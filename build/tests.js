@@ -1,0 +1,1523 @@
+(() => {
+  // src/helpers.ts
+  var Helpers = Object.freeze({
+    expose,
+    freeze: !window["debug_mode"] ? Object.freeze : pass,
+    mapValues,
+    depthOneCopy,
+    memoize
+    // string: {
+    //   characterClassOf,
+    //   characterClasses: getCharacterClasses()
+    // }
+  });
+  expose({ Helpers });
+  var CharacterClasses = Object.freeze({
+    numeric: Symbol(),
+    alphabetic: Symbol(),
+    operative: Symbol(),
+    spacious: Symbol(),
+    literal: Symbol()
+  });
+  function arrayAsCharacterSetFor(arr, characterClass) {
+    return arr.map((k) => ({ [k]: characterClass })).reduce(Object.assign);
+  }
+  var kCharacterToCharacterClass = Object.assign(
+    arrayAsCharacterSetFor(
+      [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "0"
+      ],
+      CharacterClasses.numeric
+    ),
+    arrayAsCharacterSetFor(
+      [
+        "=",
+        ":",
+        ",",
+        ".",
+        "(",
+        ")",
+        "{",
+        "}"
+      ],
+      CharacterClasses.operative
+    ),
+    arrayAsCharacterSetFor(
+      [
+        " ",
+        "	",
+        "\n"
+      ],
+      CharacterClasses.spacious
+    ),
+    arrayAsCharacterSetFor(
+      [
+        "'",
+        '"'
+      ],
+      CharacterClasses.literal
+    )
+  );
+  function pass(arg) {
+    return arg;
+  }
+  function forEachKeyIn(obj, fn) {
+    Object.getOwnPropertySymbols(obj).forEach(fn);
+    Object.getOwnPropertyNames(obj).forEach(fn);
+  }
+  function mapValues(obj, fn) {
+    const transformedObj = obj;
+    forEachKeyIn(obj, (key) => {
+      transformedObj[key] = fn(obj[key], key);
+    });
+    return transformedObj;
+  }
+  function depthOneCopy(obj) {
+    const copy = {};
+    forEachKeyIn(obj, (key) => {
+      copy[key] = obj[key];
+    });
+    return copy;
+  }
+  function expose(braceEnclosedVar) {
+    const setToWindow = (k) => window[k] = braceEnclosedVar[k];
+    return Object.keys(braceEnclosedVar).forEach(setToWindow);
+  }
+  function memoize(fn) {
+    let m = void 0;
+    let mSet = false;
+    return () => {
+      if (mSet)
+        return m;
+      mSet = true;
+      return m ??= fn();
+    };
+  }
+
+  // tests/test_helpers.ts
+  var { freeze } = Helpers;
+  var TestHelpers = freeze({
+    describeNamed,
+    fdescribeNamed
+  });
+  function describeNamed(obj, descFn) {
+    describe(Object.keys(obj)[0], descFn);
+  }
+  function fdescribeNamed(obj, descFn) {
+    fdescribe(Object.keys(obj)[0], descFn);
+  }
+  var InBetween = freeze({
+    attachTo: (obj, methodName) => {
+      let original = obj[methodName];
+      let receivedArguments = [];
+      obj[methodName] = (...args) => {
+        receivedArguments.push(args);
+        return original(...args);
+      };
+      obj["isInBetween"] = true;
+      return freeze({ receivedArguments });
+    }
+  });
+  var LazyEvaluate = (() => {
+    function make2() {
+      const mOriginalDeclFunctions = {};
+      const mActiveDeclFunctions = {};
+      let mValues = {};
+      const declOverloads = {
+        string: generalDecl,
+        ["function"]: symbolDecl
+      };
+      function decl(nameOrFn, fn) {
+        return declOverloads[typeof nameOrFn](nameOrFn, fn);
+      }
+      function clearAllMemoization() {
+        mValues = {};
+      }
+      function clearAllResets() {
+        Object.keys(mOriginalDeclFunctions).forEach((name) => {
+          mActiveDeclFunctions[name] = mOriginalDeclFunctions[name];
+        });
+      }
+      function retrieve(name) {
+        return retr(name);
+      }
+      function symbolDecl(fn) {
+        const handle = Symbol();
+        return generalDecl(handle, fn);
+      }
+      function generalDecl(handle, fn) {
+        mOriginalDeclFunctions[handle] = mActiveDeclFunctions[handle] = fn;
+        return ({ set } = {}) => {
+          if (typeof set === "function") {
+            mActiveDeclFunctions[handle] = set;
+          }
+          return retr(handle);
+        };
+      }
+      function retr(name) {
+        return mValues[name] ??= mActiveDeclFunctions[name]();
+      }
+      return freeze({ decl, clearAllMemoization, retrieve, clearAllResets });
+    }
+    return freeze({ make: make2 });
+  })();
+  Helpers.expose({ LazyEvaluate });
+
+  // src/character_class.ts
+  var CharacterClass = (() => {
+    const { freeze: freeze6, assign } = Object;
+    const classes = freeze6({
+      numeric: Symbol(),
+      alphabetic: Symbol(),
+      operative: Symbol(),
+      spacious: Symbol(),
+      newLine: Symbol(),
+      literal: Symbol()
+    });
+    function arrayAsCharacterSetFor2(arr, characterClass) {
+      return arr.map((k) => ({ [k]: characterClass })).reduce(assign);
+    }
+    const kCharacterToCharacterClass2 = assign(
+      {},
+      // arrayAsCharacterSetFor(
+      //   [
+      //     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
+      //   ],
+      //   classes.numeric),
+      arrayAsCharacterSetFor2(
+        [
+          "=",
+          ":",
+          ",",
+          ".",
+          "(",
+          ")",
+          "{",
+          "}"
+        ],
+        classes.operative
+      ),
+      arrayAsCharacterSetFor2(
+        [
+          " ",
+          "	",
+          "\r"
+        ],
+        classes.spacious
+      ),
+      arrayAsCharacterSetFor2(
+        [
+          "'"
+        ],
+        classes.literal
+      ),
+      arrayAsCharacterSetFor2(["\n"], classes.newLine)
+    );
+    function classOf(character) {
+      if (character.length !== 1) {
+        throw Error(`"${character}" is not one character`);
+      }
+      switch (character) {
+        case "0":
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+        case "9":
+          return classes.numeric;
+        default:
+          break;
+      }
+      return kCharacterToCharacterClass2[character] ?? classes.alphabetic;
+    }
+    return freeze6({
+      classes,
+      classOf
+    });
+  })();
+
+  // src/crawl_strategies.ts
+  var CrawlStrategies = (() => {
+    const { freeze: freeze6 } = Object;
+    const { classes, classOf } = CharacterClass;
+    function crawlAlphanumeric(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        switch (classOf(input[i])) {
+          case classes.operative:
+          case classes.spacious:
+          case classes.literal:
+          case classes.newLine:
+            return i;
+          default:
+            break;
+        }
+      }
+      return length;
+    }
+    function crawlStringLiteral(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOf(input[i]) === classes.literal) {
+          return i + 1;
+        }
+      }
+      return length;
+    }
+    function crawlOperator(input, start) {
+      if (start + 1 >= input.length) {
+        return start + 1;
+      } else if (input[start + 1] === "=" && input[start] !== "=") {
+        return start + 2;
+      }
+      return start + 1;
+    }
+    function crawlSpace(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        switch (classOf(input[i])) {
+          case classes.alphabetic:
+          case classes.numeric:
+          case classes.operative:
+          case classes.literal:
+          case classes.newLine:
+            return i;
+          default:
+            break;
+        }
+      }
+      return length;
+    }
+    function crawlNewLines(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOf(input[i]) !== classes.newLine) {
+          return i;
+        }
+      }
+      return length;
+    }
+    return freeze6({
+      [classes.alphabetic]: crawlAlphanumeric,
+      [classes.literal]: crawlStringLiteral,
+      [classes.operative]: crawlOperator,
+      [classes.numeric]: crawlAlphanumeric,
+      [classes.spacious]: crawlSpace,
+      [classes.newLine]: crawlNewLines
+    });
+  })();
+
+  // src/token.ts
+  var { freeze: freeze2 } = Object;
+  var TokenType = Object.freeze({
+    declareFunction: Symbol(),
+    operator: Symbol(),
+    stringLiteral: Symbol(),
+    newLine: Symbol(),
+    identifier: Symbol()
+  });
+  var Token = (() => {
+    function unimplemented(desc) {
+      return () => {
+        throw Error(`Cannot call ${desc} unimplemented`);
+      };
+    }
+    const kBlankToken = freeze2({
+      type: unimplemented("type"),
+      // TODO: try to get rid of this hack, blank token should
+      // never be used
+      content: () => "",
+      //unimplemented<string>('content'),
+      start: unimplemented("start"),
+      end: unimplemented("end")
+    });
+    function identifyNonKeyword(token) {
+      const firstChar = token[0];
+      switch (firstChar) {
+        case "'":
+          return TokenType.stringLiteral;
+        case "\n":
+          return TokenType.newLine;
+        case " ":
+        case "	":
+        case "\r":
+          throw Error("cannot build token from whitespace");
+      }
+      return TokenType.identifier;
+    }
+    const controlSeqs = {
+      ["fn"]: TokenType.declareFunction,
+      ["{"]: TokenType.operator,
+      ["}"]: TokenType.operator,
+      ["("]: TokenType.operator,
+      [")"]: TokenType.operator,
+      [","]: TokenType.operator,
+      [":="]: TokenType.operator
+    };
+    function makeFromStringOnly(mContents) {
+      return construct(mContents, 0, 0);
+    }
+    function make2(mInput, mStart, mEnd) {
+      return construct(mInput.substring(mStart, mEnd), mStart, mEnd);
+    }
+    function construct(mTokenContent, mStart, mEnd) {
+      const mType = controlSeqs[mTokenContent] ?? identifyNonKeyword(mTokenContent);
+      function content() {
+        return mTokenContent;
+      }
+      function start() {
+        return mStart;
+      }
+      function end() {
+        return mEnd;
+      }
+      function type() {
+        return mType;
+      }
+      return freeze2({ content, start, end, type });
+    }
+    return freeze2({
+      make: make2,
+      types: TokenType,
+      kBlankToken,
+      forTesting: { makeFromStringOnly }
+    });
+  })();
+
+  // src/character_crawler.ts
+  var CharacterCrawler = (() => {
+    const { freeze: freeze6 } = Object;
+    const injections2 = freeze6({
+      CrawlStrategies,
+      characterClassOf: CharacterClass.classOf,
+      characterClasses: CharacterClass.classes
+    });
+    function make2(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
+      const inst = freeze6({ reachedEnd, readToken, crawl });
+      let mStart = 0;
+      let mEnd = 0;
+      let mReadToken = Token.kBlankToken;
+      function readToken() {
+        return mReadToken;
+      }
+      function reachedEnd() {
+        return mEnd === mInput.length;
+      }
+      function crawledThrough() {
+        if (mStart >= mInput.length) {
+          throw Error("Cannot crawl at end of string");
+        }
+        const charClass = characterClassOf(mInput[mEnd]);
+        if (mReadToken.content() !== "" && charClass !== characterClasses.spacious) {
+          return;
+        }
+        const crawlFn = CrawlStrategies2[charClass];
+        const next = crawlFn(mInput, mEnd);
+        if (next <= mEnd) {
+          throw Error("progression failed");
+        }
+        mEnd = next;
+        if (charClass !== characterClasses.spacious) {
+          mReadToken = Token.make(mInput, mStart, mEnd);
+        }
+        mStart = mEnd;
+        return;
+      }
+      function crawl() {
+        mReadToken = Token.kBlankToken;
+        while (mReadToken.content() === "") {
+          crawledThrough();
+        }
+        if (mStart < mInput.length) {
+          crawledThrough();
+        }
+        return inst;
+      }
+      return inst;
+    }
+    return freeze6({ make: make2 });
+  })();
+
+  // src/tokenization.ts
+  var { freeze: freeze3 } = Object;
+  var TokenCollection = (() => {
+    function verifyNoTwoContiguousNewLineTokens(mTokens) {
+      const { length } = mTokens;
+      if (length < 2)
+        return;
+      for (let i = 1; i < length; ++i) {
+        if (mTokens[i].type() === Token.types.newLine && mTokens[i - 1].type() === Token.types.newLine) {
+          throw Error(`Contiguous new lines not allowed near element ${i}`);
+        }
+      }
+    }
+    function make2(mTokens) {
+      let mLength = mTokens.length;
+      verifyNoTwoContiguousNewLineTokens(mTokens);
+      function count() {
+        return mLength;
+      }
+      function at(i) {
+        return mTokens[i];
+      }
+      function forEach(fn) {
+        mTokens.forEach((token) => fn(token.content()));
+      }
+      return freeze3({ count, at, forEach });
+    }
+    return freeze3({ make: make2 });
+  })();
+  var Tokenization = (() => {
+    const injections2 = freeze3({ CharacterCrawler });
+    function make2({ CharacterCrawler: CharacterCrawler2 } = injections2) {
+      function tokenize(inp) {
+        const rv = [];
+        const crawler = CharacterCrawler2.make(inp);
+        while (!crawler.reachedEnd()) {
+          const readToken = crawler.crawl().readToken();
+          rv.push(readToken);
+        }
+        return TokenCollection.make(rv);
+      }
+      return freeze3({ tokenize });
+    }
+    return freeze3({ make: make2 });
+  })();
+  window["Tokenization"] = Tokenization;
+
+  // tests/tokenization_tests.ts
+  var { describeNamed: describeNamed2 } = TestHelpers;
+  describeNamed2({ Tokenization }, () => {
+    const getTokens = (inp) => {
+      let strings = [];
+      Tokenization.make().tokenize(inp).forEach((str) => strings.push(str));
+      return strings;
+    };
+    it("splits a hello world program", () => {
+      expect(getTokens("puts('hello')")).toEqual(["puts", "(", "'hello'", ")"]);
+    });
+    describe("operators", () => {
+      [
+        [":==", [":=", "="]],
+        ["===", ["=", "=", "="]],
+        ["n := p", ["n", ":=", "p"]],
+        ["n:=p", ["n", ":=", "p"]],
+        ["n=p", ["n", "=", "p"]]
+      ].forEach((pair) => {
+        const [toSplit, expectedSplit] = pair;
+        it(`splits "${toSplit}" correctly`, () => {
+          expect(getTokens(toSplit)).toEqual(expectedSplit);
+        });
+      });
+    });
+    describe("whitespace", () => {
+      [
+        ["new lines", "a\nb\n\nc", ["a", "\n", "b", "\n\n", "c"]],
+        [
+          "spaces",
+          "puts ('hello',   'world')  ",
+          ["puts", "(", "'hello'", ",", "'world'", ")"]
+        ],
+        ["mixed with tabs", "n	:= 	p", ["n", ":=", "p"]]
+      ].forEach((tuple) => {
+        const [desc, toSplit, expectedSplit] = tuple;
+        it(`splits "${desc}" correctly`, () => {
+          expect(getTokens(toSplit)).toEqual(expectedSplit);
+        });
+      });
+    });
+  });
+
+  // tests/ast_build_tests.ts
+  var { describeNamed: describeNamed3 } = TestHelpers;
+
+  // tests/character_class.ts
+  var { describeNamed: describeNamed4 } = TestHelpers;
+  describeNamed4({ CharacterClass }, () => {
+    describe(".classOf", () => {
+      const { classOf, classes } = CharacterClass;
+      it("numeric", () => {
+        expect(classOf("1")).toEqual(classes.numeric);
+      });
+      it("alphabetic", () => {
+        expect(classOf("q")).toEqual(classes.alphabetic);
+      });
+      it("operative", () => {
+        expect(classOf(",")).toEqual(classes.operative);
+      });
+      it("spacious", () => {
+        expect(classOf("	")).toEqual(classes.spacious);
+      });
+      it("new line", () => {
+        expect(classOf("\n")).toEqual(classes.newLine);
+      });
+    });
+  });
+
+  // tests/character_crawler_tests.ts
+  var { describeNamed: describeNamed5 } = TestHelpers;
+  describeNamed5({ CharacterCrawler }, () => {
+    it('crawls an operator ":="', () => {
+      const crawler = CharacterCrawler.make(":=");
+      const token = crawler.crawl().readToken().content();
+      expect(token).toEqual(":=");
+    });
+    it("skips whitespace", () => {
+      const crawler = CharacterCrawler.make("   :=");
+      const token = crawler.crawl().readToken().content();
+      expect(token).toEqual(":=");
+    });
+    it("treats trailing whitespace as having reached the end", () => {
+      const crawler = CharacterCrawler.make("a  ");
+      crawler.crawl().readToken();
+      expect(crawler.reachedEnd()).toBeTruthy();
+    });
+    it("crawls through the next token", () => {
+      const crawler = CharacterCrawler.make("puts('hello')");
+      const token = crawler.crawl().crawl().readToken().content();
+      expect(token).toEqual("(");
+    });
+  });
+
+  // tests/crawl_strategies.ts
+  var { fdescribeNamed: fdescribeNamed2, describeNamed: describeNamed6 } = TestHelpers;
+  describeNamed6({ CrawlStrategies }, () => {
+    const { alphabetic, literal, operative, spacious } = CharacterClass.classes;
+    const crawlAlphanumeric = CrawlStrategies[alphabetic];
+    const crawlOperator = CrawlStrategies[operative];
+    const crawlStringLiteral = CrawlStrategies[literal];
+    const crawlSpace = CrawlStrategies[spacious];
+    describeNamed6({ crawlAlphanumeric }, () => {
+      [
+        ["asdf", "end"],
+        ["asdf ", "spaces"],
+        ["asdf=", "operators"],
+        ["asdf'", "quotations"],
+        ["asdf\n", "new line"]
+      ].forEach((pair) => {
+        const [test, desc] = pair;
+        it(`stops at ${desc}`, () => {
+          expect(crawlAlphanumeric(test, 0)).toEqual(4);
+        });
+      });
+      it("stops at end with numbers", () => {
+        const str = "asdf123";
+        expect(crawlAlphanumeric(str, 0)).toEqual(str.length);
+      });
+    });
+    describeNamed6({ crawlOperator }, () => {
+      [
+        [":=", "re-assignable", 2],
+        ["= ", "assignment", 1],
+        ["+=", "accumulate", 2],
+        ["==", "two assignments", 1],
+        [",,", "commas", 1],
+        ["((", "parens", 1]
+      ].forEach((tuple) => {
+        const [test, desc, expected] = tuple;
+        it(`crawls out a: ${desc}`, () => {
+          expect(crawlOperator(test, 0)).toEqual(expected);
+        });
+      });
+    });
+    describeNamed6({ crawlSpace }, () => {
+      [
+        ["  a", "alphabetic"],
+        ["  ", "end"],
+        ["	\r=", "at operator with other whitespace"],
+        ["  +", "operator"],
+        ["  1", "numeric"],
+        ["  \n", "new line"]
+      ].forEach((pair) => {
+        const [test, desc] = pair;
+        it(`stops at ${desc}`, () => {
+          expect(crawlSpace(test, 0)).toEqual(2);
+        });
+      });
+    });
+    describeNamed6({ crawlStringLiteral }, () => {
+      it(`crawls stopping at nothing but another "'"`, () => {
+        const str = `'hello {" \\\\''`;
+        const end = crawlStringLiteral(str, 0);
+        expect(str.substring(0, end)).toEqual(`'hello {" \\\\'`);
+      });
+    });
+  });
+
+  // src/ast_node.ts
+  var AstNodeType = Object.freeze({
+    functionCall: Symbol(),
+    tuple: Symbol(),
+    stringLiteral: Symbol(),
+    identifier: Symbol(),
+    letDeclaration: Symbol(),
+    assignment: Symbol()
+  });
+  var AstNodeVisitor = (() => {
+    const { freeze: freeze6 } = Object;
+    const kDefaultImplementations = (() => {
+      function visitFunctionCall(_) {
+      }
+      function visitAssignment(_, _1) {
+      }
+      function visitLetDeclaration(_) {
+      }
+      return freeze6({ visitAssignment, visitFunctionCall, visitLetDeclaration });
+    })();
+    function makeFakeVisitor({
+      visitAssignment,
+      visitFunctionCall,
+      visitLetDeclaration
+    }) {
+      const defaults = kDefaultImplementations;
+      return freeze6({
+        visitAssignment: visitAssignment ?? defaults.visitAssignment,
+        visitFunctionCall: visitFunctionCall ?? defaults.visitFunctionCall,
+        visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration
+      });
+    }
+    return freeze6({ makeFakeVisitor });
+  })();
+  var AstAssignmentOperatorNode = (() => {
+    const { freeze: freeze6 } = Object;
+    function makeReadOnly(lhs, rhs) {
+      return construct(false, lhs, rhs);
+    }
+    function makeWritable(lhs, rhs) {
+      return construct(true, lhs, rhs);
+    }
+    function construct(mIsReassignable, lhs, rhs) {
+      if (lhs.type() !== AstNodeType.identifier) {
+        return freeze6({ message: `Only identifiers allowed on left hand side of assignment` });
+      }
+    }
+    return freeze6({ makeReadOnly, makeWritable });
+  })();
+
+  // src/ast_tuple_node.ts
+  var AstTupleNode = (() => {
+    const { freeze: freeze6 } = Object;
+    const tupleType = AstNodeType.tuple;
+    function makeBinary(lhs, rhs) {
+      return makeWithPair(lhs, rhs);
+    }
+    function makeUnary(lhs) {
+      return makeWithPair(lhs, void 0);
+    }
+    function makeWithPair(lhs, rhs) {
+      const mSubExpressions = [lhs];
+      const inst = make2(mSubExpressions);
+      if (rhs && inst.mergeWith(rhs)) {
+        mSubExpressions.push(rhs);
+      }
+      return inst;
+    }
+    function make2(mSubExpressions) {
+      const inst = freeze6({ forEach, count, visit, type, mergeWith });
+      function forEach(fn) {
+        mSubExpressions.forEach((node) => fn(node));
+      }
+      function count() {
+        return mSubExpressions.length;
+      }
+      function visit(visitor) {
+        mSubExpressions.forEach((node) => {
+          node.visit(visitor);
+        });
+      }
+      function type() {
+        return tupleType;
+      }
+      function mergeWith(node) {
+        if (node.type() !== tupleType) {
+          return node;
+        }
+        node.forEach((subNode) => {
+          mSubExpressions.push(subNode);
+        });
+        return void 0;
+      }
+      return inst;
+    }
+    return freeze6({ makeBinary, makeUnary, make: make2 });
+  })();
+
+  // src/partial_tree_next_token_build.ts
+  var PartialTreeNextTokenBuild = (() => {
+    const { freeze: freeze6 } = Object;
+    const { memoize: memoize2 } = Helpers;
+    const kCloseMapping = freeze6({
+      ["("]: ")"
+    });
+    function make2(mTokens, mStart, mEnd, mFindCloseBasedOn) {
+      let mError = () => {
+      };
+      const { lineContinuationScheme } = PartialTreeBuild;
+      const closeMapping = kCloseMapping[mFindCloseBasedOn];
+      const lineCont = closeMapping ? lineContinuationScheme.inGroup : lineContinuationScheme.operatorContinued;
+      const closePosition = memoize2(() => {
+        if (!closeMapping) {
+          return mEnd;
+        }
+        const count = mTokens.count();
+        for (let i = mStart; i < count; ++i) {
+          if (mTokens.at(i).content() === closeMapping) {
+            return i;
+          }
+        }
+        mError = memoize2(() => freeze6({
+          message: `Cannot find close position for ${mFindCloseBasedOn}`
+        }));
+        return void 0;
+      });
+      const unprocessedPart = memoize2(() => {
+        const pos = closePosition();
+        if (!pos)
+          return void 0;
+        return PartialTreeBuild.makeAssumeNotNewLine(mTokens, mStart, pos, lineCont);
+      });
+      const remainingRange = memoize2(() => {
+        const pos = closePosition();
+        if (!pos) {
+          throw Error("call and test against unprocessedPart first");
+        }
+        return [Math.min(mEnd, pos + 1), mEnd];
+      });
+      function error() {
+        return mError();
+      }
+      return freeze6({ unprocessedPart, remainingRange, error });
+    }
+    return freeze6({ make: make2 });
+  })();
+
+  // src/partial_tree_start_group_build.ts
+  var PartialTreeStartGroupBuild = (() => {
+    const { freeze: freeze6 } = Object;
+    function skipNewLine(tokens, i) {
+      if (tokens.at(i).type() === Token.types.newLine) {
+        return i + 1;
+      }
+      return i;
+    }
+    function make2(mTokens, incompleteNode, start, mEnd, closeBasedOn) {
+      let mErrorFn = () => {
+        return void 0;
+      };
+      function startGroupBuild() {
+        const nextPartStart = skipNewLine(mTokens, start + 1);
+        const nextPart = PartialTreeNextTokenBuild.make(mTokens, nextPartStart, mEnd, closeBasedOn);
+        const unprocessedPart = nextPart.unprocessedPart();
+        if (!unprocessedPart) {
+          mErrorFn = nextPart.error;
+          return;
+        }
+        const remainingRange = nextPart.remainingRange();
+        return freeze6({
+          completedNode: void 0,
+          incompleteNode,
+          unprocessedPart,
+          // <- in group //: make(mTokens, ...remainingRange),
+          // make... assume anything can happen
+          remainingPart: PartialTreeBuild.make(mTokens, ...remainingRange)
+          // <- everything outside of group //unprocessedPart
+        });
+      }
+      return freeze6({ startGroupBuild, error: () => mErrorFn() });
+    }
+    return freeze6({ make: make2, skipNewLine });
+  })();
+
+  // src/ast_stringable_node.ts
+  var { freeze: freeze4 } = Object;
+  var AstStringableNode = (() => {
+    function _downcast(node) {
+      switch (node.type()) {
+        case AstNodeType.identifier:
+        case AstNodeType.stringLiteral:
+          return node;
+        default:
+          break;
+      }
+      return void 0;
+    }
+    function downcast(node) {
+      return _downcast(node) ?? (() => {
+        throw Error("AstNode is not a AstStringableNode");
+      })();
+    }
+    function hasCreated(node) {
+      return !!_downcast(node);
+    }
+    return freeze4({ downcast, hasCreated });
+  })();
+  function makeStringableNodeClass(nodeType) {
+    function make2(value) {
+      function visit(_) {
+      }
+      function type() {
+        return nodeType;
+      }
+      function asString() {
+        return value;
+      }
+      return freeze4({ visit, type, asString });
+    }
+    return freeze4({ make: make2 });
+  }
+  var AstStringLiteralNode = (() => {
+    const Super = makeStringableNodeClass(AstNodeType.stringLiteral);
+    function make2(value) {
+      value = (() => {
+        if (value.length <= 2) {
+          throw Error("not a valid string");
+        }
+        return value.substring(1, value.length - 1);
+      })();
+      return Super.make(value);
+    }
+    return freeze4({ make: make2 });
+  })();
+  var AstIdentifierNode = makeStringableNodeClass(AstNodeType.identifier);
+
+  // src/ast_function_call_node.ts
+  var AstFunctionCallNode = (() => {
+    function make2(lhs, rhs) {
+      const arguments_ = (() => {
+        if (rhs.type() === AstNodeType.tuple) {
+          return rhs;
+        }
+        return AstTupleNode.makeUnary(rhs);
+      })();
+      const name = (() => {
+        switch (lhs.type()) {
+          case AstNodeType.identifier:
+          case AstNodeType.stringLiteral:
+            return lhs.asString();
+          default:
+            throw Error("unhandled");
+        }
+      })();
+      const inst = Object.freeze({
+        name,
+        arguments: arguments_,
+        visit,
+        type: () => AstNodeType.functionCall
+      });
+      function visit(visitor) {
+        visitor.visitFunctionCall(inst);
+      }
+      return inst;
+    }
+    return Object.freeze({ make: make2 });
+  })();
+
+  // src/ast_assignment_node.ts
+  var AstAssignmentNode = (() => {
+    const { freeze: freeze6 } = Object;
+    const assignmentType = AstNodeType.assignment;
+    function make2(lhs, rhs) {
+      const assignee = AstStringableNode.downcast(lhs);
+      const inst = freeze6({ visit, type, assigneeName });
+      function visit(visitor) {
+        visitor.visitAssignment(inst, rhs);
+      }
+      function type() {
+        return assignmentType;
+      }
+      function assigneeName() {
+        return assignee.asString();
+      }
+      return inst;
+    }
+    return freeze6({ make: make2 });
+  })();
+
+  // src/ast_incomplete_binary_node.ts
+  var AstIncompleteBinaryNode = (() => {
+    const { freeze: freeze6 } = Object;
+    function _selectedConstructor(operatorStr) {
+      switch (operatorStr) {
+        case "(":
+          return AstFunctionCallNode.make;
+        case ",":
+        case "\n":
+          return AstTupleNode.makeBinary;
+        case ":=":
+          return AstAssignmentNode.make;
+        default:
+          break;
+      }
+      throw Error(`Token ${operatorStr} does not result in a binary operator`);
+    }
+    function makeForOperator(operatorStr, lhs) {
+      const fn = _selectedConstructor(operatorStr);
+      return make2(fn, lhs);
+    }
+    function make2(fn, lhs) {
+      function finish(rhs) {
+        return fn(lhs, rhs);
+      }
+      function lhsAsString() {
+        if (!AstStringableNode.hasCreated(lhs)) {
+          return void 0;
+        }
+        return AstStringableNode.downcast(lhs).asString();
+      }
+      return freeze6({ finish, lhsAsString });
+    }
+    return freeze6({ make: make2, makeForOperator });
+  })();
+
+  // src/partial_tree_start_identifier_build.ts
+  var PartialTreeStartIdentifierBuild = (() => {
+    const { freeze: freeze6 } = Object;
+    const { skipNewLine } = PartialTreeStartGroupBuild;
+    function make2(mTokens, mStart, mEnd, mLineContScheme) {
+      if (mStart === mEnd) {
+        throw Error("");
+      }
+      const { lineContinuationScheme } = PartialTreeBuild;
+      const mStartToken = mTokens.at(mStart);
+      let mErrorFn = () => {
+        return void 0;
+      };
+      function buildForLoneNode(node) {
+        return freeze6({
+          completedNode: node,
+          incompleteNode: void 0,
+          unprocessedPart: void 0,
+          remainingPart: void 0
+        });
+      }
+      function makeNodeForSingleToken(token) {
+        const name = token.content();
+        if (token.type() === Token.types.identifier) {
+          return AstIdentifierNode.make(name);
+        } else if (token.type() === Token.types.stringLiteral) {
+          return AstStringLiteralNode.make(name);
+        }
+        throw Error(`unimplemented token type`);
+      }
+      function operatorAllowForNode(node, operator) {
+        if (node.type() === AstNodeType.identifier) {
+          return operator === "(" || operator === ",";
+        } else if (node.type() === AstNodeType.stringLiteral) {
+          return operator === ",";
+        }
+        throw Error(`unimplemented node type`);
+      }
+      function build() {
+        const lhsNode = makeNodeForSingleToken(mStartToken);
+        if (mEnd - mStart === 1) {
+          return buildForLoneNode(lhsNode);
+        }
+        const nextPos = mLineContScheme === lineContinuationScheme.inGroup ? skipNewLine(mTokens, mStart + 1) : mStart + 1;
+        const next = mTokens.at(nextPos);
+        if (next.type() === Token.types.operator) {
+          if (!operatorAllowForNode(lhsNode, next.content())) {
+            mErrorFn = () => freeze6({ message: `operator "${next.content()}" not allowed here` });
+            return;
+          }
+          const incompleteNode = AstIncompleteBinaryNode.makeForOperator(next.content(), lhsNode);
+          const group = PartialTreeStartGroupBuild.make(mTokens, incompleteNode, nextPos, mEnd, next.content());
+          const built = group.startGroupBuild();
+          if (built)
+            return built;
+          mErrorFn = group.error;
+          return;
+        } else if (next.type() === Token.types.newLine) {
+          if (mLineContScheme === lineContinuationScheme.normal) {
+            return buildForLoneNode(lhsNode);
+          }
+          if (mLineContScheme !== lineContinuationScheme.operatorContinued) {
+            throw Error("impossible branch??");
+          }
+          const { normal } = PartialTreeBuild.lineContinuationScheme;
+          return freeze6({
+            completedNode: lhsNode,
+            incompleteNode: void 0,
+            unprocessedPart: void 0,
+            remainingPart: PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal)
+          });
+        } else {
+          mErrorFn = () => freeze6({
+            message: `not sure how to handle token "${next.content()}"`
+          });
+          return;
+        }
+      }
+      return freeze6({ build, error: () => mErrorFn() });
+    }
+    return freeze6({ make: make2 });
+  })();
+
+  // src/partial_tree_build.ts
+  var PartialTreeBuild = (() => {
+    const { freeze: freeze6 } = Object;
+    const kNothing = freeze6({
+      completedNode: void 0,
+      incompleteNode: void 0,
+      unprocessedPart: void 0,
+      remainingPart: void 0
+    });
+    const lineContinuationScheme = freeze6({
+      inGroup: Symbol(),
+      operatorContinued: Symbol(),
+      normal: Symbol()
+    });
+    const { skipNewLine } = PartialTreeStartGroupBuild;
+    function make2(mTokens, mStart, mEnd, mLineContScheme = lineContinuationScheme.normal) {
+      return construct(mTokens, mStart, mEnd, mLineContScheme);
+    }
+    function makeAssumeNotNewLine(mTokens, mStart, mEnd, mLineContScheme) {
+      return construct(mTokens, mStart, mEnd, mLineContScheme);
+    }
+    function construct(mTokens, mStart, mEnd, mLineContScheme) {
+      let mErrorFn = () => {
+        return void 0;
+      };
+      function _fromGroupStart(incompleteNode, start, closeBasedOn) {
+        const group = PartialTreeStartGroupBuild.make(mTokens, incompleteNode, start, mEnd, closeBasedOn);
+        const built = group.startGroupBuild();
+        if (built)
+          return built;
+        mErrorFn = group.error;
+        return;
+      }
+      function ignoresNewLines() {
+        return mLineContScheme !== lineContinuationScheme.normal;
+      }
+      function buildPart() {
+        if (mStart === mEnd) {
+          return kNothing;
+        }
+        const startPos = skipNewLine(mTokens, mStart);
+        if (startPos === mEnd) {
+          return kNothing;
+        }
+        const start = mTokens.at(startPos);
+        if (start.type() === Token.types.identifier || start.type() === Token.types.stringLiteral) {
+          const ptsib = PartialTreeStartIdentifierBuild.make(mTokens, startPos, mEnd, mLineContScheme);
+          const built = ptsib.build();
+          if (built)
+            return built;
+          mErrorFn = ptsib.error;
+          return;
+        } else if (start.content() == "(") {
+          if (startPos + 1 < mEnd) {
+            return _fromGroupStart(void 0, startPos, start.content());
+          }
+          mErrorFn = () => freeze6({
+            message: "end of input reached before being able to close"
+          });
+          return;
+        }
+        mErrorFn = () => freeze6({
+          message: "unimplemented case"
+        });
+      }
+      function error() {
+        return mErrorFn();
+      }
+      return freeze6({ buildPart, ignoresNewLines, error, db: { mLineContScheme, mStart, mEnd } });
+    }
+    return freeze6({
+      makeAssumeNotNewLine,
+      make: make2,
+      kNothing,
+      lineContinuationScheme,
+      skipNewLine
+    });
+  })();
+
+  // src/ast_build.ts
+  var AstBuild = (() => {
+    function buildProgramSequence(partBuild, tokens) {
+      const res = partBuild.buildPart();
+      if (res === void 0) {
+        throw Error(partBuild.error()?.message ?? "undefined behavior");
+      } else if (res.completedNode !== void 0) {
+        return [res.completedNode];
+      }
+      const completedNodes = (() => {
+        if (res.incompleteNode !== void 0) {
+          const [firstNode, ...remainingNodes] = buildProgramSequence(res.unprocessedPart, tokens);
+          return [res.incompleteNode.finish(firstNode), ...remainingNodes];
+        }
+        return [];
+      })();
+      const otherNodes = (() => {
+        if (res.remainingPart) {
+          return buildProgramSequence(res.remainingPart, tokens);
+        }
+        return [];
+      })();
+      return [...completedNodes, ...otherNodes];
+    }
+    function buildFor(tokens) {
+      const partBuild = PartialTreeBuild.make(tokens, 0, tokens.count());
+      return AstTupleNode.make(buildProgramSequence(partBuild, tokens));
+    }
+    return Object.freeze({ buildFor });
+  })();
+  window["AstBuild"] = AstBuild;
+
+  // src/context.ts
+  var Context = (() => {
+    const { freeze: freeze6 } = Object;
+    function make2() {
+      let mAvailableVariables = {};
+      function declareVariable(name, value) {
+        if (mAvailableVariables[name]) {
+          throw Error(`name "${name}" already taken`);
+        }
+        mAvailableVariables[name] = value;
+      }
+      function setVariable(name, value) {
+        mAvailableVariables[name] = value;
+      }
+      function getValueOfVariable(name) {
+        return mAvailableVariables[name];
+      }
+      return freeze6({ declareVariable, getValueOfVariable, setVariable });
+    }
+    return freeze6({ make: make2 });
+  })();
+
+  // src/interpreter.ts
+  var { freeze: freeze5 } = Object;
+  var Interpreter = freeze5({ make, compile });
+  var injections = freeze5({ putsFunction: console.log });
+  function make(context = Context.make(), { putsFunction } = injections) {
+    function visitFunctionCall(node) {
+      if (node.name === "puts") {
+        node.arguments.forEach((node2) => {
+          putsFunction(getValueOf(node2));
+        });
+      }
+    }
+    function getValueOf(node) {
+      const val = node.asString();
+      switch (node.type()) {
+        case AstNodeType.stringLiteral:
+          return val;
+        case AstNodeType.identifier:
+          return context.getValueOfVariable(val) ?? (() => {
+            throw Error(`variable ${val} not declared`);
+          })();
+        default:
+          break;
+      }
+      throw Error("impossible branch??");
+    }
+    function visitLetDeclaration(_) {
+    }
+    function visitAssignment(node, rhs) {
+      context.setVariable(node.assigneeName(), getValueOf(rhs));
+    }
+    return freeze5({ visitFunctionCall, visitLetDeclaration, visitAssignment });
+  }
+  function compile(inp) {
+    const tokenCollection = Tokenization.make().tokenize(inp);
+    return AstBuild.buildFor(tokenCollection);
+  }
+  window["Interpreter"] = Interpreter;
+
+  // tests/interpreter_tests.ts
+  var { describeNamed: describeNamed7 } = TestHelpers;
+  describeNamed7({ Interpreter }, () => {
+    function makePutsFunction() {
+      const printedStrings = [];
+      const putsFunction = (str) => {
+        printedStrings.push(str);
+      };
+      const injections2 = { putsFunction };
+      return { injections: injections2, printedStrings };
+    }
+    function makeWithInjections(injections2) {
+      return Interpreter.make(Context.make(), injections2);
+    }
+    describe("integration specs", () => {
+      it('compiles and runs a "hello world!" program', () => {
+        const programRootNode = Interpreter.compile("puts('hello', ' world!')");
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const interpreter = makeWithInjections(injections2);
+        programRootNode.visit(interpreter);
+        expect(printedStrings).toEqual(["hello", " world!"]);
+      });
+      it('compiles and runs a "hello world!" program with a variable', () => {
+        const context = Context.make();
+        context.declareVariable("foo", "hello world!");
+        const programRootNode = Interpreter.compile("puts(foo)");
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const interpreter = Interpreter.make(context, injections2);
+        programRootNode.visit(interpreter);
+        expect(printedStrings).toEqual(["hello world!"]);
+      });
+      it('compiles and runs a multiline "hello world!" program', () => {
+        const programRootNode = Interpreter.compile("puts('hello')\nputs('world!')");
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const interpreter = makeWithInjections(injections2);
+        programRootNode.visit(interpreter);
+        expect(printedStrings).toEqual(["hello", "world!"]);
+      });
+      it('compiles and runs a "hello world!" program with an assignment', () => {
+        const programRootNode = Interpreter.compile(`
+        foo := 'hello world!'
+        puts(foo)
+      `);
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        programRootNode.visit(makeWithInjections(injections2));
+        expect(printedStrings).toEqual(["hello world!"]);
+      });
+    });
+  });
+
+  // tests/ast_assignment_node_tests.ts
+  var { describeNamed: describeNamed8 } = TestHelpers;
+  describeNamed8({ AstAssignmentNode }, () => {
+    const { make: make2 } = AstAssignmentNode;
+    const makeIdentifier = AstIdentifierNode.make;
+    it("is reachable by visitor", () => {
+      let mustBeTrue = false;
+      const visitor = AstNodeVisitor.makeFakeVisitor({
+        visitAssignment: (_, _1) => {
+          mustBeTrue = true;
+        }
+      });
+      make2(makeIdentifier(""), makeIdentifier("")).visit(visitor);
+      expect(mustBeTrue).toBeTruthy();
+    });
+    it("reports self as an assignment node type", () => {
+      const type = make2(makeIdentifier(""), makeIdentifier("")).type();
+      expect(type).toEqual(AstNodeType.assignment);
+    });
+    it("maybe visited for assigee name", () => {
+      let assigneeName = "";
+      const visitor = AstNodeVisitor.makeFakeVisitor({
+        visitAssignment: (node, _) => {
+          assigneeName = node.assigneeName();
+        }
+      });
+      make2(makeIdentifier("foo"), makeIdentifier("")).visit(visitor);
+      expect(assigneeName).toEqual("foo");
+    });
+    it("throws exception on attempt to instantiate with non-stringable node", () => {
+      const tuple = AstTupleNode.make([]);
+      expect(() => {
+        make2(tuple, makeIdentifier(""));
+      }).toThrowError();
+    });
+  });
+
+  // tests/ast_incomplete_binary_node_tests.ts
+  var { describeNamed: describeNamed9 } = TestHelpers;
+  describeNamed9({ AstIncompleteBinaryNode }, () => {
+    const { makeForOperator } = AstIncompleteBinaryNode;
+    function makeAnyNode() {
+      return AstIdentifierNode.make("");
+    }
+    function makeForOperatorWithAnyNodes(operator) {
+      return makeForOperator(operator, makeAnyNode()).finish(makeAnyNode());
+    }
+    it("defers creation of a function call", () => {
+      const createdType = makeForOperatorWithAnyNodes("(").type();
+      expect(createdType).toEqual(AstNodeType.functionCall);
+    });
+    it("defers creation of a tuple", () => {
+      const createdType = makeForOperatorWithAnyNodes(",").type();
+      expect(createdType).toEqual(AstNodeType.tuple);
+    });
+    it("defers creation of an assignment", () => {
+      const createdType = makeForOperatorWithAnyNodes(":=").type();
+      expect(createdType).toEqual(AstNodeType.assignment);
+    });
+  });
+
+  // tests/partial_tree_build_tests.ts
+  var { fdescribeNamed: fdescribeNamed3, describeNamed: describeNamed10 } = TestHelpers;
+  describeNamed10({ PartialTreeBuild }, () => {
+    const makeToken = Token.forTesting.makeFromStringOnly;
+    const make2 = (tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length);
+    const makePtbRes = (...tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length).buildPart();
+    function includeHasAResultExample(ptbRes) {
+      it("returns a result", () => {
+        expect(ptbRes()).toBeDefined();
+      });
+    }
+    function includeNoNodePtbExamples(ptbRes) {
+      includeHasAResultExample(ptbRes);
+      it("has no complete node", () => {
+        expect(ptbRes()?.completedNode).toBeUndefined();
+      });
+      it("has no incomplete node", () => {
+        expect(ptbRes()?.incompleteNode).toBeUndefined();
+      });
+      it("creates a ptb that ignores new lines", () => {
+        expect(ptbRes()?.unprocessedPart?.ignoresNewLines()).toBeTruthy();
+      });
+    }
+    describe('handles general case "( \\n ..."', () => {
+      const ptbRes = () => makePtbRes(
+        makeToken("("),
+        makeToken("\n"),
+        makeToken("a"),
+        makeToken(")")
+      );
+      includeNoNodePtbExamples(ptbRes);
+      it("unprocessed range contains the remainder of tokens", () => {
+        expect(ptbRes()?.remainingPart?.buildPart()).toEqual(PartialTreeBuild.kNothing);
+      });
+    });
+    describe('handles grouping case "( a )"', () => {
+      const args = [makeToken("("), makeToken("a"), makeToken(")")];
+      const ptbRes = () => makePtbRes(...args);
+      it("remaining part builds nothing", () => {
+        expect(ptbRes()?.remainingPart?.buildPart()).toEqual(PartialTreeBuild.kNothing);
+      });
+      it("incomplete part builds a complete node", () => {
+        expect(ptbRes()?.unprocessedPart?.buildPart()?.completedNode).toBeDefined();
+      });
+      it("incomplete part builds an identifier node", () => {
+        const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
+        expect(node?.type()).toBeDefined(AstNodeType.identifier);
+      });
+      it('incomplete part builds an "a" stringable node', () => {
+        const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
+        const str = node && AstStringableNode.downcast(node).asString();
+        expect(str).toBeDefined("a");
+      });
+    });
+    describe('handles grouping case "( a , b )"', () => {
+      const ptbRes = () => makePtbRes(
+        makeToken("("),
+        makeToken("a"),
+        makeToken(","),
+        makeToken("b"),
+        makeToken(")")
+      );
+      includeNoNodePtbExamples(ptbRes);
+      it("unprocessed range contains the remainder of tokens", () => {
+        expect(ptbRes()?.remainingPart?.buildPart()).toEqual(PartialTreeBuild.kNothing);
+      });
+    });
+    describe('handles general operator case "a, b"', () => {
+      const args = [makeToken("a"), makeToken(","), makeToken("b")];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      it("has no complete node", () => {
+        expect(ptbRes()?.completedNode).toBeUndefined();
+      });
+      it("has an incomplete node", () => {
+        expect(ptbRes()?.incompleteNode).toBeDefined();
+      });
+      it("incomplete node maps to correct token", () => {
+        expect(ptbRes()?.incompleteNode?.lhsAsString()).toEqual("a");
+      });
+      it("creates a ptb that ignores new lines", () => {
+        expect(ptbRes()?.unprocessedPart?.ignoresNewLines()).toBeTruthy();
+      });
+    });
+    describe('handles case operator across new line "a, \\n b \\n ...', () => {
+      const args = [
+        makeToken("a"),
+        makeToken(","),
+        makeToken("\n"),
+        makeToken("b"),
+        makeToken("\n"),
+        makeToken("c")
+      ];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      it("has no complete node", () => {
+        expect(ptbRes()?.completedNode).toBeUndefined();
+      });
+      it("has an incomplete node", () => {
+        expect(ptbRes()?.incompleteNode).toBeDefined();
+      });
+      it("remaining part does not ignore new lines", () => {
+        expect(ptbRes()?.remainingPart?.ignoresNewLines()).not.toBeTruthy();
+      });
+      it("unprocessedPart completion", () => {
+        const res = ptbRes();
+        const unprocessedPart = res?.unprocessedPart;
+        const partBuildRes = unprocessedPart?.buildPart();
+        const completedNode = partBuildRes?.completedNode;
+        const tupleNode = completedNode && res?.incompleteNode?.finish(completedNode);
+        expect(tupleNode?.type()).toEqual(AstNodeType.tuple);
+      });
+    });
+    describe('handles function call case "f(...)..."', () => {
+      describe(`a simple one parameter function call "f('a')"`, () => {
+        const args = [
+          makeToken("f"),
+          makeToken("("),
+          makeToken("'a'"),
+          makeToken(")")
+        ];
+        const ptbRes = () => makePtbRes(...args);
+        it("returns an incomplete node, with unprocessed part", () => {
+          const res = ptbRes();
+          res?.unprocessedPart?.buildPart();
+          expect(res?.incompleteNode).toBeDefined();
+          expect(res?.unprocessedPart).toBeDefined();
+        });
+        it("completes unprocessed part into an identifier", () => {
+          const res = ptbRes()?.unprocessedPart?.buildPart();
+          const stringable = res?.completedNode && AstStringableNode.downcast(res?.completedNode);
+          expect(stringable?.asString()).toEqual("a");
+        });
+        it("function has correct name", () => {
+          expect(ptbRes()?.incompleteNode?.lhsAsString()).toEqual("f");
+        });
+        it("completes into a function call", () => {
+          const res = ptbRes();
+          const node = res?.unprocessedPart?.buildPart()?.completedNode;
+          const fCall = node && res?.incompleteNode?.finish(node);
+          expect(fCall?.type()).toEqual(AstNodeType.functionCall);
+        });
+      });
+    });
+    describe("simple cases", () => {
+      it("handles a single string literal", () => {
+        const ptb = make2([makeToken("'a'")]);
+        const res = ptb.buildPart();
+        const comp = res?.completedNode;
+        const stringable = comp && AstStringableNode.downcast(comp);
+        expect(stringable?.asString()).toEqual("a");
+      });
+      it("handles new lines followed by nothing statements", () => {
+        const res = make2([makeToken("\n")]).buildPart();
+        expect(res).toEqual(PartialTreeBuild.kNothing);
+      });
+      it("handles empty statements", () => {
+        const res = make2([]).buildPart();
+        expect(res).toEqual(PartialTreeBuild.kNothing);
+      });
+      it("handles a lone token statement", () => {
+        const args = [
+          makeToken("a"),
+          makeToken("\n")
+        ];
+        const res = make2(args).buildPart();
+        expect(res).toBeDefined();
+        expect(res?.completedNode?.type()).toEqual(AstNodeType.identifier);
+        expect(res?.incompleteNode).toBeUndefined();
+      });
+    });
+  });
+})();

@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "@stylistic/eslint-plugin": "^1.7.2",
+    "@sweet-monads/either": "^3.3.1",
+    "esbuild": "^0.20.2"
+  },
+  "scripts": {
+    "build": "./node_modules/.bin/esbuild build.js --bundle --outfile=build/stuff.m.js",
+    "build_for_tests": "./node_modules/.bin/esbuild build-tests.js --bundle --outfile=build/tests.js"
+  },
+  "include": [
+    "**/*.ts"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^9.1.1",
+    "eslint": "^8.57.0",
+    "globals": "^15.0.0",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^7.7.1"
+  },
+  "compilerOptions": {}
+}

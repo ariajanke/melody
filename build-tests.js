@@ -1,0 +1,9 @@
+import './tests/tokenization_tests';
+import './tests/ast_build_tests';
+import './tests/character_class';
+import './tests/character_crawler_tests';
+import './tests/crawl_strategies';
+import './tests/interpreter_tests';
+import './tests/ast_assignment_node_tests';
+import './tests/ast_incomplete_binary_node_tests'
+import './tests/partial_tree_build_tests';

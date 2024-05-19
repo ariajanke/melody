@@ -1,0 +1,334 @@
+keyword args
+table/closure based objects
+statically typed
+compiles to C?
+inspired by: Lua, TypeScript, and Ruby
+
+Primitive/Starter types:
+- Array(s)
+- Table(s)
+- String(s)
+- Integer(s)
+- Float(s)
+- Boolean(s)
+```melody
+
+# Ruby's '()' omissions are neat
+fn new { # call it whatever you'd like!
+  let a = 10
+  let b := 1
+
+  # a = 3 # syntax error, is constant
+  # a = 'bees' # syntax error, is an Integer
+
+  # return value of foo is type duducable
+  fn foo => a + (b += 1)
+  fn bar(c: Integer, @d: Integer = 11) {
+    return a + b - c + d
+  }
+
+  return {
+    foo,
+    bar
+  }
+}
+
+# class as describing is-a rather than is-like?
+export class Closure_1 = return_type_of(new)
+export let Closure_1 = {
+  new
+}
+
+```
+
+```c
+
+#define SOME_CONTEXT_1_A 10
+
+typedef struct {
+  int b;
+} Closure_1;
+
+int some_context_1_foo(Closure_1 * c_) {
+  c_.b += 1;
+  return c_.b + SOME_CONTEXT_1_A;
+}
+
+void some_context_1_bar(Closure_1 * c_) {}
+
+// not sure what to generate for new
+
+```
+
+## A more complex example, this time implementing a Vector2 class
+
+```melody
+
+fn new(x := 0., y := 0.) {
+  # operator overloading, in melody here '=' means equals, not assignment
+  # arguments end up needing explicit types, as their types cannot be deduced
+  fn '=' (r: Vector2) => r.x = inst.x and r.y = inst.y
+  fn ':='(r: Vector2) => inst.x := r.x and inst.y := r.y and inst
+  fn '+' (r: Vector2) => new(inst.x + r.x, inst.y + r.y)
+  fn '-' (r: Vector2) => new(inst.x - r.x, inst.y - r.y)
+  fn magnitude => Math.sqrt(inst.x*inst.x + inst.y*inst.y)
+
+  let inst = {
+    := x, # in table context, the ":=" means mutable
+    := y,
+    ['='], # constant table parts maybe "optimized away", or rather omitted from the returned = structure,
+    [':='],
+    ['+'],
+    ['-'],
+    magnitude = magnitude
+  }
+
+  return inst
+}
+
+# ofc you would need typing
+
+if (new(3, 0) + new(0, 4)).magnitude() = 5 {
+  puts('hello')
+}
+
+```
+
+## Modules are "reverse" tree order
+That is you may look up, but may not look down. Or you can just use a library.
+
+## Lifetimes/Ownership/Etc
+
+Where does the data live? Everything's a struct until generics are a thing?
+
+## Presence vs Boolean
+
+```melody
+# not allowed!
+# true and null
+
+# Okay, evaluates to false
+true and null.present?
+
+# evaluates to true
+false.presence and true
+```
+
+## imcomplete language keywords
+- and
+- or
+- if
+- fn
+- let
+
+## language operators
+- +
+- -
+- =
+- :=
+- *
+- /
+- =>
+
+## What could generics and/or macros look like?
+
+```melody
+# similar to Rust?
+# how can this *not* be ugly?
+# how would I make a function with a macro?
+
+<<
+  fn foo(a: Type) {
+    return fn (b: a, c: a) {
+      return b + c
+    }
+  }
+>>
+
+let myfoo = <foo(Integer)>
+myfoo(1, 3)
+
+<<
+
+fn RectangleTemplate(scalar: number) {
+  return fn new(x: scalar, y: scalar, width: scalar = 10, height: scalar = 10) {
+    fn bottom() => x + width
+    fn right() => y + height
+    fn print_stuff() => {
+      if scalar == Integer {
+        puts('I am an Integer')
+      } else if scalar == Float {
+        puts('I am a Float')
+      }
+    }
+    return {
+      := x,
+      := y,
+      := width,
+      := height,
+      bottom,
+      right
+    }
+  }
+}
+
+>>
+
+let RectangleI = <RectangleTemplate(Integer)>
+let RectangleR = <RectangleTemplate(Float)>
+type RectangleI = <RectangleTemplate(Integer).new.returnType>
+type RectangleR = <RectangleTemplate(Float).new.returnType>
+
+# You *could* also do it in runtime as well, you just can't use it as a type
+# RectangleTemplate(Integer) # error, cannot use runtime variable as a type
+RectangleI.new.return_type # <- totes okay
+puts(RectangleI.new.return_type.as_string)
+
+RectangleI.new.print_stuff() # <- when do I evaluate "scalar == Integer"?
+
+```
+
+## Another Revision of syntax
+I think I can have parenless cake too!
+
+```melody
+
+# not sure about read-write distinction with parameters though
+let Rectangle = fn () { # 'fn's are never auto-called
+  let new = fn (left: Real, top: Real, width: Real, height: Real) {
+    let bottom = fn() inst.left + inst.width
+    let 'bottom:=' = fn(new_bottom: Real) {
+      # inst is declared later, but referenced here
+      # that's okay, hoisting is a thing in this language
+      # however, inst may not be read in anyway until it's defined
+      #
+      # implementation note: function nodes will need a "requiredCaptures"
+      # feature. A check to occur before permitting a call
+      return (inst.height = inst.top - new_bottom) and new_bottom
+    }
+    let right = fn() inst.top + inst.height
+    let 'right:=' = fn(new_right: Real) {
+      return (inst.width = inst.left - new_right) and new_right
+    }
+    let move = fn(dx: Real, dy: Real) {
+      inst.left = inst.left + dx 
+      inst.top = inst.top + dy
+    }
+    let ['or']
+
+    # ['bottom='](10) # Error! call not permitted until 'inst' is defined
+    let inst = {
+      := left, # writable, PoD field
+      := top,
+      := width,
+      := height,
+      = right, # read-only function
+      = ['right='], # read-only setter function
+      bottom, # short hand
+      ['bottom='], # also short hand
+      move,
+      ['or'] # or is a keyword, so this becomes an operator definition
+    }
+
+    # uh-oh, how am I going to have arrays then?
+    # $'bottom:='(10) # you can totally do this
+
+    return isnt
+  }
+
+  return {
+    new
+  }
+} ()
+
+# new is a function property
+# functions are called auto matically, just like Ruby uwu
+let r = Rectangle.new 0, 0, 10, 10
+# but let's say you want a function reference, no problem
+let new_rectangle = Rectangle&new
+let r2 = new_rectangle 0, 0, 100, 100
+# r2.bottom := 200 # Error! cannot write to 'inst.height'
+let r3 := new_rectangle 10, 9, 45, 10
+r3.bottom := 30 # all good!
+
+let somevar := 'somevar'
+$'somevar' := 'something else' # okay! and since it's a string literal, it's a compile time thing
+let bees := 'bees'
+# $bees := somevar # Error! 
+bees := 'r2'
+$bees.right # I am a rectangle (r2) now
+# ^ while okay, there's something tricky the compiler will have to do
+# | it will need to construct a RT access table for visable variables in scope
+
+
+# $somevar := 'string' # Error! no such variable 'something else' exist in <current context>
+
+```
+
+## What if Melody had a more English like syntax?
+
+```melody
+
+let rangeCheck = fn (n: Integer)
+  let divisibleBy10 = fn n % 10 != 0
+  if n < 0 then
+    return 'negative'
+  elseif n >= 0 and n < 10 then
+    return 'single digit positive'
+  else
+    if n == 100 or n === 1000 or n == 10000 then
+      return 'some 10^n'
+    elseif divisibleBy10() then
+      return 'something else'
+    else
+      return 'I can\'t handle that!'
+    end
+  end
+end # <- though I do think of ends as being a little ugly
+
+```
+
+Though something to consider, that there is already quite a lot in the way of
+more symbolic notation.
+
+Maybe subsequently, if I can't have ruby call like syntax:
+
+```melody
+
+let new = fn (left: Real, top: Real, width: Real, height: Real)
+  let 'right:=' = fn (new_right: Real) \
+    (inst.width = new_right - inst.left) and new_right
+  let '.right' = fn inst.left + inst.width
+
+  let 'bottom:=' = fn (new_bottom: Real) \
+    (inst.height = new_bottom - inst.top) and new_bottom
+  let '.bottom' = fn inst.left + inst.width
+
+  return let inst = {
+    := top,
+    := left,
+    := width,
+    := height,
+    'right:=' = $'right:=',
+    = '.right',
+    '.'
+  }
+end
+
+let sshhh := 60
+let 'x:=' = fn sshhh := 60
+# let x = 'stuff' # actually.. okay
+# puts(x) # error 'x' has no getter
+let '.x' = fn () (sshhh + 10) * 2
+# let x = 'stuff' # error 'x' already defined
+x := 9 # cannot resolve 'x' to a variable, okay, check for a setter
+       # I found a 'x:=' method! I'll call that with rhs
+
+# as a consequence, funky things could happen
+let '.foo' := fn 'hello'
+puts(foo)
+# foo := 'stuff' # error, 'foo' is read-only
+$'.foo' := fn 'stuff'
+puts(foo) # works, prints 'stuff'
+
+```
