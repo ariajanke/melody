@@ -39,14 +39,12 @@
     return Object.keys(braceEnclosedVar).forEach(setToWindow);
   }
   function memoize(fn) {
-    let m = void 0;
-    let mSet = false;
-    return () => {
-      if (mSet)
-        return m;
-      mSet = true;
-      return m ??= fn();
+    let get = () => {
+      const v = fn();
+      get = () => v;
+      return v;
     };
+    return () => get();
   }
 
   // tests/test_helpers.ts
@@ -430,119 +428,6 @@
     });
   });
 
-  // tests/character_class_tests.ts
-  var { describeNamed: describeNamed3 } = TestHelpers;
-  describeNamed3({ CharacterClass }, () => {
-    describe(".classOf", () => {
-      const { classOf, classes } = CharacterClass;
-      it("numeric", () => {
-        expect(classOf("1")).toEqual(classes.numeric);
-      });
-      it("alphabetic", () => {
-        expect(classOf("q")).toEqual(classes.alphabetic);
-      });
-      it("operative", () => {
-        expect(classOf(",")).toEqual(classes.operative);
-      });
-      it("spacious", () => {
-        expect(classOf("	")).toEqual(classes.spacious);
-      });
-      it("new line", () => {
-        expect(classOf("\n")).toEqual(classes.newLine);
-      });
-    });
-  });
-
-  // tests/character_crawler_tests.ts
-  var { describeNamed: describeNamed4 } = TestHelpers;
-  describeNamed4({ CharacterCrawler }, () => {
-    it('crawls an operator ":="', () => {
-      const crawler = CharacterCrawler.make(":=");
-      const token = crawler.crawl().readToken().content();
-      expect(token).toEqual(":=");
-    });
-    it("skips whitespace", () => {
-      const crawler = CharacterCrawler.make("   :=");
-      const token = crawler.crawl().readToken().content();
-      expect(token).toEqual(":=");
-    });
-    it("treats trailing whitespace as having reached the end", () => {
-      const crawler = CharacterCrawler.make("a  ");
-      crawler.crawl().readToken();
-      expect(crawler.reachedEnd()).toBeTruthy();
-    });
-    it("crawls through the next token", () => {
-      const crawler = CharacterCrawler.make("puts('hello')");
-      const token = crawler.crawl().crawl().readToken().content();
-      expect(token).toEqual("(");
-    });
-  });
-
-  // tests/crawl_strategies_tests.ts
-  var { describeNamed: describeNamed5 } = TestHelpers;
-  describeNamed5({ CrawlStrategies }, () => {
-    const { alphabetic, literal, operative, spacious } = CharacterClass.classes;
-    const crawlAlphanumeric = CrawlStrategies[alphabetic];
-    const crawlOperator = CrawlStrategies[operative];
-    const crawlStringLiteral = CrawlStrategies[literal];
-    const crawlSpace = CrawlStrategies[spacious];
-    describeNamed5({ crawlAlphanumeric }, () => {
-      [
-        ["asdf", "end"],
-        ["asdf ", "spaces"],
-        ["asdf=", "operators"],
-        ["asdf'", "quotations"],
-        ["asdf\n", "new line"]
-      ].forEach((pair) => {
-        const [test, desc] = pair;
-        it(`stops at ${desc}`, () => {
-          expect(crawlAlphanumeric(test, 0)).toEqual(4);
-        });
-      });
-      it("stops at end with numbers", () => {
-        const str = "asdf123";
-        expect(crawlAlphanumeric(str, 0)).toEqual(str.length);
-      });
-    });
-    describeNamed5({ crawlOperator }, () => {
-      [
-        [":=", "re-assignable", 2],
-        ["= ", "assignment", 1],
-        ["+=", "accumulate", 2],
-        ["==", "two assignments", 1],
-        [",,", "commas", 1],
-        ["((", "parens", 1]
-      ].forEach((tuple) => {
-        const [test, desc, expected] = tuple;
-        it(`crawls out a: ${desc}`, () => {
-          expect(crawlOperator(test, 0)).toEqual(expected);
-        });
-      });
-    });
-    describeNamed5({ crawlSpace }, () => {
-      [
-        ["  a", "alphabetic"],
-        ["  ", "end"],
-        ["	\r=", "at operator with other whitespace"],
-        ["  +", "operator"],
-        ["  1", "numeric"],
-        ["  \n", "new line"]
-      ].forEach((pair) => {
-        const [test, desc] = pair;
-        it(`stops at ${desc}`, () => {
-          expect(crawlSpace(test, 0)).toEqual(2);
-        });
-      });
-    });
-    describeNamed5({ crawlStringLiteral }, () => {
-      it(`crawls stopping at nothing but another "'"`, () => {
-        const str = `'hello {" \\\\''`;
-        const end = crawlStringLiteral(str, 0);
-        expect(str.substring(0, end)).toEqual(`'hello {" \\\\'`);
-      });
-    });
-  });
-
   // src/ast_node.ts
   var { freeze: freeze4 } = Object;
   var AstNode = freeze4({
@@ -679,7 +564,7 @@
 
   // src/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
-    const { freeze: freeze7 } = Object;
+    const { memoize: memoize2, freeze: freeze7 } = Helpers;
     function skipNewLine(tokens, i) {
       if (tokens.at(i).type() === Token.types.newLine) {
         return i + 1;
@@ -690,26 +575,35 @@
       let mErrorFn = () => {
         return void 0;
       };
-      function startGroupBuild() {
+      const nextPart = memoize2(() => {
         const nextPartStart = skipNewLine(mTokens, start + 1);
-        const nextPart = PartialTreeNextTokenBuild.make(mTokens, nextPartStart, mEnd, closeBasedOn);
-        const unprocessedPart = nextPart.unprocessedPart();
+        return PartialTreeNextTokenBuild.make(mTokens, nextPartStart, mEnd, closeBasedOn);
+      });
+      function getUnprocessedPart() {
+        return nextPart().unprocessedPart() ?? (() => {
+          mErrorFn = nextPart().error;
+        })();
+      }
+      function startGroupBuild() {
+        const unprocessedPart = getUnprocessedPart();
         if (!unprocessedPart) {
-          mErrorFn = nextPart.error;
           return;
         }
-        const remainingRange = nextPart.remainingRange();
+        const remainingRange = nextPart().remainingRange();
         return freeze7({
           completedNode: void 0,
           incompleteNode,
           unprocessedPart,
-          // <- in group //: make(mTokens, ...remainingRange),
+          // <- in group
           // make... assume anything can happen
+          // v everything outside of group
           remainingPart: PartialTreeBuild.make(mTokens, ...remainingRange)
-          // <- everything outside of group //unprocessedPart
         });
       }
-      return freeze7({ startGroupBuild, error: () => mErrorFn() });
+      return freeze7({
+        startGroupBuild: memoize2(startGroupBuild),
+        error: () => mErrorFn()
+      });
     }
     return freeze7({ make: make2, skipNewLine });
   })();
@@ -887,6 +781,7 @@
   var PartialTreeStartIdentifierBuild = (() => {
     const { freeze: freeze7 } = Object;
     const { skipNewLine } = PartialTreeStartGroupBuild;
+    const tokenTypes = Token.types;
     const makeStringableNodeFor = AstStringableNode.makeForToken;
     function make2(mTokens, mStart, mEnd, mLineContScheme) {
       if (mStart === mEnd) {
@@ -912,7 +807,7 @@
         }
         const nextPos = mLineContScheme === lineContinuationScheme.inGroup ? skipNewLine(mTokens, mStart + 1) : mStart + 1;
         const next = mTokens.at(nextPos);
-        if (next.type() === Token.types.operator) {
+        if (next.type() === tokenTypes.operator) {
           if (!lhsNode.comesBeforeOperator(next)) {
             mErrorFn = () => freeze7({ message: `operator "${next.content()}" not allowed here` });
             return;
@@ -924,7 +819,7 @@
             return built;
           mErrorFn = group.error;
           return;
-        } else if (next.type() === Token.types.newLine) {
+        } else if (next.type() === tokenTypes.newLine) {
           if (mLineContScheme === lineContinuationScheme.normal) {
             return buildForLoneNode(lhsNode);
           }
@@ -953,6 +848,7 @@
   // src/partial_tree_build.ts
   var PartialTreeBuild = (() => {
     const { freeze: freeze7 } = Object;
+    const tokenTypes = Token.types;
     const kNothing = freeze7({
       completedNode: void 0,
       incompleteNode: void 0,
@@ -995,7 +891,7 @@
           return kNothing;
         }
         const start = mTokens.at(startPos);
-        if (start.type() === Token.types.identifier || start.type() === Token.types.stringLiteral) {
+        if (start.type() === tokenTypes.identifier || start.type() === tokenTypes.stringLiteral) {
           const ptsib = PartialTreeStartIdentifierBuild.make(mTokens, startPos, mEnd, mLineContScheme);
           const built = ptsib.build();
           if (built)
@@ -1018,7 +914,12 @@
       function error() {
         return mErrorFn();
       }
-      return freeze7({ buildPart, ignoresNewLines, error, db: { mLineContScheme, mStart, mEnd } });
+      return freeze7({
+        buildPart,
+        ignoresNewLines,
+        error,
+        db: { mLineContScheme, mStart, mEnd }
+      });
     }
     return freeze7({
       makeAssumeNotNewLine,
@@ -1034,31 +935,199 @@
     function buildProgramSequence(partBuild, tokens) {
       const res = partBuild.buildPart();
       if (res === void 0) {
-        throw Error(partBuild.error()?.message ?? "undefined behavior");
-      } else if (res.completedNode !== void 0) {
-        return [res.completedNode];
+        throw Error(partBuild.error().message);
       }
-      const completedNodes = (() => {
-        if (res.incompleteNode !== void 0) {
-          const [firstNode, ...remainingNodes] = buildProgramSequence(res.unprocessedPart, tokens);
-          return [res.incompleteNode.finish(firstNode), ...remainingNodes];
+      const withCompleteNode = (...nodes) => res.completedNode ? [res.completedNode, ...nodes] : nodes;
+      const handleUnprocessedPart = () => {
+        if (res.incompleteNode) {
+          const [head, ...tail] = buildProgramSequence(res.unprocessedPart, tokens);
+          return [res.incompleteNode.finish(head), ...tail];
+        } else if (res.unprocessedPart) {
+          return buildProgramSequence(res.unprocessedPart, tokens);
         }
         return [];
-      })();
-      const otherNodes = (() => {
+      };
+      const handleRemainingPart = () => {
         if (res.remainingPart) {
           return buildProgramSequence(res.remainingPart, tokens);
         }
         return [];
-      })();
-      return [...completedNodes, ...otherNodes];
+      };
+      return withCompleteNode(...handleUnprocessedPart(), ...handleRemainingPart());
     }
-    function buildFor(tokens) {
+    function buildFor2(tokens) {
       const partBuild = PartialTreeBuild.make(tokens, 0, tokens.count());
       return AstTupleNode.make(buildProgramSequence(partBuild, tokens));
     }
-    return Object.freeze({ buildFor });
+    return Object.freeze({ buildFor: buildFor2 });
   })();
+
+  // tests/ast_build_tests.ts
+  var { describeNamed: describeNamed3 } = TestHelpers;
+  describeNamed3({ AstBuild }, () => {
+    const makeToken = Token.forTesting.makeFromStringOnly;
+    describe("builds a mutli-line ast", () => {
+      let tokens = [];
+      const buildAst = () => AstBuild.buildFor(TokenCollection.make(tokens));
+      it("builds two function calls", () => {
+        tokens = [
+          makeToken("puts"),
+          makeToken("("),
+          makeToken("a"),
+          makeToken(")"),
+          makeToken("\n"),
+          makeToken("puts"),
+          makeToken("("),
+          makeToken("a"),
+          makeToken(")"),
+          makeToken("\n")
+        ];
+        let i = 0;
+        const visitor = AstNodeVisitor.makeFakeVisitor({
+          visitFunctionCall: (_0) => {
+            ++i;
+          }
+        });
+        buildAst().visit(visitor);
+        expect(i).toEqual(2);
+      });
+      it("two lines, operator first, call second", () => {
+        tokens = [
+          makeToken("\n"),
+          makeToken("a"),
+          makeToken(","),
+          makeToken("b"),
+          makeToken("\n"),
+          makeToken("puts"),
+          makeToken("("),
+          makeToken("a"),
+          makeToken(")"),
+          makeToken("\n")
+        ];
+        let i = 0;
+        const visitor = AstNodeVisitor.makeFakeVisitor({
+          visitFunctionCall: (_0) => {
+            ++i;
+          }
+        });
+        buildAst().visit(visitor);
+        expect(i).toEqual(1);
+      });
+    });
+  });
+
+  // tests/character_class_tests.ts
+  var { describeNamed: describeNamed4 } = TestHelpers;
+  describeNamed4({ CharacterClass }, () => {
+    describe(".classOf", () => {
+      const { classOf, classes } = CharacterClass;
+      it("numeric", () => {
+        expect(classOf("1")).toEqual(classes.numeric);
+      });
+      it("alphabetic", () => {
+        expect(classOf("q")).toEqual(classes.alphabetic);
+      });
+      it("operative", () => {
+        expect(classOf(",")).toEqual(classes.operative);
+      });
+      it("spacious", () => {
+        expect(classOf("	")).toEqual(classes.spacious);
+      });
+      it("new line", () => {
+        expect(classOf("\n")).toEqual(classes.newLine);
+      });
+    });
+  });
+
+  // tests/character_crawler_tests.ts
+  var { describeNamed: describeNamed5 } = TestHelpers;
+  describeNamed5({ CharacterCrawler }, () => {
+    it('crawls an operator ":="', () => {
+      const crawler = CharacterCrawler.make(":=");
+      const token = crawler.crawl().readToken().content();
+      expect(token).toEqual(":=");
+    });
+    it("skips whitespace", () => {
+      const crawler = CharacterCrawler.make("   :=");
+      const token = crawler.crawl().readToken().content();
+      expect(token).toEqual(":=");
+    });
+    it("treats trailing whitespace as having reached the end", () => {
+      const crawler = CharacterCrawler.make("a  ");
+      crawler.crawl().readToken();
+      expect(crawler.reachedEnd()).toBeTruthy();
+    });
+    it("crawls through the next token", () => {
+      const crawler = CharacterCrawler.make("puts('hello')");
+      const token = crawler.crawl().crawl().readToken().content();
+      expect(token).toEqual("(");
+    });
+  });
+
+  // tests/crawl_strategies_tests.ts
+  var { describeNamed: describeNamed6 } = TestHelpers;
+  describeNamed6({ CrawlStrategies }, () => {
+    const { alphabetic, literal, operative, spacious } = CharacterClass.classes;
+    const crawlAlphanumeric = CrawlStrategies[alphabetic];
+    const crawlOperator = CrawlStrategies[operative];
+    const crawlStringLiteral = CrawlStrategies[literal];
+    const crawlSpace = CrawlStrategies[spacious];
+    describeNamed6({ crawlAlphanumeric }, () => {
+      [
+        ["asdf", "end"],
+        ["asdf ", "spaces"],
+        ["asdf=", "operators"],
+        ["asdf'", "quotations"],
+        ["asdf\n", "new line"]
+      ].forEach((pair) => {
+        const [test, desc] = pair;
+        it(`stops at ${desc}`, () => {
+          expect(crawlAlphanumeric(test, 0)).toEqual(4);
+        });
+      });
+      it("stops at end with numbers", () => {
+        const str = "asdf123";
+        expect(crawlAlphanumeric(str, 0)).toEqual(str.length);
+      });
+    });
+    describeNamed6({ crawlOperator }, () => {
+      [
+        [":=", "re-assignable", 2],
+        ["= ", "assignment", 1],
+        ["+=", "accumulate", 2],
+        ["==", "two assignments", 1],
+        [",,", "commas", 1],
+        ["((", "parens", 1]
+      ].forEach((tuple) => {
+        const [test, desc, expected] = tuple;
+        it(`crawls out a: ${desc}`, () => {
+          expect(crawlOperator(test, 0)).toEqual(expected);
+        });
+      });
+    });
+    describeNamed6({ crawlSpace }, () => {
+      [
+        ["  a", "alphabetic"],
+        ["  ", "end"],
+        ["	\r=", "at operator with other whitespace"],
+        ["  +", "operator"],
+        ["  1", "numeric"],
+        ["  \n", "new line"]
+      ].forEach((pair) => {
+        const [test, desc] = pair;
+        it(`stops at ${desc}`, () => {
+          expect(crawlSpace(test, 0)).toEqual(2);
+        });
+      });
+    });
+    describeNamed6({ crawlStringLiteral }, () => {
+      it(`crawls stopping at nothing but another "'"`, () => {
+        const str = `'hello {" \\\\''`;
+        const end = crawlStringLiteral(str, 0);
+        expect(str.substring(0, end)).toEqual(`'hello {" \\\\'`);
+      });
+    });
+  });
 
   // src/context.ts
   var Context = (() => {
@@ -1084,7 +1153,7 @@
 
   // src/interpreter.ts
   var { freeze: freeze6 } = Object;
-  var Interpreter = freeze6({ make, compile });
+  var Interpreter = freeze6({ make, buildFor });
   var injections = freeze6({ putsFunction: console.log });
   function make(context = Context.make(), { putsFunction } = injections) {
     const nodeTypes = AstNode.types;
@@ -1116,15 +1185,15 @@
     }
     return freeze6({ visitFunctionCall, visitLetDeclaration, visitAssignment });
   }
-  function compile(inp) {
+  function buildFor(inp) {
     const tokenCollection = Tokenization.make().tokenize(inp);
     return AstBuild.buildFor(tokenCollection);
   }
   Helpers.expose({ Interpreter });
 
   // tests/interpreter_tests.ts
-  var { describeNamed: describeNamed6 } = TestHelpers;
-  describeNamed6({ Interpreter }, () => {
+  var { describeNamed: describeNamed7 } = TestHelpers;
+  describeNamed7({ Interpreter }, () => {
     function makePutsFunction() {
       const printedStrings = [];
       const putsFunction = (str) => {
@@ -1138,7 +1207,7 @@
     }
     describe("integration specs", () => {
       it('compiles and runs a "hello world!" program', () => {
-        const programRootNode = Interpreter.compile("puts('hello', ' world!')");
+        const programRootNode = Interpreter.buildFor("puts('hello', ' world!')");
         const { printedStrings, injections: injections2 } = makePutsFunction();
         const interpreter = makeWithInjections(injections2);
         programRootNode.visit(interpreter);
@@ -1147,34 +1216,35 @@
       it('compiles and runs a "hello world!" program with a variable', () => {
         const context = Context.make();
         context.declareVariable("foo", "hello world!");
-        const programRootNode = Interpreter.compile("puts(foo)");
+        const programRootNode = Interpreter.buildFor("puts(foo)");
         const { printedStrings, injections: injections2 } = makePutsFunction();
         const interpreter = Interpreter.make(context, injections2);
         programRootNode.visit(interpreter);
         expect(printedStrings).toEqual(["hello world!"]);
       });
       it('compiles and runs a multiline "hello world!" program', () => {
-        const programRootNode = Interpreter.compile("puts('hello')\nputs('world!')");
+        const programRootNode = Interpreter.buildFor("puts('hello')\nputs('world!')");
         const { printedStrings, injections: injections2 } = makePutsFunction();
         const interpreter = makeWithInjections(injections2);
         programRootNode.visit(interpreter);
         expect(printedStrings).toEqual(["hello", "world!"]);
       });
       it('compiles and runs a "hello world!" program with an assignment', () => {
-        const programRootNode = Interpreter.compile(`
+        const programRootNode = Interpreter.buildFor(`
         foo := 'hello world!'
         puts(foo)
       `);
         const { printedStrings, injections: injections2 } = makePutsFunction();
-        programRootNode.visit(makeWithInjections(injections2));
+        const intr = makeWithInjections(injections2);
+        programRootNode.visit(intr);
         expect(printedStrings).toEqual(["hello world!"]);
       });
     });
   });
 
   // tests/ast_assignment_node_tests.ts
-  var { describeNamed: describeNamed7 } = TestHelpers;
-  describeNamed7({ AstAssignmentNode }, () => {
+  var { describeNamed: describeNamed8 } = TestHelpers;
+  describeNamed8({ AstAssignmentNode }, () => {
     const { make: make2 } = AstAssignmentNode;
     const makeIdentifier = AstIdentifierNode.make;
     it("is reachable by visitor", () => {
@@ -1210,8 +1280,8 @@
   });
 
   // tests/ast_incomplete_binary_node_tests.ts
-  var { describeNamed: describeNamed8 } = TestHelpers;
-  describeNamed8({ AstIncompleteBinaryNode }, () => {
+  var { describeNamed: describeNamed9 } = TestHelpers;
+  describeNamed9({ AstIncompleteBinaryNode }, () => {
     const { makeForOperator } = AstIncompleteBinaryNode;
     function makeAnyNode() {
       return AstIdentifierNode.make("");
@@ -1234,8 +1304,8 @@
   });
 
   // tests/partial_tree_build_tests.ts
-  var { describeNamed: describeNamed9 } = TestHelpers;
-  describeNamed9({ PartialTreeBuild }, () => {
+  var { describeNamed: describeNamed10 } = TestHelpers;
+  describeNamed10({ PartialTreeBuild }, () => {
     const makeToken = Token.forTesting.makeFromStringOnly;
     const make2 = (tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length);
     const makePtbRes = (...tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length).buildPart();
@@ -1406,4 +1476,3 @@
     });
   });
 })();
-//!operatorAllowForNode(lhsNode, next.content())) {

@@ -13,7 +13,7 @@ export interface Interpreter extends AstNodeVisitor {
 
 };
 
-export const Interpreter = freeze({ make, compile });
+export const Interpreter = freeze({ make, buildFor });
 
 const injections = freeze({ putsFunction: console.log });
 
@@ -50,7 +50,7 @@ function make(context: Context = Context.make(), { putsFunction } = injections):
   return freeze({ visitFunctionCall, visitLetDeclaration, visitAssignment });
 }
 
-function compile(inp: string): AstNode {
+function buildFor(inp: string): AstNode {
   const tokenCollection = Tokenization.make().tokenize(inp);
   return AstBuild.buildFor(tokenCollection);
 }

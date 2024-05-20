@@ -38,23 +38,18 @@ export const PartialTreeStartGroupBuild = (() => {
         make(mTokens, nextPartStart, mEnd, closeBasedOn);
     });
 
-    const unprocessedPart = memoize(() => {
+    function getUnprocessedPart() {
       return nextPart().unprocessedPart() ?? (() => {
         mErrorFn = nextPart().error;
       })();
-    });
+    }
 
     function startGroupBuild(): PartialTreeBuildResult | undefined {
-      const nextPartStart = skipNewLine(mTokens, start + 1);
-      const nextPart = PartialTreeNextTokenBuild.
-        make(mTokens, nextPartStart, mEnd, closeBasedOn);
-
-      const unprocessedPart = nextPart.unprocessedPart();
+      const unprocessedPart = getUnprocessedPart();
       if (!unprocessedPart) {
-        mErrorFn = nextPart.error;
         return;
       }
-      const remainingRange = nextPart.remainingRange();
+      const remainingRange = nextPart().remainingRange();
       return freeze({
         completedNode: undefined,
         incompleteNode,
@@ -65,7 +60,10 @@ export const PartialTreeStartGroupBuild = (() => {
       });
     }
 
-    return freeze({ startGroupBuild, error: () => mErrorFn() });
+    return freeze({
+      startGroupBuild: memoize(startGroupBuild),
+      error: () => mErrorFn()
+    });
   }
 
   return freeze({ make, skipNewLine });

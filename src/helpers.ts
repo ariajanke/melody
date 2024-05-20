@@ -8,7 +8,8 @@ export const Helpers = Object.freeze({
   memoize,
 });
 
-export type StandardErrorsFn = (() => { message: string } | undefined);
+export type StandardError = Readonly<{ message: string }>;
+export type StandardErrorsFn = (() => StandardError | undefined);
 
 expose({ Helpers });
 

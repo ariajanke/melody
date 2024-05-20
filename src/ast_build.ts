@@ -2,6 +2,7 @@ import { AstNode } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
 import { PartialTreeBuild } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
+import { StandardError } from './helpers';
 
 export const AstBuild = (() => {
   function buildProgramSequence
@@ -9,33 +10,32 @@ export const AstBuild = (() => {
     AstNode[]
   {
     const res = partBuild.buildPart();
-
     if (res === undefined) {
-      throw Error(partBuild.error()?.message ?? 'undefined behavior');
-    } else if (res.completedNode !== undefined) {
-      // need to start "collapsing" incomplete binary nodes if they exist
-      return [res.completedNode];
+      throw Error(( partBuild.error() as StandardError ).message);
     }
-    const completedNodes = (() => {
-      if (res.incompleteNode !== undefined) {
-        // first range completes this
-        // second range becomes it's own node
-        // I guess recusion it is
-        const [firstNode, ...remainingNodes] =
-          buildProgramSequence(res.unprocessedPart as PartialTreeBuild, tokens); //tokens, res .nodeCompletingRange);
-        return [res.incompleteNode.finish(firstNode), ...remainingNodes];
+    const withCompleteNode = (...nodes: AstNode[]) =>
+      res.completedNode ? [res.completedNode, ...nodes] : nodes;
+
+    const handleUnprocessedPart = (): AstNode[] => {
+      if (res.incompleteNode) {
+        const [head, ...tail] =
+          buildProgramSequence(res.unprocessedPart as PartialTreeBuild, tokens);
+        
+        return [res.incompleteNode.finish(head), ...tail];
+      } else if(res.unprocessedPart) {
+        return buildProgramSequence(res.unprocessedPart, tokens);
       }
       return [];
-    })();
+    };
 
-    const otherNodes = (() => {
+    const handleRemainingPart = (): AstNode[] => {
       if (res.remainingPart) {
         return buildProgramSequence(res.remainingPart, tokens);
       }
       return [];
-    })();
+    };
 
-    return [...completedNodes, ...otherNodes];
+    return withCompleteNode(...handleUnprocessedPart(), ...handleRemainingPart());
   }
 
   function buildFor(tokens: TokenCollection): AstNode {
