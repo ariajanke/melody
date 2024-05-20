@@ -1,12 +1,16 @@
 import { AstNode, AstNodeVisitor, AstNodeType } from './ast_node';
+import { Token } from './token';
 
 const { freeze } = Object;
 
 export interface AstStringableNode extends AstNode {
-  asString: () => string
+  asString: () => string,
+  comesBeforeOperator: (operator: Token) => boolean
 }
 
 export const AstStringableNode = (() => {
+  const tokenTypes = Token.types;
+
   function _downcast(node: AstNode): AstStringableNode | undefined {
     switch (node.type()) {
     case AstNodeType.identifier:
@@ -27,16 +31,33 @@ export const AstStringableNode = (() => {
     return !!_downcast(node);
   }
 
-  return freeze({ downcast, hasCreated });
+  function makeForToken(token: Token): AstStringableNode {
+    return (() => {
+      switch (token.type()) {
+      case tokenTypes.identifier:
+        return AstIdentifierNode;
+      case tokenTypes.stringLiteral:
+        return AstStringLiteralNode;
+      default:
+        throw Error('cannot build stringable node from token');
+      }
+    })().make(token.content());
+  }
+
+  return freeze({ downcast, hasCreated, makeForToken });
 })();
 
 function makeStringableNodeClass(nodeType: symbol) {
-  function make(value: string): AstStringableNode {
+  function make
+    (value: string,
+     comesBeforeOperator: (operator: Token) => boolean):
+    AstStringableNode
+  {
     function visit(_0: AstNodeVisitor): void {}
     function type(): symbol { return nodeType; }
     function asString(): string { return value; }
 
-    return freeze({ visit, type, asString });
+    return freeze({ visit, type, asString, comesBeforeOperator });
   }
 
   return freeze({ make });
@@ -53,11 +74,27 @@ export const AstStringLiteralNode = (() => {
       return value.substring(1, value.length - 1);
     })();
 
-    return Super.make(value);
+    function comesBeforeOperator(operator: Token): boolean {
+      return operator.content() === ',';
+    }
+
+    return Super.make(value, comesBeforeOperator);
   }
 
   return freeze({ make });
 })();
 
-export const AstIdentifierNode =
-  makeStringableNodeClass(AstNodeType.identifier);
+export const AstIdentifierNode = (() => {
+  const Super = makeStringableNodeClass(AstNodeType.identifier);
+
+  function make(value: string): AstStringableNode {
+    function comesBeforeOperator(operator: Token): boolean {
+      const str = operator.content();
+      return str === ',' || str === '(' || str === ':=';
+    }
+
+    return Super.make(value, comesBeforeOperator);
+  }
+
+  return freeze({ make });
+})();

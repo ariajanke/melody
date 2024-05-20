@@ -58,26 +58,3 @@ export interface AstLetNode extends AstNode {
   takenNames: () => string[],
   primaryName: () => string
 };
-
-// Assignment is a special case of binary operator
-// const AstAssignmentOperatorNode = (() => {
-//   const { freeze } = Object;
-
-//   function makeReadOnly(lhs: AstNode, rhs: AstNode) {
-//     return construct(false, lhs, rhs);
-//   }
-
-//   function makeWritable(lhs: AstNode, rhs: AstNode) {
-//     return construct(true, lhs, rhs);
-//   }
-
-//   function construct(mIsReassignable: boolean, lhs: AstNode, rhs: AstNode) {
-//     if (lhs.type() !== AstNodeType.identifier) {
-//       return freeze({ message: `Only identifiers allowed on left hand side of assignment` });
-//     }
-
-//     // rhs needs to be evaluatable, and have an evaluatable type
-//   }
-
-//   return freeze({ makeReadOnly, makeWritable });
-// })();

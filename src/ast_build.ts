@@ -45,5 +45,3 @@ export const AstBuild = (() => {
 
   return Object.freeze({ buildFor });
 })();
-
-window['AstBuild'] = AstBuild;

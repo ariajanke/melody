@@ -65,9 +65,6 @@ export const CharacterCrawler = (() => {
       if (mStart < mInput.length) {
         crawledThrough();
       }
-      // while (crawledThrough() === characterClasses.spacious) {
-      //   // if (mStart)
-      // }
       return inst;
     }
 

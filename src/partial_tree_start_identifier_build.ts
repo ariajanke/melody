@@ -1,16 +1,16 @@
 import { PartialTreeBuild, PartialTreeBuildResult } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
 import { StandardErrorsFn } from './helpers';
-import { AstIdentifierNode, AstStringLiteralNode } from './ast_stringable_node';
+import { AstStringableNode } from './ast_stringable_node';
 import { Token } from './token';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
-import { AstNode, AstNodeType } from './ast_node';
 
 export const PartialTreeStartIdentifierBuild = (() => {
   const { freeze } = Object;
 
   const { skipNewLine } = PartialTreeStartGroupBuild;
+  const makeStringableNodeFor = AstStringableNode.makeForToken;
   function make(mTokens: TokenCollection, mStart: number, mEnd: number,
                 mLineContScheme: symbol) {
     if (mStart === mEnd) {
@@ -21,7 +21,7 @@ export const PartialTreeStartIdentifierBuild = (() => {
     const mStartToken = mTokens.at(mStart);
     let mErrorFn: StandardErrorsFn = () => { return undefined; };
 
-    function buildForLoneNode(node: AstNode): PartialTreeBuildResult {
+    function buildForLoneNode(node: AstStringableNode): PartialTreeBuildResult {
       return freeze({
         completedNode: node,
         incompleteNode: undefined,
@@ -30,27 +30,8 @@ export const PartialTreeStartIdentifierBuild = (() => {
       });
     }
 
-    function makeNodeForSingleToken(token: Token): AstNode {
-      const name = token.content();
-      if (token.type() === Token.types.identifier) {
-        return AstIdentifierNode.make(name);
-      } else if (token.type() === Token.types.stringLiteral) {
-        return AstStringLiteralNode.make(name);
-      }
-      throw Error(`unimplemented token type`);
-    }
-
-    function operatorAllowForNode(node: AstNode, operator: string): boolean {
-      if (node.type() === AstNodeType.identifier) {
-        return operator === '(' || operator === ',';
-      } else if (node.type() === AstNodeType.stringLiteral) {
-        return operator === ',';
-      }
-      throw Error(`unimplemented node type`);
-    }
-
     function build(): PartialTreeBuildResult | undefined {
-      const lhsNode = makeNodeForSingleToken(mStartToken);
+      const lhsNode = makeStringableNodeFor(mStartToken);
       if (mEnd - mStart === 1) {
         return buildForLoneNode(lhsNode);
       }
@@ -61,7 +42,7 @@ export const PartialTreeStartIdentifierBuild = (() => {
       if (next.type() === Token.types.operator) {
         // grouping, specifically a function call
         // new line ignoring range [mStart + 2, mEnd]
-        if (!operatorAllowForNode(lhsNode, next.content())) {
+        if (!lhsNode.comesBeforeOperator(next)) { //!operatorAllowForNode(lhsNode, next.content())) {
           mErrorFn = () =>
             freeze({ message: `operator "${next.content()}" not allowed here` });
           return;

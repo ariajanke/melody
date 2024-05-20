@@ -68,5 +68,3 @@ export const Tokenization = (() => {
 
   return freeze({ make });
 })();
-
-window['Tokenization'] = Tokenization;

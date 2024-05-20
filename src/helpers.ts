@@ -1,6 +1,8 @@
+const kDebugMode: boolean = globalThis['debug_mode'] ?? false;
+
 export const Helpers = Object.freeze({
   expose,
-  freeze: !window['debug_mode'] ? Object.freeze : pass,
+  freeze: !kDebugMode ? Object.freeze : pass,
   mapValues,
   depthOneCopy,
   memoize,
@@ -45,7 +47,11 @@ function depthOneCopy<Type>
 }
 
 function expose(braceEnclosedVar: object): void {
-  const setToWindow = (k: string) => window[k] = braceEnclosedVar[k];
+  const setToWindow = (k: string) => {
+    if (typeof window === 'undefined')
+      return;
+    window[k] = braceEnclosedVar[k];
+  };
   return Object.keys(braceEnclosedVar).forEach(setToWindow);
 }
 

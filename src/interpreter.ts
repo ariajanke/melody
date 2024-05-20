@@ -9,6 +9,7 @@ import { AstStringableNode } from './ast_stringable_node';
 import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstAssignmentNode } from './ast_assignment_node';
+import { Helpers } from './helpers';
 
 const { freeze } = Object;
 
@@ -57,4 +58,4 @@ function compile(inp: string): AstNode {
   return AstBuild.buildFor(tokenCollection);
 }
 
-window['Interpreter'] = Interpreter;
+Helpers.expose({ Interpreter });
