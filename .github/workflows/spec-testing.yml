@@ -23,7 +23,8 @@ jobs:
         with:
           node-version: 20.13.1
 
-      - name: run linter
+      - name: run specs
         run: |
           npm install \
-          npm run lint
+          npm run build_for_tests \
+          npm run test
