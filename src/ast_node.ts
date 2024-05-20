@@ -1,5 +1,3 @@
-import { Helpers } from './helpers';
-import { AstStringableNode } from './ast_stringable_node';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstAssignmentNode } from './ast_assignment_node';
 
@@ -60,34 +58,6 @@ export interface AstLetNode extends AstNode {
   takenNames: () => string[],
   primaryName: () => string
 };
-
-// export const AstLetNode = (() => {
-//   const { freeze } = Object;
-//   function takenNamesFor(name: string): string[] {
-//     return [];
-//   }
-
-//   function make
-//     (declaring: AstStringableNode, assignmentOperator: AstNode): AstLetNode
-//   {
-//     const { memoize } = Helpers;
-//     const mPrimaryName = declaring.asString();
-//     const takenNames = memoize(() => takenNamesFor(mPrimaryName));
-//     const inst = freeze({ visit, type, takenNames, primaryName });
-
-//     function visit(visitor: AstNodeVisitor): void {
-//       visitor.visitLetDeclaration(inst);
-//     }
-
-//     function type() { return AstNodeType.letDeclaration; }
-
-//     function primaryName() { return mPrimaryName; }
-
-//     return inst;
-//   }
-
-//   return freeze({ make });
-// })();
 
 // Assignment is a special case of binary operator
 const AstAssignmentOperatorNode = (() => {

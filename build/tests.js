@@ -544,7 +544,7 @@
   // tests/ast_build_tests.ts
   var { describeNamed: describeNamed3 } = TestHelpers;
 
-  // tests/character_class.ts
+  // tests/character_class_tests.ts
   var { describeNamed: describeNamed4 } = TestHelpers;
   describeNamed4({ CharacterClass }, () => {
     describe(".classOf", () => {
@@ -592,7 +592,7 @@
     });
   });
 
-  // tests/crawl_strategies.ts
+  // tests/crawl_strategies_tests.ts
   var { fdescribeNamed: fdescribeNamed2, describeNamed: describeNamed6 } = TestHelpers;
   describeNamed6({ CrawlStrategies }, () => {
     const { alphabetic, literal, operative, spacious } = CharacterClass.classes;
