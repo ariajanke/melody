@@ -2,7 +2,7 @@ import { TestHelpers } from './test_helpers';
 import { CrawlStrategies } from '../src/crawl_strategies';
 import { CharacterClass } from '../src/character_class';
 
-const { fdescribeNamed, describeNamed } = TestHelpers;
+const { describeNamed } = TestHelpers;
 
 describeNamed({ CrawlStrategies }, () => {
   const { alphabetic, literal, operative, spacious } = CharacterClass.classes;

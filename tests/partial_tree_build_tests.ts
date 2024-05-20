@@ -5,7 +5,7 @@ import { TokenCollection } from '../src/tokenization';
 import { AstNode, AstNodeType } from '../src/ast_node';
 import { AstStringableNode } from '../src/ast_stringable_node';
 
-const { fdescribeNamed, describeNamed } = TestHelpers;
+const { describeNamed } = TestHelpers;
 
 // general cases
 // ( \n ... )
@@ -41,7 +41,7 @@ describeNamed({ PartialTreeBuild }, () => {
 
     it('has no complete node', () => {
       expect(ptbRes()?.completedNode).toBeUndefined();
-    })
+    });
 
     it('has no incomplete node', () => {
       expect(ptbRes()?.incompleteNode).toBeUndefined();
@@ -110,7 +110,7 @@ describeNamed({ PartialTreeBuild }, () => {
 
     it('has no complete node', () => {
       expect(ptbRes()?.completedNode).toBeUndefined();
-    })
+    });
 
     it('has an incomplete node', () => {
       expect(ptbRes()?.incompleteNode).toBeDefined();
@@ -138,7 +138,7 @@ describeNamed({ PartialTreeBuild }, () => {
 
     it('has no complete node', () => {
       expect(ptbRes()?.completedNode).toBeUndefined();
-    })
+    });
 
     it('has an incomplete node', () => {
       expect(ptbRes()?.incompleteNode).toBeDefined();

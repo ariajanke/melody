@@ -4,63 +4,11 @@ export const Helpers = Object.freeze({
   mapValues,
   depthOneCopy,
   memoize,
-  // string: {
-  //   characterClassOf,
-  //   characterClasses: getCharacterClasses()
-  // }
 });
 
 export type StandardErrorsFn = (() => { message: string } | undefined);
 
 expose({ Helpers });
-
-function getCharacterClasses() {
-  return CharacterClasses;
-}
-
-const CharacterClasses = Object.freeze({
-  numeric: Symbol(),
-  alphabetic: Symbol(),
-  operative: Symbol(),
-  spacious: Symbol(),
-  literal: Symbol()
-});
-
-function arrayAsCharacterSetFor(arr: string[], characterClass: symbol) {
-  return arr.
-    map((k: string) => ({ [k]: characterClass })).
-    reduce(Object.assign);
-}
-
-const kCharacterToCharacterClass =
-  Object.assign(
-    arrayAsCharacterSetFor(
-      [
-        '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
-      ],
-      CharacterClasses.numeric),
-    arrayAsCharacterSetFor(
-      [
-        '=', ':', ',', '.', '(', ')', '{', '}'
-      ],
-      CharacterClasses.operative),
-    arrayAsCharacterSetFor(
-      [
-        ' ', '\t', '\n'
-      ],
-      CharacterClasses.spacious),
-    arrayAsCharacterSetFor(
-      [
-        '\'', '"'
-      ],
-      CharacterClasses.literal));
-
-function characterClassOf(character: string): symbol {
-  if (character.length !== 1) {
-    throw Error(`"${character}" is not one character`);
-  }
-  return kCharacterToCharacterClass[character] ?? CharacterClasses.alphabetic;
-}
 
 function pass<Type>(arg: Type): Type { return arg; }
 

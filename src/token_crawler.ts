@@ -1,10 +1,9 @@
 import { Helpers } from './helpers';
-import { Token } from './token';
 import { TokenCollection } from './tokenization';
 
 export const TokenCrawler = (() => {
   const { freeze } = Object;
-  const { memoize } = Helpers
+  const { memoize } = Helpers;
 
   function make
     (mTokens: TokenCollection,

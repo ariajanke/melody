@@ -15,7 +15,7 @@ describeNamed({ AstAssignmentNode }, () => {
   it('is reachable by visitor', () => {
     let mustBeTrue = false;
     const visitor = AstNodeVisitor.makeFakeVisitor({
-      visitAssignment: (_: AstNode, _1: AstNode) => {
+      visitAssignment: (_0: AstNode, _1: AstNode) => {
         mustBeTrue = true;
       }
     });
@@ -31,7 +31,7 @@ describeNamed({ AstAssignmentNode }, () => {
   it('maybe visited for assigee name', () => {
     let assigneeName = '';
     const visitor = AstNodeVisitor.makeFakeVisitor({
-      visitAssignment: (node: AstAssignmentNode, _: AstNode) => {
+      visitAssignment: (node: AstAssignmentNode, _0: AstNode) => {
         assigneeName = node.assigneeName();
       }
     });

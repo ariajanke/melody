@@ -10,7 +10,7 @@ export const Context = (() => {
 
   function make(): Context {
     // I'm not sure about other types
-    let mAvailableVariables: { [name: string]: string } = {};
+    const mAvailableVariables: { [name: string]: string } = {};
 
     function declareVariable(name: string, value: string) {
       if (mAvailableVariables[name]) {

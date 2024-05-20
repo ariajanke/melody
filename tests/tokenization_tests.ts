@@ -5,13 +5,13 @@ const { describeNamed } = TestHelpers;
 
 describeNamed({ Tokenization }, () => {
   const getTokens = (inp: string): string[] => {
-    let strings: string[] = [];
+    const strings: string[] = [];
     Tokenization.
       make().
       tokenize(inp).
       forEach((str: string) => strings.push(str));
     return strings;
-  }
+  };
 
   it('splits a hello world program', () => {
     expect(getTokens("puts('hello')")).toEqual(['puts', '(', "'hello'", ')']);

@@ -3,8 +3,6 @@ import { Token } from './token';
 
 export interface TokenCollection {
   count: () => number,
-  // typeAt: (i: number) => symbol,
-  // tokenAt: (i: number) => string,
   at: (i: number) => Token
   forEach: (fn: (token: string) => void) => void
 }
@@ -13,7 +11,7 @@ export interface Tokenization {
   tokenize: (input: string) => TokenCollection
 }
 
-const { freeze } = Object
+const { freeze } = Object;
 
 export const TokenCollection = (() => {
   function verifyNoTwoContiguousNewLineTokens(mTokens: Token[]) {
@@ -29,7 +27,7 @@ export const TokenCollection = (() => {
   }
 
   function make(mTokens: Token[]): TokenCollection {
-    let mLength = mTokens.length;
+    const mLength = mTokens.length;
     verifyNoTwoContiguousNewLineTokens(mTokens);
 
     function count(): number {

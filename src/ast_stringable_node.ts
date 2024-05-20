@@ -32,7 +32,7 @@ export const AstStringableNode = (() => {
 
 function makeStringableNodeClass(nodeType: symbol) {
   function make(value: string): AstStringableNode {
-    function visit(_: AstNodeVisitor): void {}
+    function visit(_0: AstNodeVisitor): void {}
     function type(): symbol { return nodeType; }
     function asString(): string { return value; }
 

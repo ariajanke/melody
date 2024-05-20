@@ -4,6 +4,8 @@ import { Context } from '../src/context';
 
 const { describeNamed } = TestHelpers;
 
+type PutsFunction = typeof console.log;
+
 describeNamed({ Interpreter }, () => {
   function makePutsFunction() {
     const printedStrings: string[] = [];
@@ -12,7 +14,7 @@ describeNamed({ Interpreter }, () => {
 
     return { injections, printedStrings };
   }
-  function makeWithInjections(injections: { putsFunction: (...args: any[]) => void }) {
+  function makeWithInjections(injections: { putsFunction: PutsFunction }) {
     return Interpreter.make(Context.make(), injections);
   }
   describe('integration specs', () => {
