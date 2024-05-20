@@ -26,5 +26,5 @@ jobs:
       - name: run specs
         run: |
           npm install \
-          npm run build_for_tests \
+          npm run build_for_tests && \
           npm run test

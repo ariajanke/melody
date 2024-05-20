@@ -1,12 +1,18 @@
-import { PartialTreeBuild } from './partial_tree_build';
+import { PartialTreeBuild, PartialTreeBuildResult } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
 import { StandardErrorsFn } from './helpers';
 import { PartialTreeNextTokenBuild } from './partial_tree_next_token_build';
 import { Token } from './token';
+import { Helpers } from './helpers';
+
+interface PartialTreeStartGroupBuild {
+  startGroupBuild: () => PartialTreeBuildResult | undefined,
+  error: StandardErrorsFn
+}
 
 export const PartialTreeStartGroupBuild = (() => {
-  const { freeze } = Object;
+  const { memoize, freeze } = Helpers;
 
   function skipNewLine(tokens: TokenCollection, i: number): number {
     if (tokens.at(i).type() === Token.types.newLine) {
@@ -21,16 +27,28 @@ export const PartialTreeStartGroupBuild = (() => {
                 incompleteNode: AstIncompleteBinaryNode | undefined,
                 start: number,
                 mEnd: number,
-                closeBasedOn: string)//:
-                //PartialTreeBuildResult | undefined
+                closeBasedOn: string):
+                PartialTreeStartGroupBuild
   {
     let mErrorFn: StandardErrorsFn = () => { return undefined; };
 
-    function startGroupBuild() {
-      // skip to opening token
+    const nextPart = memoize(() => {
+      const nextPartStart = skipNewLine(mTokens, start + 1);
+      return PartialTreeNextTokenBuild.
+        make(mTokens, nextPartStart, mEnd, closeBasedOn);
+    });
+
+    const unprocessedPart = memoize(() => {
+      return nextPart().unprocessedPart() ?? (() => {
+        mErrorFn = nextPart().error;
+      })();
+    });
+
+    function startGroupBuild(): PartialTreeBuildResult | undefined {
       const nextPartStart = skipNewLine(mTokens, start + 1);
       const nextPart = PartialTreeNextTokenBuild.
         make(mTokens, nextPartStart, mEnd, closeBasedOn);
+
       const unprocessedPart = nextPart.unprocessedPart();
       if (!unprocessedPart) {
         mErrorFn = nextPart.error;
@@ -40,9 +58,10 @@ export const PartialTreeStartGroupBuild = (() => {
       return freeze({
         completedNode: undefined,
         incompleteNode,
-        unprocessedPart, // <- in group //: make(mTokens, ...remainingRange),
+        unprocessedPart, // <- in group
         // make... assume anything can happen
-        remainingPart: PartialTreeBuild.make(mTokens, ...remainingRange) // <- everything outside of group //unprocessedPart
+        // v everything outside of group
+        remainingPart: PartialTreeBuild.make(mTokens, ...remainingRange) 
       });
     }
 

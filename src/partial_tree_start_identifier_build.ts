@@ -8,9 +8,10 @@ import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 
 export const PartialTreeStartIdentifierBuild = (() => {
   const { freeze } = Object;
-
   const { skipNewLine } = PartialTreeStartGroupBuild;
+  const tokenTypes = Token.types;
   const makeStringableNodeFor = AstStringableNode.makeForToken;
+
   function make(mTokens: TokenCollection, mStart: number, mEnd: number,
                 mLineContScheme: symbol) {
     if (mStart === mEnd) {
@@ -35,14 +36,13 @@ export const PartialTreeStartIdentifierBuild = (() => {
       if (mEnd - mStart === 1) {
         return buildForLoneNode(lhsNode);
       }
-      // ONLY skip new lines if in a group
       const nextPos = mLineContScheme === lineContinuationScheme.inGroup ?
         skipNewLine(mTokens, mStart + 1) : (mStart + 1);
       const next = mTokens.at(nextPos);
-      if (next.type() === Token.types.operator) {
-        // grouping, specifically a function call
-        // new line ignoring range [mStart + 2, mEnd]
-        if (!lhsNode.comesBeforeOperator(next)) { //!operatorAllowForNode(lhsNode, next.content())) {
+      if (next.type() === tokenTypes.operator) {
+
+        // extract me
+        if (!lhsNode.comesBeforeOperator(next)) {
           mErrorFn = () =>
             freeze({ message: `operator "${next.content()}" not allowed here` });
           return;
@@ -55,7 +55,10 @@ export const PartialTreeStartIdentifierBuild = (() => {
         if (built) return built;
         mErrorFn = group.error;
         return;
-      } else if (next.type() === Token.types.newLine) {
+
+      } else if (next.type() === tokenTypes.newLine) {
+
+        // also begging for extraction
         if (mLineContScheme === lineContinuationScheme.normal) {
           return buildForLoneNode(lhsNode);
         }

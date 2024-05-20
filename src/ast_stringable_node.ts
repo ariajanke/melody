@@ -1,4 +1,4 @@
-import { AstNode, AstNodeVisitor, AstNodeType } from './ast_node';
+import { AstNode, AstNodeVisitor } from './ast_node';
 import { Token } from './token';
 
 const { freeze } = Object;
@@ -10,11 +10,12 @@ export interface AstStringableNode extends AstNode {
 
 export const AstStringableNode = (() => {
   const tokenTypes = Token.types;
+  const nodeTypes = AstNode.types;
 
   function _downcast(node: AstNode): AstStringableNode | undefined {
     switch (node.type()) {
-    case AstNodeType.identifier:
-    case AstNodeType.stringLiteral:
+    case nodeTypes.identifier:
+    case nodeTypes.stringLiteral:
       return node as AstStringableNode;
     default: break;
     }
@@ -64,7 +65,7 @@ function makeStringableNodeClass(nodeType: symbol) {
 }
 
 export const AstStringLiteralNode = (() => {
-  const Super = makeStringableNodeClass(AstNodeType.stringLiteral);
+  const Super = makeStringableNodeClass(AstNode.types.stringLiteral);
 
   function make(value: string): AstStringableNode {
     value = (() => {
@@ -85,7 +86,7 @@ export const AstStringLiteralNode = (() => {
 })();
 
 export const AstIdentifierNode = (() => {
-  const Super = makeStringableNodeClass(AstNodeType.identifier);
+  const Super = makeStringableNodeClass(AstNode.types.identifier);
 
   function make(value: string): AstStringableNode {
     function comesBeforeOperator(operator: Token): boolean {

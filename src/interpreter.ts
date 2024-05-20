@@ -1,9 +1,5 @@
 import { AstBuild } from './ast_build';
-import {
-  AstNodeVisitor,
-  AstNodeType,
-  AstNode,
-} from './ast_node';
+import { AstNodeVisitor, AstNode } from './ast_node';
 import { Context } from './context';
 import { AstStringableNode } from './ast_stringable_node';
 import { Tokenization } from './tokenization';
@@ -22,6 +18,7 @@ export const Interpreter = freeze({ make, compile });
 const injections = freeze({ putsFunction: console.log });
 
 function make(context: Context = Context.make(), { putsFunction } = injections): Interpreter {
+  const nodeTypes = AstNode.types;
   function visitFunctionCall(node: AstFunctionCallNode) {
     if (node.name === 'puts') {
       node.arguments.forEach((node: AstNode) => {
@@ -33,9 +30,9 @@ function make(context: Context = Context.make(), { putsFunction } = injections):
   function getValueOf(node: AstStringableNode): string {
     const val = node.asString();
     switch (node.type()) {
-    case AstNodeType.stringLiteral:
+    case nodeTypes.stringLiteral:
       return val;
-    case AstNodeType.identifier:
+    case nodeTypes.identifier:
       return context.getValueOfVariable(val) ?? (() => {
         throw Error(`variable ${val} not declared`);
       })();

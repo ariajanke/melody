@@ -48,7 +48,7 @@ export const PartialTreeNextTokenBuild = (() => {
       return undefined;
     });
 
-    const unprocessedPart = memoize(() => {
+    const unprocessedPart = memoize((): PartialTreeBuild | undefined => {
       const pos = closePosition();
       if (!pos) return undefined;
       return PartialTreeBuild.makeAssumeNotNewLine(mTokens, mStart, pos, lineCont);

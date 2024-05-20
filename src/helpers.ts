@@ -12,7 +12,7 @@ export type StandardErrorsFn = (() => { message: string } | undefined);
 
 expose({ Helpers });
 
-function pass<Type>(arg: Type): Type { return arg; }
+function pass<Type>(arg: Type): Readonly<Type> { return arg; }
 
 function forEachKeyIn<Type>
   (obj: { [id: symbol | string]: Type },
@@ -56,11 +56,10 @@ function expose(braceEnclosedVar: object): void {
 }
 
 function memoize<Type>(fn: () => Type): () => Type {
-  let m: Type | undefined = undefined;
-  let mSet = false;
-  return () => {
-    if (mSet) return m as Type;
-    mSet = true;
-    return m ??= fn();
+  let get = (): Type => {
+    const v = fn();
+    get = () => v;
+    return v;
   };
+  return () => get();
 }

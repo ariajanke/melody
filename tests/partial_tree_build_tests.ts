@@ -2,7 +2,7 @@ import { PartialTreeBuild, PartialTreeBuildResult } from '../src/partial_tree_bu
 import { TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
-import { AstNode, AstNodeType } from '../src/ast_node';
+import { AstNode } from '../src/ast_node';
 import { AstStringableNode } from '../src/ast_stringable_node';
 
 const { describeNamed } = TestHelpers;
@@ -79,7 +79,7 @@ describeNamed({ PartialTreeBuild }, () => {
 
     it('incomplete part builds an identifier node', () => {
       const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
-      expect(node?.type()).toBeDefined(AstNodeType.identifier);
+      expect(node?.type()).toBeDefined(AstNode.types.identifier);
     });
 
     it('incomplete part builds an "a" stringable node', () => {
@@ -158,7 +158,7 @@ describeNamed({ PartialTreeBuild }, () => {
         partBuildRes?.completedNode;
       const tupleNode = completedNode && res?.incompleteNode?.
         finish(completedNode as AstNode);
-      expect(tupleNode?.type()).toEqual(AstNodeType.tuple);
+      expect(tupleNode?.type()).toEqual(AstNode.types.tuple);
     });
   });
 
@@ -192,7 +192,7 @@ describeNamed({ PartialTreeBuild }, () => {
         const res = ptbRes();
         const node = res?.unprocessedPart?.buildPart()?.completedNode;
         const fCall = node && res?.incompleteNode?.finish(node);
-        expect(fCall?.type()).toEqual(AstNodeType.functionCall);
+        expect(fCall?.type()).toEqual(AstNode.types.functionCall);
       });
     });
 
@@ -233,7 +233,7 @@ describeNamed({ PartialTreeBuild }, () => {
       const res = make(args).buildPart();
 
       expect(res).toBeDefined();
-      expect(res?.completedNode?.type()).toEqual(AstNodeType.identifier);
+      expect(res?.completedNode?.type()).toEqual(AstNode.types.identifier);
       expect(res?.incompleteNode).toBeUndefined();
     });
   });

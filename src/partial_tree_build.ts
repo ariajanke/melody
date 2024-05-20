@@ -22,6 +22,8 @@ export interface PartialTreeBuildResult {
 export const PartialTreeBuild = (() => {
   const { freeze } = Object;
 
+  const tokenTypes = Token.types;
+
   const kNothing = freeze({
     completedNode: undefined,
     incompleteNode: undefined,
@@ -46,7 +48,7 @@ export const PartialTreeBuild = (() => {
 
   function makeAssumeNotNewLine
     (mTokens: TokenCollection, mStart: number, mEnd: number,
-      mLineContScheme)
+     mLineContScheme: symbol)
   {
     return construct(mTokens, mStart, mEnd, mLineContScheme);
   }
@@ -85,8 +87,8 @@ export const PartialTreeBuild = (() => {
         return kNothing;
       }
       const start = mTokens.at(startPos);
-      if (start.type() === Token.types.identifier ||
-          start.type() === Token.types.stringLiteral)
+      if (start.type() === tokenTypes.identifier ||
+          start.type() === tokenTypes.stringLiteral)
       {
         const ptsib = PartialTreeStartIdentifierBuild.
           make(mTokens, startPos, mEnd, mLineContScheme);
@@ -114,7 +116,12 @@ export const PartialTreeBuild = (() => {
 
     function error() { return mErrorFn(); }
 
-    return freeze({ buildPart, ignoresNewLines, error, db: { mLineContScheme, mStart, mEnd } });
+    return freeze({
+      buildPart,
+      ignoresNewLines,
+      error,
+      db: { mLineContScheme, mStart, mEnd }
+    });
   }
 
   return freeze({

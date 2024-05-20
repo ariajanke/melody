@@ -1,6 +1,6 @@
 import { TestHelpers } from './test_helpers';
 import { AstIncompleteBinaryNode } from '../src/ast_incomplete_binary_node';
-import { AstNodeType } from '../src/ast_node';
+import { AstNode } from '../src/ast_node';
 import { AstIdentifierNode } from '../src/ast_stringable_node';
 
 const { describeNamed } = TestHelpers;
@@ -18,16 +18,16 @@ describeNamed({ AstIncompleteBinaryNode }, () => {
 
   it('defers creation of a function call', () => {
     const createdType = makeForOperatorWithAnyNodes('(').type();
-    expect(createdType).toEqual(AstNodeType.functionCall);
+    expect(createdType).toEqual(AstNode.types.functionCall);
   });
 
   it('defers creation of a tuple', () => {
     const createdType = makeForOperatorWithAnyNodes(',').type();
-    expect(createdType).toEqual(AstNodeType.tuple);
+    expect(createdType).toEqual(AstNode.types.tuple);
   });
 
   it('defers creation of an assignment', () => {
     const createdType = makeForOperatorWithAnyNodes(':=').type();
-    expect(createdType).toEqual(AstNodeType.assignment);
+    expect(createdType).toEqual(AstNode.types.assignment);
   });
 });

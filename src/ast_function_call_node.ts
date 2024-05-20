@@ -1,6 +1,5 @@
 import { AstNode, AstNodeVisitor } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
-import { AstNodeType } from './ast_node';
 import { AstStringableNode } from './ast_stringable_node';
 
 export interface AstFunctionCallNode extends AstNode {
@@ -9,9 +8,10 @@ export interface AstFunctionCallNode extends AstNode {
 }
 
 export const AstFunctionCallNode = (() => {
+  const nodeTypes = AstNode.types;
   function make(lhs: AstNode, rhs: AstNode) {
     const arguments_: AstTupleNode = (() => {
-      if (rhs.type() === AstNodeType.tuple) {
+      if (rhs.type() === nodeTypes.tuple) {
         return rhs as AstTupleNode;
       }
       return AstTupleNode.makeUnary(rhs);
@@ -20,8 +20,8 @@ export const AstFunctionCallNode = (() => {
     const name: string = (() => {
       // switch on type... nice
       switch (lhs.type()) {
-      case AstNodeType.identifier:
-      case AstNodeType.stringLiteral:
+      case nodeTypes.identifier:
+      case nodeTypes.stringLiteral:
         return (lhs as AstStringableNode).asString();
       default: throw Error('unhandled');
       }
@@ -31,7 +31,7 @@ export const AstFunctionCallNode = (() => {
       name,
       arguments: arguments_,
       visit,
-      type: () => AstNodeType.functionCall
+      type: () => nodeTypes.functionCall
     });
 
     function visit(visitor: AstNodeVisitor): void {

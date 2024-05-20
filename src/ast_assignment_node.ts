@@ -1,4 +1,4 @@
-import { AstNode, AstNodeType, AstNodeVisitor } from './ast_node';
+import { AstNode, AstNodeVisitor } from './ast_node';
 import { AstStringableNode } from './ast_stringable_node';
 
 export interface AstAssignmentNode extends AstNode {
@@ -7,7 +7,7 @@ export interface AstAssignmentNode extends AstNode {
 
 export const AstAssignmentNode = (() => {
   const { freeze } = Object;
-  const assignmentType = AstNodeType.assignment;
+  const assignmentType = AstNode.types.assignment;
 
   // for rhs, I'm now entering the domain of evaluating expressions
   // as such time to read up then?

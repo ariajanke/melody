@@ -64,8 +64,8 @@
 
   // src/character_class.ts
   var CharacterClass = (() => {
-    const { freeze: freeze6, assign } = Object;
-    const classes = freeze6({
+    const { freeze: freeze7, assign } = Object;
+    const classes = freeze7({
       numeric: Symbol(),
       alphabetic: Symbol(),
       operative: Symbol(),
@@ -133,7 +133,7 @@
       }
       return kCharacterToCharacterClass[character] ?? classes.alphabetic;
     }
-    return freeze6({
+    return freeze7({
       classes,
       classOf
     });
@@ -141,7 +141,7 @@
 
   // src/crawl_strategies.ts
   var CrawlStrategies = (() => {
-    const { freeze: freeze6 } = Object;
+    const { freeze: freeze7 } = Object;
     const { classes, classOf } = CharacterClass;
     function crawlAlphanumeric(input, start) {
       const { length } = input;
@@ -200,7 +200,7 @@
       }
       return length;
     }
-    return freeze6({
+    return freeze7({
       [classes.alphabetic]: crawlAlphanumeric,
       [classes.literal]: crawlStringLiteral,
       [classes.operative]: crawlOperator,
@@ -289,14 +289,14 @@
 
   // src/character_crawler.ts
   var CharacterCrawler = (() => {
-    const { freeze: freeze6 } = Object;
-    const injections2 = freeze6({
+    const { freeze: freeze7 } = Object;
+    const injections2 = freeze7({
       CrawlStrategies,
       characterClassOf: CharacterClass.classOf,
       characterClasses: CharacterClass.classes
     });
     function make2(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
-      const inst = freeze6({ reachedEnd, readToken, crawl });
+      const inst = freeze7({ reachedEnd, readToken, crawl });
       let mStart = 0;
       let mEnd = 0;
       let mReadToken = Token.kBlankToken;
@@ -338,7 +338,7 @@
       }
       return inst;
     }
-    return freeze6({ make: make2 });
+    return freeze7({ make: make2 });
   })();
 
   // src/tokenization.ts
@@ -544,16 +544,18 @@
   });
 
   // src/ast_node.ts
-  var AstNodeType = Object.freeze({
-    functionCall: Symbol(),
-    tuple: Symbol(),
-    stringLiteral: Symbol(),
-    identifier: Symbol(),
-    letDeclaration: Symbol(),
-    assignment: Symbol()
+  var { freeze: freeze4 } = Object;
+  var AstNode = freeze4({
+    types: {
+      functionCall: Symbol(),
+      tuple: Symbol(),
+      stringLiteral: Symbol(),
+      identifier: Symbol(),
+      letDeclaration: Symbol(),
+      assignment: Symbol()
+    }
   });
   var AstNodeVisitor = (() => {
-    const { freeze: freeze6 } = Object;
     const kDefaultImplementations = (() => {
       function visitFunctionCall(_0) {
       }
@@ -561,7 +563,7 @@
       }
       function visitLetDeclaration(_0) {
       }
-      return freeze6({ visitAssignment, visitFunctionCall, visitLetDeclaration });
+      return freeze4({ visitAssignment, visitFunctionCall, visitLetDeclaration });
     })();
     function makeFakeVisitor({
       visitAssignment,
@@ -569,19 +571,19 @@
       visitLetDeclaration
     }) {
       const defaults = kDefaultImplementations;
-      return freeze6({
+      return freeze4({
         visitAssignment: visitAssignment ?? defaults.visitAssignment,
         visitFunctionCall: visitFunctionCall ?? defaults.visitFunctionCall,
         visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration
       });
     }
-    return freeze6({ makeFakeVisitor });
+    return freeze4({ makeFakeVisitor });
   })();
 
   // src/ast_tuple_node.ts
   var AstTupleNode = (() => {
-    const { freeze: freeze6 } = Object;
-    const tupleType = AstNodeType.tuple;
+    const { freeze: freeze7 } = Object;
+    const tupleType = AstNode.types.tuple;
     function makeBinary(lhs, rhs) {
       return makeWithPair(lhs, rhs);
     }
@@ -597,7 +599,7 @@
       return inst;
     }
     function make2(mSubExpressions) {
-      const inst = freeze6({ forEach, count, visit, type, mergeWith });
+      const inst = freeze7({ forEach, count, visit, type, mergeWith });
       function forEach(fn) {
         mSubExpressions.forEach((node) => fn(node));
       }
@@ -623,14 +625,14 @@
       }
       return inst;
     }
-    return freeze6({ makeBinary, makeUnary, make: make2 });
+    return freeze7({ makeBinary, makeUnary, make: make2 });
   })();
 
   // src/partial_tree_next_token_build.ts
   var PartialTreeNextTokenBuild = (() => {
-    const { freeze: freeze6 } = Object;
+    const { freeze: freeze7 } = Object;
     const { memoize: memoize2 } = Helpers;
-    const kCloseMapping = freeze6({
+    const kCloseMapping = freeze7({
       ["("]: ")"
     });
     function make2(mTokens, mStart, mEnd, mFindCloseBasedOn) {
@@ -649,7 +651,7 @@
             return i;
           }
         }
-        mError = memoize2(() => freeze6({
+        mError = memoize2(() => freeze7({
           message: `Cannot find close position for ${mFindCloseBasedOn}`
         }));
         return void 0;
@@ -670,14 +672,14 @@
       function error() {
         return mError();
       }
-      return freeze6({ unprocessedPart, remainingRange, error });
+      return freeze7({ unprocessedPart, remainingRange, error });
     }
-    return freeze6({ make: make2 });
+    return freeze7({ make: make2 });
   })();
 
   // src/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
-    const { freeze: freeze6 } = Object;
+    const { freeze: freeze7 } = Object;
     function skipNewLine(tokens, i) {
       if (tokens.at(i).type() === Token.types.newLine) {
         return i + 1;
@@ -697,7 +699,7 @@
           return;
         }
         const remainingRange = nextPart.remainingRange();
-        return freeze6({
+        return freeze7({
           completedNode: void 0,
           incompleteNode,
           unprocessedPart,
@@ -707,19 +709,20 @@
           // <- everything outside of group //unprocessedPart
         });
       }
-      return freeze6({ startGroupBuild, error: () => mErrorFn() });
+      return freeze7({ startGroupBuild, error: () => mErrorFn() });
     }
-    return freeze6({ make: make2, skipNewLine });
+    return freeze7({ make: make2, skipNewLine });
   })();
 
   // src/ast_stringable_node.ts
-  var { freeze: freeze4 } = Object;
+  var { freeze: freeze5 } = Object;
   var AstStringableNode = (() => {
     const tokenTypes = Token.types;
+    const nodeTypes = AstNode.types;
     function _downcast(node) {
       switch (node.type()) {
-        case AstNodeType.identifier:
-        case AstNodeType.stringLiteral:
+        case nodeTypes.identifier:
+        case nodeTypes.stringLiteral:
           return node;
         default:
           break;
@@ -746,7 +749,7 @@
         }
       })().make(token.content());
     }
-    return freeze4({ downcast, hasCreated, makeForToken });
+    return freeze5({ downcast, hasCreated, makeForToken });
   })();
   function makeStringableNodeClass(nodeType) {
     function make2(value, comesBeforeOperator) {
@@ -758,12 +761,12 @@
       function asString() {
         return value;
       }
-      return freeze4({ visit, type, asString, comesBeforeOperator });
+      return freeze5({ visit, type, asString, comesBeforeOperator });
     }
-    return freeze4({ make: make2 });
+    return freeze5({ make: make2 });
   }
   var AstStringLiteralNode = (() => {
-    const Super = makeStringableNodeClass(AstNodeType.stringLiteral);
+    const Super = makeStringableNodeClass(AstNode.types.stringLiteral);
     function make2(value) {
       value = (() => {
         if (value.length <= 2) {
@@ -776,10 +779,10 @@
       }
       return Super.make(value, comesBeforeOperator);
     }
-    return freeze4({ make: make2 });
+    return freeze5({ make: make2 });
   })();
   var AstIdentifierNode = (() => {
-    const Super = makeStringableNodeClass(AstNodeType.identifier);
+    const Super = makeStringableNodeClass(AstNode.types.identifier);
     function make2(value) {
       function comesBeforeOperator(operator) {
         const str = operator.content();
@@ -787,22 +790,23 @@
       }
       return Super.make(value, comesBeforeOperator);
     }
-    return freeze4({ make: make2 });
+    return freeze5({ make: make2 });
   })();
 
   // src/ast_function_call_node.ts
   var AstFunctionCallNode = (() => {
+    const nodeTypes = AstNode.types;
     function make2(lhs, rhs) {
       const arguments_ = (() => {
-        if (rhs.type() === AstNodeType.tuple) {
+        if (rhs.type() === nodeTypes.tuple) {
           return rhs;
         }
         return AstTupleNode.makeUnary(rhs);
       })();
       const name = (() => {
         switch (lhs.type()) {
-          case AstNodeType.identifier:
-          case AstNodeType.stringLiteral:
+          case nodeTypes.identifier:
+          case nodeTypes.stringLiteral:
             return lhs.asString();
           default:
             throw Error("unhandled");
@@ -812,7 +816,7 @@
         name,
         arguments: arguments_,
         visit,
-        type: () => AstNodeType.functionCall
+        type: () => nodeTypes.functionCall
       });
       function visit(visitor) {
         visitor.visitFunctionCall(inst);
@@ -824,11 +828,11 @@
 
   // src/ast_assignment_node.ts
   var AstAssignmentNode = (() => {
-    const { freeze: freeze6 } = Object;
-    const assignmentType = AstNodeType.assignment;
+    const { freeze: freeze7 } = Object;
+    const assignmentType = AstNode.types.assignment;
     function make2(lhs, rhs) {
       const assignee = AstStringableNode.downcast(lhs);
-      const inst = freeze6({ visit, type, assigneeName });
+      const inst = freeze7({ visit, type, assigneeName });
       function visit(visitor) {
         visitor.visitAssignment(inst, rhs);
       }
@@ -840,12 +844,12 @@
       }
       return inst;
     }
-    return freeze6({ make: make2 });
+    return freeze7({ make: make2 });
   })();
 
   // src/ast_incomplete_binary_node.ts
   var AstIncompleteBinaryNode = (() => {
-    const { freeze: freeze6 } = Object;
+    const { freeze: freeze7 } = Object;
     function _selectedConstructor(operatorStr) {
       switch (operatorStr) {
         case "(":
@@ -874,14 +878,14 @@
         }
         return AstStringableNode.downcast(lhs).asString();
       }
-      return freeze6({ finish, lhsAsString });
+      return freeze7({ finish, lhsAsString });
     }
-    return freeze6({ make: make2, makeForOperator });
+    return freeze7({ make: make2, makeForOperator });
   })();
 
   // src/partial_tree_start_identifier_build.ts
   var PartialTreeStartIdentifierBuild = (() => {
-    const { freeze: freeze6 } = Object;
+    const { freeze: freeze7 } = Object;
     const { skipNewLine } = PartialTreeStartGroupBuild;
     const makeStringableNodeFor = AstStringableNode.makeForToken;
     function make2(mTokens, mStart, mEnd, mLineContScheme) {
@@ -894,7 +898,7 @@
         return void 0;
       };
       function buildForLoneNode(node) {
-        return freeze6({
+        return freeze7({
           completedNode: node,
           incompleteNode: void 0,
           unprocessedPart: void 0,
@@ -910,7 +914,7 @@
         const next = mTokens.at(nextPos);
         if (next.type() === Token.types.operator) {
           if (!lhsNode.comesBeforeOperator(next)) {
-            mErrorFn = () => freeze6({ message: `operator "${next.content()}" not allowed here` });
+            mErrorFn = () => freeze7({ message: `operator "${next.content()}" not allowed here` });
             return;
           }
           const incompleteNode = AstIncompleteBinaryNode.makeForOperator(next.content(), lhsNode);
@@ -928,34 +932,34 @@
             throw Error("impossible branch??");
           }
           const { normal } = PartialTreeBuild.lineContinuationScheme;
-          return freeze6({
+          return freeze7({
             completedNode: lhsNode,
             incompleteNode: void 0,
             unprocessedPart: void 0,
             remainingPart: PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal)
           });
         } else {
-          mErrorFn = () => freeze6({
+          mErrorFn = () => freeze7({
             message: `not sure how to handle token "${next.content()}"`
           });
           return;
         }
       }
-      return freeze6({ build, error: () => mErrorFn() });
+      return freeze7({ build, error: () => mErrorFn() });
     }
-    return freeze6({ make: make2 });
+    return freeze7({ make: make2 });
   })();
 
   // src/partial_tree_build.ts
   var PartialTreeBuild = (() => {
-    const { freeze: freeze6 } = Object;
-    const kNothing = freeze6({
+    const { freeze: freeze7 } = Object;
+    const kNothing = freeze7({
       completedNode: void 0,
       incompleteNode: void 0,
       unprocessedPart: void 0,
       remainingPart: void 0
     });
-    const lineContinuationScheme = freeze6({
+    const lineContinuationScheme = freeze7({
       inGroup: Symbol(),
       operatorContinued: Symbol(),
       normal: Symbol()
@@ -1002,21 +1006,21 @@
           if (startPos + 1 < mEnd) {
             return _fromGroupStart(void 0, startPos, start.content());
           }
-          mErrorFn = () => freeze6({
+          mErrorFn = () => freeze7({
             message: "end of input reached before being able to close"
           });
           return;
         }
-        mErrorFn = () => freeze6({
+        mErrorFn = () => freeze7({
           message: "unimplemented case"
         });
       }
       function error() {
         return mErrorFn();
       }
-      return freeze6({ buildPart, ignoresNewLines, error, db: { mLineContScheme, mStart, mEnd } });
+      return freeze7({ buildPart, ignoresNewLines, error, db: { mLineContScheme, mStart, mEnd } });
     }
-    return freeze6({
+    return freeze7({
       makeAssumeNotNewLine,
       make: make2,
       kNothing,
@@ -1058,7 +1062,7 @@
 
   // src/context.ts
   var Context = (() => {
-    const { freeze: freeze6 } = Object;
+    const { freeze: freeze7 } = Object;
     function make2() {
       const mAvailableVariables = {};
       function declareVariable(name, value) {
@@ -1073,16 +1077,17 @@
       function getValueOfVariable(name) {
         return mAvailableVariables[name];
       }
-      return freeze6({ declareVariable, getValueOfVariable, setVariable });
+      return freeze7({ declareVariable, getValueOfVariable, setVariable });
     }
-    return freeze6({ make: make2 });
+    return freeze7({ make: make2 });
   })();
 
   // src/interpreter.ts
-  var { freeze: freeze5 } = Object;
-  var Interpreter = freeze5({ make, compile });
-  var injections = freeze5({ putsFunction: console.log });
+  var { freeze: freeze6 } = Object;
+  var Interpreter = freeze6({ make, compile });
+  var injections = freeze6({ putsFunction: console.log });
   function make(context = Context.make(), { putsFunction } = injections) {
+    const nodeTypes = AstNode.types;
     function visitFunctionCall(node) {
       if (node.name === "puts") {
         node.arguments.forEach((node2) => {
@@ -1093,9 +1098,9 @@
     function getValueOf(node) {
       const val = node.asString();
       switch (node.type()) {
-        case AstNodeType.stringLiteral:
+        case nodeTypes.stringLiteral:
           return val;
-        case AstNodeType.identifier:
+        case nodeTypes.identifier:
           return context.getValueOfVariable(val) ?? (() => {
             throw Error(`variable ${val} not declared`);
           })();
@@ -1109,7 +1114,7 @@
     function visitAssignment(node, rhs) {
       context.setVariable(node.assigneeName(), getValueOf(rhs));
     }
-    return freeze5({ visitFunctionCall, visitLetDeclaration, visitAssignment });
+    return freeze6({ visitFunctionCall, visitLetDeclaration, visitAssignment });
   }
   function compile(inp) {
     const tokenCollection = Tokenization.make().tokenize(inp);
@@ -1184,7 +1189,7 @@
     });
     it("reports self as an assignment node type", () => {
       const type = make2(makeIdentifier(""), makeIdentifier("")).type();
-      expect(type).toEqual(AstNodeType.assignment);
+      expect(type).toEqual(AstNode.types.assignment);
     });
     it("maybe visited for assigee name", () => {
       let assigneeName = "";
@@ -1216,15 +1221,15 @@
     }
     it("defers creation of a function call", () => {
       const createdType = makeForOperatorWithAnyNodes("(").type();
-      expect(createdType).toEqual(AstNodeType.functionCall);
+      expect(createdType).toEqual(AstNode.types.functionCall);
     });
     it("defers creation of a tuple", () => {
       const createdType = makeForOperatorWithAnyNodes(",").type();
-      expect(createdType).toEqual(AstNodeType.tuple);
+      expect(createdType).toEqual(AstNode.types.tuple);
     });
     it("defers creation of an assignment", () => {
       const createdType = makeForOperatorWithAnyNodes(":=").type();
-      expect(createdType).toEqual(AstNodeType.assignment);
+      expect(createdType).toEqual(AstNode.types.assignment);
     });
   });
 
@@ -1274,7 +1279,7 @@
       });
       it("incomplete part builds an identifier node", () => {
         const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
-        expect(node?.type()).toBeDefined(AstNodeType.identifier);
+        expect(node?.type()).toBeDefined(AstNode.types.identifier);
       });
       it('incomplete part builds an "a" stringable node', () => {
         const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
@@ -1338,7 +1343,7 @@
         const partBuildRes = unprocessedPart?.buildPart();
         const completedNode = partBuildRes?.completedNode;
         const tupleNode = completedNode && res?.incompleteNode?.finish(completedNode);
-        expect(tupleNode?.type()).toEqual(AstNodeType.tuple);
+        expect(tupleNode?.type()).toEqual(AstNode.types.tuple);
       });
     });
     describe('handles function call case "f(...)..."', () => {
@@ -1368,7 +1373,7 @@
           const res = ptbRes();
           const node = res?.unprocessedPart?.buildPart()?.completedNode;
           const fCall = node && res?.incompleteNode?.finish(node);
-          expect(fCall?.type()).toEqual(AstNodeType.functionCall);
+          expect(fCall?.type()).toEqual(AstNode.types.functionCall);
         });
       });
     });
@@ -1395,7 +1400,7 @@
         ];
         const res = make2(args).buildPart();
         expect(res).toBeDefined();
-        expect(res?.completedNode?.type()).toEqual(AstNodeType.identifier);
+        expect(res?.completedNode?.type()).toEqual(AstNode.types.identifier);
         expect(res?.incompleteNode).toBeUndefined();
       });
     });

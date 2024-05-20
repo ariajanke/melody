@@ -1,6 +1,6 @@
 import { TestHelpers } from './test_helpers';
 import { AstAssignmentNode } from '../src/ast_assignment_node';
-import { AstNode, AstNodeType, AstNodeVisitor } from '../src/ast_node';
+import { AstNode, AstNodeVisitor } from '../src/ast_node';
 import { AstIdentifierNode } from '../src/ast_stringable_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
 
@@ -25,7 +25,7 @@ describeNamed({ AstAssignmentNode }, () => {
 
   it('reports self as an assignment node type', () => {
     const type = make(makeIdentifier(''), makeIdentifier('')).type();
-    expect(type).toEqual(AstNodeType.assignment);
+    expect(type).toEqual(AstNode.types.assignment);
   });
 
   it('maybe visited for assigee name', () => {

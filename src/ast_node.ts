@@ -1,18 +1,23 @@
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstAssignmentNode } from './ast_assignment_node';
 
+const { freeze } = Object;
+
 export interface AstNode {
   visit: (visitor: AstNodeVisitor) => void,
   type: () => symbol
 }
 
-export const AstNodeType = Object.freeze({
-  functionCall: Symbol(),
-  tuple: Symbol(),
-  stringLiteral: Symbol(),
-  identifier: Symbol(),
-  letDeclaration: Symbol(),
-  assignment: Symbol()
+export const AstNode = freeze({
+  types: 
+    {
+      functionCall: Symbol(),
+      tuple: Symbol(),
+      stringLiteral: Symbol(),
+      identifier: Symbol(),
+      letDeclaration: Symbol(),
+      assignment: Symbol()
+    }
 });
 
 export interface AstNodeVisitor {
@@ -22,7 +27,6 @@ export interface AstNodeVisitor {
 }
 
 export const AstNodeVisitor = (() => {
-  const { freeze } = Object;
   const kDefaultImplementations = (() => {
 
     function visitFunctionCall(_0: AstFunctionCallNode): void {}

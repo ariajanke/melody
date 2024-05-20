@@ -1,4 +1,4 @@
-import { AstNode, AstNodeType, AstNodeVisitor } from './ast_node';
+import { AstNode, AstNodeVisitor } from './ast_node';
 
 export interface AstTupleNode extends AstNode {
   count: () => number,
@@ -9,7 +9,7 @@ export interface AstTupleNode extends AstNode {
 
 export const AstTupleNode = (() => {
   const { freeze } = Object;
-  const tupleType = AstNodeType.tuple;
+  const tupleType = AstNode.types.tuple;
 
   function makeBinary(lhs: AstNode, rhs: AstNode): AstTupleNode {
     return makeWithPair(lhs, rhs);
