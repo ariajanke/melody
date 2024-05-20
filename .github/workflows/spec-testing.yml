@@ -25,4 +25,5 @@ jobs:
 
       - name: run linter
         run: |
+          npm install \
           npm run lint
