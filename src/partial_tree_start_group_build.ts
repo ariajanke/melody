@@ -1,7 +1,7 @@
 import { PartialTreeBuild, NodeExpansion, PartialBuildToNodesFn } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
-import { StandardErrorsFn } from './helpers';
+import { StandardErrorsFn, TypeCheckable } from './helpers';
 import { PartialTreeNextTokenBuild } from './partial_tree_next_token_build';
 import { Token } from './token';
 import { Helpers } from './helpers';
@@ -12,8 +12,9 @@ interface PartialTreeStartGroupBuild {
   error: StandardErrorsFn
 }
 
-const StartGroupCombiner = (() => {
+export const StartGroupCombiner = (() => {
   const { freeze } = Object;
+  const { type, hasCreated } = TypeCheckable.make();
 
   function make
     (unprocessedPart: PartialTreeBuild,
@@ -22,22 +23,21 @@ const StartGroupCombiner = (() => {
     function expandIntoNodes
       (fn: PartialBuildToNodesFn): Readonly<AstNode[]>
     { 
-      const pr: AstNode[] =
-        [
-          ...fn(unprocessedPart),
-          ...fn(remainingPart)
-        ];
-      return pr;
+      return [
+        ...fn(unprocessedPart),
+        ...fn(remainingPart)
+      ];
     }
 
-    return freeze({ expandIntoNodes });
+    return freeze({ expandIntoNodes, type });
   }
 
-  return freeze({ make });
+  return freeze({ make, hasCreated });
 })();
 
-const StartGroupCombinerWithIncomplete = (() => {
+export const StartGroupCombinerWithIncomplete = (() => {
   const { freeze } = Object;
+  const { type } = TypeCheckable.make();
 
   function make
     (incompleteNode: AstIncompleteBinaryNode,
@@ -49,21 +49,18 @@ const StartGroupCombinerWithIncomplete = (() => {
     {
       const [head, ...tail] = fn(unprocessedPart);
       
-      const pr: AstNode[] =
-        [
-          incompleteNode.finish(head),
-          ...tail,
-          ...fn(remainingPart)
-        ];
-      return pr;
+      return [
+        incompleteNode.finish(head),
+        ...tail,
+        ...fn(remainingPart)
+      ];
     }
 
-    return freeze({ expandIntoNodes });
+    return freeze({ expandIntoNodes, type });
   }
 
   return freeze({ make });
 })();
-
 
 export const PartialTreeStartGroupBuild = (() => {
   const { memoize, freeze } = Helpers;
@@ -109,14 +106,6 @@ export const PartialTreeStartGroupBuild = (() => {
         return StartGroupCombinerWithIncomplete.make(incompleteNode, unprocessedPart, remainingPart);
       else
         return StartGroupCombiner.make(unprocessedPart, remainingPart);
-      // return freeze({
-      //   completedNode: undefined,
-      //   incompleteNode,
-      //   unprocessedPart, // <- in group
-      //   // make... assume anything can happen
-      //   // v everything outside of group
-      //   remainingPart
-      // });
     }
 
     return freeze({

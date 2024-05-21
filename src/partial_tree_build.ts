@@ -6,29 +6,22 @@ import { Token } from './token';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { PartialTreeStartIdentifierBuild } from './partial_tree_start_identifier_build';
 
+const { freeze } = Object;
+
 export interface PartialTreeBuild {
   buildPart: () => NodeExpansion | undefined,
   ignoresNewLines: () => boolean,
   error: StandardErrorsFn
 }
 
-// export interface PartialTreeBuildResult {
-//   completedNode: AstNode | undefined,
-//   incompleteNode: AstIncompleteBinaryNode | undefined,
-//   unprocessedPart: PartialTreeBuild | undefined,
-//   remainingPart: PartialTreeBuild | undefined
-// }
-
 export type PartialBuildToNodesFn =
   (partBuild: PartialTreeBuild) => Readonly<AstNode[]>;
 
-export interface NodeExpansion {
-  expandIntoNodes(partBuildToNodes: PartialBuildToNodesFn): Readonly<AstNode[]>,
-  type: () => symbol
+export interface NodeExpansion extends TypeCheckable {
+  expandIntoNodes(partBuildToNodes: PartialBuildToNodesFn): Readonly<AstNode[]>
 }
 
 export const DoNothingCombiner = (() => {
-  const { freeze } = Object;
   const { type, hasCreated } = TypeCheckable.make();
   const kEmpty: Readonly<AstNode[]> = [];
 
@@ -49,16 +42,7 @@ export const DoNothingCombiner = (() => {
 })();
 
 export const PartialTreeBuild = (() => {
-  const { freeze } = Object;
-
   const tokenTypes = Token.types;
-
-  // const kNothing = freeze({
-  //   completedNode: undefined,
-  //   incompleteNode: undefined,
-  //   unprocessedPart: undefined,
-  //   remainingPart: undefined
-  // });
 
   const lineContinuationScheme = freeze({
     inGroup: Symbol(),
@@ -108,14 +92,12 @@ export const PartialTreeBuild = (() => {
     function buildPart(): NodeExpansion | undefined {
       if (mStart === mEnd) {
         return DoNothingCombiner.make();
-        // return kNothing;
       }
 
       const startPos = skipNewLine(mTokens, mStart);
       if (startPos === mEnd) {
         // nothing, but not an error
         return DoNothingCombiner.make();
-        // return kNothing;
       }
       const start = mTokens.at(startPos);
       if (start.type() === tokenTypes.identifier ||
@@ -140,9 +122,6 @@ export const PartialTreeBuild = (() => {
       mErrorFn = () => freeze({
         message: 'unimplemented case'
       });
-      // while in a function call or just plain "()"
-      // it needs to be fully processed first (producing a single AstNode)
-      // before continuing
     }
 
     function error() { return mErrorFn(); }

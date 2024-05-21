@@ -9,6 +9,21 @@
     memoize
   });
   expose({ Helpers });
+  var TypeCheckable = (() => {
+    function make2() {
+      const kTypeKey = Symbol();
+      function hasCreated(thing) {
+        return thing?.type() === kTypeKey;
+      }
+      function type() {
+        return kTypeKey;
+      }
+      return Helpers.freeze({ hasCreated, type });
+    }
+    return Helpers.freeze({
+      make: make2
+    });
+  })();
   function pass(arg) {
     return arg;
   }
@@ -565,31 +580,31 @@
   // src/partial_tree_start_group_build.ts
   var StartGroupCombiner = (() => {
     const { freeze: freeze7 } = Object;
+    const { type, hasCreated } = TypeCheckable.make();
     function make2(unprocessedPart, remainingPart) {
       function expandIntoNodes(fn) {
-        const pr = [
+        return [
           ...fn(unprocessedPart),
           ...fn(remainingPart)
         ];
-        return pr;
       }
-      return freeze7({ expandIntoNodes });
+      return freeze7({ expandIntoNodes, type });
     }
-    return freeze7({ make: make2 });
+    return freeze7({ make: make2, hasCreated });
   })();
   var StartGroupCombinerWithIncomplete = (() => {
     const { freeze: freeze7 } = Object;
+    const { type } = TypeCheckable.make();
     function make2(incompleteNode, unprocessedPart, remainingPart) {
       function expandIntoNodes(fn) {
         const [head, ...tail] = fn(unprocessedPart);
-        const pr = [
+        return [
           incompleteNode.finish(head),
           ...tail,
           ...fn(remainingPart)
         ];
-        return pr;
       }
-      return freeze7({ expandIntoNodes });
+      return freeze7({ expandIntoNodes, type });
     }
     return freeze7({ make: make2 });
   })();
@@ -806,16 +821,18 @@
   // src/partial_tree_start_identifier_build.ts
   var SingleNodeCombiner = (() => {
     const { freeze: freeze7 } = Object;
+    const { type, hasCreated } = TypeCheckable.make();
     function make2(node) {
-      function expandIntoNodes(fn) {
+      function expandIntoNodes(_0) {
         return [node];
       }
-      return freeze7({ expandIntoNodes });
+      return freeze7({ expandIntoNodes, type });
     }
-    return freeze7({ make: make2 });
+    return freeze7({ make: make2, hasCreated });
   })();
   var SingleNodeCombinerWithRemaining = (() => {
     const { freeze: freeze7 } = Object;
+    const { type, hasCreated } = TypeCheckable.make();
     function make2(node, remainingPart) {
       function expandIntoNodes(fn) {
         return [
@@ -823,9 +840,9 @@
           ...fn(remainingPart)
         ];
       }
-      return freeze7({ expandIntoNodes });
+      return freeze7({ expandIntoNodes, type });
     }
-    return freeze7({ make: make2 });
+    return freeze7({ make: make2, hasCreated });
   })();
   var PartialTreeStartIdentifierBuild = (() => {
     const { freeze: freeze7 } = Object;
@@ -837,17 +854,13 @@
         throw Error("");
       }
       const { lineContinuationScheme } = PartialTreeBuild;
-      const mStartToken = mTokens.at(mStart);
       let mErrorFn = () => {
         return void 0;
       };
-      function buildForLoneNode(node) {
-        return SingleNodeCombiner.make(node);
-      }
       function build() {
-        const lhsNode = makeStringableNodeFor(mStartToken);
+        const lhsNode = makeStringableNodeFor(mTokens.at(mStart));
         if (mEnd - mStart === 1) {
-          return buildForLoneNode(lhsNode);
+          return SingleNodeCombiner.make(lhsNode);
         }
         const nextPos = mLineContScheme === lineContinuationScheme.inGroup ? skipNewLine(mTokens, mStart + 1) : mStart + 1;
         const next = mTokens.at(nextPos);
@@ -865,13 +878,14 @@
           return;
         } else if (next.type() === tokenTypes.newLine) {
           if (mLineContScheme === lineContinuationScheme.normal) {
-            return buildForLoneNode(lhsNode);
+            return SingleNodeCombiner.make(lhsNode);
           }
           if (mLineContScheme !== lineContinuationScheme.operatorContinued) {
             throw Error("impossible branch??");
           }
           const { normal } = PartialTreeBuild.lineContinuationScheme;
-          return SingleNodeCombinerWithRemaining.make(lhsNode, PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal));
+          const remaining = PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal);
+          return SingleNodeCombinerWithRemaining.make(lhsNode, remaining);
         } else {
           mErrorFn = () => freeze7({
             message: `not sure how to handle token "${next.content()}"`
@@ -887,17 +901,19 @@
   // src/partial_tree_build.ts
   var DoNothingCombiner = (() => {
     const { freeze: freeze7 } = Object;
+    const { type, hasCreated } = TypeCheckable.make();
     const kEmpty = [];
     function expandIntoNodes(_0) {
       return kEmpty;
     }
     const sharedInst = freeze7({
-      expandIntoNodes
+      expandIntoNodes,
+      type
     });
     function make2() {
       return sharedInst;
     }
-    return freeze7({ make: make2 });
+    return freeze7({ make: make2, hasCreated });
   })();
   var PartialTreeBuild = (() => {
     const { freeze: freeze7 } = Object;
@@ -1349,28 +1365,15 @@
         expect(ptbRes()).toBeDefined();
       });
     }
-    function includeNoNodePtbExamples(ptbRes) {
-      includeHasAResultExample(ptbRes);
-      it("has no complete node", () => {
-        expect(ptbRes()?.completedNode).toBeUndefined();
-      });
-      it("has no incomplete node", () => {
-        expect(ptbRes()?.incompleteNode).toBeUndefined();
-      });
-      it("creates a ptb that ignores new lines", () => {
-        expect(ptbRes()?.unprocessedPart?.ignoresNewLines()).toBeTruthy();
-      });
-    }
     describe('handles general case "( \\n ..."', () => {
-      const ptbRes = () => makePtbRes(
-        makeToken("("),
-        makeToken("\n"),
-        makeToken("a"),
-        makeToken(")")
-      );
-      includeNoNodePtbExamples(ptbRes);
+      const args = [makeToken("("), makeToken("\n"), makeToken("a"), makeToken(")")];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      fit("begins as group start combiner", () => {
+        expect(StartGroupCombiner.hasCreated(ptbRes())).toBeTruthy();
+      });
       it("unprocessed range contains the remainder of tokens", () => {
-        expect(ptbRes()?.remainingPart?.buildPart()).toEqual(PartialTreeBuild.kNothing);
+        expect(DoNothingCombiner.hasCreated(ptbRes())).toBeTruthy();
       });
     });
     describe('handles grouping case "( a )"', () => {

@@ -1,9 +1,11 @@
-import { PartialTreeBuild, NodeExpansion } from '../src/partial_tree_build';
+import { PartialTreeBuild, DoNothingCombiner } from '../src/partial_tree_build';
 import { TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
 import { AstNode } from '../src/ast_node';
 import { AstStringableNode } from '../src/ast_stringable_node';
+import { StartGroupCombiner } from '../src/partial_tree_start_group_build';
+import { AstBuild } from '../src/ast_build';
 
 const { describeNamed } = TestHelpers;
 
@@ -22,6 +24,7 @@ const { describeNamed } = TestHelpers;
 
 describeNamed({ PartialTreeBuild }, () => {
   const makeToken = Token.forTesting.makeFromStringOnly;
+  const { buildProgramSequence } = AstBuild.testable;
 
   const make = (tokens: Token[]) =>
     PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length);
@@ -36,31 +39,41 @@ describeNamed({ PartialTreeBuild }, () => {
     });
   }
 
-  function includeNoNodePtbExamples(ptbRes: () => PartialTreeBuildResult | undefined) {
-    includeHasAResultExample(ptbRes);
+  // function includeNoNodePtbExamples(ptbRes: () => PartialTreeBuildResult | undefined) {
+  //   includeHasAResultExample(ptbRes);
 
-    it('has no complete node', () => {
-      expect(ptbRes()?.completedNode).toBeUndefined();
-    });
+  //   it('has no complete node', () => {
+  //     expect(ptbRes()?.completedNode).toBeUndefined();
+  //   });
 
-    it('has no incomplete node', () => {
-      expect(ptbRes()?.incompleteNode).toBeUndefined();
-    });
+  //   it('has no incomplete node', () => {
+  //     expect(ptbRes()?.incompleteNode).toBeUndefined();
+  //   });
 
-    it('creates a ptb that ignores new lines', () => {
-      expect(ptbRes()?.unprocessedPart?.ignoresNewLines()).toBeTruthy();
-    });
-  }
+  //   it('creates a ptb that ignores new lines', () => {
+  //     expect(ptbRes()?.unprocessedPart?.ignoresNewLines()).toBeTruthy();
+  //   });
+  // }
 
   describe('handles general case "( \\n ..."', () => {
-    const ptbRes = () => makePtbRes(
-      makeToken('('), makeToken('\n'), makeToken('a'), makeToken(')'));
+    const args = [makeToken('('), makeToken('\n'), makeToken('a'), makeToken(')')];
+    const ptbRes = () => makePtbRes(...args);
 
-    includeNoNodePtbExamples(ptbRes);
+    includeHasAResultExample(ptbRes);
+
+    fit('begins as group start combiner', () => {
+       expect(StartGroupCombiner.hasCreated(ptbRes())).toBeTruthy();
+    })
 
     it('unprocessed range contains the remainder of tokens', () => {
-      expect(ptbRes()?.remainingPart?.buildPart()).
-        toEqual(PartialTreeBuild.kNothing);
+      // ptbRes()?.expandIntoNodes((partBuild: PartialTreeBuild) => {
+      //   partBuild.
+      // });
+      ;
+      ptbRes()?.expandIntoNodes(buildProgramSequence);
+      expect(DoNothingCombiner.hasCreated(ptbRes())).toBeTruthy();
+      // expect(ptbRes()?.remainingPart?.buildPart()).
+      //   toEqual(PartialTreeBuild.kNothing);
     });
   });
 

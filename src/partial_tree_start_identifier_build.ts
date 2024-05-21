@@ -1,28 +1,29 @@
 import { PartialTreeBuild, NodeExpansion, PartialBuildToNodesFn } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
-import { StandardErrorsFn } from './helpers';
+import { StandardErrorsFn, TypeCheckable } from './helpers';
 import { AstStringableNode } from './ast_stringable_node';
 import { Token } from './token';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { AstNode } from './ast_node';
 
-const SingleNodeCombiner = (() => {
+export const SingleNodeCombiner = (() => {
   const { freeze } = Object;
+  const { type, hasCreated } = TypeCheckable.make();
 
-  function make(node: AstNode) {
-    function expandIntoNodes(fn: PartialBuildToNodesFn): Readonly<AstNode[]> {
-      return [node];
-    }
+  function make(node: AstNode): NodeExpansion {
+    function expandIntoNodes(_0: PartialBuildToNodesFn): Readonly<AstNode[]>
+      { return [node]; }
 
-    return freeze({ expandIntoNodes });
+    return freeze({ expandIntoNodes, type });
   }
 
-  return freeze({ make });
+  return freeze({ make, hasCreated });
 })();
 
-const SingleNodeCombinerWithRemaining = (() => {
+export const SingleNodeCombinerWithRemaining = (() => {
   const { freeze } = Object;
+  const { type, hasCreated } = TypeCheckable.make();
 
   function make
     (node: AstNode, remainingPart: PartialTreeBuild):
@@ -35,10 +36,10 @@ const SingleNodeCombinerWithRemaining = (() => {
       ];
     }
 
-    return freeze({ expandIntoNodes });
+    return freeze({ expandIntoNodes, type });
   }
 
-  return freeze({ make });
+  return freeze({ make, hasCreated });
 })();
 
 export const PartialTreeStartIdentifierBuild = (() => {
@@ -52,32 +53,20 @@ export const PartialTreeStartIdentifierBuild = (() => {
     if (mStart === mEnd) {
       throw Error('');
     }
+
     const { lineContinuationScheme } = PartialTreeBuild;
 
-    const mStartToken = mTokens.at(mStart);
     let mErrorFn: StandardErrorsFn = () => { return undefined; };
 
-    function buildForLoneNode(node: AstStringableNode): NodeExpansion
-    {
-      return SingleNodeCombiner.make(node);
-      // return freeze({
-      //   completedNode: node,
-      //   incompleteNode: undefined,
-      //   unprocessedPart: undefined,
-      //   remainingPart: undefined
-      // });
-    }
-
     function build(): NodeExpansion | undefined {
-      const lhsNode = makeStringableNodeFor(mStartToken);
+      const lhsNode = makeStringableNodeFor(mTokens.at(mStart));
       if (mEnd - mStart === 1) {
-        return buildForLoneNode(lhsNode);
+        return SingleNodeCombiner.make(lhsNode);
       }
       const nextPos = mLineContScheme === lineContinuationScheme.inGroup ?
         skipNewLine(mTokens, mStart + 1) : (mStart + 1);
       const next = mTokens.at(nextPos);
       if (next.type() === tokenTypes.operator) {
-        // extract me
         if (!lhsNode.comesBeforeOperator(next)) {
           mErrorFn = () =>
             freeze({ message: `operator "${next.content()}" not allowed here` });
@@ -95,22 +84,16 @@ export const PartialTreeStartIdentifierBuild = (() => {
       } else if (next.type() === tokenTypes.newLine) {
         // also begging for extraction
         if (mLineContScheme === lineContinuationScheme.normal) {
-          return buildForLoneNode(lhsNode);
+          return SingleNodeCombiner.make(lhsNode);
         }
         if (mLineContScheme !== lineContinuationScheme.operatorContinued) {
           throw Error('impossible branch??');
         }
         const { normal } = PartialTreeBuild.lineContinuationScheme;
+        const remaining = PartialTreeBuild.
+          make(mTokens, nextPos + 1, mEnd, normal)
         return SingleNodeCombinerWithRemaining.
-          make(lhsNode, PartialTreeBuild.
-                          make(mTokens, nextPos + 1, mEnd, normal));
-        // return freeze({
-        //   completedNode: lhsNode,
-        //   incompleteNode: undefined,
-        //   unprocessedPart: undefined,
-        //   remainingPart: PartialTreeBuild.
-        //     make(mTokens, nextPos + 1, mEnd, normal)
-        // });
+          make(lhsNode, remaining);
       } else {
         mErrorFn = () => freeze({
           message: `not sure how to handle token "${next.content()}"`
