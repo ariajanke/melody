@@ -566,21 +566,21 @@
   var StartGroupCombiner = (() => {
     const { freeze: freeze7 } = Object;
     function make2(unprocessedPart, remainingPart) {
-      function stuff(fn) {
+      function expandIntoNodes(fn) {
         const pr = [
           ...fn(unprocessedPart),
           ...fn(remainingPart)
         ];
         return pr;
       }
-      return freeze7({ stuff });
+      return freeze7({ expandIntoNodes });
     }
     return freeze7({ make: make2 });
   })();
   var StartGroupCombinerWithIncomplete = (() => {
     const { freeze: freeze7 } = Object;
     function make2(incompleteNode, unprocessedPart, remainingPart) {
-      function stuff(fn) {
+      function expandIntoNodes(fn) {
         const [head, ...tail] = fn(unprocessedPart);
         const pr = [
           incompleteNode.finish(head),
@@ -589,7 +589,7 @@
         ];
         return pr;
       }
-      return freeze7({ stuff });
+      return freeze7({ expandIntoNodes });
     }
     return freeze7({ make: make2 });
   })();
@@ -622,18 +622,9 @@
         const remainingRange = nextPart().remainingRange();
         const remainingPart = PartialTreeBuild.make(mTokens, ...remainingRange);
         if (incompleteNode)
-          StartGroupCombinerWithIncomplete.make(incompleteNode, unprocessedPart, remainingPart);
+          return StartGroupCombinerWithIncomplete.make(incompleteNode, unprocessedPart, remainingPart);
         else
-          StartGroupCombiner.make(unprocessedPart, remainingPart);
-        return freeze7({
-          completedNode: void 0,
-          incompleteNode,
-          unprocessedPart,
-          // <- in group
-          // make... assume anything can happen
-          // v everything outside of group
-          remainingPart
-        });
+          return StartGroupCombiner.make(unprocessedPart, remainingPart);
       }
       return freeze7({
         startGroupBuild: memoize2(startGroupBuild),
@@ -816,23 +807,23 @@
   var SingleNodeCombiner = (() => {
     const { freeze: freeze7 } = Object;
     function make2(node) {
-      function stuff(_0) {
-        node;
+      function expandIntoNodes(fn) {
+        return [node];
       }
-      return freeze7({ stuff });
+      return freeze7({ expandIntoNodes });
     }
     return freeze7({ make: make2 });
   })();
   var SingleNodeCombinerWithRemaining = (() => {
     const { freeze: freeze7 } = Object;
     function make2(node, remainingPart) {
-      function stuff(fn) {
-        [
+      function expandIntoNodes(fn) {
+        return [
           node,
           ...fn(remainingPart)
         ];
       }
-      return freeze7({ stuff });
+      return freeze7({ expandIntoNodes });
     }
     return freeze7({ make: make2 });
   })();
@@ -851,13 +842,7 @@
         return void 0;
       };
       function buildForLoneNode(node) {
-        SingleNodeCombiner.make(node);
-        return freeze7({
-          completedNode: node,
-          incompleteNode: void 0,
-          unprocessedPart: void 0,
-          remainingPart: void 0
-        });
+        return SingleNodeCombiner.make(node);
       }
       function build() {
         const lhsNode = makeStringableNodeFor(mStartToken);
@@ -886,13 +871,7 @@
             throw Error("impossible branch??");
           }
           const { normal } = PartialTreeBuild.lineContinuationScheme;
-          SingleNodeCombinerWithRemaining.make(lhsNode, PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal));
-          return freeze7({
-            completedNode: lhsNode,
-            incompleteNode: void 0,
-            unprocessedPart: void 0,
-            remainingPart: PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal)
-          });
+          return SingleNodeCombinerWithRemaining.make(lhsNode, PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal));
         } else {
           mErrorFn = () => freeze7({
             message: `not sure how to handle token "${next.content()}"`
@@ -923,12 +902,6 @@
   var PartialTreeBuild = (() => {
     const { freeze: freeze7 } = Object;
     const tokenTypes = Token.types;
-    const kNothing = freeze7({
-      completedNode: void 0,
-      incompleteNode: void 0,
-      unprocessedPart: void 0,
-      remainingPart: void 0
-    });
     const lineContinuationScheme = freeze7({
       inGroup: Symbol(),
       operatorContinued: Symbol(),
@@ -958,13 +931,11 @@
       }
       function buildPart() {
         if (mStart === mEnd) {
-          DoNothingCombiner.make();
-          return kNothing;
+          return DoNothingCombiner.make();
         }
         const startPos = skipNewLine(mTokens, mStart);
         if (startPos === mEnd) {
-          DoNothingCombiner.make();
-          return kNothing;
+          return DoNothingCombiner.make();
         }
         const start = mTokens.at(startPos);
         if (start.type() === tokenTypes.identifier || start.type() === tokenTypes.stringLiteral) {
@@ -1000,7 +971,7 @@
     return freeze7({
       makeAssumeNotNewLine,
       make: make2,
-      kNothing,
+      // kNothing,
       lineContinuationScheme,
       skipNewLine
     });
@@ -1009,32 +980,19 @@
   // src/ast_build.ts
   var AstBuild = (() => {
     const { freeze: freeze7 } = Object;
+    const mErrors = [];
     function buildProgramSequence(partBuild) {
-      const res = partBuild.buildPart();
-      if (res === void 0) {
-        throw Error(partBuild.error().message);
+      const part = partBuild.buildPart();
+      if (!part) {
+        mErrors.push(partBuild.error());
+        return [];
       }
-      const withCompleteNode = (...nodes) => res.completedNode ? [res.completedNode, ...nodes] : nodes;
-      const handleUnprocessedPart = () => {
-        if (res.incompleteNode) {
-          const [head, ...tail] = buildProgramSequence(res.unprocessedPart);
-          return [res.incompleteNode.finish(head), ...tail];
-        } else if (res.unprocessedPart) {
-          return buildProgramSequence(res.unprocessedPart);
-        }
-        return [];
-      };
-      const handleRemainingPart = () => {
-        if (res.remainingPart) {
-          return buildProgramSequence(res.remainingPart);
-        }
-        return [];
-      };
-      return withCompleteNode(...handleUnprocessedPart(), ...handleRemainingPart());
+      return part.expandIntoNodes(buildProgramSequence);
     }
     function buildFor2(tokens) {
       const partBuild = PartialTreeBuild.make(tokens, 0, tokens.count());
-      return AstTupleNode.make(buildProgramSequence(partBuild));
+      const res = buildProgramSequence(partBuild).map((n) => n);
+      return AstTupleNode.make(res);
     }
     return freeze7({ buildFor: buildFor2 });
   })();

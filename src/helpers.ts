@@ -13,6 +13,28 @@ export type StandardErrorsFn = (() => StandardError | undefined);
 
 expose({ Helpers });
 
+export interface TypeCheckable {
+  type: () => symbol
+}
+
+export const TypeCheckable = (() => {
+  function make() {
+    const kTypeKey = Symbol();
+
+    function hasCreated
+      (thing: TypeCheckable | undefined): boolean
+    { return thing?.type() === kTypeKey; }
+
+    function type(): symbol { return kTypeKey; }
+
+    return Helpers.freeze({ hasCreated, type });
+  }
+
+  return Helpers.freeze({
+    make
+  });
+})();
+
 function pass<Type>(arg: Type): Readonly<Type> { return arg; }
 
 function forEachKeyIn<Type>

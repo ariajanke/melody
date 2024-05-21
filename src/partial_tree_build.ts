@@ -1,46 +1,51 @@
 import { AstNode } from './ast_node';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
 import { TokenCollection } from './tokenization';
-import { StandardErrorsFn } from './helpers';
+import { StandardErrorsFn, TypeCheckable } from './helpers';
 import { Token } from './token';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { PartialTreeStartIdentifierBuild } from './partial_tree_start_identifier_build';
 
 export interface PartialTreeBuild {
-  buildPart: () => PartialTreeBuildResult | undefined,
+  buildPart: () => NodeExpansion | undefined,
   ignoresNewLines: () => boolean,
   error: StandardErrorsFn
 }
 
-export interface PartialTreeBuildResult {
-  completedNode: AstNode | undefined,
-  incompleteNode: AstIncompleteBinaryNode | undefined,
-  unprocessedPart: PartialTreeBuild | undefined,
-  remainingPart: PartialTreeBuild | undefined
-}
+// export interface PartialTreeBuildResult {
+//   completedNode: AstNode | undefined,
+//   incompleteNode: AstIncompleteBinaryNode | undefined,
+//   unprocessedPart: PartialTreeBuild | undefined,
+//   remainingPart: PartialTreeBuild | undefined
+// }
 
-export type PartialBuildToNodesFn = (partBuild: PartialTreeBuild) => AstNode[];
+export type PartialBuildToNodesFn =
+  (partBuild: PartialTreeBuild) => Readonly<AstNode[]>;
 
 export interface NodeExpansion {
-  expandIntoNodes(partBuildToNodes: PartialBuildToNodesFn): Readonly<AstNode[]>
+  expandIntoNodes(partBuildToNodes: PartialBuildToNodesFn): Readonly<AstNode[]>,
+  type: () => symbol
 }
 
-const DoNothingCombiner = (() => {
+export const DoNothingCombiner = (() => {
   const { freeze } = Object;
+  const { type, hasCreated } = TypeCheckable.make();
   const kEmpty: Readonly<AstNode[]> = [];
+
   function expandIntoNodes(_0: PartialBuildToNodesFn): Readonly<AstNode[]> {
     return kEmpty;
   }
 
   const sharedInst = freeze({
-    expandIntoNodes
+    expandIntoNodes,
+    type
   });
 
   function make(): NodeExpansion {
     return sharedInst;
   }
 
-  return freeze({ make });
+  return freeze({ make, hasCreated });
 })();
 
 export const PartialTreeBuild = (() => {
@@ -48,12 +53,12 @@ export const PartialTreeBuild = (() => {
 
   const tokenTypes = Token.types;
 
-  const kNothing = freeze({
-    completedNode: undefined,
-    incompleteNode: undefined,
-    unprocessedPart: undefined,
-    remainingPart: undefined
-  });
+  // const kNothing = freeze({
+  //   completedNode: undefined,
+  //   incompleteNode: undefined,
+  //   unprocessedPart: undefined,
+  //   remainingPart: undefined
+  // });
 
   const lineContinuationScheme = freeze({
     inGroup: Symbol(),
@@ -79,7 +84,7 @@ export const PartialTreeBuild = (() => {
 
   function construct
     (mTokens: TokenCollection, mStart: number, mEnd: number,
-     mLineContScheme: symbol)
+     mLineContScheme: symbol): PartialTreeBuild
   {
     let mErrorFn: StandardErrorsFn = () => { return undefined; };
 
@@ -87,7 +92,7 @@ export const PartialTreeBuild = (() => {
       (incompleteNode: AstIncompleteBinaryNode | undefined,
        start: number,
        closeBasedOn: string):
-       PartialTreeBuildResult | undefined
+       NodeExpansion | undefined
     {
       const group = PartialTreeStartGroupBuild.
         make(mTokens, incompleteNode, start, mEnd, closeBasedOn);
@@ -100,17 +105,17 @@ export const PartialTreeBuild = (() => {
     function ignoresNewLines(): boolean { return mLineContScheme !== lineContinuationScheme.normal; }
 
     // this is the tippy-top of the chain, anything can happen
-    function buildPart(): PartialTreeBuildResult | undefined {
+    function buildPart(): NodeExpansion | undefined {
       if (mStart === mEnd) {
-        DoNothingCombiner.make();
-        return kNothing;
+        return DoNothingCombiner.make();
+        // return kNothing;
       }
 
       const startPos = skipNewLine(mTokens, mStart);
       if (startPos === mEnd) {
         // nothing, but not an error
-        DoNothingCombiner.make();
-        return kNothing;
+        return DoNothingCombiner.make();
+        // return kNothing;
       }
       const start = mTokens.at(startPos);
       if (start.type() === tokenTypes.identifier ||
@@ -153,7 +158,7 @@ export const PartialTreeBuild = (() => {
   return freeze({
     makeAssumeNotNewLine,
     make,
-    kNothing,
+    // kNothing,
     lineContinuationScheme,
     skipNewLine
   });

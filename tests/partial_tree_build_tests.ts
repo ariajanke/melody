@@ -1,4 +1,4 @@
-import { PartialTreeBuild, PartialTreeBuildResult } from '../src/partial_tree_build';
+import { PartialTreeBuild, NodeExpansion } from '../src/partial_tree_build';
 import { TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
