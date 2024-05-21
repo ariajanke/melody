@@ -5,11 +5,61 @@ import { StandardErrorsFn } from './helpers';
 import { PartialTreeNextTokenBuild } from './partial_tree_next_token_build';
 import { Token } from './token';
 import { Helpers } from './helpers';
+import { AstNode } from './ast_node';
 
 interface PartialTreeStartGroupBuild {
   startGroupBuild: () => PartialTreeBuildResult | undefined,
   error: StandardErrorsFn
 }
+
+const StartGroupCombiner = (() => {
+  const { freeze } = Object;
+
+  function make
+    (unprocessedPart: PartialTreeBuild,
+     remainingPart: PartialTreeBuild)
+  {
+    function stuff(fn: (partBuild: PartialTreeBuild) => AstNode[]) {      
+      const pr: AstNode[] =
+        [
+          ...fn(unprocessedPart),
+          ...fn(remainingPart)
+        ];
+      return pr;
+    }
+
+    return freeze({ stuff });
+  }
+
+  return freeze({ make });
+})();
+
+const StartGroupCombinerWithIncomplete = (() => {
+  const { freeze } = Object;
+
+  function make
+    (incompleteNode: AstIncompleteBinaryNode,
+     unprocessedPart: PartialTreeBuild,
+     remainingPart: PartialTreeBuild)
+  {
+    function stuff(fn: (partBuild: PartialTreeBuild) => AstNode[]) {
+      const [head, ...tail] = fn(unprocessedPart);
+      
+      const pr: AstNode[] =
+        [
+          incompleteNode.finish(head),
+          ...tail,
+          ...fn(remainingPart)
+        ];
+      return pr;
+    }
+
+    return freeze({ stuff });
+  }
+
+  return freeze({ make });
+})();
+
 
 export const PartialTreeStartGroupBuild = (() => {
   const { memoize, freeze } = Helpers;
@@ -50,13 +100,18 @@ export const PartialTreeStartGroupBuild = (() => {
         return;
       }
       const remainingRange = nextPart().remainingRange();
+      const remainingPart = PartialTreeBuild.make(mTokens, ...remainingRange);
+      if (incompleteNode)
+        StartGroupCombinerWithIncomplete.make(incompleteNode, unprocessedPart, remainingPart);
+      else
+        StartGroupCombiner.make(unprocessedPart, remainingPart);
       return freeze({
         completedNode: undefined,
         incompleteNode,
         unprocessedPart, // <- in group
         // make... assume anything can happen
         // v everything outside of group
-        remainingPart: PartialTreeBuild.make(mTokens, ...remainingRange) 
+        remainingPart
       });
     }
 

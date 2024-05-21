@@ -5,6 +5,38 @@ import { AstStringableNode } from './ast_stringable_node';
 import { Token } from './token';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
+import { AstNode } from './ast_node';
+
+const SingleNodeCombiner = (() => {
+  const { freeze } = Object;
+
+  function make(node: AstNode) {
+    function stuff(_0: (partBuild: PartialTreeBuild) => AstNode[]) {
+      node;
+    }
+
+    return freeze({ stuff });
+  }
+
+  return freeze({ make });
+})();
+
+const SingleNodeCombinerWithRemaining = (() => {
+  const { freeze } = Object;
+
+  function make(node: AstNode, remainingPart: PartialTreeBuild) {
+    function stuff(fn: (partBuild: PartialTreeBuild) => AstNode[]) {
+      [
+        node,
+        ...fn(remainingPart),
+      ];
+    }
+
+    return freeze({ stuff });
+  }
+
+  return freeze({ make });
+})();
 
 export const PartialTreeStartIdentifierBuild = (() => {
   const { freeze } = Object;
@@ -23,6 +55,7 @@ export const PartialTreeStartIdentifierBuild = (() => {
     let mErrorFn: StandardErrorsFn = () => { return undefined; };
 
     function buildForLoneNode(node: AstStringableNode): PartialTreeBuildResult {
+      SingleNodeCombiner.make(node);
       return freeze({
         completedNode: node,
         incompleteNode: undefined,
@@ -40,7 +73,6 @@ export const PartialTreeStartIdentifierBuild = (() => {
         skipNewLine(mTokens, mStart + 1) : (mStart + 1);
       const next = mTokens.at(nextPos);
       if (next.type() === tokenTypes.operator) {
-
         // extract me
         if (!lhsNode.comesBeforeOperator(next)) {
           mErrorFn = () =>
@@ -57,7 +89,6 @@ export const PartialTreeStartIdentifierBuild = (() => {
         return;
 
       } else if (next.type() === tokenTypes.newLine) {
-
         // also begging for extraction
         if (mLineContScheme === lineContinuationScheme.normal) {
           return buildForLoneNode(lhsNode);
@@ -66,6 +97,9 @@ export const PartialTreeStartIdentifierBuild = (() => {
           throw Error('impossible branch??');
         }
         const { normal } = PartialTreeBuild.lineContinuationScheme;
+        SingleNodeCombinerWithRemaining.
+          make(lhsNode, PartialTreeBuild.
+                          make(mTokens, nextPos + 1, mEnd, normal));
         return freeze({
           completedNode: lhsNode,
           incompleteNode: undefined,

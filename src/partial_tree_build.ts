@@ -19,6 +19,30 @@ export interface PartialTreeBuildResult {
   remainingPart: PartialTreeBuild | undefined
 }
 
+export type PartialBuildToNodesFn = (partBuild: PartialTreeBuild) => AstNode[];
+
+export interface NodeExpansion {
+  expandIntoNodes(partBuildToNodes: PartialBuildToNodesFn): Readonly<AstNode[]>
+}
+
+const DoNothingCombiner = (() => {
+  const { freeze } = Object;
+  const kEmpty: Readonly<AstNode[]> = [];
+  function expandIntoNodes(_0: PartialBuildToNodesFn): Readonly<AstNode[]> {
+    return kEmpty;
+  }
+
+  const sharedInst = freeze({
+    expandIntoNodes
+  });
+
+  function make(): NodeExpansion {
+    return sharedInst;
+  }
+
+  return freeze({ make });
+})();
+
 export const PartialTreeBuild = (() => {
   const { freeze } = Object;
 
@@ -78,12 +102,14 @@ export const PartialTreeBuild = (() => {
     // this is the tippy-top of the chain, anything can happen
     function buildPart(): PartialTreeBuildResult | undefined {
       if (mStart === mEnd) {
+        DoNothingCombiner.make();
         return kNothing;
       }
 
       const startPos = skipNewLine(mTokens, mStart);
       if (startPos === mEnd) {
         // nothing, but not an error
+        DoNothingCombiner.make();
         return kNothing;
       }
       const start = mTokens.at(startPos);

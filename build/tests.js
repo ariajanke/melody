@@ -563,6 +563,36 @@
   })();
 
   // src/partial_tree_start_group_build.ts
+  var StartGroupCombiner = (() => {
+    const { freeze: freeze7 } = Object;
+    function make2(unprocessedPart, remainingPart) {
+      function stuff(fn) {
+        const pr = [
+          ...fn(unprocessedPart),
+          ...fn(remainingPart)
+        ];
+        return pr;
+      }
+      return freeze7({ stuff });
+    }
+    return freeze7({ make: make2 });
+  })();
+  var StartGroupCombinerWithIncomplete = (() => {
+    const { freeze: freeze7 } = Object;
+    function make2(incompleteNode, unprocessedPart, remainingPart) {
+      function stuff(fn) {
+        const [head, ...tail] = fn(unprocessedPart);
+        const pr = [
+          incompleteNode.finish(head),
+          ...tail,
+          ...fn(remainingPart)
+        ];
+        return pr;
+      }
+      return freeze7({ stuff });
+    }
+    return freeze7({ make: make2 });
+  })();
   var PartialTreeStartGroupBuild = (() => {
     const { memoize: memoize2, freeze: freeze7 } = Helpers;
     function skipNewLine(tokens, i) {
@@ -590,6 +620,11 @@
           return;
         }
         const remainingRange = nextPart().remainingRange();
+        const remainingPart = PartialTreeBuild.make(mTokens, ...remainingRange);
+        if (incompleteNode)
+          StartGroupCombinerWithIncomplete.make(incompleteNode, unprocessedPart, remainingPart);
+        else
+          StartGroupCombiner.make(unprocessedPart, remainingPart);
         return freeze7({
           completedNode: void 0,
           incompleteNode,
@@ -597,7 +632,7 @@
           // <- in group
           // make... assume anything can happen
           // v everything outside of group
-          remainingPart: PartialTreeBuild.make(mTokens, ...remainingRange)
+          remainingPart
         });
       }
       return freeze7({
@@ -778,6 +813,29 @@
   })();
 
   // src/partial_tree_start_identifier_build.ts
+  var SingleNodeCombiner = (() => {
+    const { freeze: freeze7 } = Object;
+    function make2(node) {
+      function stuff(_0) {
+        node;
+      }
+      return freeze7({ stuff });
+    }
+    return freeze7({ make: make2 });
+  })();
+  var SingleNodeCombinerWithRemaining = (() => {
+    const { freeze: freeze7 } = Object;
+    function make2(node, remainingPart) {
+      function stuff(fn) {
+        [
+          node,
+          ...fn(remainingPart)
+        ];
+      }
+      return freeze7({ stuff });
+    }
+    return freeze7({ make: make2 });
+  })();
   var PartialTreeStartIdentifierBuild = (() => {
     const { freeze: freeze7 } = Object;
     const { skipNewLine } = PartialTreeStartGroupBuild;
@@ -793,6 +851,7 @@
         return void 0;
       };
       function buildForLoneNode(node) {
+        SingleNodeCombiner.make(node);
         return freeze7({
           completedNode: node,
           incompleteNode: void 0,
@@ -827,6 +886,7 @@
             throw Error("impossible branch??");
           }
           const { normal } = PartialTreeBuild.lineContinuationScheme;
+          SingleNodeCombinerWithRemaining.make(lhsNode, PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal));
           return freeze7({
             completedNode: lhsNode,
             incompleteNode: void 0,
@@ -846,6 +906,20 @@
   })();
 
   // src/partial_tree_build.ts
+  var DoNothingCombiner = (() => {
+    const { freeze: freeze7 } = Object;
+    const kEmpty = [];
+    function expandIntoNodes(_0) {
+      return kEmpty;
+    }
+    const sharedInst = freeze7({
+      expandIntoNodes
+    });
+    function make2() {
+      return sharedInst;
+    }
+    return freeze7({ make: make2 });
+  })();
   var PartialTreeBuild = (() => {
     const { freeze: freeze7 } = Object;
     const tokenTypes = Token.types;
@@ -884,10 +958,12 @@
       }
       function buildPart() {
         if (mStart === mEnd) {
+          DoNothingCombiner.make();
           return kNothing;
         }
         const startPos = skipNewLine(mTokens, mStart);
         if (startPos === mEnd) {
+          DoNothingCombiner.make();
           return kNothing;
         }
         const start = mTokens.at(startPos);
@@ -932,7 +1008,8 @@
 
   // src/ast_build.ts
   var AstBuild = (() => {
-    function buildProgramSequence(partBuild, tokens) {
+    const { freeze: freeze7 } = Object;
+    function buildProgramSequence(partBuild) {
       const res = partBuild.buildPart();
       if (res === void 0) {
         throw Error(partBuild.error().message);
@@ -940,16 +1017,16 @@
       const withCompleteNode = (...nodes) => res.completedNode ? [res.completedNode, ...nodes] : nodes;
       const handleUnprocessedPart = () => {
         if (res.incompleteNode) {
-          const [head, ...tail] = buildProgramSequence(res.unprocessedPart, tokens);
+          const [head, ...tail] = buildProgramSequence(res.unprocessedPart);
           return [res.incompleteNode.finish(head), ...tail];
         } else if (res.unprocessedPart) {
-          return buildProgramSequence(res.unprocessedPart, tokens);
+          return buildProgramSequence(res.unprocessedPart);
         }
         return [];
       };
       const handleRemainingPart = () => {
         if (res.remainingPart) {
-          return buildProgramSequence(res.remainingPart, tokens);
+          return buildProgramSequence(res.remainingPart);
         }
         return [];
       };
@@ -957,9 +1034,9 @@
     }
     function buildFor2(tokens) {
       const partBuild = PartialTreeBuild.make(tokens, 0, tokens.count());
-      return AstTupleNode.make(buildProgramSequence(partBuild, tokens));
+      return AstTupleNode.make(buildProgramSequence(partBuild));
     }
-    return Object.freeze({ buildFor: buildFor2 });
+    return freeze7({ buildFor: buildFor2 });
   })();
 
   // tests/ast_build_tests.ts
