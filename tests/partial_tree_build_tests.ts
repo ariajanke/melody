@@ -1,11 +1,12 @@
-import { PartialTreeBuild, DoNothingCombiner } from '../src/partial_tree_build';
+import { PartialTreeBuild } from '../src/partial_tree_build';
 import { TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
 import { AstNode } from '../src/ast_node';
 import { AstStringableNode } from '../src/ast_stringable_node';
-import { StartGroupCombiner } from '../src/partial_tree_start_group_build';
+// import { StartGroupCombiner } from '../src/partial_tree_start_group_build';
 import { AstBuild } from '../src/ast_build';
+import { EmptyNodeExpansion } from '../src/node_expansion';
 
 const { describeNamed } = TestHelpers;
 
@@ -61,7 +62,7 @@ describeNamed({ PartialTreeBuild }, () => {
 
     includeHasAResultExample(ptbRes);
 
-    fit('begins as group start combiner', () => {
+    it('begins as group start combiner', () => {
        expect(StartGroupCombiner.hasCreated(ptbRes())).toBeTruthy();
     })
 
@@ -71,7 +72,7 @@ describeNamed({ PartialTreeBuild }, () => {
       // });
       ;
       ptbRes()?.expandIntoNodes(buildProgramSequence);
-      expect(DoNothingCombiner.hasCreated(ptbRes())).toBeTruthy();
+      expect(EmptyNodeExpansion.hasCreated(ptbRes())).toBeTruthy();
       // expect(ptbRes()?.remainingPart?.buildPart()).
       //   toEqual(PartialTreeBuild.kNothing);
     });

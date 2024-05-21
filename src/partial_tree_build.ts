@@ -1,10 +1,10 @@
-import { AstNode } from './ast_node';
-import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
 import { TokenCollection } from './tokenization';
-import { StandardErrorsFn, TypeCheckable } from './helpers';
+import { StandardErrorsFn } from './helpers';
 import { Token } from './token';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { PartialTreeStartIdentifierBuild } from './partial_tree_start_identifier_build';
+import { NodeExpansion, EmptyNodeExpansion } from './node_expansion';
+import { BareLeftTreePartHandler } from './start_group_node_expansion';
 
 const { freeze } = Object;
 
@@ -13,33 +13,6 @@ export interface PartialTreeBuild {
   ignoresNewLines: () => boolean,
   error: StandardErrorsFn
 }
-
-export type PartialBuildToNodesFn =
-  (partBuild: PartialTreeBuild) => Readonly<AstNode[]>;
-
-export interface NodeExpansion extends TypeCheckable {
-  expandIntoNodes(partBuildToNodes: PartialBuildToNodesFn): Readonly<AstNode[]>
-}
-
-export const DoNothingCombiner = (() => {
-  const { type, hasCreated } = TypeCheckable.make();
-  const kEmpty: Readonly<AstNode[]> = [];
-
-  function expandIntoNodes(_0: PartialBuildToNodesFn): Readonly<AstNode[]> {
-    return kEmpty;
-  }
-
-  const sharedInst = freeze({
-    expandIntoNodes,
-    type
-  });
-
-  function make(): NodeExpansion {
-    return sharedInst;
-  }
-
-  return freeze({ make, hasCreated });
-})();
 
 export const PartialTreeBuild = (() => {
   const tokenTypes = Token.types;
@@ -73,13 +46,12 @@ export const PartialTreeBuild = (() => {
     let mErrorFn: StandardErrorsFn = () => { return undefined; };
 
     function _fromGroupStart
-      (incompleteNode: AstIncompleteBinaryNode | undefined,
-       start: number,
+      (start: number,
        closeBasedOn: string):
        NodeExpansion | undefined
     {
       const group = PartialTreeStartGroupBuild.
-        make(mTokens, incompleteNode, start, mEnd, closeBasedOn);
+        make(mTokens, BareLeftTreePartHandler.make(), start, mEnd, closeBasedOn);
       const built = group.startGroupBuild();
       if (built) return built;
       mErrorFn = group.error;
@@ -91,13 +63,13 @@ export const PartialTreeBuild = (() => {
     // this is the tippy-top of the chain, anything can happen
     function buildPart(): NodeExpansion | undefined {
       if (mStart === mEnd) {
-        return DoNothingCombiner.make();
+        return EmptyNodeExpansion.make();
       }
 
       const startPos = skipNewLine(mTokens, mStart);
       if (startPos === mEnd) {
         // nothing, but not an error
-        return DoNothingCombiner.make();
+        return EmptyNodeExpansion.make();
       }
       const start = mTokens.at(startPos);
       if (start.type() === tokenTypes.identifier ||
@@ -112,7 +84,7 @@ export const PartialTreeBuild = (() => {
       } else if (start.content() == '(') {
         // grouping new line ignoring range (processed separately)
         if (startPos + 1 < mEnd) {
-          return _fromGroupStart(undefined, startPos, start.content());
+          return _fromGroupStart(startPos, start.content());
         }
         mErrorFn = () => freeze({
           message: 'end of input reached before being able to close'

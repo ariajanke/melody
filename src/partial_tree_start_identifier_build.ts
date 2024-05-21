@@ -1,4 +1,4 @@
-import { PartialTreeBuild, NodeExpansion, PartialBuildToNodesFn } from './partial_tree_build';
+import { PartialTreeBuild } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
 import { StandardErrorsFn, TypeCheckable } from './helpers';
 import { AstStringableNode } from './ast_stringable_node';
@@ -6,29 +6,33 @@ import { Token } from './token';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { AstNode } from './ast_node';
+import { NodeExpansion, PartialBuildToNodesFn, NodeExpansionVisitor } from './node_expansion';
+import { IncompleteNodeLeftTreePartHandler } from './start_group_node_expansion';
 
 export const SingleNodeCombiner = (() => {
   const { freeze } = Object;
-  const { type, hasCreated } = TypeCheckable.make();
 
   function make(node: AstNode): NodeExpansion {
+    const { type, visit } = NodeExpansion.makeBase();
+
     function expandIntoNodes(_0: PartialBuildToNodesFn): Readonly<AstNode[]>
       { return [node]; }
 
-    return freeze({ expandIntoNodes, type });
+    return freeze({ expandIntoNodes, type, visit });
   }
 
-  return freeze({ make, hasCreated });
+  return freeze({ make });
 })();
 
 export const SingleNodeCombinerWithRemaining = (() => {
   const { freeze } = Object;
-  const { type, hasCreated } = TypeCheckable.make();
 
   function make
     (node: AstNode, remainingPart: PartialTreeBuild):
     NodeExpansion
   {
+    const { type, verifyInTesting } = NodeExpansion.makeBase();
+
     function expandIntoNodes(fn: PartialBuildToNodesFn): Readonly<AstNode[]> {
       return [
         node,
@@ -36,10 +40,15 @@ export const SingleNodeCombinerWithRemaining = (() => {
       ];
     }
 
-    return freeze({ expandIntoNodes, type });
+    function visit(visitor: NodeExpansionVisitor) {
+      verifyInTesting();
+      visitor.visitComplete(node, remainingPart);
+    }
+
+    return freeze({ expandIntoNodes, type, visit });
   }
 
-  return freeze({ make, hasCreated });
+  return freeze({ make });
 })();
 
 export const PartialTreeStartIdentifierBuild = (() => {
@@ -75,7 +84,7 @@ export const PartialTreeStartIdentifierBuild = (() => {
         const incompleteNode = AstIncompleteBinaryNode.
           makeForOperator(next.content(), lhsNode);
         const group = PartialTreeStartGroupBuild.
-          make(mTokens, incompleteNode, nextPos, mEnd, next.content());
+          make(mTokens, IncompleteNodeLeftTreePartHandler.make(incompleteNode), nextPos, mEnd, next.content());
         const built = group.startGroupBuild();
         if (built) return built;
         mErrorFn = group.error;
@@ -90,10 +99,10 @@ export const PartialTreeStartIdentifierBuild = (() => {
           throw Error('impossible branch??');
         }
         const { normal } = PartialTreeBuild.lineContinuationScheme;
-        const remaining = PartialTreeBuild.
+        const rightPart = PartialTreeBuild.
           make(mTokens, nextPos + 1, mEnd, normal)
         return SingleNodeCombinerWithRemaining.
-          make(lhsNode, remaining);
+          make(lhsNode, rightPart);
       } else {
         mErrorFn = () => freeze({
           message: `not sure how to handle token "${next.content()}"`

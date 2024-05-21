@@ -6,7 +6,8 @@
     freeze: !kDebugMode ? Object.freeze : pass,
     mapValues,
     depthOneCopy,
-    memoize
+    memoize,
+    kInTestEnvironment: kDebugMode
   });
   expose({ Helpers });
   var TypeCheckable = (() => {
@@ -77,8 +78,8 @@
 
   // src/character_class.ts
   var CharacterClass = (() => {
-    const { freeze: freeze7, assign } = Object;
-    const classes = freeze7({
+    const { freeze: freeze9, assign } = Object;
+    const classes = freeze9({
       numeric: Symbol(),
       alphabetic: Symbol(),
       operative: Symbol(),
@@ -146,7 +147,7 @@
       }
       return kCharacterToCharacterClass[character] ?? classes.alphabetic;
     }
-    return freeze7({
+    return freeze9({
       classes,
       classOf
     });
@@ -154,7 +155,7 @@
 
   // src/crawl_strategies.ts
   var CrawlStrategies = (() => {
-    const { freeze: freeze7 } = Object;
+    const { freeze: freeze9 } = Object;
     const { classes, classOf } = CharacterClass;
     function crawlAlphanumeric(input, start) {
       const { length } = input;
@@ -213,7 +214,7 @@
       }
       return length;
     }
-    return freeze7({
+    return freeze9({
       [classes.alphabetic]: crawlAlphanumeric,
       [classes.literal]: crawlStringLiteral,
       [classes.operative]: crawlOperator,
@@ -302,14 +303,14 @@
 
   // src/character_crawler.ts
   var CharacterCrawler = (() => {
-    const { freeze: freeze7 } = Object;
-    const injections2 = freeze7({
+    const { freeze: freeze9 } = Object;
+    const injections2 = freeze9({
       CrawlStrategies,
       characterClassOf: CharacterClass.classOf,
       characterClasses: CharacterClass.classes
     });
     function make2(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
-      const inst = freeze7({ reachedEnd, readToken, crawl });
+      const inst = freeze9({ reachedEnd, readToken, crawl });
       let mStart = 0;
       let mEnd = 0;
       let mReadToken = Token.kBlankToken;
@@ -351,7 +352,7 @@
       }
       return inst;
     }
-    return freeze7({ make: make2 });
+    return freeze9({ make: make2 });
   })();
 
   // src/tokenization.ts
@@ -482,7 +483,7 @@
 
   // src/ast_tuple_node.ts
   var AstTupleNode = (() => {
-    const { freeze: freeze7 } = Object;
+    const { freeze: freeze9 } = Object;
     const tupleType = AstNode.types.tuple;
     function makeBinary(lhs, rhs) {
       return makeWithPair(lhs, rhs);
@@ -499,7 +500,7 @@
       return inst;
     }
     function make2(mSubExpressions) {
-      const inst = freeze7({ forEach, count, visit, type, mergeWith });
+      const inst = freeze9({ forEach, count, visit, type, mergeWith });
       function forEach(fn) {
         mSubExpressions.forEach((node) => fn(node));
       }
@@ -525,14 +526,14 @@
       }
       return inst;
     }
-    return freeze7({ makeBinary, makeUnary, make: make2 });
+    return freeze9({ makeBinary, makeUnary, make: make2 });
   })();
 
   // src/partial_tree_next_token_build.ts
   var PartialTreeNextTokenBuild = (() => {
-    const { freeze: freeze7 } = Object;
+    const { freeze: freeze9 } = Object;
     const { memoize: memoize2 } = Helpers;
-    const kCloseMapping = freeze7({
+    const kCloseMapping = freeze9({
       ["("]: ")"
     });
     function make2(mTokens, mStart, mEnd, mFindCloseBasedOn) {
@@ -551,7 +552,7 @@
             return i;
           }
         }
-        mError = memoize2(() => freeze7({
+        mError = memoize2(() => freeze9({
           message: `Cannot find close position for ${mFindCloseBasedOn}`
         }));
         return void 0;
@@ -572,51 +573,111 @@
       function error() {
         return mError();
       }
-      return freeze7({ unprocessedPart, remainingRange, error });
+      return freeze9({ unprocessedPart, remainingRange, error });
     }
-    return freeze7({ make: make2 });
+    return freeze9({ make: make2 });
+  })();
+
+  // src/node_expansion.ts
+  var { freeze: freeze5 } = Helpers;
+  var NodeExpansion = (() => {
+    const { freeze: freeze9, kInTestEnvironment } = Helpers;
+    function visit(_0) {
+    }
+    function verifyInTesting() {
+      if (kInTestEnvironment)
+        return;
+      throw Error("Cannot be called outside of a testing environment");
+    }
+    function makeBase() {
+      const { type, hasCreated } = TypeCheckable.make();
+      return freeze9({ hasCreated, type, freeze: freeze9, visit, verifyInTesting });
+    }
+    return freeze9({ makeBase });
+  })();
+  var EmptyNodeExpansion = (() => {
+    const { type, hasCreated, visit } = NodeExpansion.makeBase();
+    const kEmpty = [];
+    function expandIntoNodes(_0) {
+      return kEmpty;
+    }
+    const sharedInst = freeze5({
+      expandIntoNodes,
+      type,
+      visit
+    });
+    function make2() {
+      return sharedInst;
+    }
+    return freeze5({ make: make2, hasCreated });
+  })();
+
+  // src/start_group_node_expansion.ts
+  var BareLeftTreePartHandler = (() => {
+    const { freeze: freeze9 } = Object;
+    const kSharedInst = freeze9({ handleLeftSide, visit });
+    function handleLeftSide(nodes) {
+      return nodes;
+    }
+    function visit(leftPart, visitor) {
+      visitor.visitRemainingPart(leftPart);
+    }
+    function make2() {
+      return kSharedInst;
+    }
+    return freeze9({ make: make2 });
+  })();
+  var IncompleteNodeLeftTreePartHandler = (() => {
+    const { freeze: freeze9 } = Object;
+    function make2(incompleteNode) {
+      function handleLeftSide(nodes) {
+        const [head, ...tail] = nodes;
+        if (!head) {
+          return [];
+        }
+        return [incompleteNode.finish(head), ...tail];
+      }
+      function visit(leftPart, visitor) {
+        visitor.visitIncomplete(incompleteNode, leftPart);
+      }
+      return freeze9({ handleLeftSide, visit });
+    }
+    return freeze9({ make: make2 });
+  })();
+  var StartGroupNodeExpansion = (() => {
+    const { freeze: freeze9 } = Object;
+    function make2(leftPartHandler, leftPart, rightPart) {
+      const {
+        type,
+        verifyInTesting
+      } = NodeExpansion.makeBase();
+      function expandIntoNodes(fn) {
+        return [
+          ...leftPartHandler.handleLeftSide(fn(leftPart)),
+          //base.expandIntoNodes(fn),
+          ...fn(rightPart)
+        ];
+      }
+      function visit(visitor) {
+        verifyInTesting();
+        leftPartHandler.visit(leftPart, visitor);
+        visitor.visitRemainingPart(rightPart);
+      }
+      return freeze9({ expandIntoNodes, type, visit });
+    }
+    return freeze9({ make: make2 });
   })();
 
   // src/partial_tree_start_group_build.ts
-  var StartGroupCombiner = (() => {
-    const { freeze: freeze7 } = Object;
-    const { type, hasCreated } = TypeCheckable.make();
-    function make2(unprocessedPart, remainingPart) {
-      function expandIntoNodes(fn) {
-        return [
-          ...fn(unprocessedPart),
-          ...fn(remainingPart)
-        ];
-      }
-      return freeze7({ expandIntoNodes, type });
-    }
-    return freeze7({ make: make2, hasCreated });
-  })();
-  var StartGroupCombinerWithIncomplete = (() => {
-    const { freeze: freeze7 } = Object;
-    const { type } = TypeCheckable.make();
-    function make2(incompleteNode, unprocessedPart, remainingPart) {
-      function expandIntoNodes(fn) {
-        const [head, ...tail] = fn(unprocessedPart);
-        return [
-          incompleteNode.finish(head),
-          ...tail,
-          ...fn(remainingPart)
-        ];
-      }
-      return freeze7({ expandIntoNodes, type });
-    }
-    return freeze7({ make: make2 });
-  })();
   var PartialTreeStartGroupBuild = (() => {
-    const { memoize: memoize2, freeze: freeze7 } = Helpers;
+    const { memoize: memoize2, freeze: freeze9 } = Helpers;
     function skipNewLine(tokens, i) {
       if (tokens.at(i).type() === Token.types.newLine) {
         return i + 1;
       }
       return i;
     }
-    function make2(mTokens, incompleteNode, start, mEnd, closeBasedOn) {
+    function make2(mTokens, leftPartHandler, start, mEnd, closeBasedOn) {
       let mErrorFn = () => {
         return void 0;
       };
@@ -624,33 +685,30 @@
         const nextPartStart = skipNewLine(mTokens, start + 1);
         return PartialTreeNextTokenBuild.make(mTokens, nextPartStart, mEnd, closeBasedOn);
       });
-      function getUnprocessedPart() {
+      function getLeftPart() {
         return nextPart().unprocessedPart() ?? (() => {
           mErrorFn = nextPart().error;
         })();
       }
       function startGroupBuild() {
-        const unprocessedPart = getUnprocessedPart();
-        if (!unprocessedPart) {
+        const leftPart = getLeftPart();
+        if (!leftPart) {
           return;
         }
         const remainingRange = nextPart().remainingRange();
-        const remainingPart = PartialTreeBuild.make(mTokens, ...remainingRange);
-        if (incompleteNode)
-          return StartGroupCombinerWithIncomplete.make(incompleteNode, unprocessedPart, remainingPart);
-        else
-          return StartGroupCombiner.make(unprocessedPart, remainingPart);
+        const rightPart = PartialTreeBuild.make(mTokens, ...remainingRange);
+        return StartGroupNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
-      return freeze7({
+      return freeze9({
         startGroupBuild: memoize2(startGroupBuild),
         error: () => mErrorFn()
       });
     }
-    return freeze7({ make: make2, skipNewLine });
+    return freeze9({ make: make2, skipNewLine });
   })();
 
   // src/ast_stringable_node.ts
-  var { freeze: freeze5 } = Object;
+  var { freeze: freeze6 } = Object;
   var AstStringableNode = (() => {
     const tokenTypes = Token.types;
     const nodeTypes = AstNode.types;
@@ -684,7 +742,7 @@
         }
       })().make(token.content());
     }
-    return freeze5({ downcast, hasCreated, makeForToken });
+    return freeze6({ downcast, hasCreated, makeForToken });
   })();
   function makeStringableNodeClass(nodeType) {
     function make2(value, comesBeforeOperator) {
@@ -696,9 +754,9 @@
       function asString() {
         return value;
       }
-      return freeze5({ visit, type, asString, comesBeforeOperator });
+      return freeze6({ visit, type, asString, comesBeforeOperator });
     }
-    return freeze5({ make: make2 });
+    return freeze6({ make: make2 });
   }
   var AstStringLiteralNode = (() => {
     const Super = makeStringableNodeClass(AstNode.types.stringLiteral);
@@ -714,7 +772,7 @@
       }
       return Super.make(value, comesBeforeOperator);
     }
-    return freeze5({ make: make2 });
+    return freeze6({ make: make2 });
   })();
   var AstIdentifierNode = (() => {
     const Super = makeStringableNodeClass(AstNode.types.identifier);
@@ -725,7 +783,7 @@
       }
       return Super.make(value, comesBeforeOperator);
     }
-    return freeze5({ make: make2 });
+    return freeze6({ make: make2 });
   })();
 
   // src/ast_function_call_node.ts
@@ -763,11 +821,11 @@
 
   // src/ast_assignment_node.ts
   var AstAssignmentNode = (() => {
-    const { freeze: freeze7 } = Object;
+    const { freeze: freeze9 } = Object;
     const assignmentType = AstNode.types.assignment;
     function make2(lhs, rhs) {
       const assignee = AstStringableNode.downcast(lhs);
-      const inst = freeze7({ visit, type, assigneeName });
+      const inst = freeze9({ visit, type, assigneeName });
       function visit(visitor) {
         visitor.visitAssignment(inst, rhs);
       }
@@ -779,12 +837,12 @@
       }
       return inst;
     }
-    return freeze7({ make: make2 });
+    return freeze9({ make: make2 });
   })();
 
   // src/ast_incomplete_binary_node.ts
   var AstIncompleteBinaryNode = (() => {
-    const { freeze: freeze7 } = Object;
+    const { freeze: freeze9 } = Object;
     function _selectedConstructor(operatorStr) {
       switch (operatorStr) {
         case "(":
@@ -813,39 +871,43 @@
         }
         return AstStringableNode.downcast(lhs).asString();
       }
-      return freeze7({ finish, lhsAsString });
+      return freeze9({ finish, lhsAsString });
     }
-    return freeze7({ make: make2, makeForOperator });
+    return freeze9({ make: make2, makeForOperator });
   })();
 
   // src/partial_tree_start_identifier_build.ts
   var SingleNodeCombiner = (() => {
-    const { freeze: freeze7 } = Object;
-    const { type, hasCreated } = TypeCheckable.make();
+    const { freeze: freeze9 } = Object;
     function make2(node) {
+      const { type, visit } = NodeExpansion.makeBase();
       function expandIntoNodes(_0) {
         return [node];
       }
-      return freeze7({ expandIntoNodes, type });
+      return freeze9({ expandIntoNodes, type, visit });
     }
-    return freeze7({ make: make2, hasCreated });
+    return freeze9({ make: make2 });
   })();
   var SingleNodeCombinerWithRemaining = (() => {
-    const { freeze: freeze7 } = Object;
-    const { type, hasCreated } = TypeCheckable.make();
+    const { freeze: freeze9 } = Object;
     function make2(node, remainingPart) {
+      const { type, verifyInTesting } = NodeExpansion.makeBase();
       function expandIntoNodes(fn) {
         return [
           node,
           ...fn(remainingPart)
         ];
       }
-      return freeze7({ expandIntoNodes, type });
+      function visit(visitor) {
+        verifyInTesting();
+        visitor.visitComplete(node, remainingPart);
+      }
+      return freeze9({ expandIntoNodes, type, visit });
     }
-    return freeze7({ make: make2, hasCreated });
+    return freeze9({ make: make2 });
   })();
   var PartialTreeStartIdentifierBuild = (() => {
-    const { freeze: freeze7 } = Object;
+    const { freeze: freeze9 } = Object;
     const { skipNewLine } = PartialTreeStartGroupBuild;
     const tokenTypes = Token.types;
     const makeStringableNodeFor = AstStringableNode.makeForToken;
@@ -866,11 +928,11 @@
         const next = mTokens.at(nextPos);
         if (next.type() === tokenTypes.operator) {
           if (!lhsNode.comesBeforeOperator(next)) {
-            mErrorFn = () => freeze7({ message: `operator "${next.content()}" not allowed here` });
+            mErrorFn = () => freeze9({ message: `operator "${next.content()}" not allowed here` });
             return;
           }
           const incompleteNode = AstIncompleteBinaryNode.makeForOperator(next.content(), lhsNode);
-          const group = PartialTreeStartGroupBuild.make(mTokens, incompleteNode, nextPos, mEnd, next.content());
+          const group = PartialTreeStartGroupBuild.make(mTokens, IncompleteNodeLeftTreePartHandler.make(incompleteNode), nextPos, mEnd, next.content());
           const built = group.startGroupBuild();
           if (built)
             return built;
@@ -887,36 +949,20 @@
           const remaining = PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal);
           return SingleNodeCombinerWithRemaining.make(lhsNode, remaining);
         } else {
-          mErrorFn = () => freeze7({
+          mErrorFn = () => freeze9({
             message: `not sure how to handle token "${next.content()}"`
           });
           return;
         }
       }
-      return freeze7({ build, error: () => mErrorFn() });
+      return freeze9({ build, error: () => mErrorFn() });
     }
-    return freeze7({ make: make2 });
+    return freeze9({ make: make2 });
   })();
 
   // src/partial_tree_build.ts
-  var DoNothingCombiner = (() => {
-    const { freeze: freeze7 } = Object;
-    const { type, hasCreated } = TypeCheckable.make();
-    const kEmpty = [];
-    function expandIntoNodes(_0) {
-      return kEmpty;
-    }
-    const sharedInst = freeze7({
-      expandIntoNodes,
-      type
-    });
-    function make2() {
-      return sharedInst;
-    }
-    return freeze7({ make: make2, hasCreated });
-  })();
+  var { freeze: freeze7 } = Object;
   var PartialTreeBuild = (() => {
-    const { freeze: freeze7 } = Object;
     const tokenTypes = Token.types;
     const lineContinuationScheme = freeze7({
       inGroup: Symbol(),
@@ -934,8 +980,8 @@
       let mErrorFn = () => {
         return void 0;
       };
-      function _fromGroupStart(incompleteNode, start, closeBasedOn) {
-        const group = PartialTreeStartGroupBuild.make(mTokens, incompleteNode, start, mEnd, closeBasedOn);
+      function _fromGroupStart(start, closeBasedOn) {
+        const group = PartialTreeStartGroupBuild.make(mTokens, BareLeftTreePartHandler.make(), start, mEnd, closeBasedOn);
         const built = group.startGroupBuild();
         if (built)
           return built;
@@ -947,11 +993,11 @@
       }
       function buildPart() {
         if (mStart === mEnd) {
-          return DoNothingCombiner.make();
+          return EmptyNodeExpansion.make();
         }
         const startPos = skipNewLine(mTokens, mStart);
         if (startPos === mEnd) {
-          return DoNothingCombiner.make();
+          return EmptyNodeExpansion.make();
         }
         const start = mTokens.at(startPos);
         if (start.type() === tokenTypes.identifier || start.type() === tokenTypes.stringLiteral) {
@@ -963,7 +1009,7 @@
           return;
         } else if (start.content() == "(") {
           if (startPos + 1 < mEnd) {
-            return _fromGroupStart(void 0, startPos, start.content());
+            return _fromGroupStart(startPos, start.content());
           }
           mErrorFn = () => freeze7({
             message: "end of input reached before being able to close"
@@ -995,7 +1041,7 @@
 
   // src/ast_build.ts
   var AstBuild = (() => {
-    const { freeze: freeze7 } = Object;
+    const { freeze: freeze9 } = Object;
     const mErrors = [];
     function buildProgramSequence(partBuild) {
       const part = partBuild.buildPart();
@@ -1010,7 +1056,7 @@
       const res = buildProgramSequence(partBuild).map((n) => n);
       return AstTupleNode.make(res);
     }
-    return freeze7({ buildFor: buildFor2 });
+    return freeze9({ buildFor: buildFor2, testable: { buildProgramSequence } });
   })();
 
   // tests/ast_build_tests.ts
@@ -1182,7 +1228,7 @@
 
   // src/context.ts
   var Context = (() => {
-    const { freeze: freeze7 } = Object;
+    const { freeze: freeze9 } = Object;
     function make2() {
       const mAvailableVariables = {};
       function declareVariable(name, value) {
@@ -1197,15 +1243,15 @@
       function getValueOfVariable(name) {
         return mAvailableVariables[name];
       }
-      return freeze7({ declareVariable, getValueOfVariable, setVariable });
+      return freeze9({ declareVariable, getValueOfVariable, setVariable });
     }
-    return freeze7({ make: make2 });
+    return freeze9({ make: make2 });
   })();
 
   // src/interpreter.ts
-  var { freeze: freeze6 } = Object;
-  var Interpreter = freeze6({ make, buildFor });
-  var injections = freeze6({ putsFunction: console.log });
+  var { freeze: freeze8 } = Object;
+  var Interpreter = freeze8({ make, buildFor });
+  var injections = freeze8({ putsFunction: console.log });
   function make(context = Context.make(), { putsFunction } = injections) {
     const nodeTypes = AstNode.types;
     function visitFunctionCall(node) {
@@ -1234,7 +1280,7 @@
     function visitAssignment(node, rhs) {
       context.setVariable(node.assigneeName(), getValueOf(rhs));
     }
-    return freeze6({ visitFunctionCall, visitLetDeclaration, visitAssignment });
+    return freeze8({ visitFunctionCall, visitLetDeclaration, visitAssignment });
   }
   function buildFor(inp) {
     const tokenCollection = Tokenization.make().tokenize(inp);
@@ -1358,6 +1404,7 @@
   var { describeNamed: describeNamed10 } = TestHelpers;
   describeNamed10({ PartialTreeBuild }, () => {
     const makeToken = Token.forTesting.makeFromStringOnly;
+    const { buildProgramSequence } = AstBuild.testable;
     const make2 = (tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length);
     const makePtbRes = (...tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length).buildPart();
     function includeHasAResultExample(ptbRes) {
@@ -1369,11 +1416,13 @@
       const args = [makeToken("("), makeToken("\n"), makeToken("a"), makeToken(")")];
       const ptbRes = () => makePtbRes(...args);
       includeHasAResultExample(ptbRes);
-      fit("begins as group start combiner", () => {
+      it("begins as group start combiner", () => {
         expect(StartGroupCombiner.hasCreated(ptbRes())).toBeTruthy();
       });
       it("unprocessed range contains the remainder of tokens", () => {
-        expect(DoNothingCombiner.hasCreated(ptbRes())).toBeTruthy();
+        ;
+        ptbRes()?.expandIntoNodes(buildProgramSequence);
+        expect(EmptyNodeExpansion.hasCreated(ptbRes())).toBeTruthy();
       });
     });
     describe('handles grouping case "( a )"', () => {

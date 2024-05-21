@@ -6,6 +6,7 @@ export const Helpers = Object.freeze({
   mapValues,
   depthOneCopy,
   memoize,
+  kInTestEnvironment: kDebugMode
 });
 
 export type StandardError = Readonly<{ message: string }>;

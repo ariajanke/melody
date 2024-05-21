@@ -4,8 +4,11 @@ import { AstTupleNode } from './ast_tuple_node';
 import { AstAssignmentNode } from './ast_assignment_node';
 import { AstStringableNode } from './ast_stringable_node';
 
-export interface AstIncompleteBinaryNode {
-  finish: (rhs: AstNode) => AstNode,
+export interface IncompleteNode {
+  finish: (rhs: AstNode) => AstNode
+}
+
+export interface AstIncompleteBinaryNode extends IncompleteNode {
   lhsAsString: () => string | undefined
 }
 
@@ -22,6 +25,8 @@ export const AstIncompleteBinaryNode = (() => {
       return AstTupleNode.makeBinary;
     case ':=':
       return AstAssignmentNode.make;
+    // +, -, *, /, and, or, =, [, .,
+    // +=, -=, *=, /=
     default: break;
     }
     throw Error(`Token ${operatorStr} does not result in a binary operator`);
