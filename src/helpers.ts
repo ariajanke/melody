@@ -6,7 +6,8 @@ export const Helpers = Object.freeze({
   mapValues,
   depthOneCopy,
   memoize,
-  kInTestEnvironment: kDebugMode
+  verifyInTesting,
+  // passWhenInTesting
 });
 
 export type StandardError = Readonly<{ message: string }>;
@@ -35,6 +36,16 @@ export const TypeCheckable = (() => {
     make
   });
 })();
+
+function verifyInTesting() {
+  if (kDebugMode) return;
+  throw Error('Cannot be called outside of a testing environment');
+}
+
+// function passWhenInTesting<Type>(fn: () => Type): Type {
+//   if (!kDebugMode) return {} as Type;
+//   return fn();
+// }
 
 function pass<Type>(arg: Type): Readonly<Type> { return arg; }
 

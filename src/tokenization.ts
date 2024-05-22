@@ -4,7 +4,8 @@ import { Token } from './token';
 export interface TokenCollection {
   count: () => number,
   at: (i: number) => Token
-  forEach: (fn: (token: string) => void) => void
+  forEach: (fn: (token: string) => void) => void,
+  skipNewLine: (i: number) => number
 }
 
 export interface Tokenization {
@@ -42,7 +43,14 @@ export const TokenCollection = (() => {
       mTokens.forEach((token: Token) => fn(token.content()));
     }
 
-    return freeze({ count, at, forEach });
+    function skipNewLine(i: number): number {
+      if (at(i).type() === Token.types.newLine) {
+        return i + 1;
+      }
+      return i;
+    }
+
+    return freeze({ count, at, forEach, skipNewLine });
   }
 
   return freeze({ make });

@@ -1,17 +1,18 @@
 import { TokenCollection } from './tokenization';
-import { StandardErrorsFn } from './helpers';
+import { Helpers, StandardErrorsFn } from './helpers';
 import { Token } from './token';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { PartialTreeStartIdentifierBuild } from './partial_tree_start_identifier_build';
 import { NodeExpansion, EmptyNodeExpansion } from './node_expansion';
-import { BareLeftTreePartHandler } from './start_group_node_expansion';
+import { BareLeftTreePartHandler } from './left_side_node_expansion';
 
-const { freeze } = Object;
+const { freeze, memoize } = Helpers;
 
 export interface PartialTreeBuild {
   buildPart: () => NodeExpansion | undefined,
   ignoresNewLines: () => boolean,
-  error: StandardErrorsFn
+  error: StandardErrorsFn,
+  instanceId: () => symbol
 }
 
 export const PartialTreeBuild = (() => {
@@ -22,8 +23,6 @@ export const PartialTreeBuild = (() => {
     operatorContinued: Symbol(),
     normal: Symbol()
   });
-
-  const { skipNewLine } = PartialTreeStartGroupBuild;
 
   function make
     (mTokens: TokenCollection, mStart: number, mEnd: number,
@@ -60,17 +59,16 @@ export const PartialTreeBuild = (() => {
 
     function ignoresNewLines(): boolean { return mLineContScheme !== lineContinuationScheme.normal; }
 
-    // this is the tippy-top of the chain, anything can happen
     function buildPart(): NodeExpansion | undefined {
       if (mStart === mEnd) {
         return EmptyNodeExpansion.make();
       }
 
-      const startPos = skipNewLine(mTokens, mStart);
+      const startPos = mTokens.skipNewLine(mStart);
       if (startPos === mEnd) {
-        // nothing, but not an error
         return EmptyNodeExpansion.make();
       }
+
       const start = mTokens.at(startPos);
       if (start.type() === tokenTypes.identifier ||
           start.type() === tokenTypes.stringLiteral)
@@ -102,15 +100,13 @@ export const PartialTreeBuild = (() => {
       buildPart,
       ignoresNewLines,
       error,
-      db: { mLineContScheme, mStart, mEnd }
+      instanceId: memoize(Symbol)
     });
   }
 
   return freeze({
     makeAssumeNotNewLine,
     make,
-    // kNothing,
-    lineContinuationScheme,
-    skipNewLine
+    lineContinuationScheme
   });
 })();

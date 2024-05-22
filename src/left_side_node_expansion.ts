@@ -20,12 +20,9 @@ export const BareLeftTreePartHandler = (() => {
     { return nodes; }
 
   function visit(leftPart: PartialTreeBuild, visitor: NodeExpansionVisitor)
-    { visitor.visitRemainingPart(leftPart); }
+    { visitor.visitLeftPartOnly(leftPart); }
 
-
-  function make(): LeftTreePartHandler {
-    return kSharedInst;
-  }
+  function make(): LeftTreePartHandler { return kSharedInst; }
 
   return freeze({ make })
 })();
@@ -39,13 +36,12 @@ export const IncompleteNodeLeftTreePartHandler = (() => {
       if (!head) {
         return [];
       }
-      
+
       return [incompleteNode.finish(head), ...tail];
     }
 
-    function visit(leftPart: PartialTreeBuild, visitor: NodeExpansionVisitor) {
-      visitor.visitIncomplete(incompleteNode, leftPart);
-    }
+    function visit(leftPart: PartialTreeBuild, visitor: NodeExpansionVisitor)
+      { visitor.visitLeftWithNode(incompleteNode, leftPart); }
 
     return freeze({ handleLeftSide, visit });
   }
@@ -53,7 +49,7 @@ export const IncompleteNodeLeftTreePartHandler = (() => {
   return freeze({ make });
 })();
 
-export const StartGroupNodeExpansion = (() => {
+export const LeftSideNodeExpansion = (() => {
   const { freeze } = Object;
 
   function make
@@ -67,9 +63,9 @@ export const StartGroupNodeExpansion = (() => {
 
     function expandIntoNodes
       (fn: PartialBuildToNodesFn): Readonly<AstNode[]>
-    { 
+    {
       return [
-        ...leftPartHandler.handleLeftSide(fn(leftPart)), //base.expandIntoNodes(fn),
+        ...leftPartHandler.handleLeftSide(fn(leftPart)),
         ...fn(rightPart)
       ];
     }
@@ -78,7 +74,7 @@ export const StartGroupNodeExpansion = (() => {
       verifyInTesting();
       leftPartHandler.visit(leftPart, visitor);
       visitor.
-        visitRemainingPart(rightPart);
+        visitRightPartOnly(rightPart);
     }
 
     return freeze({ expandIntoNodes, type, visit });

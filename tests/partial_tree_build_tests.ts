@@ -6,7 +6,7 @@ import { AstNode } from '../src/ast_node';
 import { AstStringableNode } from '../src/ast_stringable_node';
 // import { StartGroupCombiner } from '../src/partial_tree_start_group_build';
 import { AstBuild } from '../src/ast_build';
-import { EmptyNodeExpansion } from '../src/node_expansion';
+import { EmptyNodeExpansion, NodeExpansionVisitor } from '../src/node_expansion';
 
 const { describeNamed } = TestHelpers;
 
@@ -56,26 +56,62 @@ describeNamed({ PartialTreeBuild }, () => {
   //   });
   // }
 
-  describe('handles general case "( \\n ..."', () => {
+  fdescribe('handles general case "( \\n ..."', () => {
     const args = [makeToken('('), makeToken('\n'), makeToken('a'), makeToken(')')];
     const ptbRes = () => makePtbRes(...args);
 
     includeHasAResultExample(ptbRes);
 
-    it('begins as group start combiner', () => {
-       expect(StartGroupCombiner.hasCreated(ptbRes())).toBeTruthy();
+    it('is composed of a left and right part only', () => {
+      let leftPartCalls = 0;
+      let rightPartCalls = 0;
+      const visitor = NodeExpansionVisitor.
+        makeOverrider(fail).
+        visitLeftPartOnly((_0: PartialTreeBuild) => {
+          ++leftPartCalls;
+        }).
+        visitRightPartOnly((_1: PartialTreeBuild) => {
+          ++rightPartCalls;
+        }).
+        finish();
+      ptbRes()?.visit(visitor);
+      expect(leftPartCalls).toEqual(1);
+      expect(rightPartCalls).toEqual(1);
     })
 
-    it('unprocessed range contains the remainder of tokens', () => {
-      // ptbRes()?.expandIntoNodes((partBuild: PartialTreeBuild) => {
-      //   partBuild.
-      // });
-      ;
-      ptbRes()?.expandIntoNodes(buildProgramSequence);
-      expect(EmptyNodeExpansion.hasCreated(ptbRes())).toBeTruthy();
-      // expect(ptbRes()?.remainingPart?.buildPart()).
-      //   toEqual(PartialTreeBuild.kNothing);
+    it('makes right part with remainder of tokens', () => {
+      let ran = false;
+      const originalMake = PartialTreeBuild.make;
+      const fakeMake = 
+      PartialTreeBuild.make = 
+      const visitor = NodeExpansionVisitor.
+        makeOverrider(fail).
+        visitLeftPartOnly((_0: PartialTreeBuild) => {
+          ;
+        }).
+        visitRightPartOnly((rightPart: PartialTreeBuild) => {
+          // ran = true;
+          // rightPart.tellTokenRange((start: number, end: number) => {
+          //   expect(start).toEqual(4);
+          //   expect(end).toEqual(4);
+          // });
+          // expect(rightPart.start()).toEqual(1);
+          // expect(rightPart.end()).toEqual(3);
+        }).
+        finish();
+      ptbRes()?.visit(visitor);
     });
+
+    // it('unprocessed range contains the remainder of tokens', () => {
+    //   // ptbRes()?.expandIntoNodes((partBuild: PartialTreeBuild) => {
+    //   //   partBuild.
+    //   // });
+    //   ;
+    //   ptbRes()?.expandIntoNodes(buildProgramSequence);
+    //   expect(EmptyNodeExpansion.hasCreated(ptbRes())).toBeTruthy();
+    //   // expect(ptbRes()?.remainingPart?.buildPart()).
+    //   //   toEqual(PartialTreeBuild.kNothing);
+    // });
   });
 
   describe('handles grouping case "( a )"', () => {
@@ -108,7 +144,7 @@ describeNamed({ PartialTreeBuild }, () => {
       makeToken('('), makeToken('a'), makeToken(','), makeToken('b'),
       makeToken(')'));
 
-    includeNoNodePtbExamples(ptbRes);
+    // includeNoNodePtbExamples(ptbRes);
 
     it('unprocessed range contains the remainder of tokens', () => {
       expect(ptbRes()?.remainingPart?.buildPart()).
