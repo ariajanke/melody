@@ -332,3 +332,116 @@ $'.foo' := fn 'stuff'
 puts(foo) # works, prints 'stuff'
 
 ```
+
+How would I do things like enable mocks/flexiblity for testing?
+
+```melody
+
+<<
+
+let makeWithRunExpectations = fn
+end
+
+>>
+
+it('dodo', fn (expectToCall: ???)
+  defVisit( expectToCall( fn (rightPart: PartialTreeBuild)
+    let start = rightPart.range().start
+    let end = rightPart.range().end
+    expect(start).toEqual(4)
+    expect(end).toEqual(4)
+  end) )
+end)
+
+
+```
+
+How would you have generic member functions?
+Or how to add to a constant table after a return but still during "before time"?
+I think I need to figure out function overloading first. Because this will essentially be a thing that let's me define n number of functions for a name.
+
+``` melody
+
+# somewhere there's a getInterger defined
+# It returns an Integer32, a type that
+# - fits inteface Integer
+# - fits inteface Anything
+# each identifier has one type, and many interfaces
+
+<<
+
+# identifiers can be unresolvable in value, or Inaccessible in type
+# *sometimes* that's not a problem
+let convertTo = fn (a: Anything, t: Type)
+  # a is presently unresolvable in value, but not unresolvable in type
+  let converter = kConversionMethodsTable[typeOf(a)][t]
+  # what about:
+  # return kConversionMethodsTable[typeOf(a)][t](a)
+  # that means I need for "a" RTTI in place:
+  # const char * a_type = "Integer32";
+  # const char * t_value = "String";
+  # const void * t_0 = mel_table_lookup(kConversionMethodsTable_ptr, a_type);
+  # const void * t_1 = mel_table_lookup(t_0, t_value);
+  # // void pointer representing a Melody string instance
+  # // at this point we know that "a" is an "int32"
+  # // that the looked up method is void*(*)(int32) c function
+  # const void * t_return_value = ((void *(*)(int32))(t_1))( /* STOP !ERROR! */ );
+  # STOP cannot resolve value of a in this context
+  # however a:
+  # return fn kConversionMethodsTable[typeOf(a)][t](a)
+  # will work, because in this deferred context, a is resovlable (when it's called in runtime scope)
+  # v however here
+  return fn converter(a)
+  # coverter is found at compile time
+end
+
+>>
+
+puts(<< convertTo($getRandomInteger(), String) >>())
+
+```
+
+Need function overloading, especially if we want common functions that can be used for arbitrary types.
+The idea originally was to allow a sort of interface for the parameters and let the compiler figure it out?
+
+```melody
+
+<<
+
+let myWrap = fn (f_: Function)
+  let makeRtComponent = fn
+    let didHit := false
+
+    fn getHit didHit := true
+    fn gotHit didHit
+
+    return {
+      getHit, gotHit
+    }
+  end
+
+  return fn
+    let c := makeRtComponent()
+    let rv = f_(c.getHit)
+    tellRtHit(c.gotHit())
+    return rv
+  end
+end
+
+>>
+
+<<
+myWrap(fn (f_: fn (): Boolean)
+  if someRtThingWorksOut()
+    f_()
+  end
+end) \
+>>()
+
+<<
+myWrap(fn (f_: fn (): Boolean)
+  return 10
+end)
+>>
+
+```

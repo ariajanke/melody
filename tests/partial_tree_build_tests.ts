@@ -34,6 +34,10 @@ describeNamed({ PartialTreeBuild }, () => {
       make(TokenCollection.make(tokens), 0, tokens.length).
       buildPart();
 
+    const ptbWithVisitor = (fn: () => NodeExpansionVisitor) =>
+      { ptbRes()?.visit(fn()); };
+  
+
   function includeHasAResultExample(ptbRes: () => PartialTreeBuildResult | undefined) {
     it('returns a result', () => {
       expect(ptbRes()).toBeDefined();
@@ -56,7 +60,7 @@ describeNamed({ PartialTreeBuild }, () => {
   //   });
   // }
 
-  fdescribe('handles general case "( \\n ..."', () => {
+  describe('handles general case "( \\n ..."', () => {
     const args = [makeToken('('), makeToken('\n'), makeToken('a'), makeToken(')')];
     const ptbRes = () => makePtbRes(...args);
 
@@ -79,42 +83,41 @@ describeNamed({ PartialTreeBuild }, () => {
       expect(rightPartCalls).toEqual(1);
     })
 
-    it('makes right part with remainder of tokens', () => {
+
+    it('makes right part with none of the tokens', () => {
       let ran = false;
-      const originalMake = PartialTreeBuild.make;
-      const fakeMake = 
-      PartialTreeBuild.make = 
-      const visitor = NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((_0: PartialTreeBuild) => {
-          ;
-        }).
-        visitRightPartOnly((rightPart: PartialTreeBuild) => {
-          // ran = true;
-          // rightPart.tellTokenRange((start: number, end: number) => {
-          //   expect(start).toEqual(4);
-          //   expect(end).toEqual(4);
-          // });
-          // expect(rightPart.start()).toEqual(1);
-          // expect(rightPart.end()).toEqual(3);
-        }).
-        finish();
-      ptbRes()?.visit(visitor);
+      ptbWithVisitor(() =>
+        NodeExpansionVisitor.
+          makeOverrider(fail).
+          visitLeftPartOnly((_0: PartialTreeBuild) => {}).
+          visitRightPartOnly((rightPart: PartialTreeBuild) => {
+            ran = true;
+            const { start, end } = rightPart.range();
+            expect(start).toEqual(4);
+            expect(end).toEqual(4);
+          }).
+          finish())
+      expect(ran).toBeTruthy();
     });
 
-    // it('unprocessed range contains the remainder of tokens', () => {
-    //   // ptbRes()?.expandIntoNodes((partBuild: PartialTreeBuild) => {
-    //   //   partBuild.
-    //   // });
-    //   ;
-    //   ptbRes()?.expandIntoNodes(buildProgramSequence);
-    //   expect(EmptyNodeExpansion.hasCreated(ptbRes())).toBeTruthy();
-    //   // expect(ptbRes()?.remainingPart?.buildPart()).
-    //   //   toEqual(PartialTreeBuild.kNothing);
-    // });
+    it('makes left part with the remainder of the tokens, skipping new line', () => {
+      let ran = false;
+      ptbWithVisitor(() =>
+        NodeExpansionVisitor.
+          makeOverrider(fail).
+          visitLeftPartOnly((leftPart: PartialTreeBuild) => {
+            ran = true;
+            const { start, end } = leftPart.range();
+            expect(start).toEqual(2);
+            expect(end).toEqual(3);
+          }).
+          visitRightPartOnly((_0: PartialTreeBuild) => {}).
+          finish())
+      expect(ran).toBeTruthy();
+    });
   });
 
-  describe('handles grouping case "( a )"', () => {
+  fdescribe('handles grouping case "( a )"', () => {
     const args = [makeToken('('), makeToken('a'), makeToken(')')];
     const ptbRes = () =>
       makePtbRes(...args);

@@ -1,6 +1,6 @@
 import { TokenCollection } from './tokenization';
 import { StandardErrorsFn } from './helpers';
-import { PartialTreeBuild } from './partial_tree_build';
+import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
 import { Helpers } from './helpers';
 
 export interface PartialTreeNextTokenBuild {
@@ -21,11 +21,10 @@ export const PartialTreeNextTokenBuild = (() => {
                 mFindCloseBasedOn: string)
   {
     let mError: StandardErrorsFn = (): undefined => {};
-    const { lineContinuationScheme } = PartialTreeBuild;
     const closeMapping: string | undefined = kCloseMapping[mFindCloseBasedOn];
     const lineCont = closeMapping ?
-      lineContinuationScheme.inGroup :
-      lineContinuationScheme.operatorContinued;
+      LineContinuationScheme.inGroup :
+      LineContinuationScheme.operatorContinued;
 
     const closePosition = memoize(() => {
       if (!closeMapping) {
@@ -51,7 +50,7 @@ export const PartialTreeNextTokenBuild = (() => {
     const unprocessedPart = memoize((): PartialTreeBuild | undefined => {
       const pos = closePosition();
       if (!pos) return undefined;
-      return PartialTreeBuild.makeAssumeNotNewLine(mTokens, mStart, pos, lineCont);
+      return PartialTreeBuild.make(mTokens, mStart, pos, lineCont);
     });
 
     const remainingRange = memoize((): [number, number] => {

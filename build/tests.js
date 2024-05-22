@@ -1,4 +1,7 @@
 (() => {
+  // tests/globals.ts
+  globalThis["debug_mode"] = true;
+
   // src/helpers.ts
   var kDebugMode = globalThis["debug_mode"] ?? false;
   var Helpers = Object.freeze({
@@ -7,8 +10,8 @@
     mapValues,
     depthOneCopy,
     memoize,
-    verifyInTesting,
-    passWhenInTesting
+    verifyInTesting
+    // passWhenInTesting
   });
   expose({ Helpers });
   var TypeCheckable = (() => {
@@ -30,11 +33,6 @@
     if (kDebugMode)
       return;
     throw Error("Cannot be called outside of a testing environment");
-  }
-  function passWhenInTesting(fn) {
-    if (!kDebugMode)
-      return {};
-    return fn();
   }
   function pass(arg) {
     return arg;
@@ -556,9 +554,8 @@
     function make2(mTokens, mStart, mEnd, mFindCloseBasedOn) {
       let mError = () => {
       };
-      const { lineContinuationScheme } = PartialTreeBuild;
       const closeMapping = kCloseMapping[mFindCloseBasedOn];
-      const lineCont = closeMapping ? lineContinuationScheme.inGroup : lineContinuationScheme.operatorContinued;
+      const lineCont = closeMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
       const closePosition = memoize2(() => {
         if (!closeMapping) {
           return mEnd;
@@ -578,7 +575,7 @@
         const pos = closePosition();
         if (!pos)
           return void 0;
-        return PartialTreeBuild.makeAssumeNotNewLine(mTokens, mStart, pos, lineCont);
+        return PartialTreeBuild.make(mTokens, mStart, pos, lineCont);
       });
       const remainingRange = memoize2(() => {
         const pos = closePosition();
@@ -656,12 +653,12 @@
     return freeze5({ makeOverrider });
   })();
   var NodeExpansion = (() => {
-    const { freeze: freeze11, verifyInTesting: verifyInTesting2 } = Helpers;
+    const { freeze: freeze11, verifyInTesting: verifyInTesting3 } = Helpers;
     function visit(_0) {
     }
     function makeBase() {
       const { type, hasCreated } = TypeCheckable.make();
-      return freeze11({ hasCreated, type, freeze: freeze11, visit, verifyInTesting: verifyInTesting2 });
+      return freeze11({ hasCreated, type, freeze: freeze11, visit, verifyInTesting: verifyInTesting3 });
     }
     return freeze11({ makeBase });
   })();
@@ -719,7 +716,7 @@
     function make2(leftPartHandler, leftPart, rightPart) {
       const {
         type,
-        verifyInTesting: verifyInTesting2
+        verifyInTesting: verifyInTesting3
       } = NodeExpansion.makeBase();
       function expandIntoNodes(fn) {
         return [
@@ -728,7 +725,7 @@
         ];
       }
       function visit(visitor) {
-        verifyInTesting2();
+        verifyInTesting3();
         leftPartHandler.visit(leftPart, visitor);
         visitor.visitRightPartOnly(rightPart);
       }
@@ -744,6 +741,7 @@
       let mErrorFn = () => {
         return void 0;
       };
+      const normalLineContinuation = LineContinuationScheme.normal;
       const nextPart = memoize2(() => {
         const nextPartStart = mTokens.skipNewLine(start + 1);
         return PartialTreeNextTokenBuild.make(mTokens, nextPartStart, mEnd, closeBasedOn);
@@ -760,7 +758,7 @@
           return;
         }
         const remainingRange = nextPart().remainingRange();
-        const rightPart = PartialTreeBuild.make(mTokens, ...remainingRange);
+        const rightPart = PartialTreeBuild.make(mTokens, ...remainingRange, normalLineContinuation);
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
       return freeze11({
@@ -968,7 +966,7 @@
   })();
   var RightSideNodeExpansion = (() => {
     function make2(node, rightHandler) {
-      const { type, verifyInTesting: verifyInTesting2 } = NodeExpansion.makeBase();
+      const { type, verifyInTesting: verifyInTesting3 } = NodeExpansion.makeBase();
       function expandIntoNodes(fn) {
         return [
           node,
@@ -976,7 +974,7 @@
         ];
       }
       function visit(visitor) {
-        verifyInTesting2();
+        verifyInTesting3();
         rightHandler.visit(node, visitor);
       }
       return freeze7({ type, expandIntoNodes, visit });
@@ -993,7 +991,6 @@
       if (mStart === mEnd) {
         throw Error("");
       }
-      const { lineContinuationScheme } = PartialTreeBuild;
       let mErrorFn = () => {
         return void 0;
       };
@@ -1002,7 +999,7 @@
         if (mEnd - mStart === 1) {
           return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
         }
-        const nextPos = mLineContScheme === lineContinuationScheme.inGroup ? mTokens.skipNewLine(mStart + 1) : mStart + 1;
+        const nextPos = mLineContScheme === LineContinuationScheme.inGroup ? mTokens.skipNewLine(mStart + 1) : mStart + 1;
         const next = mTokens.at(nextPos);
         if (next.type() === tokenTypes.operator) {
           if (!lhsNode.comesBeforeOperator(next)) {
@@ -1017,13 +1014,13 @@
           mErrorFn = group.error;
           return;
         } else if (next.type() === tokenTypes.newLine) {
-          if (mLineContScheme === lineContinuationScheme.normal) {
+          if (mLineContScheme === LineContinuationScheme.normal) {
             return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
           }
-          if (mLineContScheme !== lineContinuationScheme.operatorContinued) {
+          if (mLineContScheme !== LineContinuationScheme.operatorContinued) {
             throw Error("impossible branch??");
           }
-          const { normal } = PartialTreeBuild.lineContinuationScheme;
+          const { normal } = LineContinuationScheme;
           const rightPart = PartialTreeBuild.make(mTokens, nextPos + 1, mEnd, normal);
           const ph = BuildPartRightTreePartHandler.make(rightPart);
           return RightSideNodeExpansion.make(lhsNode, ph);
@@ -1040,21 +1037,15 @@
   })();
 
   // src/partial_tree_build.ts
-  var { freeze: freeze9, passWhenInTesting: passWhenInTesting2 } = Helpers;
+  var { freeze: freeze9, verifyInTesting: verifyInTesting2 } = Helpers;
+  var LineContinuationScheme = freeze9({
+    inGroup: Symbol(),
+    operatorContinued: Symbol(),
+    normal: Symbol()
+  });
   var PartialTreeBuild = (() => {
     const tokenTypes = Token.types;
-    const lineContinuationScheme = freeze9({
-      inGroup: Symbol(),
-      operatorContinued: Symbol(),
-      normal: Symbol()
-    });
-    function make2(mTokens, mStart, mEnd, mLineContScheme = lineContinuationScheme.normal) {
-      return construct(mTokens, mStart, mEnd, mLineContScheme);
-    }
-    function makeAssumeNotNewLine(mTokens, mStart, mEnd, mLineContScheme) {
-      return construct(mTokens, mStart, mEnd, mLineContScheme);
-    }
-    function construct(mTokens, mStart, mEnd, mLineContScheme) {
+    function make2(mTokens, mStart, mEnd, mLineContScheme) {
       let mErrorFn = () => {
         return void 0;
       };
@@ -1067,7 +1058,7 @@
         return;
       }
       function ignoresNewLines() {
-        return mLineContScheme !== lineContinuationScheme.normal;
+        return mLineContScheme !== LineContinuationScheme.normal;
       }
       function buildPart() {
         if (mStart === mEnd) {
@@ -1101,21 +1092,18 @@
       function error() {
         return mErrorFn();
       }
+      function range() {
+        verifyInTesting2();
+        return freeze9({ start: mStart, end: mEnd });
+      }
       return freeze9({
         buildPart,
         ignoresNewLines,
         error,
-        ...passWhenInTesting2(() => ({
-          start: () => mStart,
-          end: () => mEnd
-        }))
+        range
       });
     }
-    return freeze9({
-      makeAssumeNotNewLine,
-      make: make2,
-      lineContinuationScheme
-    });
+    return freeze9({ make: make2 });
   })();
 
   // src/ast_build.ts
@@ -1507,16 +1495,30 @@
         expect(leftPartCalls).toEqual(1);
         expect(rightPartCalls).toEqual(1);
       });
-      it("makes right part with remainder of tokens", () => {
+      const ptbWithVisitor = (fn) => {
+        ptbRes()?.visit(fn());
+      };
+      it("makes right part with none of the tokens", () => {
         let ran = false;
-        const visitor = NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
-          ;
+        ptbWithVisitor(() => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
         }).visitRightPartOnly((rightPart) => {
           ran = true;
-          expect(rightPart.start()).toEqual(1);
-          expect(rightPart.end()).toEqual(3);
-        }).finish();
-        ptbRes()?.visit(visitor);
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(4);
+          expect(end).toEqual(4);
+        }).finish());
+        expect(ran).toBeTruthy();
+      });
+      it("makes left part with the remainder of the tokens, skipping new line", () => {
+        let ran = false;
+        ptbWithVisitor(() => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((leftPart) => {
+          ran = true;
+          const { start, end } = leftPart.range();
+          expect(start).toEqual(2);
+          expect(end).toEqual(3);
+        }).visitRightPartOnly((_0) => {
+        }).finish());
+        expect(ran).toBeTruthy();
       });
     });
     describe('handles grouping case "( a )"', () => {

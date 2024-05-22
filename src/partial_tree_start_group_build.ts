@@ -1,4 +1,4 @@
-import { PartialTreeBuild } from './partial_tree_build';
+import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
 import { StandardErrorsFn } from './helpers';
 import { PartialTreeNextTokenBuild } from './partial_tree_next_token_build';
@@ -15,7 +15,7 @@ interface PartialTreeStartGroupBuild {
 
 export const PartialTreeStartGroupBuild = (() => {
   const { memoize, freeze } = Helpers;
-
+  
   function make(mTokens: TokenCollection,
                 leftPartHandler: LeftTreePartHandler,
                 start: number,
@@ -24,6 +24,7 @@ export const PartialTreeStartGroupBuild = (() => {
                 PartialTreeStartGroupBuild
   {
     let mErrorFn: StandardErrorsFn = () => { return undefined; };
+    const normalLineContinuation = LineContinuationScheme.normal;
 
     const nextPart = memoize(() => {
       const nextPartStart = mTokens.skipNewLine(start + 1);
@@ -44,7 +45,7 @@ export const PartialTreeStartGroupBuild = (() => {
         return;
       }
       const remainingRange = nextPart().remainingRange();
-      const rightPart = PartialTreeBuild.make(mTokens, ...remainingRange);
+      const rightPart = PartialTreeBuild.make(mTokens, ...remainingRange, normalLineContinuation);
       return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart)
     }
 

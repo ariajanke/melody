@@ -6,39 +6,25 @@ import { PartialTreeStartIdentifierBuild } from './partial_tree_start_identifier
 import { NodeExpansion, EmptyNodeExpansion } from './node_expansion';
 import { BareLeftTreePartHandler } from './left_side_node_expansion';
 
-const { freeze, memoize } = Helpers;
+const { freeze, verifyInTesting } = Helpers;
 
 export interface PartialTreeBuild {
   buildPart: () => NodeExpansion | undefined,
   ignoresNewLines: () => boolean,
   error: StandardErrorsFn,
-  instanceId: () => symbol
+  range: () => ({ start: number, end: number })
 }
+
+export const LineContinuationScheme = freeze({
+  inGroup: Symbol(),
+  operatorContinued: Symbol(),
+  normal: Symbol()
+});
 
 export const PartialTreeBuild = (() => {
   const tokenTypes = Token.types;
 
-  const lineContinuationScheme = freeze({
-    inGroup: Symbol(),
-    operatorContinued: Symbol(),
-    normal: Symbol()
-  });
-
   function make
-    (mTokens: TokenCollection, mStart: number, mEnd: number,
-     mLineContScheme: symbol = lineContinuationScheme.normal)
-  {
-    return construct(mTokens, mStart, mEnd, mLineContScheme);
-  }
-
-  function makeAssumeNotNewLine
-    (mTokens: TokenCollection, mStart: number, mEnd: number,
-     mLineContScheme: symbol)
-  {
-    return construct(mTokens, mStart, mEnd, mLineContScheme);
-  }
-
-  function construct
     (mTokens: TokenCollection, mStart: number, mEnd: number,
      mLineContScheme: symbol): PartialTreeBuild
   {
@@ -57,7 +43,8 @@ export const PartialTreeBuild = (() => {
       return;
     }
 
-    function ignoresNewLines(): boolean { return mLineContScheme !== lineContinuationScheme.normal; }
+    function ignoresNewLines(): boolean
+      { return mLineContScheme !== LineContinuationScheme.normal; }
 
     function buildPart(): NodeExpansion | undefined {
       if (mStart === mEnd) {
@@ -96,17 +83,18 @@ export const PartialTreeBuild = (() => {
 
     function error() { return mErrorFn(); }
 
+    function range() {
+      verifyInTesting();
+      return freeze({ start: mStart, end: mEnd });
+    }
+
     return freeze({
       buildPart,
       ignoresNewLines,
       error,
-      instanceId: memoize(Symbol)
+      range
     });
   }
 
-  return freeze({
-    makeAssumeNotNewLine,
-    make,
-    lineContinuationScheme
-  });
+  return freeze({ make });
 })();

@@ -1,3 +1,4 @@
+import './tests/globals';
 import './tests/tokenization_tests';
 import './tests/ast_build_tests';
 import './tests/character_class_tests';
