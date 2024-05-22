@@ -1472,84 +1472,162 @@
   describeNamed10({ PartialTreeBuild }, () => {
     const makeToken = Token.forTesting.makeFromStringOnly;
     const { buildProgramSequence } = AstBuild.testable;
-    const make2 = (tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length);
-    const makePtbRes = (...tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length).buildPart();
+    const normalCont = LineContinuationScheme.normal;
+    const make2 = (tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length, normalCont);
+    const makePtbRes = (...tokens) => PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length, normalCont).buildPart();
+    const ptbWithVisitor = (ptbRes, fn) => {
+      ptbRes()?.visit(fn());
+    };
     function includeHasAResultExample(ptbRes) {
       it("returns a result", () => {
         expect(ptbRes()).toBeDefined();
       });
     }
-    fdescribe('handles general case "( \\n ..."', () => {
+    describe('handles general case "( \\n ..."', () => {
       const args = [makeToken("("), makeToken("\n"), makeToken("a"), makeToken(")")];
       const ptbRes = () => makePtbRes(...args);
       includeHasAResultExample(ptbRes);
       it("is composed of a left and right part only", () => {
         let leftPartCalls = 0;
         let rightPartCalls = 0;
-        const visitor = NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
           ++leftPartCalls;
         }).visitRightPartOnly((_1) => {
           ++rightPartCalls;
-        }).finish();
-        ptbRes()?.visit(visitor);
+        }).finish());
         expect(leftPartCalls).toEqual(1);
         expect(rightPartCalls).toEqual(1);
       });
-      const ptbWithVisitor = (fn) => {
-        ptbRes()?.visit(fn());
-      };
       it("makes right part with none of the tokens", () => {
-        let ran = false;
-        ptbWithVisitor(() => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
         }).visitRightPartOnly((rightPart) => {
-          ran = true;
           const { start, end } = rightPart.range();
           expect(start).toEqual(4);
           expect(end).toEqual(4);
         }).finish());
-        expect(ran).toBeTruthy();
       });
       it("makes left part with the remainder of the tokens, skipping new line", () => {
-        let ran = false;
-        ptbWithVisitor(() => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((leftPart) => {
-          ran = true;
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((leftPart) => {
           const { start, end } = leftPart.range();
           expect(start).toEqual(2);
           expect(end).toEqual(3);
         }).visitRightPartOnly((_0) => {
         }).finish());
-        expect(ran).toBeTruthy();
       });
     });
+    ;
+    const ReachPoint = (() => {
+      function make3(mSet, mIdx) {
+        let mRequiredHits = 1;
+        let mName = `Point ${mIdx}`;
+        function hitsAtExactly(times, name) {
+          mRequiredHits = times;
+          mSet[mIdx]++;
+          if (mSet[mIdx] > times) {
+            throw Error(`Reached "${mName} too many times`);
+          }
+          if (name) {
+            mName = name;
+          }
+        }
+        function verifySatisfied() {
+          if (mSet[mIdx] !== mRequiredHits) {
+            throw Error(`Point "${mName}" was not reached ${mRequiredHits} times`);
+          }
+        }
+        return Object.freeze({ hitsAtExactly, verifySatisfied });
+      }
+      function makeCollection(size) {
+        const mSet = [];
+        mSet.length = size;
+        mSet.fill(0);
+        const mPoints = [];
+        for (let i = 0; i < size; ++i) {
+          mPoints.push(make3(mSet, i));
+        }
+        function points() {
+          return mPoints;
+        }
+        function verifyAllHit() {
+          mPoints.forEach((pt) => {
+            pt.verifySatisfied();
+          });
+          return true;
+        }
+        return Object.freeze({ points, verifyAllHit });
+      }
+      return Object.freeze({ make: make3, makeCollection });
+    })();
+    function includeHasLeftAndRightPointWithNoNodes(ptbRes) {
+      it("has left and right point with no nodes", () => {
+        const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+        const [pt1, pt2] = points();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+          pt1.hitsAtExactly(1);
+        }).visitRightPartOnly((_0) => {
+          pt2.hitsAtExactly(1);
+        }).finish());
+        expect(verifyAllHit()).toBeTruthy();
+      });
+    }
     describe('handles grouping case "( a )"', () => {
       const args = [makeToken("("), makeToken("a"), makeToken(")")];
       const ptbRes = () => makePtbRes(...args);
-      it("remaining part builds nothing", () => {
-        expect(ptbRes()?.remainingPart?.buildPart()).toEqual(PartialTreeBuild.kNothing);
+      includeHasLeftAndRightPointWithNoNodes(ptbRes);
+      it("has left and right point with no nodes", () => {
+        const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+        const [pt1, pt2] = points();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+          pt1.hitsAtExactly(1);
+        }).visitRightPartOnly((_0) => {
+          pt2.hitsAtExactly(1);
+        }).finish());
+        expect(verifyAllHit()).toBeTruthy();
       });
-      it("incomplete part builds a complete node", () => {
-        expect(ptbRes()?.unprocessedPart?.buildPart()?.completedNode).toBeDefined();
+      it("left part contains no tokens", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((leftPart) => {
+          expect(args[leftPart.range().start].content()).toEqual("a");
+        }).visitRightPartOnly((_0) => {
+        }).finish());
       });
-      it("incomplete part builds an identifier node", () => {
-        const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
-        expect(node?.type()).toBeDefined(AstNode.types.identifier);
-      });
-      it('incomplete part builds an "a" stringable node', () => {
-        const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
-        const str = node && AstStringableNode.downcast(node).asString();
-        expect(str).toBeDefined("a");
+      it('right part contains the "a" token', () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+        }).visitRightPartOnly((rightPart) => {
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(end);
+        }).finish());
       });
     });
     describe('handles grouping case "( a , b )"', () => {
-      const ptbRes = () => makePtbRes(
+      const args = [
         makeToken("("),
         makeToken("a"),
         makeToken(","),
         makeToken("b"),
         makeToken(")")
-      );
-      it("unprocessed range contains the remainder of tokens", () => {
-        expect(ptbRes()?.remainingPart?.buildPart()).toEqual(PartialTreeBuild.kNothing);
+      ];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasLeftAndRightPointWithNoNodes(ptbRes);
+      [
+        ["a", 0],
+        [",", 1],
+        ["b", 2]
+      ].forEach(([token, position]) => {
+        it(`left part contains the "${token}" tokens`, () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((leftPart) => {
+            const idx = leftPart.range().start + position;
+            expect(idx).toBeLessThan(args.length);
+            expect(args[idx]?.content()).toEqual(token);
+          }).visitRightPartOnly((_0) => {
+          }).finish());
+        });
+      });
+      it(`right part contains no tokens`, () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+        }).visitRightPartOnly((rightPart) => {
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(end);
+        }).finish());
       });
     });
     describe('handles general operator case "a, b"', () => {
@@ -1631,29 +1709,33 @@
     });
     describe("simple cases", () => {
       it("handles a single string literal", () => {
-        const ptb = make2([makeToken("'a'")]);
-        const res = ptb.buildPart();
-        const comp = res?.completedNode;
-        const stringable = comp && AstStringableNode.downcast(comp);
-        expect(stringable?.asString()).toEqual("a");
+        const ptbRes = () => make2([makeToken("'a'")]).buildPart();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightNodeOnly((node) => {
+          const str = AstStringableNode.downcast(node).asString();
+          expect(str).toEqual("a");
+        }).finish());
       });
       it("handles new lines followed by nothing statements", () => {
         const res = make2([makeToken("\n")]).buildPart();
-        expect(res).toEqual(PartialTreeBuild.kNothing);
+        expect(EmptyNodeExpansion.hasCreated(res)).toBeTruthy();
       });
       it("handles empty statements", () => {
         const res = make2([]).buildPart();
-        expect(res).toEqual(PartialTreeBuild.kNothing);
+        expect(EmptyNodeExpansion.hasCreated(res)).toBeTruthy();
       });
       it("handles a lone token statement", () => {
         const args = [
           makeToken("a"),
           makeToken("\n")
         ];
-        const res = make2(args).buildPart();
-        expect(res).toBeDefined();
-        expect(res?.completedNode?.type()).toEqual(AstNode.types.identifier);
-        expect(res?.incompleteNode).toBeUndefined();
+        const ptbRes = () => make2(args).buildPart();
+        const { points, verifyAllHit } = ReachPoint.makeCollection(1);
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightNodeOnly((node) => {
+          const str = AstStringableNode.downcast(node).asString();
+          points()[0].hitsAtExactly(1);
+          expect(str).toEqual("a");
+        }).finish());
+        verifyAllHit();
       });
     });
   });
