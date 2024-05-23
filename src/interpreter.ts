@@ -6,6 +6,7 @@ import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstAssignmentNode } from './ast_assignment_node';
 import { Helpers } from './helpers';
+import { AstLetDeclarationNode } from './ast_let_declaration_node';
 
 const { freeze } = Object;
 
@@ -41,7 +42,7 @@ function make(context: Context = Context.make(), { putsFunction } = injections):
     throw Error('impossible branch??');
   }
 
-  function visitLetDeclaration(_0: AstNode) {}
+  function visitLetDeclaration(_0: AstLetDeclarationNode) {}
 
   function visitAssignment(node: AstAssignmentNode, rhs: AstNode) {
     context.setVariable(node.assigneeName(), getValueOf(rhs as AstStringableNode));

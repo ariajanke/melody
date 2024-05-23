@@ -13,6 +13,24 @@
     verifyInTesting
     // passWhenInTesting
   });
+  var StandardError = (() => {
+    const { freeze: freeze11 } = Helpers;
+    function make2() {
+      let mErrorFn = () => {
+      };
+      function setErrorFn(fn) {
+        mErrorFn = fn;
+      }
+      function setErrorMessage(message) {
+        mErrorFn = () => freeze11({ message });
+      }
+      function error() {
+        return mErrorFn();
+      }
+      return freeze11({ setErrorFn, setErrorMessage, error });
+    }
+    return freeze11({ make: make2 });
+  })();
   expose({ Helpers });
   var TypeCheckable = (() => {
     function make2() {
@@ -272,6 +290,7 @@
       return TokenType.identifier;
     }
     const controlSeqs = {
+      ["let"]: TokenType.operator,
       ["fn"]: TokenType.declareFunction,
       ["{"]: TokenType.operator,
       ["}"]: TokenType.operator,
@@ -546,14 +565,12 @@
 
   // src/partial_tree_next_token_build.ts
   var PartialTreeNextTokenBuild = (() => {
-    const { freeze: freeze11 } = Object;
-    const { memoize: memoize2 } = Helpers;
+    const { memoize: memoize2, freeze: freeze11 } = Helpers;
     const kCloseMapping = freeze11({
       ["("]: ")"
     });
     function make2(mTokens, mStart, mEnd, mFindCloseBasedOn) {
-      let mError = () => {
-      };
+      const { error, setErrorMessage } = StandardError.make();
       const closeMapping = kCloseMapping[mFindCloseBasedOn];
       const lineCont = closeMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
       const closePosition = memoize2(() => {
@@ -566,10 +583,7 @@
             return i;
           }
         }
-        mError = memoize2(() => freeze11({
-          message: `Cannot find close position for ${mFindCloseBasedOn}`
-        }));
-        return void 0;
+        return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
       });
       const unprocessedPart = memoize2(() => {
         const pos = closePosition();
@@ -584,9 +598,6 @@
         }
         return [Math.min(mEnd, pos + 1), mEnd];
       });
-      function error() {
-        return mError();
-      }
       return freeze11({ unprocessedPart, remainingRange, error });
     }
     return freeze11({ make: make2 });
@@ -737,33 +748,32 @@
   // src/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
     const { memoize: memoize2, freeze: freeze11 } = Helpers;
-    function make2(mTokens, leftPartHandler, start, mEnd, closeBasedOn) {
-      let mErrorFn = () => {
-        return void 0;
-      };
+    function make2(mTokens, leftPartHandler, mStartToken, mStart, mEnd) {
+      const { setErrorMessage, error, setErrorFn } = StandardError.make();
       const normalLineContinuation = LineContinuationScheme.normal;
       const nextPart = memoize2(() => {
-        const nextPartStart = mTokens.skipNewLine(start + 1);
-        return PartialTreeNextTokenBuild.make(mTokens, nextPartStart, mEnd, closeBasedOn);
+        if (mStart > mEnd) {
+          setErrorMessage("end of input reached before being able to close");
+        }
+        const nextPartStart = mTokens.skipNewLine(mStart);
+        return PartialTreeNextTokenBuild.make(mTokens, nextPartStart, mEnd, mStartToken.content());
       });
       function getLeftPart() {
-        return nextPart().unprocessedPart() ?? (() => {
-          mErrorFn = nextPart().error;
-        })();
+        return nextPart().unprocessedPart() ?? setErrorFn(nextPart().error);
       }
       function startGroupBuild() {
         const leftPart = getLeftPart();
         if (!leftPart) {
-          mErrorFn = () => freeze11({ message: "no left part??" });
+          setErrorMessage("no left part??");
           return;
         }
-        const remainingRange = nextPart().remainingRange();
-        const rightPart = PartialTreeBuild.make(mTokens, ...remainingRange, normalLineContinuation);
+        const { remainingRange } = nextPart();
+        const rightPart = PartialTreeBuild.make(mTokens, ...remainingRange(), normalLineContinuation);
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
       return freeze11({
         startGroupBuild: memoize2(startGroupBuild),
-        error: () => mErrorFn()
+        error
       });
     }
     return freeze11({ make: make2 });
@@ -987,32 +997,23 @@
   var PartialTreeStartIdentifierBuild = (() => {
     const tokenTypes = Token.types;
     const makeStringableNodeFor = AstStringableNode.makeForToken;
-    function make2(mTokens, mStart, mEnd, mLineContScheme) {
-      if (mStart === mEnd) {
-        throw Error("");
-      }
-      let mErrorFn = () => {
-        return void 0;
-      };
+    function make2(mTokens, mStartToken, mStart, mEnd, mLineContScheme) {
+      const { error, setErrorMessage, setErrorFn } = StandardError.make();
       function build() {
-        const lhsNode = makeStringableNodeFor(mTokens.at(mStart));
-        if (mEnd - mStart === 1) {
+        const lhsNode = makeStringableNodeFor(mStartToken);
+        if (mEnd === mStart) {
           return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
         }
-        const nextPos = mLineContScheme === LineContinuationScheme.inGroup ? mTokens.skipNewLine(mStart + 1) : mStart + 1;
+        const nextPos = mLineContScheme === LineContinuationScheme.inGroup ? mTokens.skipNewLine(mStart) : mStart;
         const next = mTokens.at(nextPos);
         if (next.type() === tokenTypes.operator) {
           if (!lhsNode.comesBeforeOperator(next)) {
-            mErrorFn = () => freeze8({ message: `operator "${next.content()}" not allowed here` });
-            return;
+            return setErrorMessage(`operator "${next.content()}" not allowed here`);
           }
           const incompleteNode = AstIncompleteBinaryNode.makeForOperator(next.content(), lhsNode);
-          const group = PartialTreeStartGroupBuild.make(mTokens, IncompleteNodeLeftTreePartHandler.make(incompleteNode), nextPos, mEnd, next.content());
-          const built = group.startGroupBuild();
-          if (built)
-            return built;
-          mErrorFn = group.error;
-          return;
+          const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(incompleteNode);
+          const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(mTokens, leftTreePartHandler, next, nextPos + 1, mEnd);
+          return startGroupBuild() ?? setErrorFn(error2);
         } else if (next.type() === tokenTypes.newLine) {
           if (mLineContScheme === LineContinuationScheme.normal) {
             return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
@@ -1025,13 +1026,10 @@
           const ph = BuildPartRightTreePartHandler.make(rightPart);
           return RightSideNodeExpansion.make(lhsNode, ph);
         } else {
-          mErrorFn = () => freeze8({
-            message: `not sure how to handle token "${next.content()}"`
-          });
-          return;
+          return setErrorMessage(`not sure how to handle token "${next.content()}"`);
         }
       }
-      return freeze8({ build, error: () => mErrorFn() });
+      return freeze8({ build, error });
     }
     return freeze8({ make: make2 });
   })();
@@ -1046,20 +1044,7 @@
   var PartialTreeBuild = (() => {
     const tokenTypes = Token.types;
     function make2(mTokens, mStart, mEnd, mLineContScheme) {
-      let mErrorFn = () => {
-        return void 0;
-      };
-      function _fromGroupStart(start, closeBasedOn) {
-        const group = PartialTreeStartGroupBuild.make(mTokens, BareLeftTreePartHandler.make(), start, mEnd, closeBasedOn);
-        const built = group.startGroupBuild();
-        if (built)
-          return built;
-        mErrorFn = group.error;
-        return;
-      }
-      function ignoresNewLines() {
-        return mLineContScheme !== LineContinuationScheme.normal;
-      }
+      const { error, setErrorFn, setErrorMessage } = StandardError.make();
       function buildPart() {
         if (mStart === mEnd) {
           return EmptyNodeExpansion.make();
@@ -1070,38 +1055,19 @@
         }
         const start = mTokens.at(startPos);
         if (start.type() === tokenTypes.identifier || start.type() === tokenTypes.stringLiteral) {
-          const ptsib = PartialTreeStartIdentifierBuild.make(mTokens, startPos, mEnd, mLineContScheme);
-          const built = ptsib.build();
-          if (built)
-            return built;
-          mErrorFn = ptsib.error;
-          return;
-        } else if (start.content() == "(") {
-          if (startPos + 1 < mEnd) {
-            return _fromGroupStart(startPos, start.content());
-          }
-          mErrorFn = () => freeze9({
-            message: "end of input reached before being able to close"
-          });
-          return;
+          const { build, error: error2 } = PartialTreeStartIdentifierBuild.make(mTokens, start, startPos + 1, mEnd, mLineContScheme);
+          return build() ?? setErrorFn(error2);
+        } else if (start.type() === tokenTypes.operator || start.content() === "(") {
+          const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(mTokens, BareLeftTreePartHandler.make(), start, startPos + 1, mEnd);
+          return startGroupBuild() ?? setErrorFn(error2);
         }
-        mErrorFn = () => freeze9({
-          message: "unimplemented case"
-        });
-      }
-      function error() {
-        return mErrorFn();
+        setErrorMessage("unimplemented case");
       }
       function range() {
         verifyInTesting2();
         return freeze9({ start: mStart, end: mEnd });
       }
-      return freeze9({
-        buildPart,
-        ignoresNewLines,
-        error,
-        range
-      });
+      return freeze9({ buildPart, error, range });
     }
     return freeze9({ make: make2 });
   })();

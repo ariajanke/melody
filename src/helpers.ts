@@ -10,8 +10,33 @@ export const Helpers = Object.freeze({
   // passWhenInTesting
 });
 
-export type StandardError = Readonly<{ message: string }>;
-export type StandardErrorsFn = (() => StandardError | undefined);
+export type StandardErrorFn = (() => Readonly<{ message: string }> | undefined);
+export interface StandardError {
+  setErrorFn: (fn: StandardErrorFn) => undefined,
+  setErrorMessage: (message: string) => undefined,
+  error: () => Readonly<{ message: string }> | undefined
+};
+
+export const StandardError = (() => {
+  const { freeze } = Helpers;
+
+  function make(): StandardError {
+    let mErrorFn: StandardErrorFn = (): undefined => {};
+
+    function setErrorFn(fn: StandardErrorFn): undefined
+      { mErrorFn = fn; }
+
+    function setErrorMessage(message: string): undefined
+      { mErrorFn = () => freeze({ message }); }
+
+    function error(): Readonly<{ message: string }> | undefined
+      { return mErrorFn(); }
+
+    return freeze({ setErrorFn, setErrorMessage, error });
+  }
+
+  return freeze({ make });
+})();
 
 expose({ Helpers });
 

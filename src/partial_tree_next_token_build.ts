@@ -1,17 +1,16 @@
 import { TokenCollection } from './tokenization';
-import { StandardErrorsFn } from './helpers';
+import { StandardError, StandardErrorFn } from './helpers';
 import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
 import { Helpers } from './helpers';
 
 export interface PartialTreeNextTokenBuild {
   unprocessedPart: () => PartialTreeBuild | undefined,
   remainingRange: () => Readonly<[number, number]>,
-  error: StandardErrorsFn
+  error: StandardErrorFn
 }
 
 export const PartialTreeNextTokenBuild = (() => {
-  const { freeze } = Object;
-  const { memoize } = Helpers;
+  const { memoize, freeze } = Helpers;
 
   const kCloseMapping = freeze({
     ['(']: ')'
@@ -20,7 +19,7 @@ export const PartialTreeNextTokenBuild = (() => {
   function make(mTokens: TokenCollection, mStart: number, mEnd: number,
                 mFindCloseBasedOn: string)
   {
-    let mError: StandardErrorsFn = (): undefined => {};
+    const { error, setErrorMessage } = StandardError.make();
     const closeMapping: string | undefined = kCloseMapping[mFindCloseBasedOn];
     const lineCont = closeMapping ?
       LineContinuationScheme.inGroup :
@@ -40,11 +39,7 @@ export const PartialTreeNextTokenBuild = (() => {
         }
       }
 
-      mError = memoize(() => freeze({
-        message: `Cannot find close position for ${mFindCloseBasedOn}`
-      }));
-
-      return undefined;
+      return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
     });
 
     const unprocessedPart = memoize((): PartialTreeBuild | undefined => {
@@ -53,15 +48,13 @@ export const PartialTreeNextTokenBuild = (() => {
       return PartialTreeBuild.make(mTokens, mStart, pos, lineCont);
     });
 
-    const remainingRange = memoize((): [number, number] => {
+    const remainingRange = memoize((): Readonly<[number, number]> => {
       const pos = closePosition();
       if (!pos) {
         throw Error('call and test against unprocessedPart first');
       }
       return [Math.min(mEnd, pos + 1), mEnd];
     });
-
-    function error() { return mError(); }
 
     return freeze({ unprocessedPart, remainingRange, error });
   }

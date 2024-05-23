@@ -23,7 +23,9 @@ const AstIncompleteUnaryNode = (() => {
   return freeze({ makeForOperator, make })
 })();
 
-const AstLetDeclarationNode = (() => {
+export interface AstLetDeclarationNode {};
+
+export const AstLetDeclarationNode = (() => {
   function make() {
     const inst = freeze({ visit, type });
     const { letDeclaration } = AstNode.types;

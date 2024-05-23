@@ -1,5 +1,5 @@
 import { TokenCollection } from './tokenization';
-import { Helpers, StandardErrorsFn } from './helpers';
+import { Helpers, StandardError, StandardErrorFn } from './helpers';
 import { Token } from './token';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { PartialTreeStartIdentifierBuild } from './partial_tree_start_identifier_build';
@@ -10,8 +10,7 @@ const { freeze, verifyInTesting } = Helpers;
 
 export interface PartialTreeBuild {
   buildPart: () => NodeExpansion | undefined,
-  ignoresNewLines: () => boolean,
-  error: StandardErrorsFn,
+  error: StandardErrorFn,
   range: () => ({ start: number, end: number })
 }
 
@@ -28,23 +27,7 @@ export const PartialTreeBuild = (() => {
     (mTokens: TokenCollection, mStart: number, mEnd: number,
      mLineContScheme: symbol): PartialTreeBuild
   {
-    let mErrorFn: StandardErrorsFn = () => { return undefined; };
-
-    function _fromGroupStart
-      (start: number,
-       closeBasedOn: string):
-       NodeExpansion | undefined
-    {
-      const group = PartialTreeStartGroupBuild.
-        make(mTokens, BareLeftTreePartHandler.make(), start, mEnd, closeBasedOn);
-      const built = group.startGroupBuild();
-      if (built) return built;
-      mErrorFn = group.error;
-      return;
-    }
-
-    function ignoresNewLines(): boolean
-      { return mLineContScheme !== LineContinuationScheme.normal; }
+    const { error, setErrorFn, setErrorMessage } = StandardError.make();
 
     function buildPart(): NodeExpansion | undefined {
       if (mStart === mEnd) {
@@ -57,43 +40,31 @@ export const PartialTreeBuild = (() => {
       }
 
       const start = mTokens.at(startPos);
+      // tokens are more contextually identified
+      // "(" is a grouping token in one context
+      // but an operator in another
       if (start.type() === tokenTypes.identifier ||
           start.type() === tokenTypes.stringLiteral)
       {
-        const ptsib = PartialTreeStartIdentifierBuild.
-          make(mTokens, startPos, mEnd, mLineContScheme);
-        const built = ptsib.build();
-        if (built) return built;
-        mErrorFn = ptsib.error;
-        return;
-      } else if (start.content() == '(') {
-        // grouping new line ignoring range (processed separately)
-        if (startPos + 1 < mEnd) {
-          return _fromGroupStart(startPos, start.content());
-        }
-        mErrorFn = () => freeze({
-          message: 'end of input reached before being able to close'
-        });
-        return;
+        const { build, error } = PartialTreeStartIdentifierBuild.
+          make(mTokens, start, startPos + 1, mEnd, mLineContScheme);
+        return build() ?? setErrorFn(error);
+      } else if (start.content() === '(') {
+        const { startGroupBuild, error } = PartialTreeStartGroupBuild.
+          make(mTokens, BareLeftTreePartHandler.make(), start, startPos + 1, mEnd);
+        return startGroupBuild() ?? setErrorFn(error);
+      } else if (start.type() == tokenTypes.operator) {
+        ;
       }
-      mErrorFn = () => freeze({
-        message: 'unimplemented case'
-      });
+      setErrorMessage('unimplemented case');
     }
-
-    function error() { return mErrorFn(); }
 
     function range() {
       verifyInTesting();
       return freeze({ start: mStart, end: mEnd });
     }
 
-    return freeze({
-      buildPart,
-      ignoresNewLines,
-      error,
-      range
-    });
+    return freeze({ buildPart, error, range });
   }
 
   return freeze({ make });

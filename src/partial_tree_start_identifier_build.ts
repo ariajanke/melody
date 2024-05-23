@@ -1,6 +1,6 @@
 import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
-import { Helpers, StandardErrorsFn } from './helpers';
+import { Helpers, StandardError, StandardErrorFn } from './helpers';
 import { AstStringableNode } from './ast_stringable_node';
 import { Token } from './token';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
@@ -15,39 +15,30 @@ export const PartialTreeStartIdentifierBuild = (() => {
   const tokenTypes = Token.types;
   const makeStringableNodeFor = AstStringableNode.makeForToken;
 
-  function make(mTokens: TokenCollection, mStart: number, mEnd: number,
+  function make(mTokens: TokenCollection, mStartToken: Token,
+                mStart: number, mEnd: number,
                 mLineContScheme: symbol)
   {
-    if (mStart === mEnd) {
-      throw Error('');
-    }
-
-    // const { lineContinuationScheme } = PartialTreeBuild;
-
-    let mErrorFn: StandardErrorsFn = () => { return undefined; };
+    const { error, setErrorMessage, setErrorFn } = StandardError.make();
 
     function build(): NodeExpansion | undefined {
-      const lhsNode = makeStringableNodeFor(mTokens.at(mStart));
-      if (mEnd - mStart === 1) {
+      const lhsNode = makeStringableNodeFor(mStartToken);
+      if (mEnd === mStart) {
         return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
       }
       const nextPos = mLineContScheme === LineContinuationScheme.inGroup ?
-        mTokens.skipNewLine(mStart + 1) : (mStart + 1);
+        mTokens.skipNewLine(mStart) : (mStart);
       const next = mTokens.at(nextPos);
       if (next.type() === tokenTypes.operator) {
         if (!lhsNode.comesBeforeOperator(next)) {
-          mErrorFn = () =>
-            freeze({ message: `operator "${next.content()}" not allowed here` });
-          return;
+          return setErrorMessage(`operator "${next.content()}" not allowed here`);
         }
         const incompleteNode = AstIncompleteBinaryNode.
           makeForOperator(next.content(), lhsNode);
-        const group = PartialTreeStartGroupBuild.
-          make(mTokens, IncompleteNodeLeftTreePartHandler.make(incompleteNode), nextPos, mEnd, next.content());
-        const built = group.startGroupBuild();
-        if (built) return built;
-        mErrorFn = group.error;
-        return;
+        const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(incompleteNode);
+        const { startGroupBuild, error } = PartialTreeStartGroupBuild.
+          make(mTokens, leftTreePartHandler, next, nextPos + 1, mEnd);
+        return startGroupBuild() ?? setErrorFn(error);
       } else if (next.type() === tokenTypes.newLine) {
         // also begging for extraction
         if (mLineContScheme === LineContinuationScheme.normal) {
@@ -62,14 +53,11 @@ export const PartialTreeStartIdentifierBuild = (() => {
         const ph = BuildPartRightTreePartHandler.make(rightPart);
         return RightSideNodeExpansion.make(lhsNode, ph);
       } else {
-        mErrorFn = () => freeze({
-          message: `not sure how to handle token "${next.content()}"`
-        });
-        return;
+        return setErrorMessage(`not sure how to handle token "${next.content()}"`);
       }
     }
 
-    return freeze({ build, error: () => mErrorFn() });
+    return freeze({ build, error });
   }
 
   return freeze({ make });

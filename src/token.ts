@@ -43,13 +43,14 @@ export const Token = (() => {
   }
 
   const controlSeqs = {
-    ['fn']: TokenType.declareFunction,
-    ['{' ]: TokenType.operator,
-    ['}' ]: TokenType.operator,
-    ['(' ]: TokenType.operator,
-    [')' ]: TokenType.operator,
-    [',' ]: TokenType.operator,
-    [':=']: TokenType.operator
+    ['let']: TokenType.operator,
+    ['fn' ]: TokenType.declareFunction,
+    ['{'  ]: TokenType.operator,
+    ['}'  ]: TokenType.operator,
+    ['('  ]: TokenType.operator,
+    [')'  ]: TokenType.operator,
+    [','  ]: TokenType.operator,
+    [':=' ]: TokenType.operator
   };
 
   function makeFromStringOnly(mContents: string) {

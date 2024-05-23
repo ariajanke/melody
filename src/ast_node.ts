@@ -1,5 +1,6 @@
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstAssignmentNode } from './ast_assignment_node';
+import { AstLetDeclarationNode } from './ast_let_declaration_node';
 
 const { freeze } = Object;
 
@@ -9,7 +10,7 @@ export interface AstNode {
 }
 
 export const AstNode = freeze({
-  types: 
+  types:
     {
       functionCall: Symbol(),
       tuple: Symbol(),
@@ -23,7 +24,7 @@ export const AstNode = freeze({
 export interface AstNodeVisitor {
   visitFunctionCall: (node: AstFunctionCallNode) => void,
   visitAssignment: (node: AstAssignmentNode, lhs: AstNode) => void,
-  visitLetDeclaration: (node: AstNode) => void
+  visitLetDeclaration: (node: AstLetDeclarationNode) => void
 }
 
 export const AstNodeVisitor = (() => {
@@ -31,7 +32,7 @@ export const AstNodeVisitor = (() => {
 
     function visitFunctionCall(_0: AstFunctionCallNode): void {}
     function visitAssignment(_0: AstAssignmentNode, _1: AstNode): void {}
-    function visitLetDeclaration(_0: AstNode): void {}
+    function visitLetDeclaration(_0: AstLetDeclarationNode): void {}
 
     return freeze({ visitAssignment, visitFunctionCall, visitLetDeclaration });
   })();
@@ -44,7 +45,7 @@ export const AstNodeVisitor = (() => {
     }: {
       visitFunctionCall?: (node: AstFunctionCallNode) => void | undefined,
       visitAssignment?: (node: AstAssignmentNode, rhs: AstNode) => void | undefined,
-      visitLetDeclaration?: (node: AstNode) => void | undefined
+      visitLetDeclaration?: (node: AstLetDeclarationNode) => void | undefined
     }): AstNodeVisitor
   {
     const defaults = kDefaultImplementations;
@@ -58,7 +59,7 @@ export const AstNodeVisitor = (() => {
   return freeze({ makeFakeVisitor });
 })();
 
-export interface AstLetNode extends AstNode {
-  takenNames: () => string[],
-  primaryName: () => string
-};
+// export interface AstLetNode extends AstNode {
+//   takenNames: () => string[],
+//   primaryName: () => string
+// };

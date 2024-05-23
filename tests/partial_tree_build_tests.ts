@@ -39,9 +39,8 @@ describeNamed({ PartialTreeBuild }, () => {
     (ptbRes: () => NodeExpansion | undefined,
      fn: () => NodeExpansionVisitor) =>
     { ptbRes()?.visit(fn()); };
-  
 
-  function includeHasAResultExample(ptbRes: () => PartialTreeBuildResult | undefined) {
+  function includeHasAResultExample(ptbRes: () => NodeExpansion | undefined) {
     it('returns a result', () => {
       expect(ptbRes()).toBeDefined();
     });
