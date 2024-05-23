@@ -6,27 +6,10 @@ type UnaryNodeCreationFn = (node: AstNode) => AstNode;
 
 const { freeze } = Helpers;
 
-const AstIncompleteUnaryNode = (() => {
-  function makeForOperator(operatorStr: string) {
-    switch (operatorStr) {
-    case 'let':
-      return AstLetDeclarationNode.make;
-    default: break;
-    }
-    throw Error(`Token ${operatorStr} does not result in an unary operator`);
-  }
-
-  function make(fn: UnaryNodeCreationFn): IncompleteNode {
-    return freeze({ finish: fn });
-  }
-
-  return freeze({ makeForOperator, make })
-})();
-
 export interface AstLetDeclarationNode {};
 
 export const AstLetDeclarationNode = (() => {
-  function make() {
+  function make(node: AstNode) {
     const inst = freeze({ visit, type });
     const { letDeclaration } = AstNode.types;
 
@@ -41,3 +24,25 @@ export const AstLetDeclarationNode = (() => {
 
   return freeze({ make });
 })();
+
+export const AstIncompleteUnaryNode = (() => {
+  function _selectedConstructor(operatorStr: string) {
+    switch (operatorStr) {
+    case 'let':
+      return AstLetDeclarationNode.make;
+    default: break;
+    }
+    throw Error(`Token ${operatorStr} does not result in an unary operator`);
+  }
+
+  function makeForOperator(operatorStr: string): IncompleteNode {
+    return make(_selectedConstructor(operatorStr));
+  }
+
+  function make(fn: UnaryNodeCreationFn): IncompleteNode {
+    return freeze({ finish: fn });
+  }
+
+  return freeze({ makeForOperator, make });
+})();
+

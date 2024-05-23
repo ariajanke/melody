@@ -4,7 +4,7 @@ import {
   NodeExpansionVisitor,
   PartialBuildToNodesFn
 } from './node_expansion';
-import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
+import { IncompleteNode } from './ast_incomplete_binary_node';
 import { AstNode } from './ast_node';
 
 export interface LeftTreePartHandler {
@@ -30,7 +30,7 @@ export const BareLeftTreePartHandler = (() => {
 export const IncompleteNodeLeftTreePartHandler = (() => {
   const { freeze } = Object
 
-  function make(incompleteNode: AstIncompleteBinaryNode): LeftTreePartHandler {
+  function make(incompleteNode: IncompleteNode): LeftTreePartHandler {
     function handleLeftSide(nodes: Readonly<AstNode[]>): Readonly<AstNode[]> {
       const [head, ...tail] = nodes;
       if (!head) {

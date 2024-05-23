@@ -5,6 +5,8 @@ import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { PartialTreeStartIdentifierBuild } from './partial_tree_start_identifier_build';
 import { NodeExpansion, EmptyNodeExpansion } from './node_expansion';
 import { BareLeftTreePartHandler } from './left_side_node_expansion';
+import { PartialTreeStartOperatorBuild } from './partial_tree_start_operator_build';
+import { AstIncompleteUnaryNode } from './ast_let_declaration_node';
 
 const { freeze, verifyInTesting } = Helpers;
 
@@ -54,7 +56,10 @@ export const PartialTreeBuild = (() => {
           make(mTokens, BareLeftTreePartHandler.make(), start, startPos + 1, mEnd);
         return startGroupBuild() ?? setErrorFn(error);
       } else if (start.type() == tokenTypes.operator) {
-        ;
+        const incomplete = AstIncompleteUnaryNode.makeForOperator(start.content());
+        const { build, error } = PartialTreeStartOperatorBuild.
+          make(incomplete, start, mTokens, startPos + 1, mEnd);
+        return build() ?? setErrorFn(error);
       }
       setErrorMessage('unimplemented case');
     }

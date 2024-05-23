@@ -42,7 +42,9 @@ function make(context: Context = Context.make(), { putsFunction } = injections):
     throw Error('impossible branch??');
   }
 
-  function visitLetDeclaration(_0: AstLetDeclarationNode) {}
+  function visitLetDeclaration(letNode: AstLetDeclarationNode) {
+    //letNode.
+  }
 
   function visitAssignment(node: AstAssignmentNode, rhs: AstNode) {
     context.setVariable(node.assigneeName(), getValueOf(rhs as AstStringableNode));

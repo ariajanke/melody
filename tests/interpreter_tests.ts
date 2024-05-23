@@ -59,5 +59,16 @@ describeNamed({ Interpreter }, () => {
       programRootNode.visit(intr);
       expect(printedStrings).toEqual(['hello world!']);
     });
+
+    it('compiles and runs a simple program with a let declaration', () => {
+      const programRootNode = Interpreter.buildFor(`
+        let a := 'hello world!'
+        puts(a)
+      `);
+      const { printedStrings, injections } = makePutsFunction();
+      const intr = makeWithInjections(injections);
+      programRootNode.visit(intr);
+      expect(printedStrings).toEqual(['hello world!']);
+    });
   });
 });

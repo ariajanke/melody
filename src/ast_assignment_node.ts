@@ -13,7 +13,7 @@ export const AstAssignmentNode = (() => {
   // as such time to read up then?
 
   function make(lhs: AstNode, rhs: AstNode): AstAssignmentNode {
-    const assignee = AstStringableNode.downcast(lhs);
+    const { asString } = AstStringableNode.downcast(lhs);
     const inst = freeze({ visit, type, assigneeName });
 
     function visit(visitor: AstNodeVisitor) {
@@ -25,7 +25,7 @@ export const AstAssignmentNode = (() => {
     }
 
     function assigneeName(): string {
-      return assignee.asString();
+      return asString();
     }
 
     return inst;

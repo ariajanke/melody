@@ -14,7 +14,7 @@
     // passWhenInTesting
   });
   var StandardError = (() => {
-    const { freeze: freeze11 } = Helpers;
+    const { freeze: freeze12 } = Helpers;
     function make2() {
       let mErrorFn = () => {
       };
@@ -22,14 +22,14 @@
         mErrorFn = fn;
       }
       function setErrorMessage(message) {
-        mErrorFn = () => freeze11({ message });
+        mErrorFn = () => freeze12({ message });
       }
       function error() {
         return mErrorFn();
       }
-      return freeze11({ setErrorFn, setErrorMessage, error });
+      return freeze12({ setErrorFn, setErrorMessage, error });
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
   expose({ Helpers });
   var TypeCheckable = (() => {
@@ -105,8 +105,8 @@
 
   // src/character_class.ts
   var CharacterClass = (() => {
-    const { freeze: freeze11, assign } = Object;
-    const classes = freeze11({
+    const { freeze: freeze12, assign } = Object;
+    const classes = freeze12({
       numeric: Symbol(),
       alphabetic: Symbol(),
       operative: Symbol(),
@@ -174,7 +174,7 @@
       }
       return kCharacterToCharacterClass[character] ?? classes.alphabetic;
     }
-    return freeze11({
+    return freeze12({
       classes,
       classOf
     });
@@ -182,7 +182,7 @@
 
   // src/crawl_strategies.ts
   var CrawlStrategies = (() => {
-    const { freeze: freeze11 } = Object;
+    const { freeze: freeze12 } = Object;
     const { classes, classOf } = CharacterClass;
     function crawlAlphanumeric(input, start) {
       const { length } = input;
@@ -241,7 +241,7 @@
       }
       return length;
     }
-    return freeze11({
+    return freeze12({
       [classes.alphabetic]: crawlAlphanumeric,
       [classes.literal]: crawlStringLiteral,
       [classes.operative]: crawlOperator,
@@ -331,14 +331,14 @@
 
   // src/character_crawler.ts
   var CharacterCrawler = (() => {
-    const { freeze: freeze11 } = Object;
-    const injections2 = freeze11({
+    const { freeze: freeze12 } = Object;
+    const injections2 = freeze12({
       CrawlStrategies,
       characterClassOf: CharacterClass.classOf,
       characterClasses: CharacterClass.classes
     });
     function make2(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
-      const inst = freeze11({ reachedEnd, readToken, crawl });
+      const inst = freeze12({ reachedEnd, readToken, crawl });
       let mStart = 0;
       let mEnd = 0;
       let mReadToken = Token.kBlankToken;
@@ -380,7 +380,7 @@
       }
       return inst;
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
 
   // src/tokenization.ts
@@ -517,7 +517,7 @@
 
   // src/ast_tuple_node.ts
   var AstTupleNode = (() => {
-    const { freeze: freeze11 } = Object;
+    const { freeze: freeze12 } = Object;
     const tupleType = AstNode.types.tuple;
     function makeBinary(lhs, rhs) {
       return makeWithPair(lhs, rhs);
@@ -534,7 +534,7 @@
       return inst;
     }
     function make2(mSubExpressions) {
-      const inst = freeze11({ forEach, count, visit, type, mergeWith });
+      const inst = freeze12({ forEach, count, visit, type, mergeWith });
       function forEach(fn) {
         mSubExpressions.forEach((node) => fn(node));
       }
@@ -560,13 +560,13 @@
       }
       return inst;
     }
-    return freeze11({ makeBinary, makeUnary, make: make2 });
+    return freeze12({ makeBinary, makeUnary, make: make2 });
   })();
 
   // src/partial_tree_next_token_build.ts
   var PartialTreeNextTokenBuild = (() => {
-    const { memoize: memoize2, freeze: freeze11 } = Helpers;
-    const kCloseMapping = freeze11({
+    const { memoize: memoize2, freeze: freeze12 } = Helpers;
+    const kCloseMapping = freeze12({
       ["("]: ")"
     });
     function make2(mTokens, mStart, mEnd, mFindCloseBasedOn) {
@@ -598,9 +598,9 @@
         }
         return [Math.min(mEnd, pos + 1), mEnd];
       });
-      return freeze11({ unprocessedPart, remainingRange, error });
+      return freeze12({ unprocessedPart, remainingRange, error });
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
 
   // src/node_expansion.ts
@@ -664,14 +664,14 @@
     return freeze5({ makeOverrider });
   })();
   var NodeExpansion = (() => {
-    const { freeze: freeze11, verifyInTesting: verifyInTesting3 } = Helpers;
+    const { freeze: freeze12, verifyInTesting: verifyInTesting3 } = Helpers;
     function visit(_0) {
     }
     function makeBase() {
       const { type, hasCreated } = TypeCheckable.make();
-      return freeze11({ hasCreated, type, freeze: freeze11, visit, verifyInTesting: verifyInTesting3 });
+      return freeze12({ hasCreated, type, freeze: freeze12, visit, verifyInTesting: verifyInTesting3 });
     }
-    return freeze11({ makeBase });
+    return freeze12({ makeBase });
   })();
   var EmptyNodeExpansion = (() => {
     const { type, hasCreated, visit } = NodeExpansion.makeBase();
@@ -692,8 +692,8 @@
 
   // src/left_side_node_expansion.ts
   var BareLeftTreePartHandler = (() => {
-    const { freeze: freeze11 } = Object;
-    const kSharedInst = freeze11({ handleLeftSide, visit });
+    const { freeze: freeze12 } = Object;
+    const kSharedInst = freeze12({ handleLeftSide, visit });
     function handleLeftSide(nodes) {
       return nodes;
     }
@@ -703,10 +703,10 @@
     function make2() {
       return kSharedInst;
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
   var IncompleteNodeLeftTreePartHandler = (() => {
-    const { freeze: freeze11 } = Object;
+    const { freeze: freeze12 } = Object;
     function make2(incompleteNode) {
       function handleLeftSide(nodes) {
         const [head, ...tail] = nodes;
@@ -718,12 +718,12 @@
       function visit(leftPart, visitor) {
         visitor.visitLeftWithNode(incompleteNode, leftPart);
       }
-      return freeze11({ handleLeftSide, visit });
+      return freeze12({ handleLeftSide, visit });
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
   var LeftSideNodeExpansion = (() => {
-    const { freeze: freeze11 } = Object;
+    const { freeze: freeze12 } = Object;
     function make2(leftPartHandler, leftPart, rightPart) {
       const {
         type,
@@ -740,14 +740,14 @@
         leftPartHandler.visit(leftPart, visitor);
         visitor.visitRightPartOnly(rightPart);
       }
-      return freeze11({ expandIntoNodes, type, visit });
+      return freeze12({ expandIntoNodes, type, visit });
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
 
   // src/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
-    const { memoize: memoize2, freeze: freeze11 } = Helpers;
+    const { memoize: memoize2, freeze: freeze12 } = Helpers;
     function make2(mTokens, leftPartHandler, mStartToken, mStart, mEnd) {
       const { setErrorMessage, error, setErrorFn } = StandardError.make();
       const normalLineContinuation = LineContinuationScheme.normal;
@@ -771,12 +771,12 @@
         const rightPart = PartialTreeBuild.make(mTokens, ...remainingRange(), normalLineContinuation);
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
-      return freeze11({
+      return freeze12({
         startGroupBuild: memoize2(startGroupBuild),
         error
       });
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
 
   // src/ast_stringable_node.ts
@@ -893,11 +893,11 @@
 
   // src/ast_assignment_node.ts
   var AstAssignmentNode = (() => {
-    const { freeze: freeze11 } = Object;
+    const { freeze: freeze12 } = Object;
     const assignmentType = AstNode.types.assignment;
     function make2(lhs, rhs) {
-      const assignee = AstStringableNode.downcast(lhs);
-      const inst = freeze11({ visit, type, assigneeName });
+      const { asString } = AstStringableNode.downcast(lhs);
+      const inst = freeze12({ visit, type, assigneeName });
       function visit(visitor) {
         visitor.visitAssignment(inst, rhs);
       }
@@ -905,16 +905,16 @@
         return assignmentType;
       }
       function assigneeName() {
-        return assignee.asString();
+        return asString();
       }
       return inst;
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
 
   // src/ast_incomplete_binary_node.ts
   var AstIncompleteBinaryNode = (() => {
-    const { freeze: freeze11 } = Object;
+    const { freeze: freeze12 } = Object;
     function _selectedConstructor(operatorStr) {
       switch (operatorStr) {
         case "(":
@@ -943,9 +943,9 @@
         }
         return AstStringableNode.downcast(lhs).asString();
       }
-      return freeze11({ finish, lhsAsString });
+      return freeze12({ finish, lhsAsString });
     }
-    return freeze11({ make: make2, makeForOperator });
+    return freeze12({ make: make2, makeForOperator });
   })();
 
   // src/right_side_node_expansion.ts
@@ -992,6 +992,21 @@
     return freeze7({ make: make2 });
   })();
 
+  // src/partial_tree_start_operator_build.ts
+  var PartialTreeStartOperatorBuild = (() => {
+    const { freeze: freeze12 } = Helpers;
+    function make2(mIncompleteNode, mNextToken, mTokens, mStart, mEnd) {
+      const { setErrorFn, error } = StandardError.make();
+      function build() {
+        const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(mIncompleteNode);
+        const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(mTokens, leftTreePartHandler, mNextToken, mStart, mEnd);
+        return startGroupBuild() ?? setErrorFn(error2);
+      }
+      return freeze12({ build, error });
+    }
+    return freeze12({ make: make2 });
+  })();
+
   // src/partial_tree_start_identifier_build.ts
   var { freeze: freeze8 } = Helpers;
   var PartialTreeStartIdentifierBuild = (() => {
@@ -1011,9 +1026,8 @@
             return setErrorMessage(`operator "${next.content()}" not allowed here`);
           }
           const incompleteNode = AstIncompleteBinaryNode.makeForOperator(next.content(), lhsNode);
-          const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(incompleteNode);
-          const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(mTokens, leftTreePartHandler, next, nextPos + 1, mEnd);
-          return startGroupBuild() ?? setErrorFn(error2);
+          const { build: build2, error: error2 } = PartialTreeStartOperatorBuild.make(incompleteNode, next, mTokens, nextPos + 1, mEnd);
+          return build2() ?? setErrorFn(error2);
         } else if (next.type() === tokenTypes.newLine) {
           if (mLineContScheme === LineContinuationScheme.normal) {
             return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
@@ -1034,9 +1048,44 @@
     return freeze8({ make: make2 });
   })();
 
+  // src/ast_let_declaration_node.ts
+  var { freeze: freeze9 } = Helpers;
+  var AstLetDeclarationNode = (() => {
+    function make2(node) {
+      const inst = freeze9({ visit, type });
+      const { letDeclaration } = AstNode.types;
+      function visit(visitor) {
+        visitor.visitLetDeclaration(inst);
+      }
+      function type() {
+        return letDeclaration;
+      }
+      return inst;
+    }
+    return freeze9({ make: make2 });
+  })();
+  var AstIncompleteUnaryNode = (() => {
+    function _selectedConstructor(operatorStr) {
+      switch (operatorStr) {
+        case "let":
+          return AstLetDeclarationNode.make;
+        default:
+          break;
+      }
+      throw Error(`Token ${operatorStr} does not result in an unary operator`);
+    }
+    function makeForOperator(operatorStr) {
+      return make2(_selectedConstructor(operatorStr));
+    }
+    function make2(fn) {
+      return freeze9({ finish: fn });
+    }
+    return freeze9({ makeForOperator, make: make2 });
+  })();
+
   // src/partial_tree_build.ts
-  var { freeze: freeze9, verifyInTesting: verifyInTesting2 } = Helpers;
-  var LineContinuationScheme = freeze9({
+  var { freeze: freeze10, verifyInTesting: verifyInTesting2 } = Helpers;
+  var LineContinuationScheme = freeze10({
     inGroup: Symbol(),
     operatorContinued: Symbol(),
     normal: Symbol()
@@ -1057,24 +1106,28 @@
         if (start.type() === tokenTypes.identifier || start.type() === tokenTypes.stringLiteral) {
           const { build, error: error2 } = PartialTreeStartIdentifierBuild.make(mTokens, start, startPos + 1, mEnd, mLineContScheme);
           return build() ?? setErrorFn(error2);
-        } else if (start.type() === tokenTypes.operator || start.content() === "(") {
+        } else if (start.content() === "(") {
           const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(mTokens, BareLeftTreePartHandler.make(), start, startPos + 1, mEnd);
           return startGroupBuild() ?? setErrorFn(error2);
+        } else if (start.type() == tokenTypes.operator) {
+          const incomplete = AstIncompleteUnaryNode.makeForOperator(start.content());
+          const { build, error: error2 } = PartialTreeStartOperatorBuild.make(incomplete, start, mTokens, startPos + 1, mEnd);
+          return build() ?? setErrorFn(error2);
         }
         setErrorMessage("unimplemented case");
       }
       function range() {
         verifyInTesting2();
-        return freeze9({ start: mStart, end: mEnd });
+        return freeze10({ start: mStart, end: mEnd });
       }
-      return freeze9({ buildPart, error, range });
+      return freeze10({ buildPart, error, range });
     }
-    return freeze9({ make: make2 });
+    return freeze10({ make: make2 });
   })();
 
   // src/ast_build.ts
   var AstBuild = (() => {
-    const { freeze: freeze11 } = Object;
+    const { freeze: freeze12 } = Object;
     const mErrors = [];
     function buildProgramSequence(partBuild) {
       const part = partBuild.buildPart();
@@ -1089,7 +1142,7 @@
       const res = buildProgramSequence(partBuild).map((n) => n);
       return AstTupleNode.make(res);
     }
-    return freeze11({ buildFor: buildFor2, testable: { buildProgramSequence } });
+    return freeze12({ buildFor: buildFor2, testable: { buildProgramSequence } });
   })();
 
   // tests/ast_build_tests.ts
@@ -1261,7 +1314,7 @@
 
   // src/context.ts
   var Context = (() => {
-    const { freeze: freeze11 } = Object;
+    const { freeze: freeze12 } = Object;
     function make2() {
       const mAvailableVariables = {};
       function declareVariable(name, value) {
@@ -1276,15 +1329,15 @@
       function getValueOfVariable(name) {
         return mAvailableVariables[name];
       }
-      return freeze11({ declareVariable, getValueOfVariable, setVariable });
+      return freeze12({ declareVariable, getValueOfVariable, setVariable });
     }
-    return freeze11({ make: make2 });
+    return freeze12({ make: make2 });
   })();
 
   // src/interpreter.ts
-  var { freeze: freeze10 } = Object;
-  var Interpreter = freeze10({ make, buildFor });
-  var injections = freeze10({ putsFunction: console.log });
+  var { freeze: freeze11 } = Object;
+  var Interpreter = freeze11({ make, buildFor });
+  var injections = freeze11({ putsFunction: console.log });
   function make(context = Context.make(), { putsFunction } = injections) {
     const nodeTypes = AstNode.types;
     function visitFunctionCall(node) {
@@ -1308,12 +1361,12 @@
       }
       throw Error("impossible branch??");
     }
-    function visitLetDeclaration(_0) {
+    function visitLetDeclaration(letNode) {
     }
     function visitAssignment(node, rhs) {
       context.setVariable(node.assigneeName(), getValueOf(rhs));
     }
-    return freeze10({ visitFunctionCall, visitLetDeclaration, visitAssignment });
+    return freeze11({ visitFunctionCall, visitLetDeclaration, visitAssignment });
   }
   function buildFor(inp) {
     const tokenCollection = Tokenization.make().tokenize(inp);
@@ -1363,6 +1416,16 @@
         const programRootNode = Interpreter.buildFor(`
         foo := 'hello world!'
         puts(foo)
+      `);
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const intr = makeWithInjections(injections2);
+        programRootNode.visit(intr);
+        expect(printedStrings).toEqual(["hello world!"]);
+      });
+      it("compiles and runs a simple program with a let declaration", () => {
+        const programRootNode = Interpreter.buildFor(`
+        let a := 'hello world!'
+        puts(a)
       `);
         const { printedStrings, injections: injections2 } = makePutsFunction();
         const intr = makeWithInjections(injections2);
@@ -1596,21 +1659,42 @@
         }).finish());
       });
     });
+    function setupWithLeftPartCompletingTupleNode(ptbRes, fn) {
+      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((node, _1) => {
+        const compl = node.finish(AstIdentifierNode.make("b"));
+        if (compl.type() === AstNode.types.tuple) {
+          fn(compl);
+        } else {
+          fail();
+        }
+      }).visitRightPartOnly((_0) => {
+      }).finish());
+    }
     describe('handles general operator case "a, b"', () => {
       const args = [makeToken("a"), makeToken(","), makeToken("b")];
       const ptbRes = () => makePtbRes(...args);
       includeHasAResultExample(ptbRes);
-      it("has no complete node", () => {
-        expect(ptbRes()?.completedNode).toBeUndefined();
+      it("left part has incomplete node", () => {
+        const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+        const [pt1, pt2] = points();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => pt1.hitsAtExactly(1)).visitRightPartOnly((_0) => {
+          pt2.hitsAtExactly(1);
+        }).finish());
+        verifyAllHit();
       });
-      it("has an incomplete node", () => {
-        expect(ptbRes()?.incompleteNode).toBeDefined();
+      it("left part incomplete node, completes into a tuple node", () => {
+        setupWithLeftPartCompletingTupleNode(ptbRes, (node) => {
+          expect(node.count()).toEqual(2);
+        });
       });
-      it("incomplete node maps to correct token", () => {
-        expect(ptbRes()?.incompleteNode?.lhsAsString()).toEqual("a");
-      });
-      it("creates a ptb that ignores new lines", () => {
-        expect(ptbRes()?.unprocessedPart?.ignoresNewLines()).toBeTruthy();
+      it('left part incomplete node, completes into a tuple node, first is an "a" identifer', () => {
+        setupWithLeftPartCompletingTupleNode(ptbRes, (node) => {
+          let first = void 0;
+          node.forEach((node2) => {
+            first ??= AstStringableNode.downcast(node2).asString();
+          });
+          expect(first).toEqual("a");
+        });
       });
     });
     describe('handles case operator across new line "a, \\n b \\n ...', () => {
@@ -1624,24 +1708,34 @@
       ];
       const ptbRes = () => makePtbRes(...args);
       includeHasAResultExample(ptbRes);
-      it("has no complete node", () => {
-        expect(ptbRes()?.completedNode).toBeUndefined();
+      includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
+      it("has left side has incomplete node, has new line adjusted range", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, part) => {
+          const { start, end } = part.range();
+          expect(start).toEqual(3);
+          expect(end).toEqual(6);
+        }).visitRightPartOnly((_0) => {
+        }).finish());
       });
-      it("has an incomplete node", () => {
-        expect(ptbRes()?.incompleteNode).toBeDefined();
-      });
-      it("remaining part does not ignore new lines", () => {
-        expect(ptbRes()?.remainingPart?.ignoresNewLines()).not.toBeTruthy();
-      });
-      it("unprocessedPart completion", () => {
-        const res = ptbRes();
-        const unprocessedPart = res?.unprocessedPart;
-        const partBuildRes = unprocessedPart?.buildPart();
-        const completedNode = partBuildRes?.completedNode;
-        const tupleNode = completedNode && res?.incompleteNode?.finish(completedNode);
-        expect(tupleNode?.type()).toEqual(AstNode.types.tuple);
+      it("has right side, has new line adjusted range", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => {
+        }).visitRightPartOnly((rightPart) => {
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(6);
+          expect(end).toEqual(6);
+        }).finish());
       });
     });
+    function includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes) {
+      it("has left side has incomplete node, and nodeless right side", () => {
+        const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+        const [pt1, pt2] = points();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => pt1.hitsAtExactly(1)).visitRightPartOnly((_0) => {
+          pt2.hitsAtExactly(1);
+        }).finish());
+        verifyAllHit();
+      });
+    }
     describe('handles function call case "f(...)..."', () => {
       describe(`a simple one parameter function call "f('a')"`, () => {
         const args = [
@@ -1651,26 +1745,58 @@
           makeToken(")")
         ];
         const ptbRes = () => makePtbRes(...args);
-        it("returns an incomplete node, with unprocessed part", () => {
-          const res = ptbRes();
-          res?.unprocessedPart?.buildPart();
-          expect(res?.incompleteNode).toBeDefined();
-          expect(res?.unprocessedPart).toBeDefined();
+        includeHasAResultExample(ptbRes);
+        includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
+        it("has left side whose incomplete node that completes into a function", () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((node, _1) => {
+            const completed = node.finish(AstIdentifierNode.make("c"));
+            expect(completed.type()).toEqual(AstNode.types.functionCall);
+          }).visitRightPartOnly((_0) => {
+          }).finish());
         });
-        it("completes unprocessed part into an identifier", () => {
-          const res = ptbRes()?.unprocessedPart?.buildPart();
-          const stringable = res?.completedNode && AstStringableNode.downcast(res?.completedNode);
-          expect(stringable?.asString()).toEqual("a");
+        it("has left side whose incomplete node that completes into the correct function", () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((node, _1) => {
+            const completed = node.finish(AstIdentifierNode.make("c"));
+            if (completed.type() !== AstNode.types.functionCall) {
+              fail();
+              return;
+            }
+            expect(completed.name).toEqual("f");
+          }).visitRightPartOnly((_0) => {
+          }).finish());
         });
-        it("function has correct name", () => {
-          expect(ptbRes()?.incompleteNode?.lhsAsString()).toEqual("f");
+        it("has left side, with one token", () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, part) => {
+            const { start, end } = part.range();
+            expect(end - start).toEqual(1);
+          }).visitRightPartOnly((_0) => {
+          }).finish());
         });
-        it("completes into a function call", () => {
-          const res = ptbRes();
-          const node = res?.unprocessedPart?.buildPart()?.completedNode;
-          const fCall = node && res?.incompleteNode?.finish(node);
-          expect(fCall?.type()).toEqual(AstNode.types.functionCall);
+        it("has empty right side", () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => {
+          }).visitRightPartOnly((rightPart) => {
+            const { start, end } = rightPart.range();
+            expect(start).toEqual(end);
+          }).finish());
         });
+      });
+    });
+    describe("let declaration", () => {
+      const args = [
+        makeToken("let"),
+        makeToken("a"),
+        makeToken("="),
+        makeToken("'hello'")
+      ];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
+      it("has left side whose incomplete node that completes into a let", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((node, _1) => {
+          const completed = node.finish(AstIdentifierNode.make("c"));
+          expect(completed.type()).toEqual(AstNode.types.letDeclaration);
+        }).visitRightPartOnly((_0) => {
+        }).finish());
       });
     });
     describe("simple cases", () => {

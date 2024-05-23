@@ -3,10 +3,13 @@ import { TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
 import { AstNode } from '../src/ast_node';
-import { AstStringableNode } from '../src/ast_stringable_node';
+import { AstIdentifierNode, AstStringableNode } from '../src/ast_stringable_node';
 // import { StartGroupCombiner } from '../src/partial_tree_start_group_build';
 import { AstBuild } from '../src/ast_build';
 import { EmptyNodeExpansion, NodeExpansion, NodeExpansionVisitor } from '../src/node_expansion';
+import { IncompleteNode } from '../src/ast_incomplete_binary_node';
+import { AstTupleNode } from '../src/ast_tuple_node';
+import { AstFunctionCallNode } from '../src/ast_function_call_node';
 
 const { describeNamed } = TestHelpers;
 
@@ -227,22 +230,6 @@ describeNamed({ PartialTreeBuild }, () => {
         }).
         finish());
     });
-
-    // cover these tests by lone "a" token
-    // it('incomplete part builds a complete node', () => {
-    //   expect(ptbRes()?.unprocessedPart?.buildPart()?.completedNode).toBeDefined();
-    // });
-
-    // it('incomplete part builds an identifier node', () => {
-    //   const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
-    //   expect(node?.type()).toBeDefined(AstNode.types.identifier);
-    // });
-
-    // it('incomplete part builds an "a" stringable node', () => {
-    //   const node = ptbRes()?.unprocessedPart?.buildPart()?.completedNode;
-    //   const str = node && AstStringableNode.downcast(node).asString();
-    //   expect(str).toBeDefined('a');
-    // });
   });
 
   describe('handles grouping case "( a , b )"', () => {
@@ -285,26 +272,58 @@ describeNamed({ PartialTreeBuild }, () => {
     });
   });
 
+  function setupWithLeftPartCompletingTupleNode
+    (ptbRes: () => NodeExpansion | undefined, fn: (node: AstTupleNode) => void)
+  {
+    ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+      makeOverrider(fail).
+      visitLeftWithNode((node: IncompleteNode, _1: PartialTreeBuild) => {
+        const compl = node.finish(AstIdentifierNode.make('b'));
+        if (compl.type() === AstNode.types.tuple) {
+          fn(compl as AstTupleNode);
+        } else {
+          fail();
+        }
+      }).
+      visitRightPartOnly((_0: PartialTreeBuild) => {}).
+      finish());
+  }
+
+
   describe('handles general operator case "a, b"', () => {
     const args = [makeToken('a'), makeToken(','), makeToken('b')];
     const ptbRes = () => makePtbRes(...args);
 
     includeHasAResultExample(ptbRes);
 
-    it('has no complete node', () => {
-      expect(ptbRes()?.completedNode).toBeUndefined();
+    it('left part has incomplete node', () => {
+      const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+      const [pt1, pt2] = points();
+      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+        makeOverrider(fail).
+        visitLeftWithNode((_0: IncompleteNode, _1: PartialTreeBuild) =>
+          pt1.hitsAtExactly(1)).
+        visitRightPartOnly((_0: PartialTreeBuild) => {
+          pt2.hitsAtExactly(1);
+        }).
+        finish());
+      verifyAllHit();
     });
 
-    it('has an incomplete node', () => {
-      expect(ptbRes()?.incompleteNode).toBeDefined();
+    it('left part incomplete node, completes into a tuple node', () => {
+      setupWithLeftPartCompletingTupleNode(ptbRes, (node: AstTupleNode) => {
+        expect(node.count()).toEqual(2);
+      });
     });
 
-    it('incomplete node maps to correct token', () => {
-      expect(ptbRes()?.incompleteNode?.lhsAsString()).toEqual('a');
-    });
-
-    it('creates a ptb that ignores new lines', () => {
-      expect(ptbRes()?.unprocessedPart?.ignoresNewLines()).toBeTruthy();
+    it('left part incomplete node, completes into a tuple node, first is an "a" identifer', () => {
+      setupWithLeftPartCompletingTupleNode(ptbRes, (node: AstTupleNode) => {
+        let first: string | undefined = undefined;
+        node.forEach((node: AstNode) => {
+          first ??= AstStringableNode.downcast(node).asString();
+        });
+        expect(first).toEqual('a');
+      });
     });
   });
 
@@ -319,31 +338,50 @@ describeNamed({ PartialTreeBuild }, () => {
 
     includeHasAResultExample(ptbRes);
 
-    it('has no complete node', () => {
-      expect(ptbRes()?.completedNode).toBeUndefined();
+    includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
+
+    it('has left side has incomplete node, has new line adjusted range', () => {
+      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+        makeOverrider(fail).
+        visitLeftWithNode((_0: IncompleteNode, part: PartialTreeBuild) => {
+          const { start, end } = part.range();
+          expect(start).toEqual(3);
+          expect(end).toEqual(6);
+        }).
+        visitRightPartOnly((_0: PartialTreeBuild) => {}).
+        finish());
     });
 
-    it('has an incomplete node', () => {
-      expect(ptbRes()?.incompleteNode).toBeDefined();
-    });
-
-    // this time more interested in the next completing
-
-    it('remaining part does not ignore new lines', () => {
-      expect(ptbRes()?.remainingPart?.ignoresNewLines()).not.toBeTruthy();
-    });
-
-    it('unprocessedPart completion', () => {
-      const res = ptbRes();
-      const unprocessedPart = res?.unprocessedPart;
-      const partBuildRes = unprocessedPart?.buildPart();
-      const completedNode: AstNode | undefined =
-        partBuildRes?.completedNode;
-      const tupleNode = completedNode && res?.incompleteNode?.
-        finish(completedNode as AstNode);
-      expect(tupleNode?.type()).toEqual(AstNode.types.tuple);
+    it('has right side, has new line adjusted range', () => {
+      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+        makeOverrider(fail).
+        visitLeftWithNode((_0: IncompleteNode, _1: PartialTreeBuild) => {}).
+        visitRightPartOnly((rightPart: PartialTreeBuild) => {
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(6);
+          expect(end).toEqual(6);
+        }).
+        finish());
     });
   });
+
+  function includeHasLeftSideIncompleteNodeRightSidePartOnly
+    (ptbRes: () => NodeExpansion | undefined)
+  {
+    it('has left side has incomplete node, and nodeless right side', () => {
+      const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+      const [pt1, pt2] = points();
+      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+        makeOverrider(fail).
+        visitLeftWithNode((_0: IncompleteNode, _1: PartialTreeBuild) =>
+          pt1.hitsAtExactly(1)).
+        visitRightPartOnly((_0: PartialTreeBuild) => {
+          pt2.hitsAtExactly(1);
+        }).
+        finish());
+      verifyAllHit();
+    });
+  }
 
   describe('handles function call case "f(...)..."', () => {
     describe('a simple one parameter function call "f(\'a\')"', () => {
@@ -353,40 +391,81 @@ describeNamed({ PartialTreeBuild }, () => {
         ];
       const ptbRes = () => makePtbRes(...args);
 
-      it('returns an incomplete node, with unprocessed part', () => {
-        const res = ptbRes();
-        res?.unprocessedPart?.buildPart();
-        expect(res?.incompleteNode).toBeDefined();
-        expect(res?.unprocessedPart).toBeDefined();
+      includeHasAResultExample(ptbRes);
+
+      includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
+
+      it('has left side whose incomplete node that completes into a function', () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+          makeOverrider(fail).
+          visitLeftWithNode((node: IncompleteNode, _1: PartialTreeBuild) => {
+            const completed = node.finish(AstIdentifierNode.make('c'));
+            expect(completed.type()).toEqual(AstNode.types.functionCall);
+          }).
+          visitRightPartOnly((_0: PartialTreeBuild) => {}).
+          finish());
       });
 
-      it('completes unprocessed part into an identifier', () => {
-        const res = ptbRes()?.unprocessedPart?.buildPart();
-        const stringable = res?.completedNode && AstStringableNode.
-          downcast(res?.completedNode);
-        expect(stringable?.asString()).toEqual('a');
+      it('has left side whose incomplete node that completes into the correct function', () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+          makeOverrider(fail).
+          visitLeftWithNode((node: IncompleteNode, _1: PartialTreeBuild) => {
+            const completed = node.finish(AstIdentifierNode.make('c'));
+            if (completed.type() !== AstNode.types.functionCall) {
+              fail();
+              return;
+            }
+            expect((completed as AstFunctionCallNode).name).toEqual('f');
+          }).
+          visitRightPartOnly((_0: PartialTreeBuild) => {}).
+          finish());
       });
 
-      it('function has correct name', () => {
-        expect(ptbRes()?.incompleteNode?.lhsAsString()).toEqual('f');
+      it('has left side, with one token', () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+          makeOverrider(fail).
+          visitLeftWithNode((_0: IncompleteNode, part: PartialTreeBuild) => {
+            const { start, end } = part.range();
+            expect(end - start).toEqual(1);
+          }).
+          visitRightPartOnly((_0: PartialTreeBuild) => {}).
+          finish());
       });
 
-      it('completes into a function call', () => {
-        const res = ptbRes();
-        const node = res?.unprocessedPart?.buildPart()?.completedNode;
-        const fCall = node && res?.incompleteNode?.finish(node);
-        expect(fCall?.type()).toEqual(AstNode.types.functionCall);
+      it('has empty right side', () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+          makeOverrider(fail).
+          visitLeftWithNode((_0: IncompleteNode, _1: PartialTreeBuild) => {}).
+          visitRightPartOnly((rightPart: PartialTreeBuild) => {
+            const { start, end } = rightPart.range();
+            expect(start).toEqual(end);
+          }).
+          finish());
       });
     });
+  });
 
-    // describe('parameter given on next line', () => {
+  describe('let declaration', () => {
+    const args =
+      [
+        makeToken('let'), makeToken('a'), makeToken('='), makeToken("'hello'")
+      ];
+    const ptbRes = () => makePtbRes(...args);
 
-    // });
+    includeHasAResultExample(ptbRes);
 
-    // describe('multi-argument call', () => {
+    includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
 
-    // });
-
+    it('has left side whose incomplete node that completes into a let', () => {
+      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+        makeOverrider(fail).
+        visitLeftWithNode((node: IncompleteNode, _1: PartialTreeBuild) => {
+          const completed = node.finish(AstIdentifierNode.make('c'));
+          expect(completed.type()).toEqual(AstNode.types.letDeclaration);
+        }).
+        visitRightPartOnly((_0: PartialTreeBuild) => {}).
+        finish());
+    });
   });
 
   describe('simple cases', () => {
