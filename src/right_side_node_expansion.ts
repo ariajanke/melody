@@ -56,8 +56,8 @@ export const RightSideNodeExpansion = (() => {
       rightHandler.visit(node, visitor);
     }
 
-    return freeze({ type, expandIntoNodes, visit })
+    return freeze({ type, expandIntoNodes, visit });
   }
 
   return freeze({ make });
-})()
+})();

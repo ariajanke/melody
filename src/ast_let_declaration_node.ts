@@ -14,7 +14,7 @@ export const AstLetDeclarationNode = (() => {
     const { letDeclaration } = AstNode.types;
 
     function visit(visitor: AstNodeVisitor) {
-      visitor.visitLetDeclaration(inst);
+      visitor.visitLetDeclaration(inst, node);
     }
 
     function type(): symbol { return letDeclaration; }

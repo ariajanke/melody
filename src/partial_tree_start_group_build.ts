@@ -49,7 +49,7 @@ export const PartialTreeStartGroupBuild = (() => {
       const { remainingRange } = nextPart();
       const rightPart = PartialTreeBuild.
         make(mTokens, ...remainingRange(), normalLineContinuation);
-      return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart)
+      return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
     }
 
     return freeze({

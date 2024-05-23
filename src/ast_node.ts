@@ -24,7 +24,7 @@ export const AstNode = freeze({
 export interface AstNodeVisitor {
   visitFunctionCall: (node: AstFunctionCallNode) => void,
   visitAssignment: (node: AstAssignmentNode, lhs: AstNode) => void,
-  visitLetDeclaration: (node: AstLetDeclarationNode) => void
+  visitLetDeclaration: (node: AstLetDeclarationNode, rhs: AstNode) => void
 }
 
 export const AstNodeVisitor = (() => {

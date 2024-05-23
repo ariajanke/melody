@@ -897,15 +897,12 @@
     const assignmentType = AstNode.types.assignment;
     function make2(lhs, rhs) {
       const { asString } = AstStringableNode.downcast(lhs);
-      const inst = freeze12({ visit, type, assigneeName });
+      const inst = freeze12({ visit, type, assigneeName: asString });
       function visit(visitor) {
         visitor.visitAssignment(inst, rhs);
       }
       function type() {
         return assignmentType;
-      }
-      function assigneeName() {
-        return asString();
       }
       return inst;
     }
@@ -1055,7 +1052,7 @@
       const inst = freeze9({ visit, type });
       const { letDeclaration } = AstNode.types;
       function visit(visitor) {
-        visitor.visitLetDeclaration(inst);
+        visitor.visitLetDeclaration(inst, node);
       }
       function type() {
         return letDeclaration;
@@ -1336,10 +1333,37 @@
 
   // src/interpreter.ts
   var { freeze: freeze11 } = Object;
+  var LetVisitor = (() => {
+    function make2(context) {
+      let mAssigneeNameFn = () => {
+        throw Error("must assign assignee name fn");
+      };
+      function setAssigneeName(fn) {
+        mAssigneeNameFn = fn;
+      }
+      function visitFunctionCall(_0) {
+        throw Error("");
+      }
+      function visitAssignment(_0, lhs) {
+        context.declareVariable(mAssigneeNameFn(), AstStringableNode.downcast(lhs).asString());
+      }
+      function visitLetDeclaration(_0, _1) {
+        throw Error("");
+      }
+      return freeze11({
+        setAssigneeName,
+        visitFunctionCall,
+        visitAssignment,
+        visitLetDeclaration
+      });
+    }
+    return freeze11({ make: make2 });
+  })();
   var Interpreter = freeze11({ make, buildFor });
   var injections = freeze11({ putsFunction: console.log });
   function make(context = Context.make(), { putsFunction } = injections) {
     const nodeTypes = AstNode.types;
+    const mLetVisitor = LetVisitor.make(context);
     function visitFunctionCall(node) {
       if (node.name === "puts") {
         node.arguments.forEach((node2) => {
@@ -1361,7 +1385,13 @@
       }
       throw Error("impossible branch??");
     }
-    function visitLetDeclaration(letNode) {
+    function visitLetDeclaration(_0, lhs) {
+      if (lhs.type() !== AstNode.types.assignment) {
+        throw Error("bad let");
+      }
+      const assignmentNode = lhs;
+      mLetVisitor.setAssigneeName(assignmentNode.assigneeName);
+      assignmentNode.visit(mLetVisitor);
     }
     function visitAssignment(node, rhs) {
       context.setVariable(node.assigneeName(), getValueOf(rhs));

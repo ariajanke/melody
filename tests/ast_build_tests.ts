@@ -27,7 +27,7 @@ describeNamed({ AstBuild }, () => {
         visitFunctionCall: (_0: AstFunctionCallNode) => {
           ++i;
         },
-      })
+      });
       buildAst().visit(visitor);
       expect(i).toEqual(2);
     });
@@ -45,7 +45,7 @@ describeNamed({ AstBuild }, () => {
         visitFunctionCall: (_0: AstFunctionCallNode) => {
           ++i;
         },
-      })
+      });
       buildAst().visit(visitor);
       expect(i).toEqual(1);
     });

@@ -14,12 +14,48 @@ export interface Interpreter extends AstNodeVisitor {
 
 };
 
+const LetVisitor = (() => {
+  function make(context: Context) {
+    let mAssigneeNameFn = (): string => {
+      throw Error('must assign assignee name fn');
+    };
+
+    function setAssigneeName(fn: () => string) {
+      mAssigneeNameFn = fn;
+    }
+
+    function visitFunctionCall(_0: AstFunctionCallNode) {
+      throw Error('');
+    }
+
+    function visitAssignment(_0: AstAssignmentNode, lhs: AstNode) {
+      context.declareVariable(mAssigneeNameFn(), AstStringableNode.downcast(lhs).asString());
+    }
+
+    function visitLetDeclaration(_0: AstLetDeclarationNode, _1: AstNode) {
+      throw Error('');
+    }
+
+    return freeze({
+      setAssigneeName,
+      visitFunctionCall,
+      visitAssignment,
+      visitLetDeclaration
+    });
+  }
+  return freeze({ make });
+})();
+
 export const Interpreter = freeze({ make, buildFor });
 
 const injections = freeze({ putsFunction: console.log });
 
-function make(context: Context = Context.make(), { putsFunction } = injections): Interpreter {
+function make
+  (context: Context = Context.make(), { putsFunction } = injections): 
+  Interpreter
+{
   const nodeTypes = AstNode.types;
+  const mLetVisitor = LetVisitor.make(context);
   function visitFunctionCall(node: AstFunctionCallNode) {
     if (node.name === 'puts') {
       node.arguments.forEach((node: AstNode) => {
@@ -42,8 +78,13 @@ function make(context: Context = Context.make(), { putsFunction } = injections):
     throw Error('impossible branch??');
   }
 
-  function visitLetDeclaration(letNode: AstLetDeclarationNode) {
-    //letNode.
+  function visitLetDeclaration(_0: AstLetDeclarationNode, lhs: AstNode) {
+    if (lhs.type() !== AstNode.types.assignment) {
+      throw Error('bad let');
+    }
+    const assignmentNode = (lhs as AstAssignmentNode);
+    mLetVisitor.setAssigneeName(assignmentNode.assigneeName);
+    assignmentNode.visit(mLetVisitor);
   }
 
   function visitAssignment(node: AstAssignmentNode, rhs: AstNode) {

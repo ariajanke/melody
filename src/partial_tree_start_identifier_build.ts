@@ -1,13 +1,15 @@
 import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
 import { TokenCollection } from './tokenization';
-import { Helpers, StandardError, StandardErrorFn } from './helpers';
+import { Helpers, StandardError } from './helpers';
 import { AstStringableNode } from './ast_stringable_node';
 import { Token } from './token';
 import { AstIncompleteBinaryNode } from './ast_incomplete_binary_node';
-import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { NodeExpansion } from './node_expansion';
-import { IncompleteNodeLeftTreePartHandler } from './left_side_node_expansion';
-import { RightSideNodeExpansion, BareRightTreePartHandler, BuildPartRightTreePartHandler } from './right_side_node_expansion';
+import {
+  RightSideNodeExpansion,
+  BareRightTreePartHandler,
+  BuildPartRightTreePartHandler
+} from './right_side_node_expansion';
 import { PartialTreeStartOperatorBuild } from './partial_tree_start_operator_build';
 
 const { freeze } = Helpers;
@@ -49,7 +51,7 @@ export const PartialTreeStartIdentifierBuild = (() => {
         }
         const { normal } = LineContinuationScheme;
         const rightPart = PartialTreeBuild.
-          make(mTokens, nextPos + 1, mEnd, normal)
+          make(mTokens, nextPos + 1, mEnd, normal);
         const ph = BuildPartRightTreePartHandler.make(rightPart);
         return RightSideNodeExpansion.make(lhsNode, ph);
       } else {

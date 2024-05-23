@@ -30,7 +30,7 @@ export const NodeExpansionVisitor = (() => {
   }
 
   function makeOverrider(defaultOnCallback: () => void = () => {}) {
-    let mInstance = { ...makeDefaultImplementations(defaultOnCallback) };
+    const mInstance = { ...makeDefaultImplementations(defaultOnCallback) };
 
     const inst = freeze({
       visitLeftPartOnly,

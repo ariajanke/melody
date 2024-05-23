@@ -14,7 +14,7 @@ export const AstAssignmentNode = (() => {
 
   function make(lhs: AstNode, rhs: AstNode): AstAssignmentNode {
     const { asString } = AstStringableNode.downcast(lhs);
-    const inst = freeze({ visit, type, assigneeName });
+    const inst = freeze({ visit, type, assigneeName: asString });
 
     function visit(visitor: AstNodeVisitor) {
       visitor.visitAssignment(inst, rhs);
@@ -22,10 +22,6 @@ export const AstAssignmentNode = (() => {
 
     function type(): symbol {
       return assignmentType;
-    }
-
-    function assigneeName(): string {
-      return asString();
     }
 
     return inst;

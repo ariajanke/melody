@@ -4,8 +4,6 @@ import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
 import { AstNode } from '../src/ast_node';
 import { AstIdentifierNode, AstStringableNode } from '../src/ast_stringable_node';
-// import { StartGroupCombiner } from '../src/partial_tree_start_group_build';
-import { AstBuild } from '../src/ast_build';
 import { EmptyNodeExpansion, NodeExpansion, NodeExpansionVisitor } from '../src/node_expansion';
 import { IncompleteNode } from '../src/ast_incomplete_binary_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
@@ -28,7 +26,6 @@ const { describeNamed } = TestHelpers;
 
 describeNamed({ PartialTreeBuild }, () => {
   const makeToken = Token.forTesting.makeFromStringOnly;
-  const { buildProgramSequence } = AstBuild.testable;
 
   const normalCont = LineContinuationScheme.normal;
   const make = (tokens: Token[]) =>
@@ -48,22 +45,6 @@ describeNamed({ PartialTreeBuild }, () => {
       expect(ptbRes()).toBeDefined();
     });
   }
-
-  // function includeNoNodePtbExamples(ptbRes: () => PartialTreeBuildResult | undefined) {
-  //   includeHasAResultExample(ptbRes);
-
-  //   it('has no complete node', () => {
-  //     expect(ptbRes()?.completedNode).toBeUndefined();
-  //   });
-
-  //   it('has no incomplete node', () => {
-  //     expect(ptbRes()?.incompleteNode).toBeUndefined();
-  //   });
-
-  //   it('creates a ptb that ignores new lines', () => {
-  //     expect(ptbRes()?.unprocessedPart?.ignoresNewLines()).toBeTruthy();
-  //   });
-  // }
 
   describe('handles general case "( \\n ..."', () => {
     const args = [makeToken('('), makeToken('\n'), makeToken('a'), makeToken(')')];
@@ -160,14 +141,14 @@ describeNamed({ PartialTreeBuild }, () => {
       }
 
       function verifyAllHit(): boolean {
-        mPoints.forEach((pt) => { pt.verifySatisfied() });
+        mPoints.forEach((pt) => { pt.verifySatisfied(); });
         return true;
       }
 
       return Object.freeze({ points, verifyAllHit });
     }
 
-    return Object.freeze({ make, makeCollection })
+    return Object.freeze({ make, makeCollection });
   })();
 
   function includeHasLeftAndRightPointWithNoNodes

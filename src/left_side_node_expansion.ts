@@ -13,7 +13,7 @@ export interface LeftTreePartHandler {
 }
 
 export const BareLeftTreePartHandler = (() => {
-  const { freeze } = Object
+  const { freeze } = Object;
   const kSharedInst = freeze({ handleLeftSide, visit });
 
   function handleLeftSide(nodes: Readonly<AstNode[]>): Readonly<AstNode[]>
@@ -24,11 +24,11 @@ export const BareLeftTreePartHandler = (() => {
 
   function make(): LeftTreePartHandler { return kSharedInst; }
 
-  return freeze({ make })
+  return freeze({ make });
 })();
 
 export const IncompleteNodeLeftTreePartHandler = (() => {
-  const { freeze } = Object
+  const { freeze } = Object;
 
   function make(incompleteNode: IncompleteNode): LeftTreePartHandler {
     function handleLeftSide(nodes: Readonly<AstNode[]>): Readonly<AstNode[]> {
