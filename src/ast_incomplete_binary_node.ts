@@ -71,7 +71,7 @@ export const IncompleteNodeCreation = (() => {
       return AstIncompleteBinaryNode.make( selected, mLhs );
     }
 
-    return freeze({ makeNode, error })
+    return freeze({ makeNode, error });
   }
 
   return freeze({ make });

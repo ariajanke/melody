@@ -8,6 +8,7 @@ import { EmptyNodeExpansion, NodeExpansion, NodeExpansionVisitor } from '../src/
 import { IncompleteNode } from '../src/ast_incomplete_binary_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
 import { AstFunctionCallNode } from '../src/ast_function_call_node';
+import { TokenRange } from '../src/token_range';
 
 const { describeNamed } = TestHelpers;
 
@@ -29,10 +30,10 @@ describeNamed({ PartialTreeBuild }, () => {
 
   const normalCont = LineContinuationScheme.normal;
   const make = (tokens: Token[]) =>
-    PartialTreeBuild.make(TokenCollection.make(tokens), 0, tokens.length, normalCont);
+    PartialTreeBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont);
   const makePtbRes = (...tokens: Token[]) =>
     PartialTreeBuild.
-      make(TokenCollection.make(tokens), 0, tokens.length, normalCont).
+      make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont).
       buildPart();
 
   const ptbWithVisitor =

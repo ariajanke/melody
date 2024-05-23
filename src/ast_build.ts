@@ -24,7 +24,7 @@ export const AstBuild = (() => {
   function buildFor(tokens: TokenCollection): AstNode {
     const range = TokenRange.makeStartingRange(tokens);
     const partBuild = PartialTreeBuild.
-      make(tokens, range.start(), range.end(), LineContinuationScheme.normal);
+      make(range, LineContinuationScheme.normal);
     const res = buildProgramSequence(partBuild).map(n => n);
     return AstTupleNode.make(res);
   }

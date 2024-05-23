@@ -3,8 +3,8 @@ import { Helpers, StandardError } from './helpers';
 import { NodeExpansion } from './node_expansion';
 import { IncompleteNodeLeftTreePartHandler } from './left_side_node_expansion';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
-import { TokenCollection } from './tokenization';
 import { Token } from './token';
+import { TokenRange } from './token_range';
 
 export const PartialTreeStartOperatorBuild = (() => {
   const { freeze } = Helpers;
@@ -12,16 +12,14 @@ export const PartialTreeStartOperatorBuild = (() => {
   function make
     (mIncompleteNode: IncompleteNode,
      mNextToken: Token,
-     mTokens: TokenCollection,
-     mStart: number,
-     mEnd: number)
+     mTokenRange: TokenRange)
   {
     const { setErrorFn, error } = StandardError.make();
 
     function build(): NodeExpansion | undefined {
       const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(mIncompleteNode);
       const { startGroupBuild, error } = PartialTreeStartGroupBuild.
-        make(mTokens, leftTreePartHandler, mNextToken, mStart, mEnd);
+        make(leftTreePartHandler, mTokenRange, mNextToken);
       return startGroupBuild() ?? setErrorFn(error);
     }
 

@@ -1,5 +1,4 @@
 import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
-import { TokenCollection } from './tokenization';
 import { StandardError, StandardErrorFn } from './helpers';
 import { PartialTreeNextTokenBuild } from './partial_tree_next_token_build';
 import { Helpers } from './helpers';
@@ -18,23 +17,18 @@ interface PartialTreeStartGroupBuild {
 export const PartialTreeStartGroupBuild = (() => {
   const { memoize, freeze } = Helpers;
 
-  function make(mTokens: TokenCollection,
-                leftPartHandler: LeftTreePartHandler,
-                mStartToken: Token,
-                mStart: number,
-                mEnd: number):
+  function make(leftPartHandler: LeftTreePartHandler,
+                mTokenRange: TokenRange,
+                mStartToken: Token):
                 PartialTreeStartGroupBuild
   {
     const { setErrorMessage, error, setErrorFn } = StandardError.make();
     const normalLineContinuation = LineContinuationScheme.normal;
-    const mTokenRange = TokenRange.make(mTokens, mStart, mEnd);
-
+    
     const nextPart = memoize(() => {
-      // const nextPartStart = mTokens.skipNewLine(mStart);
       mTokenRange.skipNewLine();
       return PartialTreeNextTokenBuild.
-        make(mTokens, mTokenRange.start(), mTokenRange.end(), mStartToken.content());
-        // make(mTokens, nextPartStart, mEnd, mStartToken.content());
+        make(mTokenRange, mStartToken.content());
     });
 
     function getLeftPart() {
@@ -49,7 +43,7 @@ export const PartialTreeStartGroupBuild = (() => {
       }
       const { remainingRange } = nextPart();
       const rightPart = PartialTreeBuild.
-        make(mTokens, ...remainingRange(), normalLineContinuation);
+        make(remainingRange(), normalLineContinuation);
       return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
     }
 

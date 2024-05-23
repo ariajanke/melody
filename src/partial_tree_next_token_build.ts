@@ -1,4 +1,3 @@
-import { TokenCollection } from './tokenization';
 import { StandardError, StandardErrorFn } from './helpers';
 import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
 import { Helpers } from './helpers';
@@ -6,7 +5,7 @@ import { TokenRange } from './token_range';
 
 export interface PartialTreeNextTokenBuild {
   unprocessedPart: () => PartialTreeBuild | undefined,
-  remainingRange: () => Readonly<[number, number]>,
+  remainingRange: () => TokenRange,
   error: StandardErrorFn
 }
 
@@ -17,12 +16,9 @@ export const PartialTreeNextTokenBuild = (() => {
     ['(']: ')'
   });
 
-  function make(mTokens: TokenCollection, mStart: number, mEnd: number,
-                mFindCloseBasedOn: string)
-  {
+  function make(mTokenRange: TokenRange, mFindCloseBasedOn: string) {
     const { error, setErrorMessage } = StandardError.make();
-    const mTokenRange = TokenRange.make(mTokens, mStart, mEnd);
-    const { start, end } = mTokenRange;
+    const { start, end, parentContainerSize, tokenAt } = mTokenRange;
     const closeMapping: string | undefined = kCloseMapping[mFindCloseBasedOn];
     const lineCont = closeMapping ?
       LineContinuationScheme.inGroup :
@@ -31,12 +27,12 @@ export const PartialTreeNextTokenBuild = (() => {
     const closePosition = memoize(() => {
       if (!closeMapping) {
         // not necessary try to find the new line
-        return end();// mEnd;
+        return end();
       }
 
-      const count = mTokenRange.parentContainerSize(); // mTokens.count();
-      for (let i = start()/*mStart*/; i < count; ++i) {
-        if (/*mTokens.at(i).content()*/ mTokenRange.tokenAt(i).content() === closeMapping) {
+      const count = parentContainerSize();
+      for (let i = start(); i < count; ++i) {
+        if (tokenAt(i).content() === closeMapping) {
           // reminder: i is one past the last element for our range
           return i;
         }
@@ -48,15 +44,15 @@ export const PartialTreeNextTokenBuild = (() => {
     const unprocessedPart = memoize((): PartialTreeBuild | undefined => {
       const pos = closePosition();
       if (!pos) return undefined;
-      return PartialTreeBuild.make(mTokens, start()/* mStart*/, pos, lineCont);
+      return PartialTreeBuild.make(mTokenRange.clone(start(), pos), lineCont);
     });
 
-    const remainingRange = memoize((): Readonly<[number, number]> => {
+    const remainingRange = memoize((): TokenRange => {
       const pos = closePosition();
       if (!pos) {
         throw Error('call and test against unprocessedPart first');
       }
-      return [Math.min(/*mEnd*/ end(), pos + 1), end()/* mEnd*/];
+      return mTokenRange.clone(Math.min(end(), pos + 1), end());
     });
 
     return freeze({ unprocessedPart, remainingRange, error });

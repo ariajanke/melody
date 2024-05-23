@@ -1,4 +1,3 @@
-import { TokenCollection } from './tokenization';
 import { Helpers, StandardError, StandardErrorFn } from './helpers';
 import { Token } from './token';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
@@ -25,26 +24,24 @@ export const LineContinuationScheme = freeze({
 
 export const PartialTreeBuild = (() => {
   const tokenTypes = Token.types;
+  const { zeroSizedRange } = TokenRange;
 
   function make
-    (mTokens: TokenCollection, mStart: number, mEnd: number,
-     mLineContScheme: symbol): PartialTreeBuild
+    (mTokenRange: TokenRange, mLineContScheme: symbol): PartialTreeBuild
   {
     const { error, setErrorFn, setErrorMessage } = StandardError.make();
-    const mTokenRange = TokenRange.make(mTokens, mStart, mEnd);
-
+    
     function buildPart(): NodeExpansion | undefined {
-      if (mTokenRange.start() === mTokenRange.end()) { //mStart === mEnd) {
+      if (zeroSizedRange(mTokenRange)) {
         return EmptyNodeExpansion.make();
       }
 
       mTokenRange.skipNewLine();
-      // const startPos = mTokens.skipNewLine(mStart);
-      if (mTokenRange.start() === mTokenRange.end()) {
+      if (zeroSizedRange(mTokenRange)) {
         return EmptyNodeExpansion.make();
       }
 
-      const start = mTokenRange.tokenAt(mTokenRange.start()); // mTokens.at(startPos);
+      const start = mTokenRange.tokenAt(mTokenRange.start());
       // tokens are more contextually identified
       // "(" is a grouping token in one context
       // but an operator in another
@@ -53,21 +50,18 @@ export const PartialTreeBuild = (() => {
           start.type() === tokenTypes.stringLiteral)
       {
         const { build, error } = PartialTreeStartIdentifierBuild.
-          make(mTokens, start, mTokenRange.start(), mTokenRange.end(), mLineContScheme);
-          // startPos + 1, mEnd, mLineContScheme);
+          make(start, mTokenRange, mLineContScheme);
         return build() ?? setErrorFn(error);
       } else if (start.content() === '(') {
         const { startGroupBuild, error } = PartialTreeStartGroupBuild.
-          make(mTokens,
-               BareLeftTreePartHandler.make(),
-               start,
-               mTokenRange.start(),
-               mTokenRange.end());  //start, startPos + 1, mEnd);
+          make(BareLeftTreePartHandler.make(),
+               mTokenRange,
+               start);
         return startGroupBuild() ?? setErrorFn(error);
       } else if (start.type() == tokenTypes.operator) {
         const incomplete = AstIncompleteUnaryNode.makeForOperator(start.content());
         const { build, error } = PartialTreeStartOperatorBuild.
-          make(incomplete, start, mTokens, mTokenRange.start(), mTokenRange.end()); //startPos + 1, mEnd);
+          make(incomplete, start, mTokenRange);
         return build() ?? setErrorFn(error);
       }
       setErrorMessage('unimplemented case');
@@ -75,7 +69,8 @@ export const PartialTreeBuild = (() => {
 
     function range() {
       verifyInTesting();
-      return freeze({ start: mStart, end: mEnd });
+      const { start, end } = mTokenRange;
+      return freeze({ start: start(), end: end() });
     }
 
     return freeze({ buildPart, error, range });
