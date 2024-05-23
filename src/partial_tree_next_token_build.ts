@@ -2,6 +2,7 @@ import { TokenCollection } from './tokenization';
 import { StandardError, StandardErrorFn } from './helpers';
 import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
 import { Helpers } from './helpers';
+import { TokenRange } from './token_range';
 
 export interface PartialTreeNextTokenBuild {
   unprocessedPart: () => PartialTreeBuild | undefined,
@@ -20,6 +21,8 @@ export const PartialTreeNextTokenBuild = (() => {
                 mFindCloseBasedOn: string)
   {
     const { error, setErrorMessage } = StandardError.make();
+    const mTokenRange = TokenRange.make(mTokens, mStart, mEnd);
+    const { start, end } = mTokenRange;
     const closeMapping: string | undefined = kCloseMapping[mFindCloseBasedOn];
     const lineCont = closeMapping ?
       LineContinuationScheme.inGroup :
@@ -28,12 +31,12 @@ export const PartialTreeNextTokenBuild = (() => {
     const closePosition = memoize(() => {
       if (!closeMapping) {
         // not necessary try to find the new line
-        return mEnd;
+        return end();// mEnd;
       }
 
-      const count = mTokens.count();
-      for (let i = mStart; i < count; ++i) {
-        if (mTokens.at(i).content() === closeMapping) {
+      const count = mTokenRange.parentContainerSize(); // mTokens.count();
+      for (let i = start()/*mStart*/; i < count; ++i) {
+        if (/*mTokens.at(i).content()*/ mTokenRange.tokenAt(i).content() === closeMapping) {
           // reminder: i is one past the last element for our range
           return i;
         }
@@ -45,7 +48,7 @@ export const PartialTreeNextTokenBuild = (() => {
     const unprocessedPart = memoize((): PartialTreeBuild | undefined => {
       const pos = closePosition();
       if (!pos) return undefined;
-      return PartialTreeBuild.make(mTokens, mStart, pos, lineCont);
+      return PartialTreeBuild.make(mTokens, start()/* mStart*/, pos, lineCont);
     });
 
     const remainingRange = memoize((): Readonly<[number, number]> => {
@@ -53,7 +56,7 @@ export const PartialTreeNextTokenBuild = (() => {
       if (!pos) {
         throw Error('call and test against unprocessedPart first');
       }
-      return [Math.min(mEnd, pos + 1), mEnd];
+      return [Math.min(/*mEnd*/ end(), pos + 1), end()/* mEnd*/];
     });
 
     return freeze({ unprocessedPart, remainingRange, error });

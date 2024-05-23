@@ -8,6 +8,7 @@ import {
   LeftTreePartHandler, LeftSideNodeExpansion
 } from './left_side_node_expansion';
 import { Token } from './token';
+import { TokenRange } from './token_range';
 
 interface PartialTreeStartGroupBuild {
   startGroupBuild: () => NodeExpansion | undefined,
@@ -26,14 +27,14 @@ export const PartialTreeStartGroupBuild = (() => {
   {
     const { setErrorMessage, error, setErrorFn } = StandardError.make();
     const normalLineContinuation = LineContinuationScheme.normal;
+    const mTokenRange = TokenRange.make(mTokens, mStart, mEnd);
 
     const nextPart = memoize(() => {
-      if (mStart > mEnd) {
-        setErrorMessage('end of input reached before being able to close');
-      }
-      const nextPartStart = mTokens.skipNewLine(mStart);
+      // const nextPartStart = mTokens.skipNewLine(mStart);
+      mTokenRange.skipNewLine();
       return PartialTreeNextTokenBuild.
-        make(mTokens, nextPartStart, mEnd, mStartToken.content());
+        make(mTokens, mTokenRange.start(), mTokenRange.end(), mStartToken.content());
+        // make(mTokens, nextPartStart, mEnd, mStartToken.content());
     });
 
     function getLeftPart() {

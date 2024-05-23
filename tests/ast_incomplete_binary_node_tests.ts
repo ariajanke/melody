@@ -1,33 +1,41 @@
 import { TestHelpers } from './test_helpers';
-import { AstIncompleteBinaryNode } from '../src/ast_incomplete_binary_node';
+import {
+  AstIncompleteBinaryNode,
+  IncompleteNodeCreation
+} from '../src/ast_incomplete_binary_node';
 import { AstNode } from '../src/ast_node';
 import { AstIdentifierNode } from '../src/ast_stringable_node';
+import { Token } from '../src/token';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ AstIncompleteBinaryNode }, () => {
-  const { makeForOperator } = AstIncompleteBinaryNode;
+  // const { makeForOperator } = AstIncompleteBinaryNode;
+  const makeToken = Token.forTesting.makeFromStringOnly;
+  const makeForOperator = IncompleteNodeCreation.make;
 
   function makeAnyNode() {
     return AstIdentifierNode.make('');
   }
 
   function makeForOperatorWithAnyNodes(operator: string) {
-    return makeForOperator(operator, makeAnyNode()).finish(makeAnyNode());
+    return makeForOperator(makeToken(operator), makeAnyNode())?.
+      makeNode()?.
+      finish(makeAnyNode());
   }
 
   it('defers creation of a function call', () => {
-    const createdType = makeForOperatorWithAnyNodes('(').type();
+    const createdType = makeForOperatorWithAnyNodes('(')?.type();
     expect(createdType).toEqual(AstNode.types.functionCall);
   });
 
   it('defers creation of a tuple', () => {
-    const createdType = makeForOperatorWithAnyNodes(',').type();
+    const createdType = makeForOperatorWithAnyNodes(',')?.type();
     expect(createdType).toEqual(AstNode.types.tuple);
   });
 
   it('defers creation of an assignment', () => {
-    const createdType = makeForOperatorWithAnyNodes(':=').type();
+    const createdType = makeForOperatorWithAnyNodes(':=')?.type();
     expect(createdType).toEqual(AstNode.types.assignment);
   });
 });

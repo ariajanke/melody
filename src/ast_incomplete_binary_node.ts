@@ -3,6 +3,10 @@ import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstTupleNode } from './ast_tuple_node';
 import { AstAssignmentNode } from './ast_assignment_node';
 import { AstStringableNode } from './ast_stringable_node';
+import { Helpers, StandardError } from './helpers';
+import { Token } from './token';
+
+const { freeze } = Helpers;
 
 export interface IncompleteNode {
   finish: (rhs: AstNode) => AstNode
@@ -12,31 +16,9 @@ export interface AstIncompleteBinaryNode extends IncompleteNode {
   lhsAsString: () => string | undefined
 }
 
+type BinaryNodeCreationFn = (lhs: AstNode, rhs: AstNode) => AstNode;
+
 export const AstIncompleteBinaryNode = (() => {
-  type BinaryNodeCreationFn = (lhs: AstNode, rhs: AstNode) => AstNode;
-  const { freeze } = Object;
-
-  function _selectedConstructor(operatorStr: string): BinaryNodeCreationFn {
-    switch (operatorStr) {
-    case '(':
-      return AstFunctionCallNode.make;
-    case ',':
-    case '\n':
-      return AstTupleNode.makeBinary;
-    case ':=':
-      return AstAssignmentNode.make;
-    // +, -, *, /, and, or, =, [, .,
-    // +=, -=, *=, /=
-    default: break;
-    }
-    throw Error(`Token ${operatorStr} does not result in a binary operator`);
-  }
-
-  function makeForOperator(operatorStr: string, lhs: AstNode) {
-    const fn = _selectedConstructor(operatorStr);
-    return make(fn, lhs);
-  }
-
   function make
     (fn: BinaryNodeCreationFn, lhs: AstNode):
     AstIncompleteBinaryNode
@@ -56,5 +38,41 @@ export const AstIncompleteBinaryNode = (() => {
     return freeze({ finish, lhsAsString });
   }
 
-  return freeze({ make, makeForOperator });
+  return freeze({ make });
+})();
+
+export const IncompleteNodeCreation = (() => {
+  const { error, setErrorMessage } = StandardError.make();
+
+  function make(mOperator: Token, mLhs: AstNode) {
+    function _selectedConstructor(): BinaryNodeCreationFn | undefined {
+      const tokenStr = mOperator.content();
+      switch (tokenStr) {
+      case '(':
+        return AstFunctionCallNode.make;
+      case ',':
+      case '\n':
+        return AstTupleNode.makeBinary;
+      case ':=':
+        return AstAssignmentNode.make;
+      // +, -, *, /, and, or, =, [, .,
+      // +=, -=, *=, /=
+      default: break;
+      }
+      return setErrorMessage(`Token ${tokenStr} does not result in a binary operator`);
+    }
+
+    function makeNode() {
+      const selected = _selectedConstructor();
+      if (!selected) {
+        return;
+      }
+
+      return AstIncompleteBinaryNode.make( selected, mLhs );
+    }
+
+    return freeze({ makeNode, error })
+  }
+
+  return freeze({ make });
 })();
