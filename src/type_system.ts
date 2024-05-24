@@ -13,12 +13,84 @@ interface Parameter {
   fitName: string
 }
 
-interface FunctionType {
+interface FunctionTypeBase {
   arguments_: () => Readonly<Parameter[]>,
   returns: () => Readonly<Parameter[]>,
-  uid: symbol,
-  satisfactionDegree: (fn: FunctionType) => number | undefined
+  uid: () => symbol,
+  isComplete: () => boolean,
+  name: () => string
 }
+
+interface FunctionType extends FunctionTypeBase {
+  satisfactionDegree: (fn: FunctionType) => number | undefined,
+}
+
+interface IncompleteFunctionType extends FunctionTypeBase {
+  setName: (name: string) => IncompleteFunctionType,
+  setArguments: (args: Readonly<Parameter[]>) => IncompleteFunctionType,
+  setReturns: (args: Readonly<Parameter[]>) => IncompleteFunctionType,
+  finish: () => FunctionType
+};
+
+const IncompleteFunctionType = (() => {
+  const reservedAnonymouseName = '<anonymous>';
+
+  function make(): IncompleteFunctionType {
+    const mUid = Symbol();
+    const mArguments_: Parameter[] = [];
+    const mReturns   : Parameter[] = [];
+    let mName = reservedAnonymouseName;
+
+    const inst = freeze({
+      arguments_,
+      returns,
+      uid,
+      isComplete,
+      setName,
+      setArguments,
+      setReturns,
+      name,
+      finish
+    });
+
+    function arguments_(): Readonly<Parameter[]>
+      { return mArguments_; }
+
+    function returns(): Readonly<Parameter[]>
+      { return mReturns; }
+
+    function uid(): symbol { return mUid; }
+
+    function isComplete(): boolean { return false; }
+
+    function setName(name: string): IncompleteFunctionType {
+      mName = name;
+      return inst;
+    }
+
+    function setArguments(args: Readonly<Parameter[]>): IncompleteFunctionType {
+      mArguments_.length = 0;
+      mArguments_.push(...args);
+      return inst;
+    }
+
+    function setReturns(rets: Readonly<Parameter[]>): IncompleteFunctionType {
+      mReturns.length = 0;
+      mReturns.push(...rets);
+      return inst;
+    }
+
+    function name() { return mName; }
+
+    function finish() {
+      return FunctionType.make(inst);
+    }
+
+    return inst;
+  }
+
+  return freeze({ make, reservedAnonymouseName });
+})();
 
 const FunctionType = (() => {
   function satisfactionDegreeOfParam
@@ -47,13 +119,9 @@ const FunctionType = (() => {
     return degree;
   }
 
-  function make(name?: string): FunctionType {
-    function arguments_(): Readonly<Parameter[]> {
-      return [];
-    }
-
-    function returns(): Readonly<Parameter[]> { return []; }
-
+  function make(base: FunctionTypeBase): FunctionType {
+    const { arguments_, returns, uid, name } = base;
+    
     // 0 meaning 1-1 match
     // undefined for does not match at all
     function satisfactionDegree(fn: FunctionType) {
@@ -68,44 +136,112 @@ const FunctionType = (() => {
       return argDeg + rtDeg;
     }
 
-    return freeze({ arguments_, returns, uid: Symbol(), satisfactionDegree });
-  }
+    function isComplete() { return true; }
 
-  
+    return freeze({
+      satisfactionDegree, arguments_, returns, uid, name, isComplete
+    });
+  }
 
   return freeze({ make });
 })();
-
-FunctionType.make('Function');
-
-interface ObjectType {
-  lookUp: (operation: string) => FunctionType
-}
 
 const FunctionLookUpTable = (() => {
 
 })();
 
-const ObjectType = (() => {
-  function make(name: string, mLookupTable: { [name: string]: FunctionType }) {
+interface ObjectType {
+  name: () => string,
+  lookUp: (operation: string) => FunctionType,
+  uid: symbol,
+  setLookUp: (lookupTable: { [name: string]: FunctionType }) => ObjectType
+}
 
-    function lookUp(operation: string): FunctionType {
-      return mLookupTable[operation];
+const ObjectType = (() => {
+  function make
+    (name?: string): ObjectType
+  {
+    name ??= '<anonymous>';
+    let mLookupTable: { [name: string]: FunctionType } = {};
+    const inst = freeze({ lookUp, name: () => name, uid: Symbol(), setLookUp });
+
+    function setLookUp(lookupTable: { [name: string]: FunctionType }) {
+      mLookupTable = lookupTable;
+      return inst;
     }
 
-    return freeze({ lookUp });
+    function lookUp(operation: string): FunctionType {
+      throw 'shit';
+    }
+
+    return inst;
   }
 
   return freeze({ make });
 })();
 
-const intt = ObjectType.make('Integer32', {
-  ['+' ]: FunctionType.make(),
-  ['-' ]: FunctionType.make(),
-  [':=']: FunctionType.make()
-});
+const ObjectLookUpTable = (() => {
+  function make() {
+    function makeMemberType(): ObjectType {
+      return ObjectType.make();
+    }
 
-intt.lookUp('+');
+    return freeze({ makeMemberType })
+  }
+
+  return freeze({ make });
+})();
+
+const add = IncompleteFunctionType.
+  make().
+  setName('+').
+  setArguments([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
+  setReturns  ([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
+  finish();
+
+const sub = IncompleteFunctionType.
+  make().
+  setName('-').
+  setArguments([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
+  setReturns  ([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
+  finish();
+
+const assign = IncompleteFunctionType.
+  make().
+  setName(':=').
+  setArguments([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
+  setReturns  ([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
+  finish();
+
+const toS = IncompleteFunctionType.
+  make().
+  setName('toString').
+  setArguments([]).
+  setReturns  ([{ fit: ParameterFit.isType, fitName: 'String' }]).
+  finish();
+
+const assignStr = IncompleteFunctionType.
+  make().
+  setName(':=').
+  setArguments([{ fit: ParameterFit.isType, fitName: 'String' }]).
+  setReturns  ([{ fit: ParameterFit.isType, fitName: 'String' }]).
+  finish();
+
+const intt = ObjectType.
+  make('Integer32').
+  setLookUp({
+    ['+' ]: add,
+    ['-' ]: sub,
+    [':=']: assign,
+    ['toString']: toS
+  });
+
+const strt = ObjectType.
+  make('String').
+  setLookUp({
+    [':=']: assignStr
+  });
+
 
 const TypeSystem = (() => {
 

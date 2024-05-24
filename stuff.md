@@ -485,3 +485,16 @@ There's a lot going on here. So more verbosely:
   # and an additional interface
   # - Writable
   let d := 2
+
+```
+
+Function look up
+
+Checking returns is occasionally possible, the same is true for arguments for that matter.
+
+```melody
+
+# v depends on the types for a and b
+a, b = func(c, d)
+
+```
