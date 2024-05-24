@@ -1,13 +1,13 @@
-import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
-import { StandardError, StandardErrorFn } from './helpers';
+import { TreePartBuild, LineContinuationScheme } from '../tree_part_build';
+import { StandardError, StandardErrorFn } from '../helpers';
 import { PartialTreeNextTokenBuild } from './partial_tree_next_token_build';
-import { Helpers } from './helpers';
-import { NodeExpansion } from './node_expansion';
+import { Helpers } from '../helpers';
+import { NodeExpansion } from '../node_expansion';
 import {
   LeftTreePartHandler, LeftSideNodeExpansion
-} from './left_side_node_expansion';
-import { Token } from './token';
-import { TokenRange } from './token_range';
+} from '../left_side_node_expansion';
+import { Token } from '../token';
+import { TokenRange } from '../token_range';
 
 interface PartialTreeStartGroupBuild {
   startGroupBuild: () => NodeExpansion | undefined,
@@ -42,7 +42,7 @@ export const PartialTreeStartGroupBuild = (() => {
         return;
       }
       const { remainingRange } = nextPart();
-      const rightPart = PartialTreeBuild.
+      const rightPart = TreePartBuild.
         make(remainingRange(), normalLineContinuation);
       return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
     }

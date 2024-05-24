@@ -1,4 +1,4 @@
-import { LineContinuationScheme, PartialTreeBuild } from '../src/partial_tree_build';
+import { LineContinuationScheme, TreePartBuild } from '../src/tree_part_build';
 import { TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
@@ -25,14 +25,14 @@ const { describeNamed } = TestHelpers;
 // \n
 // <empty>
 
-describeNamed({ PartialTreeBuild }, () => {
+describeNamed({ TreePartBuild }, () => {
   const makeToken = Token.forTesting.makeFromStringOnly;
 
   const normalCont = LineContinuationScheme.normal;
   const make = (tokens: Token[]) =>
-    PartialTreeBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont);
+    TreePartBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont);
   const makePtbRes = (...tokens: Token[]) =>
-    PartialTreeBuild.
+    TreePartBuild.
       make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont).
       buildPart();
 
@@ -58,10 +58,10 @@ describeNamed({ PartialTreeBuild }, () => {
       let rightPartCalls = 0;
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftPartOnly((_0: PartialTreeBuild) => {
+        visitLeftPartOnly((_0: TreePartBuild) => {
           ++leftPartCalls;
         }).
-        visitRightPartOnly((_1: PartialTreeBuild) => {
+        visitRightPartOnly((_1: TreePartBuild) => {
           ++rightPartCalls;
         }).
         finish());
@@ -72,8 +72,8 @@ describeNamed({ PartialTreeBuild }, () => {
     it('makes right part with none of the tokens', () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftPartOnly((_0: PartialTreeBuild) => {}).
-        visitRightPartOnly((rightPart: PartialTreeBuild) => {
+        visitLeftPartOnly((_0: TreePartBuild) => {}).
+        visitRightPartOnly((rightPart: TreePartBuild) => {
           const { start, end } = rightPart.range();
           expect(start).toEqual(4);
           expect(end).toEqual(4);
@@ -84,12 +84,12 @@ describeNamed({ PartialTreeBuild }, () => {
     it('makes left part with the remainder of the tokens, skipping new line', () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftPartOnly((leftPart: PartialTreeBuild) => {
+        visitLeftPartOnly((leftPart: TreePartBuild) => {
           const { start, end } = leftPart.range();
           expect(start).toEqual(2);
           expect(end).toEqual(3);
         }).
-        visitRightPartOnly((_0: PartialTreeBuild) => {}).
+        visitRightPartOnly((_0: TreePartBuild) => {}).
         finish());
     });
   });
@@ -160,10 +160,10 @@ describeNamed({ PartialTreeBuild }, () => {
       const [pt1, pt2] = points();
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftPartOnly((_0: PartialTreeBuild) => {
+        visitLeftPartOnly((_0: TreePartBuild) => {
           pt1.hitsAtExactly(1);
         }).
-        visitRightPartOnly((_0: PartialTreeBuild) => {
+        visitRightPartOnly((_0: TreePartBuild) => {
           pt2.hitsAtExactly(1);
         }).
         finish());
@@ -182,10 +182,10 @@ describeNamed({ PartialTreeBuild }, () => {
       const [pt1, pt2] = points();
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftPartOnly((_0: PartialTreeBuild) => {
+        visitLeftPartOnly((_0: TreePartBuild) => {
           pt1.hitsAtExactly(1);
         }).
-        visitRightPartOnly((_0: PartialTreeBuild) => {
+        visitRightPartOnly((_0: TreePartBuild) => {
           pt2.hitsAtExactly(1);
         }).
         finish());
@@ -195,18 +195,18 @@ describeNamed({ PartialTreeBuild }, () => {
     it('left part contains no tokens', () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftPartOnly((leftPart: PartialTreeBuild) => {
+        visitLeftPartOnly((leftPart: TreePartBuild) => {
           expect(args[leftPart.range().start].content()).toEqual("a");
         }).
-        visitRightPartOnly((_0: PartialTreeBuild) => {}).
+        visitRightPartOnly((_0: TreePartBuild) => {}).
         finish());
     });
 
     it('right part contains the "a" token', () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftPartOnly((_0: PartialTreeBuild) => {}).
-        visitRightPartOnly((rightPart: PartialTreeBuild) => {
+        visitLeftPartOnly((_0: TreePartBuild) => {}).
+        visitRightPartOnly((rightPart: TreePartBuild) => {
           const { start, end } = rightPart.range();
           expect(start).toEqual(end);
         }).
@@ -232,12 +232,12 @@ describeNamed({ PartialTreeBuild }, () => {
         it(`left part contains the "${token}" tokens`, () => {
           ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
             makeOverrider(fail).
-            visitLeftPartOnly((leftPart: PartialTreeBuild) => {
+            visitLeftPartOnly((leftPart: TreePartBuild) => {
               const idx = leftPart.range().start + position;
               expect(idx).toBeLessThan(args.length);
               expect(args[idx]?.content()).toEqual(token);
             }).
-            visitRightPartOnly((_0: PartialTreeBuild) => {}).
+            visitRightPartOnly((_0: TreePartBuild) => {}).
             finish());
         });
       });
@@ -245,8 +245,8 @@ describeNamed({ PartialTreeBuild }, () => {
     it(`right part contains no tokens`, () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftPartOnly((_0: PartialTreeBuild) => {}).
-        visitRightPartOnly((rightPart: PartialTreeBuild) => {
+        visitLeftPartOnly((_0: TreePartBuild) => {}).
+        visitRightPartOnly((rightPart: TreePartBuild) => {
           const { start, end } = rightPart.range();
           expect(start).toEqual(end);
         }).
@@ -259,7 +259,7 @@ describeNamed({ PartialTreeBuild }, () => {
   {
     ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
       makeOverrider(fail).
-      visitLeftWithNode((node: IncompleteNode, _1: PartialTreeBuild) => {
+      visitLeftWithNode((node: IncompleteNode, _1: TreePartBuild) => {
         const compl = node.finish(AstIdentifierNode.make('b'));
         if (compl.type() === AstNode.types.tuple) {
           fn(compl as AstTupleNode);
@@ -267,7 +267,7 @@ describeNamed({ PartialTreeBuild }, () => {
           fail();
         }
       }).
-      visitRightPartOnly((_0: PartialTreeBuild) => {}).
+      visitRightPartOnly((_0: TreePartBuild) => {}).
       finish());
   }
 
@@ -283,9 +283,9 @@ describeNamed({ PartialTreeBuild }, () => {
       const [pt1, pt2] = points();
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftWithNode((_0: IncompleteNode, _1: PartialTreeBuild) =>
+        visitLeftWithNode((_0: IncompleteNode, _1: TreePartBuild) =>
           pt1.hitsAtExactly(1)).
-        visitRightPartOnly((_0: PartialTreeBuild) => {
+        visitRightPartOnly((_0: TreePartBuild) => {
           pt2.hitsAtExactly(1);
         }).
         finish());
@@ -325,20 +325,20 @@ describeNamed({ PartialTreeBuild }, () => {
     it('has left side has incomplete node, has new line adjusted range', () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftWithNode((_0: IncompleteNode, part: PartialTreeBuild) => {
+        visitLeftWithNode((_0: IncompleteNode, part: TreePartBuild) => {
           const { start, end } = part.range();
           expect(start).toEqual(3);
           expect(end).toEqual(6);
         }).
-        visitRightPartOnly((_0: PartialTreeBuild) => {}).
+        visitRightPartOnly((_0: TreePartBuild) => {}).
         finish());
     });
 
     it('has right side, has new line adjusted range', () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftWithNode((_0: IncompleteNode, _1: PartialTreeBuild) => {}).
-        visitRightPartOnly((rightPart: PartialTreeBuild) => {
+        visitLeftWithNode((_0: IncompleteNode, _1: TreePartBuild) => {}).
+        visitRightPartOnly((rightPart: TreePartBuild) => {
           const { start, end } = rightPart.range();
           expect(start).toEqual(6);
           expect(end).toEqual(6);
@@ -355,9 +355,9 @@ describeNamed({ PartialTreeBuild }, () => {
       const [pt1, pt2] = points();
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftWithNode((_0: IncompleteNode, _1: PartialTreeBuild) =>
+        visitLeftWithNode((_0: IncompleteNode, _1: TreePartBuild) =>
           pt1.hitsAtExactly(1)).
-        visitRightPartOnly((_0: PartialTreeBuild) => {
+        visitRightPartOnly((_0: TreePartBuild) => {
           pt2.hitsAtExactly(1);
         }).
         finish());
@@ -380,18 +380,18 @@ describeNamed({ PartialTreeBuild }, () => {
       it('has left side whose incomplete node that completes into a function', () => {
         ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
           makeOverrider(fail).
-          visitLeftWithNode((node: IncompleteNode, _1: PartialTreeBuild) => {
+          visitLeftWithNode((node: IncompleteNode, _1: TreePartBuild) => {
             const completed = node.finish(AstIdentifierNode.make('c'));
             expect(completed.type()).toEqual(AstNode.types.functionCall);
           }).
-          visitRightPartOnly((_0: PartialTreeBuild) => {}).
+          visitRightPartOnly((_0: TreePartBuild) => {}).
           finish());
       });
 
       it('has left side whose incomplete node that completes into the correct function', () => {
         ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
           makeOverrider(fail).
-          visitLeftWithNode((node: IncompleteNode, _1: PartialTreeBuild) => {
+          visitLeftWithNode((node: IncompleteNode, _1: TreePartBuild) => {
             const completed = node.finish(AstIdentifierNode.make('c'));
             if (completed.type() !== AstNode.types.functionCall) {
               fail();
@@ -399,26 +399,26 @@ describeNamed({ PartialTreeBuild }, () => {
             }
             expect((completed as AstFunctionCallNode).name).toEqual('f');
           }).
-          visitRightPartOnly((_0: PartialTreeBuild) => {}).
+          visitRightPartOnly((_0: TreePartBuild) => {}).
           finish());
       });
 
       it('has left side, with one token', () => {
         ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
           makeOverrider(fail).
-          visitLeftWithNode((_0: IncompleteNode, part: PartialTreeBuild) => {
+          visitLeftWithNode((_0: IncompleteNode, part: TreePartBuild) => {
             const { start, end } = part.range();
             expect(end - start).toEqual(1);
           }).
-          visitRightPartOnly((_0: PartialTreeBuild) => {}).
+          visitRightPartOnly((_0: TreePartBuild) => {}).
           finish());
       });
 
       it('has empty right side', () => {
         ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
           makeOverrider(fail).
-          visitLeftWithNode((_0: IncompleteNode, _1: PartialTreeBuild) => {}).
-          visitRightPartOnly((rightPart: PartialTreeBuild) => {
+          visitLeftWithNode((_0: IncompleteNode, _1: TreePartBuild) => {}).
+          visitRightPartOnly((rightPart: TreePartBuild) => {
             const { start, end } = rightPart.range();
             expect(start).toEqual(end);
           }).
@@ -441,11 +441,11 @@ describeNamed({ PartialTreeBuild }, () => {
     it('has left side whose incomplete node that completes into a let', () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitLeftWithNode((node: IncompleteNode, _1: PartialTreeBuild) => {
+        visitLeftWithNode((node: IncompleteNode, _1: TreePartBuild) => {
           const completed = node.finish(AstIdentifierNode.make('c'));
           expect(completed.type()).toEqual(AstNode.types.letDeclaration);
         }).
-        visitRightPartOnly((_0: PartialTreeBuild) => {}).
+        visitRightPartOnly((_0: TreePartBuild) => {}).
         finish());
     });
   });

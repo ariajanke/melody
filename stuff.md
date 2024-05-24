@@ -445,3 +445,43 @@ end)
 >>
 
 ```
+
+Think about it, there's a strong "you call it, you buy it thing" going on.
+Consider interface methods:
+```melody
+
+let add = fn (a is Number, b is Number)
+  return a + b
+end
+
+let c = 1
+let d := 2
+puts(add(1, 2))
+
+```
+
+**!!!**
+There's a lot going on here. So more verbosely:
+
+```melody
+
+# In order of priority on the AST
+# 0   2   1 2  35 4  5       5  4 5
+  let add = fn (a is Number, b is Number)
+    return a + b
+  end
+  # numeric literal 1 has exactly one type, and many interfaces
+  # type: ConstInteger32
+  # interfaces:
+  # - Number
+  # - Integer
+  # - Addable
+  # - Subtractable
+  # - Dividable
+  # - Multipliable
+  let c = 1
+  # D here is slightly different
+  # type: Integer32
+  # and an additional interface
+  # - Writable
+  let d := 2

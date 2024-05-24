@@ -1,10 +1,9 @@
-import { StandardError, StandardErrorFn } from './helpers';
-import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
-import { Helpers } from './helpers';
-import { TokenRange } from './token_range';
+import { Helpers, StandardError, StandardErrorFn } from '../helpers';
+import { TreePartBuild, LineContinuationScheme } from '../tree_part_build';
+import { TokenRange } from '../token_range';
 
 export interface PartialTreeNextTokenBuild {
-  unprocessedPart: () => PartialTreeBuild | undefined,
+  unprocessedPart: () => TreePartBuild | undefined,
   remainingRange: () => TokenRange,
   error: StandardErrorFn
 }
@@ -41,10 +40,10 @@ export const PartialTreeNextTokenBuild = (() => {
       return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
     });
 
-    const unprocessedPart = memoize((): PartialTreeBuild | undefined => {
+    const unprocessedPart = memoize((): TreePartBuild | undefined => {
       const pos = closePosition();
       if (!pos) return undefined;
-      return PartialTreeBuild.make(mTokenRange.clone(start(), pos), lineCont);
+      return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
     });
 
     const remainingRange = memoize((): TokenRange => {

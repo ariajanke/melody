@@ -1,18 +1,18 @@
-import { PartialTreeBuild, LineContinuationScheme } from './partial_tree_build';
-import { Helpers, StandardError } from './helpers';
-import { AstStringableNode } from './ast_stringable_node';
-import { Token } from './token';
+import { TreePartBuild, LineContinuationScheme } from '../tree_part_build';
+import { Helpers, StandardError } from '../helpers';
+import { AstStringableNode } from '../ast_stringable_node';
+import { Token } from '../token';
 import {
   IncompleteNodeCreation
-} from './ast_incomplete_binary_node';
-import { NodeExpansion } from './node_expansion';
+} from '../ast_incomplete_binary_node';
+import { NodeExpansion } from '../node_expansion';
 import {
   RightSideNodeExpansion,
   BareRightTreePartHandler,
   BuildPartRightTreePartHandler
-} from './right_side_node_expansion';
+} from '../right_side_node_expansion';
 import { PartialTreeStartOperatorBuild } from './partial_tree_start_operator_build';
-import { TokenRange } from './token_range';
+import { TokenRange } from '../token_range';
 
 const { freeze } = Helpers;
 
@@ -58,7 +58,7 @@ export const PartialTreeStartIdentifierBuild = (() => {
           throw Error('impossible branch??');
         }
         const { normal } = LineContinuationScheme;
-        const rightPart = PartialTreeBuild.make(mTokenRange, normal);
+        const rightPart = TreePartBuild.make(mTokenRange, normal);
         const ph = BuildPartRightTreePartHandler.make(rightPart);
         return RightSideNodeExpansion.make(lhsNode, ph);
       } else {

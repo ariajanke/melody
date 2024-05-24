@@ -1,4 +1,4 @@
-import { PartialTreeBuild } from './partial_tree_build';
+import { TreePartBuild } from './tree_part_build';
 import { AstNode } from './ast_node';
 import { Helpers, TypeCheckable } from './helpers';
 import { IncompleteNode } from './ast_incomplete_binary_node';
@@ -6,25 +6,25 @@ import { IncompleteNode } from './ast_incomplete_binary_node';
 const { freeze } = Helpers;
 
 export type PartialBuildToNodesFn =
-  (partBuild: PartialTreeBuild) => Readonly<AstNode[]>;
+  (partBuild: TreePartBuild) => Readonly<AstNode[]>;
 
 export interface NodeExpansionVisitor {
-  visitLeftPartOnly: (leftPart: PartialTreeBuild) => void,
-  visitLeftWithNode: (node: IncompleteNode, leftPart: PartialTreeBuild) => void
-  visitRightPartOnly: (rightPart: PartialTreeBuild) => void,
+  visitLeftPartOnly: (leftPart: TreePartBuild) => void,
+  visitLeftWithNode: (node: IncompleteNode, leftPart: TreePartBuild) => void
+  visitRightPartOnly: (rightPart: TreePartBuild) => void,
   visitRightNodeOnly: (node: AstNode) => void,
-  visitRightWithPart: (node: AstNode, rightPart: PartialTreeBuild) => void
+  visitRightWithPart: (node: AstNode, rightPart: TreePartBuild) => void
 }
 
 export const NodeExpansionVisitor = (() => {
   function makeDefaultImplementations(fn: () => void) {
     return freeze({
-      visitLeftPartOnly: (_0: PartialTreeBuild) => { fn(); },
-      visitLeftWithNode: (_0: IncompleteNode, _1: PartialTreeBuild) =>
+      visitLeftPartOnly: (_0: TreePartBuild) => { fn(); },
+      visitLeftWithNode: (_0: IncompleteNode, _1: TreePartBuild) =>
         { fn(); },
-      visitRightPartOnly: (_0: PartialTreeBuild) => { fn(); },
+      visitRightPartOnly: (_0: TreePartBuild) => { fn(); },
       visitRightNodeOnly: (_0: AstNode) => { fn(); },
-      visitRightWithPart: (_0: AstNode, _1: PartialTreeBuild) =>
+      visitRightWithPart: (_0: AstNode, _1: TreePartBuild) =>
         { fn(); }
     });
   }
@@ -43,17 +43,17 @@ export const NodeExpansionVisitor = (() => {
 
     // maybe generics/key enumerations can DRY this up?
 
-    function visitLeftPartOnly(fn: (leftPart: PartialTreeBuild) => void) {
+    function visitLeftPartOnly(fn: (leftPart: TreePartBuild) => void) {
       mInstance.visitLeftPartOnly = fn;
       return inst;
     }
 
-    function visitLeftWithNode(fn: (node: IncompleteNode, leftPart: PartialTreeBuild) => void) {
+    function visitLeftWithNode(fn: (node: IncompleteNode, leftPart: TreePartBuild) => void) {
       mInstance.visitLeftWithNode = fn;
       return inst;
     }
 
-    function visitRightPartOnly(fn: (rightPart: PartialTreeBuild) => void) {
+    function visitRightPartOnly(fn: (rightPart: TreePartBuild) => void) {
       mInstance.visitRightPartOnly = fn;
       return inst;
     }
@@ -61,7 +61,7 @@ export const NodeExpansionVisitor = (() => {
       mInstance.visitRightNodeOnly = fn;
       return inst;
     }
-    function visitRightWithPart(fn: (node: AstNode, rightPart: PartialTreeBuild) => void) {
+    function visitRightWithPart(fn: (node: AstNode, rightPart: TreePartBuild) => void) {
       mInstance.visitRightWithPart = fn;
       return inst;
     }

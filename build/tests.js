@@ -563,7 +563,7 @@
     return freeze14({ makeBinary, makeUnary, make: make2 });
   })();
 
-  // src/partial_tree_next_token_build.ts
+  // src/tree_part_build/partial_tree_next_token_build.ts
   var PartialTreeNextTokenBuild = (() => {
     const { memoize: memoize2, freeze: freeze14 } = Helpers;
     const kCloseMapping = freeze14({
@@ -590,7 +590,7 @@
         const pos = closePosition();
         if (!pos)
           return void 0;
-        return PartialTreeBuild.make(mTokenRange.clone(start(), pos), lineCont);
+        return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
       });
       const remainingRange = memoize2(() => {
         const pos = closePosition();
@@ -746,7 +746,7 @@
     return freeze14({ make: make2 });
   })();
 
-  // src/partial_tree_start_group_build.ts
+  // src/tree_part_build/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
     const { memoize: memoize2, freeze: freeze14 } = Helpers;
     function make2(leftPartHandler, mTokenRange, mStartToken) {
@@ -766,7 +766,7 @@
           return;
         }
         const { remainingRange } = nextPart();
-        const rightPart = PartialTreeBuild.make(remainingRange(), normalLineContinuation);
+        const rightPart = TreePartBuild.make(remainingRange(), normalLineContinuation);
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
       return freeze14({
@@ -998,7 +998,7 @@
     return freeze8({ make: make2 });
   })();
 
-  // src/partial_tree_start_operator_build.ts
+  // src/tree_part_build/partial_tree_start_operator_build.ts
   var PartialTreeStartOperatorBuild = (() => {
     const { freeze: freeze14 } = Helpers;
     function make2(mIncompleteNode, mNextToken, mTokenRange) {
@@ -1065,7 +1065,7 @@
     return freeze9({ make: make2, makeStartingRange, zeroSizedRange });
   })();
 
-  // src/partial_tree_start_identifier_build.ts
+  // src/tree_part_build/partial_tree_start_identifier_build.ts
   var { freeze: freeze10 } = Helpers;
   var PartialTreeStartIdentifierBuild = (() => {
     const tokenTypes = Token.types;
@@ -1102,7 +1102,7 @@
             throw Error("impossible branch??");
           }
           const { normal } = LineContinuationScheme;
-          const rightPart = PartialTreeBuild.make(mTokenRange, normal);
+          const rightPart = TreePartBuild.make(mTokenRange, normal);
           const ph = BuildPartRightTreePartHandler.make(rightPart);
           return RightSideNodeExpansion.make(lhsNode, ph);
         } else {
@@ -1149,14 +1149,14 @@
     return freeze11({ makeForOperator, make: make2 });
   })();
 
-  // src/partial_tree_build.ts
+  // src/tree_part_build.ts
   var { freeze: freeze12, verifyInTesting: verifyInTesting2 } = Helpers;
   var LineContinuationScheme = freeze12({
     inGroup: Symbol(),
     operatorContinued: Symbol(),
     normal: Symbol()
   });
-  var PartialTreeBuild = (() => {
+  var TreePartBuild = (() => {
     const tokenTypes = Token.types;
     const { zeroSizedRange } = TokenRange;
     function make2(mTokenRange, mLineContScheme) {
@@ -1212,7 +1212,7 @@
     }
     function buildFor2(tokens) {
       const range = TokenRange.makeStartingRange(tokens);
-      const partBuild = PartialTreeBuild.make(range, LineContinuationScheme.normal);
+      const partBuild = TreePartBuild.make(range, LineContinuationScheme.normal);
       const res = buildProgramSequence(partBuild).map((n) => n);
       return AstTupleNode.make(res);
     }
@@ -1606,11 +1606,11 @@
 
   // tests/partial_tree_build_tests.ts
   var { describeNamed: describeNamed10 } = TestHelpers;
-  describeNamed10({ PartialTreeBuild }, () => {
+  describeNamed10({ TreePartBuild }, () => {
     const makeToken = Token.forTesting.makeFromStringOnly;
     const normalCont = LineContinuationScheme.normal;
-    const make2 = (tokens) => PartialTreeBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont);
-    const makePtbRes = (...tokens) => PartialTreeBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont).buildPart();
+    const make2 = (tokens) => TreePartBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont);
+    const makePtbRes = (...tokens) => TreePartBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont).buildPart();
     const ptbWithVisitor = (ptbRes, fn) => {
       ptbRes()?.visit(fn());
     };

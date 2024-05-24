@@ -1,4 +1,4 @@
-import { PartialTreeBuild } from './partial_tree_build';
+import { TreePartBuild } from './tree_part_build';
 import {
   NodeExpansion,
   NodeExpansionVisitor,
@@ -9,7 +9,7 @@ import { AstNode } from './ast_node';
 
 export interface LeftTreePartHandler {
   handleLeftSide: (nodes: Readonly<AstNode[]>) => Readonly<AstNode[]>,
-  visit: (leftPart: PartialTreeBuild, visitor: NodeExpansionVisitor) => void
+  visit: (leftPart: TreePartBuild, visitor: NodeExpansionVisitor) => void
 }
 
 export const BareLeftTreePartHandler = (() => {
@@ -19,7 +19,7 @@ export const BareLeftTreePartHandler = (() => {
   function handleLeftSide(nodes: Readonly<AstNode[]>): Readonly<AstNode[]>
     { return nodes; }
 
-  function visit(leftPart: PartialTreeBuild, visitor: NodeExpansionVisitor)
+  function visit(leftPart: TreePartBuild, visitor: NodeExpansionVisitor)
     { visitor.visitLeftPartOnly(leftPart); }
 
   function make(): LeftTreePartHandler { return kSharedInst; }
@@ -40,7 +40,7 @@ export const IncompleteNodeLeftTreePartHandler = (() => {
       return [incompleteNode.finish(head), ...tail];
     }
 
-    function visit(leftPart: PartialTreeBuild, visitor: NodeExpansionVisitor)
+    function visit(leftPart: TreePartBuild, visitor: NodeExpansionVisitor)
       { visitor.visitLeftWithNode(incompleteNode, leftPart); }
 
     return freeze({ handleLeftSide, visit });
@@ -54,8 +54,8 @@ export const LeftSideNodeExpansion = (() => {
 
   function make
     (leftPartHandler: LeftTreePartHandler,
-     leftPart: PartialTreeBuild,
-     rightPart: PartialTreeBuild): NodeExpansion
+     leftPart: TreePartBuild,
+     rightPart: TreePartBuild): NodeExpansion
   {
     const {
       type, verifyInTesting

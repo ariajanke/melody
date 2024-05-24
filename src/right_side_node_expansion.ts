@@ -1,7 +1,7 @@
 import { Helpers } from './helpers';
 import { AstNode } from './ast_node';
 import { PartialBuildToNodesFn, NodeExpansionVisitor, NodeExpansion } from './node_expansion';
-import { PartialTreeBuild } from './partial_tree_build';
+import { TreePartBuild } from './tree_part_build';
 
 const { freeze } = Helpers;
 
@@ -26,7 +26,7 @@ export const BareRightTreePartHandler = (() => {
 })();
 
 export const BuildPartRightTreePartHandler = (() => {
-  function make(rightPart: PartialTreeBuild): RightTreePartHandler {
+  function make(rightPart: TreePartBuild): RightTreePartHandler {
 
     function handleRightSide(fn: PartialBuildToNodesFn): Readonly<AstNode[]>
       { return fn(rightPart); }
