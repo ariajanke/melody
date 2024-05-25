@@ -9,7 +9,10 @@ export interface AstFunctionCallNode extends AstNode {
 
 export const AstFunctionCallNode = (() => {
   const nodeTypes = AstNode.types;
-  function make(lhs: AstNode, rhs: AstNode) {
+  const executionType = AstNode.base.
+    makeUndefinedExecutionType('AstFunctionCallNode');
+
+  function make(_0: string, lhs: AstNode, rhs: AstNode) {
     const arguments_: AstTupleNode = (() => {
       if (rhs.type() === nodeTypes.tuple) {
         return rhs as AstTupleNode;
@@ -31,7 +34,8 @@ export const AstFunctionCallNode = (() => {
       name,
       arguments: arguments_,
       visit,
-      type: () => nodeTypes.functionCall
+      type: () => nodeTypes.functionCall,
+      executionType
     });
 
     function visit(visitor: AstNodeVisitor): void {

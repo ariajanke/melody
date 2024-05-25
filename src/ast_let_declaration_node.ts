@@ -9,8 +9,9 @@ const { freeze } = Helpers;
 export interface AstLetDeclarationNode {};
 
 export const AstLetDeclarationNode = (() => {
-  function make(node: AstNode) {
-    const inst = freeze({ visit, type });
+  function make(node: AstNode): AstNode {
+    const { executionType } = node;
+    const inst = freeze({ visit, type, executionType });
     const { letDeclaration } = AstNode.types;
 
     function visit(visitor: AstNodeVisitor) {
@@ -45,4 +46,3 @@ export const AstIncompleteUnaryNode = (() => {
 
   return freeze({ makeForOperator, make });
 })();
-

@@ -10,8 +10,9 @@ export interface AstTupleNode extends AstNode {
 export const AstTupleNode = (() => {
   const { freeze } = Object;
   const tupleType = AstNode.types.tuple;
+  const executionType = AstNode.base.makeUndefinedExecutionType('AstTupleNode');
 
-  function makeBinary(lhs: AstNode, rhs: AstNode): AstTupleNode {
+  function makeBinary(_0: string, lhs: AstNode, rhs: AstNode): AstTupleNode {
     return makeWithPair(lhs, rhs);
   }
 
@@ -31,7 +32,9 @@ export const AstTupleNode = (() => {
   }
 
   function make(mSubExpressions: AstNode[]): AstTupleNode {
-    const inst = freeze({ forEach, count, visit, type, mergeWith });
+    const inst = freeze({
+      forEach, count, visit, type, mergeWith, executionType
+    });
 
     function forEach(fn: (node: AstNode) => void): void {
       mSubExpressions.forEach((node: AstNode) => fn(node));

@@ -1,8 +1,9 @@
 import { Helpers } from './helpers';
+import { ContextVariable } from './context_variable';
 
 const { freeze } = Helpers;
 
-const ParameterFit = freeze({
+export const ParameterFit = freeze({
   isLike: Symbol(),
   isType: Symbol(),
   isInterface: Symbol()
@@ -13,9 +14,13 @@ interface Parameter {
   fitName: string
 }
 
+interface ReturnType {
+  typeUid: symbol
+}
+
 interface FunctionTypeBase {
   arguments_: () => Readonly<Parameter[]>,
-  returns: () => Readonly<Parameter[]>,
+  returns: () => Readonly<ReturnType[]>,
   uid: () => symbol,
   isComplete: () => boolean,
   name: () => string
@@ -28,7 +33,7 @@ interface FunctionType extends FunctionTypeBase {
 interface IncompleteFunctionType extends FunctionTypeBase {
   setName: (name: string) => IncompleteFunctionType,
   setArguments: (args: Readonly<Parameter[]>) => IncompleteFunctionType,
-  setReturns: (args: Readonly<Parameter[]>) => IncompleteFunctionType,
+  setReturns: (args: Readonly<ReturnType[]>) => IncompleteFunctionType,
   finish: () => FunctionType
 };
 
@@ -38,7 +43,7 @@ const IncompleteFunctionType = (() => {
   function make(): IncompleteFunctionType {
     const mUid = Symbol();
     const mArguments_: Parameter[] = [];
-    const mReturns   : Parameter[] = [];
+    const mReturns   : ReturnType[] = [];
     let mName = reservedAnonymouseName;
 
     const inst = freeze({
@@ -56,7 +61,7 @@ const IncompleteFunctionType = (() => {
     function arguments_(): Readonly<Parameter[]>
       { return mArguments_; }
 
-    function returns(): Readonly<Parameter[]>
+    function returns(): Readonly<ReturnType[]>
       { return mReturns; }
 
     function uid(): symbol { return mUid; }
@@ -74,7 +79,7 @@ const IncompleteFunctionType = (() => {
       return inst;
     }
 
-    function setReturns(rets: Readonly<Parameter[]>): IncompleteFunctionType {
+    function setReturns(rets: Readonly<ReturnType[]>): IncompleteFunctionType {
       mReturns.length = 0;
       mReturns.push(...rets);
       return inst;
@@ -92,7 +97,7 @@ const IncompleteFunctionType = (() => {
   return freeze({ make, reservedAnonymouseName });
 })();
 
-const FunctionType = (() => {
+export const FunctionType = (() => {
   function satisfactionDegreeOfParam
     (lhs: Parameter, rhs: Parameter): number | undefined
   {
@@ -104,7 +109,7 @@ const FunctionType = (() => {
     }
   }
 
-  function satisfactionDegreeOfArray
+  function satisfactionDegreeOfArguments
     (lhs: Readonly<Parameter[]>, rhs: Readonly<Parameter[]>)
   {
     const length = Math.min(lhs.length, rhs.length);
@@ -119,18 +124,31 @@ const FunctionType = (() => {
     return degree;
   }
 
+  function satisfactionDegreeOfReturns
+    (lhs: Readonly<ReturnType[]>, rhs: Readonly<ReturnType[]>): number | undefined
+  {
+    const length = Math.min(lhs.length, rhs.length);
+    for (let i = 0; i < length; ++i) {
+      if (lhs[i].typeUid !== rhs[i].typeUid) {
+        return undefined;
+      }
+    }
+    return 0;
+  }
+
   function make(base: FunctionTypeBase): FunctionType {
     const { arguments_, returns, uid, name } = base;
-    
+
     // 0 meaning 1-1 match
     // undefined for does not match at all
     function satisfactionDegree(fn: FunctionType) {
       if (fn.arguments_().length !== arguments_().length ||
           fn.returns   ().length !== returns   ().length)
       { return undefined; }
-      const argDeg = satisfactionDegreeOfArray(fn.arguments_(), arguments_());
+      const argDeg =
+        satisfactionDegreeOfArguments(fn.arguments_(), arguments_());
       if (argDeg !== 0) return;
-      const rtDeg = satisfactionDegreeOfArray(fn.returns(), returns());
+      const rtDeg = satisfactionDegreeOfReturns(fn.returns(), returns());
       if (rtDeg !== 0) return;
       return argDeg + rtDeg;
     }
@@ -142,7 +160,11 @@ const FunctionType = (() => {
     });
   }
 
-  return freeze({ make, satisfactionDegreeOfParam });
+  return freeze({
+    make,
+    satisfactionDegreeOfParam,
+    satisfactionDegreeOfArguments
+  });
 })();
 
 const FunctionLookUpTable = (() => {
@@ -157,12 +179,25 @@ interface ObjectType {
 }
 
 const ObjectType = (() => {
+  function makeUidFor(name: string) {
+    switch (name) {
+    case 'Integer': return ContextVariable.types.integer;
+    case 'String' : return ContextVariable.types.string;
+    default: return Symbol();
+    }
+  }
+
+
   function make
     (name?: string): ObjectType
   {
     name ??= '<anonymous>';
     let mLookupTable: { [name: string]: FunctionType } = {};
-    const inst = freeze({ lookUp, name: () => name, uid: Symbol(), setLookUp });
+    const inst = freeze({
+      lookUp, name: () => name,
+      uid: makeUidFor(name),
+      setLookUp
+    });
 
     function setLookUp(lookupTable: { [name: string]: FunctionType }) {
       mLookupTable = lookupTable;
@@ -179,71 +214,90 @@ const ObjectType = (() => {
   return freeze({ make });
 })();
 
-const ObjectLookUpTable = (() => {
-  function make() {
-    function makeMemberType(): ObjectType {
-      return ObjectType.make();
+export interface ObjectLookUpTable {
+  addBuiltinTypes: () => ObjectLookUpTable,
+  lookUpByType: (typeUid: symbol) => ObjectType
+}
+
+export const ObjectLookUpTable = (() => {
+  const kBuiltinTypes = (() => {
+    const add = IncompleteFunctionType.
+      make().
+      setName('+').
+      setArguments([{ fit: ParameterFit.isType, fitName: 'Interger' }]).
+      setReturns  ([{ typeUid: ContextVariable.types.integer }]).
+      finish();
+
+    const sub = IncompleteFunctionType.
+      make().
+      setName('-').
+      setArguments([{ fit: ParameterFit.isType, fitName: 'Interger' }]).
+      setReturns  ([{ typeUid: ContextVariable.types.integer }]).
+      finish();
+
+    const assign = IncompleteFunctionType.
+      make().
+      setName(':=').
+      setArguments([{ fit: ParameterFit.isType, fitName: 'Interger' }]).
+      setReturns  ([{ typeUid: ContextVariable.types.integer }]).
+      finish();
+
+    const toS = IncompleteFunctionType.
+      make().
+      setName('toString').
+      setArguments([]).
+      setReturns  ([{ typeUid: ContextVariable.types.string }]).
+      finish();
+
+    const assignStr = IncompleteFunctionType.
+      make().
+      setName(':=').
+      setArguments([{ fit: ParameterFit.isType, fitName: 'String' }]).
+      setReturns  ([{ typeUid: ContextVariable.types.string }]).
+      finish();
+
+    return freeze({
+      Integer: ObjectType.
+        make('Integer').
+        setLookUp({
+          ['+' ]: add,
+          ['-' ]: sub,
+          [':=']: assign,
+          ['toString']: toS
+        }),
+      String: ObjectType.
+        make('String').
+        setLookUp({
+          [':=']: assignStr
+        })
+    });
+  })();
+
+  function make(): ObjectLookUpTable {
+    const inst = freeze({ addBuiltinTypes, lookUpByType });
+    const mLookUpByUid: { [uid: symbol]: ObjectType } = {};
+    const mLookUpByName: { [name: string]: ObjectType } = {};
+
+    function addBuiltinTypes(): ObjectLookUpTable {
+      [kBuiltinTypes.Integer, kBuiltinTypes.String].forEach((objType: ObjectType) => {
+        mLookUpByName[objType.name()] = objType;
+        mLookUpByUid[objType.uid] = objType;
+      });
+      return inst;
     }
 
-    return freeze({ makeMemberType })
+    function lookUpByType(typeUid: symbol): ObjectType {
+      return mLookUpByUid[typeUid]
+    }
+
+    return inst;
   }
 
   return freeze({ make });
 })();
 
-const add = IncompleteFunctionType.
-  make().
-  setName('+').
-  setArguments([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
-  setReturns  ([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
-  finish();
-
-const sub = IncompleteFunctionType.
-  make().
-  setName('-').
-  setArguments([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
-  setReturns  ([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
-  finish();
-
-const assign = IncompleteFunctionType.
-  make().
-  setName(':=').
-  setArguments([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
-  setReturns  ([{ fit: ParameterFit.isType, fitName: 'Interger32' }]).
-  finish();
-
-const toS = IncompleteFunctionType.
-  make().
-  setName('toString').
-  setArguments([]).
-  setReturns  ([{ fit: ParameterFit.isType, fitName: 'String' }]).
-  finish();
-
-const assignStr = IncompleteFunctionType.
-  make().
-  setName(':=').
-  setArguments([{ fit: ParameterFit.isType, fitName: 'String' }]).
-  setReturns  ([{ fit: ParameterFit.isType, fitName: 'String' }]).
-  finish();
-
-const intt = ObjectType.
-  make('Integer32').
-  setLookUp({
-    ['+' ]: add,
-    ['-' ]: sub,
-    [':=']: assign,
-    ['toString']: toS
-  });
-
-const strt = ObjectType.
-  make('String').
-  setLookUp({
-    [':=']: assignStr
-  });
 
 
 const TypeSystem = (() => {
 
 })();
-
-Helpers.expose({ intt, strt, ParameterFit, FunctionType });

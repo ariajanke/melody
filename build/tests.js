@@ -1,30 +1,2174 @@
-(()=>{globalThis.debug_mode=!0;var pe=globalThis.debug_mode??!1,h=Object.freeze({expose:ge,freeze:pe?Be:Object.freeze,mapValues:Ce,depthOneCopy:Re,memoize:Oe,verifyInTesting:Se}),x=(()=>{let{freeze:e}=h;function o(){let t=()=>{};function n(s){t=s}function r(s){t=()=>e({message:s})}function i(){return t()}return e({setErrorFn:n,setErrorMessage:r,error:i})}return e({make:o})})();ge({Helpers:h});var me=(()=>{function e(){let o=Symbol();function t(r){return r?.type()===o}function n(){return o}return h.freeze({hasCreated:t,type:n})}return h.freeze({make:e})})();function Se(){if(!pe)throw Error("Cannot be called outside of a testing environment")}function Be(e){return e}function fe(e,o){Object.getOwnPropertySymbols(e).forEach(o),Object.getOwnPropertyNames(e).forEach(o)}function Ce(e,o){let t=e;return fe(e,n=>{t[n]=o(e[n],n)}),t}function Re(e){let o={};return fe(e,t=>{o[t]=e[t]}),o}function ge(e){let o=t=>{globalThis[t]=e[t]};return Object.keys(e).forEach(o)}function Oe(e){let o=()=>{let t=e();return o=()=>t,t};return()=>o()}var{freeze:Fe}=h,A=Fe({describeNamed:Le,fdescribeNamed:Ie});function Le(e,o){describe(Object.keys(e)[0],o)}function Ie(e,o){fdescribe(Object.keys(e)[0],o)}var B=(()=>{let{freeze:e,assign:o}=Object,t=e({numeric:Symbol(),alphabetic:Symbol(),operative:Symbol(),spacious:Symbol(),newLine:Symbol(),literal:Symbol()});function n(s,u){return s.map(l=>({[l]:u})).reduce(o)}let r=o({},n(["=",":",",",".","(",")","{","}"],t.operative),n([" ","	","\r"],t.spacious),n(["'"],t.literal),n([`
-`],t.newLine));function i(s){if(s.length!==1)throw Error(`"${s}" is not one character`);switch(s){case"0":case"1":case"2":case"3":case"4":case"5":case"6":case"7":case"8":case"9":return t.numeric;default:break}return r[s]??t.alphabetic}return e({classes:t,classOf:i})})();var L=(()=>{let{freeze:e}=Object,{classes:o,classOf:t}=B;function n(l,p){let{length:c}=l;for(let a=p+1;a<c;++a)switch(t(l[a])){case o.operative:case o.spacious:case o.literal:case o.newLine:return a;default:break}return c}function r(l,p){let{length:c}=l;for(let a=p+1;a<c;++a)if(t(l[a])===o.literal)return a+1;return c}function i(l,p){return p+1>=l.length?p+1:l[p+1]==="="&&l[p]!=="="?p+2:p+1}function s(l,p){let{length:c}=l;for(let a=p+1;a<c;++a)switch(t(l[a])){case o.alphabetic:case o.numeric:case o.operative:case o.literal:case o.newLine:return a;default:break}return c}function u(l,p){let{length:c}=l;for(let a=p+1;a<c;++a)if(t(l[a])!==o.newLine)return a;return c}return e({[o.alphabetic]:n,[o.literal]:r,[o.operative]:i,[o.numeric]:n,[o.spacious]:s,[o.newLine]:u})})();var{freeze:ae}=Object,E=Object.freeze({declareFunction:Symbol(),operator:Symbol(),stringLiteral:Symbol(),newLine:Symbol(),identifier:Symbol()}),T=(()=>{function e(u){return()=>{throw Error(`Cannot call ${u} unimplemented`)}}let o=ae({type:e("type"),content:()=>"",start:e("start"),end:e("end")});function t(u){switch(u[0]){case"'":return E.stringLiteral;case`
-`:return E.newLine;case" ":case"	":case"\r":throw Error("cannot build token from whitespace")}return E.identifier}let n={let:E.operator,fn:E.declareFunction,"{":E.operator,"}":E.operator,"(":E.operator,")":E.operator,",":E.operator,":=":E.operator};function r(u){return s(u,0,0)}function i(u,l,p){return s(u.substring(l,p),l,p)}function s(u,l,p){let c=n[u]??t(u);function a(){return u}function d(){return l}function m(){return p}function f(){return c}return ae({content:a,start:d,end:m,type:f})}return ae({make:i,types:E,kBlankToken:o,forTesting:{makeFromStringOnly:r}})})();var I=(()=>{let{freeze:e}=Object,o=e({CrawlStrategies:L,characterClassOf:B.classOf,characterClasses:B.classes});function t(n,{CrawlStrategies:r,characterClassOf:i,characterClasses:s}=o){let u=e({reachedEnd:d,readToken:a,crawl:f}),l=0,p=0,c=T.kBlankToken;function a(){return c}function d(){return p===n.length}function m(){if(l>=n.length)throw Error("Cannot crawl at end of string");let g=i(n[p]);if(c.content()!==""&&g!==s.spacious)return;let y=r[g],b=y(n,p);if(b<=p)throw Error("progression failed");p=b,g!==s.spacious&&(c=T.make(n,l,p)),l=p}function f(){for(c=T.kBlankToken;c.content()==="";)m();return l<n.length&&m(),u}return u}return e({make:t})})();var{freeze:W}=Object,V=(()=>{function e(t){let{length:n}=t;if(!(n<2)){for(let r=1;r<n;++r)if(t[r].type()===T.types.newLine&&t[r-1].type()===T.types.newLine)throw Error(`Contiguous new lines not allowed near element ${r}`)}}function o(t){let n=t.length;e(t);function r(){return n}function i(l){return t[l]}function s(l){t.forEach(p=>l(p.content()))}function u(l){return i(l).type()===T.types.newLine?l+1:l}return W({count:r,at:i,forEach:s,skipNewLine:u})}return W({make:o})})(),$=(()=>{let e=W({CharacterCrawler:I});function o({CharacterCrawler:t}=e){function n(r){let i=[],s=t.make(r);for(;!s.reachedEnd();){let u=s.crawl().readToken();i.push(u)}return V.make(i)}return W({tokenize:n})}return W({make:o})})();var{describeNamed:_e}=A;_e({Tokenization:$},()=>{let e=o=>{let t=[];return $.make().tokenize(o).forEach(n=>t.push(n)),t};it("splits a hello world program",()=>{expect(e("puts('hello')")).toEqual(["puts","(","'hello'",")"])}),describe("operators",()=>{[[":==",[":=","="]],["===",["=","=","="]],["n := p",["n",":=","p"]],["n:=p",["n",":=","p"]],["n=p",["n","=","p"]]].forEach(o=>{let[t,n]=o;it(`splits "${t}" correctly`,()=>{expect(e(t)).toEqual(n)})})}),describe("whitespace",()=>{[["new lines",`a
-b
+(() => {
+  // tests/globals.ts
+  globalThis["debug_mode"] = true;
 
-c`,["a",`
-`,"b",`
+  // src/helpers.ts
+  var kDebugMode = globalThis["debug_mode"] ?? false;
+  var Helpers = Object.freeze({
+    expose,
+    freeze: !kDebugMode ? Object.freeze : pass,
+    mapValues,
+    depthOneCopy,
+    memoize,
+    verifyInTesting,
+    symbolToString: getSymbolThings().symbolToString,
+    registerSymbolString: getSymbolThings().registerSymbolString
+    // passWhenInTesting
+  });
+  var StandardError = (() => {
+    const { freeze: freeze16 } = Helpers;
+    function make2() {
+      let mErrorFn = () => {
+      };
+      function setErrorFn(fn) {
+        mErrorFn = fn;
+      }
+      function setErrorMessage(message) {
+        mErrorFn = () => freeze16({ message });
+      }
+      function error() {
+        return mErrorFn();
+      }
+      return freeze16({ setErrorFn, setErrorMessage, error });
+    }
+    return freeze16({ make: make2 });
+  })();
+  expose({ Helpers });
+  var TypeCheckable = (() => {
+    function make2() {
+      const kTypeKey = Symbol();
+      function hasCreated(thing) {
+        return thing?.type() === kTypeKey;
+      }
+      function type() {
+        return kTypeKey;
+      }
+      return Helpers.freeze({ hasCreated, type });
+    }
+    return Helpers.freeze({
+      make: make2
+    });
+  })();
+  function verifyInTesting() {
+    if (kDebugMode)
+      return;
+    throw Error("Cannot be called outside of a testing environment");
+  }
+  function pass(arg) {
+    return arg;
+  }
+  function forEachKeyIn(obj, fn) {
+    Object.getOwnPropertySymbols(obj).forEach(fn);
+    Object.getOwnPropertyNames(obj).forEach(fn);
+  }
+  function mapValues(obj, fn) {
+    const transformedObj = obj;
+    forEachKeyIn(obj, (key) => {
+      transformedObj[key] = fn(obj[key], key);
+    });
+    return transformedObj;
+  }
+  function depthOneCopy(obj) {
+    const copy = {};
+    forEachKeyIn(obj, (key) => {
+      copy[key] = obj[key];
+    });
+    return copy;
+  }
+  function expose(braceEnclosedVar) {
+    const setToWindow = (k) => {
+      globalThis[k] = braceEnclosedVar[k];
+    };
+    return Object.keys(braceEnclosedVar).forEach(setToWindow);
+  }
+  function memoize(fn) {
+    let get = () => {
+      const v = fn();
+      get = () => v;
+      return v;
+    };
+    return () => get();
+  }
+  function getSymbolThings() {
+    const impl = memoize(() => {
+      const mRegistry = {};
+      function symbolToString(id) {
+        const got = mRegistry[id];
+        if (got) {
+          return got;
+        } else {
+          return "<unregistered symbol>";
+        }
+      }
+      function registerSymbolString(id, name) {
+        mRegistry[id] = name;
+        return registerSymbolString;
+      }
+      return Object.freeze({
+        symbolToString,
+        registerSymbolString
+      });
+    });
+    return memoize(impl)();
+  }
 
-`,"c"]],["spaces","puts ('hello',   'world')  ",["puts","(","'hello'",",","'world'",")"]],["mixed with tabs","n	:= 	p",["n",":=","p"]]].forEach(o=>{let[t,n,r]=o;it(`splits "${t}" correctly`,()=>{expect(e(n)).toEqual(r)})})})});var{freeze:Z}=Object,N=Z({types:{functionCall:Symbol(),tuple:Symbol(),stringLiteral:Symbol(),identifier:Symbol(),letDeclaration:Symbol(),assignment:Symbol()}}),q=(()=>{let e=(()=>{function t(i){}function n(i,s){}function r(i){}return Z({visitAssignment:n,visitFunctionCall:t,visitLetDeclaration:r})})();function o({visitAssignment:t,visitFunctionCall:n,visitLetDeclaration:r}){let i=e;return Z({visitAssignment:t??i.visitAssignment,visitFunctionCall:n??i.visitFunctionCall,visitLetDeclaration:r??i.visitLetDeclaration})}return Z({makeFakeVisitor:o})})();var _=(()=>{let{freeze:e}=Object,o=N.types.tuple;function t(s,u){return r(s,u)}function n(s){return r(s,void 0)}function r(s,u){let l=[s],p=i(l);return u&&p.mergeWith(u)&&l.push(u),p}function i(s){let u=e({forEach:l,count:p,visit:c,type:a,mergeWith:d});function l(m){s.forEach(f=>m(f))}function p(){return s.length}function c(m){s.forEach(f=>{f.visit(m)})}function a(){return o}function d(m){if(m.type()!==o)return m;m.forEach(f=>{s.push(f)})}return u}return e({makeBinary:t,makeUnary:n,make:i})})();var he=(()=>{let{memoize:e,freeze:o}=h,t=o({"(":")"});function n(r,i){let{error:s,setErrorMessage:u}=x.make(),{start:l,end:p,parentContainerSize:c,tokenAt:a}=r,d=t[i],m=d?v.inGroup:v.operatorContinued,f=e(()=>{if(!d)return p();let b=c();for(let z=l();z<b;++z)if(a(z).content()===d)return z;return u(`Cannot find close position for ${i}`)}),g=e(()=>{let b=f();if(b)return w.make(r.clone(l(),b),m)}),y=e(()=>{let b=f();if(!b)throw Error("call and test against unprocessedPart first");return r.clone(Math.min(p(),b+1),p())});return o({unprocessedPart:g,remainingRange:y,error:s})}return o({make:n})})();var{freeze:H}=h,k=(()=>{function e(t){return H({visitLeftPartOnly:n=>{t()},visitLeftWithNode:(n,r)=>{t()},visitRightPartOnly:n=>{t()},visitRightNodeOnly:n=>{t()},visitRightWithPart:(n,r)=>{t()}})}function o(t=()=>{}){let n={...e(t)},r=H({visitLeftPartOnly:i,visitLeftWithNode:s,visitRightPartOnly:u,visitRightNodeOnly:l,visitRightWithPart:p,finish:c});function i(a){return n.visitLeftPartOnly=a,r}function s(a){return n.visitLeftWithNode=a,r}function u(a){return n.visitRightPartOnly=a,r}function l(a){return n.visitRightNodeOnly=a,r}function p(a){return n.visitRightWithPart=a,r}function c(){return H(n)}return r}return H({makeOverrider:o})})(),U=(()=>{let{freeze:e,verifyInTesting:o}=h;function t(r){}function n(){let{type:r,hasCreated:i}=me.make();return e({hasCreated:i,type:r,freeze:e,visit:t,verifyInTesting:o})}return e({makeBase:n})})(),j=(()=>{let{type:e,hasCreated:o,visit:t}=U.makeBase(),n=[];function r(u){return n}let i=H({expandIntoNodes:r,type:e,visit:t});function s(){return i}return H({make:s,hasCreated:o})})();var Ne=(()=>{let{freeze:e}=Object,o=e({handleLeftSide:t,visit:n});function t(i){return i}function n(i,s){s.visitLeftPartOnly(i)}function r(){return o}return e({make:r})})(),ye=(()=>{let{freeze:e}=Object;function o(t){function n(i){let[s,...u]=i;return s?[t.finish(s),...u]:[]}function r(i,s){s.visitLeftWithNode(t,i)}return e({handleLeftSide:n,visit:r})}return e({make:o})})(),ke=(()=>{let{freeze:e}=Object;function o(t,n,r){let{type:i,verifyInTesting:s}=U.makeBase();function u(p){return[...t.handleLeftSide(p(n)),...p(r)]}function l(p){s(),t.visit(n,p),p.visitRightPartOnly(r)}return e({expandIntoNodes:u,type:i,visit:l})}return e({make:o})})();var ee=(()=>{let{memoize:e,freeze:o}=h;function t(n,r,i){let{setErrorMessage:s,error:u,setErrorFn:l}=x.make(),p=v.normal,c=e(()=>(r.skipNewLine(),he.make(r,i.content())));function a(){return c().unprocessedPart()??l(c().error)}function d(){let m=a();if(!m){s("no left part??");return}let{remainingRange:f}=c(),g=w.make(f(),p);return ke.make(n,m,g)}return o({startGroupBuild:e(d),error:u})}return o({make:t})})();var{freeze:G}=Object,P=(()=>{let e=T.types,o=N.types;function t(s){switch(s.type()){case o.identifier:case o.stringLiteral:return s;default:break}}function n(s){return t(s)??(()=>{throw Error("AstNode is not a AstStringableNode")})()}function r(s){return!!t(s)}function i(s){return(()=>{switch(s.type()){case e.identifier:return C;case e.stringLiteral:return ze;default:throw Error("cannot build stringable node from token")}})().make(s.content())}return G({downcast:n,hasCreated:r,makeForToken:i})})();function Te(e){function o(t,n){function r(u){}function i(){return e}function s(){return t}return G({visit:r,type:i,asString:s,comesBeforeOperator:n})}return G({make:o})}var ze=(()=>{let e=Te(N.types.stringLiteral);function o(t){t=(()=>{if(t.length<=2)throw Error("not a valid string");return t.substring(1,t.length-1)})();function n(r){return r.content()===","}return e.make(t,n)}return G({make:o})})(),C=(()=>{let e=Te(N.types.identifier);function o(t){function n(r){let i=r.content();return i===","||i==="("||i===":="}return e.make(t,n)}return G({make:o})})();var be=(()=>{let e=N.types;function o(t,n){let r=n.type()===e.tuple?n:_.makeUnary(n),i=(()=>{switch(t.type()){case e.identifier:case e.stringLiteral:return t.asString();default:throw Error("unhandled")}})(),s=Object.freeze({name:i,arguments:r,visit:u,type:()=>e.functionCall});function u(l){l.visitFunctionCall(s)}return s}return Object.freeze({make:o})})();var M=(()=>{let{freeze:e}=Object,o=N.types.assignment;function t(n,r){let{asString:i}=P.downcast(n),s=e({visit:u,type:l,assigneeName:i});function u(p){p.visitAssignment(s,r)}function l(){return o}return s}return e({make:t})})();var{freeze:te}=h,ce=(()=>{function e(o,t){function n(i){return o(t,i)}function r(){if(P.hasCreated(t))return P.downcast(t).asString()}return te({finish:n,lhsAsString:r})}return te({make:e})})(),ne=(()=>{let{error:e,setErrorMessage:o}=x.make();function t(n,r){function i(){let u=n.content();switch(u){case"(":return be.make;case",":case`
-`:return _.makeBinary;case":=":return M.make;default:break}return o(`Token ${u} does not result in a binary operator`)}function s(){let u=i();if(u)return ce.make(u,r)}return te({makeNode:s,error:e})}return te({make:t})})();var{freeze:D}=h,le=(()=>{function e(){function o(n){return[]}function t(n,r){r.visitRightNodeOnly(n)}return D({handleRightSide:o,visit:t})}return D({make:e})})(),Ae=(()=>{function e(o){function t(r){return r(o)}function n(r,i){i.visitRightWithPart(r,o)}return D({handleRightSide:t,visit:n})}return D({make:e})})(),re=(()=>{function e(o,t){let{type:n,verifyInTesting:r}=U.makeBase();function i(u){return[o,...t.handleRightSide(u)]}function s(u){r(),t.visit(o,u)}return D({type:n,expandIntoNodes:i,visit:s})}return D({make:e})})();var oe=(()=>{let{freeze:e}=h;function o(t,n,r){let{setErrorFn:i,error:s}=x.make();function u(){let l=ye.make(t),{startGroupBuild:p,error:c}=ee.make(l,r,n);return p()??i(c)}return e({build:u,error:s})}return e({make:o})})();var{freeze:ve}=h,O=(()=>{function e(n){return n.start()===n.end()}function o(n){return t(n,0,n.count())}function t(n,r,i){let s=n.count,u=n.at,l=ve({step:c,skipNewLine:a,clone:d,tokenAt:u,start:m,end:f,parentContainerSize:s});function p(){if(r>i)throw Error(`Range start ${r} must be less than or equal to end ${i}`);if(n.count()<i)throw Error(`Range end ${i} cannot exceed token count ${n.count()}`)}function c(){return++r,l}function a(){return r=n.skipNewLine(r),l}function d(g,y){return t(n,g??r,y??i)}function m(){return r}function f(){return i}return p(),l}return ve({make:t,makeStartingRange:o,zeroSizedRange:e})})();var{freeze:Pe}=h,xe=(()=>{let e=T.types,o=P.makeForToken,{zeroSizedRange:t}=O;function n(r,i,s){let{error:u,setErrorMessage:l,setErrorFn:p}=x.make();function c(){let a=o(r);if(t(i))return re.make(a,le.make());s===v.inGroup&&i.skipNewLine();let d=i.tokenAt(i.start());if(i.step(),d.type()===e.operator){if(!a.comesBeforeOperator(d))return l(`operator "${d.content()}" not allowed here`);let m=ne.make(d,a),f=m.makeNode();if(!f)return p(m.error);let{build:g,error:y}=oe.make(f,d,i);return g()??p(y)}else if(d.type()===e.newLine){if(s===v.normal)return re.make(a,le.make());if(s!==v.operatorContinued)throw Error("impossible branch??");let{normal:m}=v,f=w.make(i,m),g=Ae.make(f);return re.make(a,g)}else return l(`not sure how to handle token "${d.content()}"`)}return Pe({build:c,error:u})}return Pe({make:n})})();var{freeze:ie}=h,Ve=(()=>{function e(o){let t=ie({visit:r,type:i}),{letDeclaration:n}=N.types;function r(s){s.visitLetDeclaration(t,o)}function i(){return n}return t}return ie({make:e})})(),Ee=(()=>{function e(n){switch(n){case"let":return Ve.make;default:break}throw Error(`Token ${n} does not result in an unary operator`)}function o(n){return t(e(n))}function t(n){return ie({finish:n})}return ie({makeForOperator:o,make:t})})();var{freeze:se,verifyInTesting:qe}=h,v=se({inGroup:Symbol(),operatorContinued:Symbol(),normal:Symbol()}),w=(()=>{let e=T.types,{zeroSizedRange:o}=O;function t(n,r){let{error:i,setErrorFn:s,setErrorMessage:u}=x.make();function l(){if(o(n))return j.make();if(n.skipNewLine(),o(n))return j.make();let c=n.tokenAt(n.start());if(n.step(),c.type()===e.identifier||c.type()===e.stringLiteral){let{build:a,error:d}=xe.make(c,n,r);return a()??s(d)}else if(c.content()==="("){let{startGroupBuild:a,error:d}=ee.make(Ne.make(),n,c);return a()??s(d)}else if(c.type()==e.operator){let a=Ee.makeForOperator(c.content()),{build:d,error:m}=oe.make(a,c,n);return d()??s(m)}u("unimplemented case")}function p(){qe();let{start:c,end:a}=n;return se({start:c(),end:a()})}return se({buildPart:l,error:i,range:p})}return se({make:t})})();var K=(()=>{let{freeze:e}=h,o=[];function t(r){let i=r.buildPart();return i?i.expandIntoNodes(t):(o.push(r.error()),[])}function n(r){let i=O.makeStartingRange(r),s=w.make(i,v.normal),u=t(s).map(l=>l);return _.make(u)}return e({buildFor:n,testable:{buildProgramSequence:t}})})();var{describeNamed:He}=A;He({AstBuild:K},()=>{let e=T.forTesting.makeFromStringOnly;describe("builds a mutli-line ast",()=>{let o=[],t=()=>K.buildFor(V.make(o));it("builds two function calls",()=>{o=[e("puts"),e("("),e("a"),e(")"),e(`
-`),e("puts"),e("("),e("a"),e(")"),e(`
-`)];let n=0,r=q.makeFakeVisitor({visitFunctionCall:i=>{++n}});t().visit(r),expect(n).toEqual(2)}),it("two lines, operator first, call second",()=>{o=[e(`
-`),e("a"),e(","),e("b"),e(`
-`),e("puts"),e("("),e("a"),e(")"),e(`
-`)];let n=0,r=q.makeFakeVisitor({visitFunctionCall:i=>{++n}});t().visit(r),expect(n).toEqual(1)})})});var{describeNamed:je}=A;je({CharacterClass:B},()=>{describe(".classOf",()=>{let{classOf:e,classes:o}=B;it("numeric",()=>{expect(e("1")).toEqual(o.numeric)}),it("alphabetic",()=>{expect(e("q")).toEqual(o.alphabetic)}),it("operative",()=>{expect(e(",")).toEqual(o.operative)}),it("spacious",()=>{expect(e("	")).toEqual(o.spacious)}),it("new line",()=>{expect(e(`
-`)).toEqual(o.newLine)})})});var{describeNamed:De}=A;De({CharacterCrawler:I},()=>{it('crawls an operator ":="',()=>{let o=I.make(":=").crawl().readToken().content();expect(o).toEqual(":=")}),it("skips whitespace",()=>{let o=I.make("   :=").crawl().readToken().content();expect(o).toEqual(":=")}),it("treats trailing whitespace as having reached the end",()=>{let e=I.make("a  ");e.crawl().readToken(),expect(e.reachedEnd()).toBeTruthy()}),it("crawls through the next token",()=>{let o=I.make("puts('hello')").crawl().crawl().readToken().content();expect(o).toEqual("(")})});var{describeNamed:J}=A;J({CrawlStrategies:L},()=>{let{alphabetic:e,literal:o,operative:t,spacious:n}=B.classes,r=L[e],i=L[t],s=L[o],u=L[n];J({crawlAlphanumeric:r},()=>{[["asdf","end"],["asdf ","spaces"],["asdf=","operators"],["asdf'","quotations"],[`asdf
-`,"new line"]].forEach(l=>{let[p,c]=l;it(`stops at ${c}`,()=>{expect(r(p,0)).toEqual(4)})}),it("stops at end with numbers",()=>{let l="asdf123";expect(r(l,0)).toEqual(l.length)})}),J({crawlOperator:i},()=>{[[":=","re-assignable",2],["= ","assignment",1],["+=","accumulate",2],["==","two assignments",1],[",,","commas",1],["((","parens",1]].forEach(l=>{let[p,c,a]=l;it(`crawls out a: ${c}`,()=>{expect(i(p,0)).toEqual(a)})})}),J({crawlSpace:u},()=>{[["  a","alphabetic"],["  ","end"],["	\r=","at operator with other whitespace"],["  +","operator"],["  1","numeric"],[`  
-`,"new line"]].forEach(l=>{let[p,c]=l;it(`stops at ${c}`,()=>{expect(u(p,0)).toEqual(2)})})}),J({crawlStringLiteral:s},()=>{it(`crawls stopping at nothing but another "'"`,()=>{let l=`'hello {" \\\\''`,p=s(l,0);expect(l.substring(0,p)).toEqual(`'hello {" \\\\'`)})})});var Q=(()=>{let{freeze:e}=Object;function o(){let t={};function n(s,u){if(t[s])throw Error(`name "${s}" already taken`);t[s]=u}function r(s,u){t[s]=u}function i(s){return t[s]}return e({declareVariable:n,getValueOfVariable:i,setVariable:r})}return e({make:o})})();var{freeze:X}=Object,We=(()=>{function e(o){let t=()=>{throw Error("must assign assignee name fn")};function n(u){t=u}function r(u){throw Error("")}function i(u,l){o.declareVariable(t(),P.downcast(l).asString())}function s(u,l){throw Error("")}return X({setAssigneeName:n,visitFunctionCall:r,visitAssignment:i,visitLetDeclaration:s})}return X({make:e})})(),R=X({make:Ue,buildFor:Ge}),$e=X({putsFunction:console.log});function Ue(e=Q.make(),{putsFunction:o}=$e){let t=N.types,n=We.make(e);function r(l){l.name==="puts"&&l.arguments.forEach(p=>{o(i(p))})}function i(l){let p=l.asString();switch(l.type()){case t.stringLiteral:return p;case t.identifier:return e.getValueOfVariable(p)??(()=>{throw Error(`variable ${p} not declared`)})();default:break}throw Error("impossible branch??")}function s(l,p){if(p.type()!==N.types.assignment)throw Error("bad let");let c=p;n.setAssigneeName(c.assigneeName),c.visit(n)}function u(l,p){e.setVariable(l.assigneeName(),i(p))}return X({visitFunctionCall:r,visitLetDeclaration:s,visitAssignment:u})}function Ge(e){let o=$.make().tokenize(e);return K.buildFor(o)}h.expose({Interpreter:R});var{describeNamed:Me}=A;Me({Interpreter:R},()=>{function e(){let t=[];return{injections:{putsFunction:i=>{t.push(i)}},printedStrings:t}}function o(t){return R.make(Q.make(),t)}describe("integration specs",()=>{it('compiles and runs a "hello world!" program',()=>{let t=R.buildFor("puts('hello', ' world!')"),{printedStrings:n,injections:r}=e(),i=o(r);t.visit(i),expect(n).toEqual(["hello"," world!"])}),it('compiles and runs a "hello world!" program with a variable',()=>{let t=Q.make();t.declareVariable("foo","hello world!");let n=R.buildFor("puts(foo)"),{printedStrings:r,injections:i}=e(),s=R.make(t,i);n.visit(s),expect(r).toEqual(["hello world!"])}),it('compiles and runs a multiline "hello world!" program',()=>{let t=R.buildFor(`puts('hello')
-puts('world!')`),{printedStrings:n,injections:r}=e(),i=o(r);t.visit(i),expect(n).toEqual(["hello","world!"])}),it('compiles and runs a "hello world!" program with an assignment',()=>{let t=R.buildFor(`
+  // tests/test_helpers.ts
+  var { freeze } = Helpers;
+  var TestHelpers = freeze({
+    describeNamed,
+    fdescribeNamed
+  });
+  function describeNamed(obj, descFn) {
+    describe(Object.keys(obj)[0], descFn);
+  }
+  function fdescribeNamed(obj, descFn) {
+    fdescribe(Object.keys(obj)[0], descFn);
+  }
+
+  // src/character_class.ts
+  var CharacterClass = (() => {
+    const { freeze: freeze16, assign: assign2 } = Object;
+    const classes = freeze16({
+      numeric: Symbol(),
+      alphabetic: Symbol(),
+      operative: Symbol(),
+      spacious: Symbol(),
+      newLine: Symbol(),
+      literal: Symbol()
+    });
+    function arrayAsCharacterSetFor(arr, characterClass) {
+      return arr.map((k) => ({ [k]: characterClass })).reduce(assign2);
+    }
+    const kCharacterToCharacterClass = assign2(
+      {},
+      // arrayAsCharacterSetFor(
+      //   [
+      //     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
+      //   ],
+      //   classes.numeric),
+      arrayAsCharacterSetFor(
+        [
+          "=",
+          ":",
+          ",",
+          ".",
+          "(",
+          ")",
+          "{",
+          "}"
+        ],
+        classes.operative
+      ),
+      arrayAsCharacterSetFor(
+        [
+          " ",
+          "	",
+          "\r"
+        ],
+        classes.spacious
+      ),
+      arrayAsCharacterSetFor(
+        [
+          "'"
+        ],
+        classes.literal
+      ),
+      arrayAsCharacterSetFor(["\n"], classes.newLine)
+    );
+    function classOf(character) {
+      if (character.length !== 1) {
+        throw Error(`"${character}" is not one character`);
+      }
+      switch (character) {
+        case "0":
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+        case "9":
+          return classes.numeric;
+        default:
+          break;
+      }
+      return kCharacterToCharacterClass[character] ?? classes.alphabetic;
+    }
+    return freeze16({
+      classes,
+      classOf
+    });
+  })();
+
+  // src/crawl_strategies.ts
+  var CrawlStrategies = (() => {
+    const { freeze: freeze16 } = Object;
+    const { classes, classOf } = CharacterClass;
+    function crawlAlphanumeric(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        switch (classOf(input[i])) {
+          case classes.operative:
+          case classes.spacious:
+          case classes.literal:
+          case classes.newLine:
+            return i;
+          default:
+            break;
+        }
+      }
+      return length;
+    }
+    function crawlStringLiteral(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOf(input[i]) === classes.literal) {
+          return i + 1;
+        }
+      }
+      return length;
+    }
+    function crawlOperator(input, start) {
+      if (start + 1 >= input.length) {
+        return start + 1;
+      } else if (input[start + 1] === "=" && input[start] !== "=") {
+        return start + 2;
+      }
+      return start + 1;
+    }
+    function crawlSpace(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        switch (classOf(input[i])) {
+          case classes.alphabetic:
+          case classes.numeric:
+          case classes.operative:
+          case classes.literal:
+          case classes.newLine:
+            return i;
+          default:
+            break;
+        }
+      }
+      return length;
+    }
+    function crawlNewLines(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOf(input[i]) !== classes.newLine) {
+          return i;
+        }
+      }
+      return length;
+    }
+    return freeze16({
+      [classes.alphabetic]: crawlAlphanumeric,
+      [classes.literal]: crawlStringLiteral,
+      [classes.operative]: crawlOperator,
+      [classes.numeric]: crawlAlphanumeric,
+      [classes.spacious]: crawlSpace,
+      [classes.newLine]: crawlNewLines
+    });
+  })();
+
+  // src/token.ts
+  var { freeze: freeze2 } = Object;
+  var TokenType = Object.freeze({
+    declareFunction: Symbol(),
+    operator: Symbol(),
+    stringLiteral: Symbol(),
+    newLine: Symbol(),
+    identifier: Symbol()
+  });
+  var Token = (() => {
+    function unimplemented(desc) {
+      return () => {
+        throw Error(`Cannot call ${desc} unimplemented`);
+      };
+    }
+    const kBlankToken = freeze2({
+      type: unimplemented("type"),
+      // TODO: try to get rid of this hack, blank token should
+      // never be used
+      content: () => "",
+      //unimplemented<string>('content'),
+      start: unimplemented("start"),
+      end: unimplemented("end")
+    });
+    function identifyNonKeyword(token) {
+      const firstChar = token[0];
+      switch (firstChar) {
+        case "'":
+          return TokenType.stringLiteral;
+        case "\n":
+          return TokenType.newLine;
+        case " ":
+        case "	":
+        case "\r":
+          throw Error("cannot build token from whitespace");
+      }
+      return TokenType.identifier;
+    }
+    const controlSeqs = {
+      ["let"]: TokenType.operator,
+      ["fn"]: TokenType.declareFunction,
+      ["{"]: TokenType.operator,
+      ["}"]: TokenType.operator,
+      ["("]: TokenType.operator,
+      [")"]: TokenType.operator,
+      [","]: TokenType.operator,
+      [":="]: TokenType.operator
+    };
+    function makeFromStringOnly(mContents) {
+      return construct(mContents, 0, 0);
+    }
+    function make2(mInput, mStart, mEnd) {
+      return construct(mInput.substring(mStart, mEnd), mStart, mEnd);
+    }
+    function construct(mTokenContent, mStart, mEnd) {
+      const mType = controlSeqs[mTokenContent] ?? identifyNonKeyword(mTokenContent);
+      function content() {
+        return mTokenContent;
+      }
+      function start() {
+        return mStart;
+      }
+      function end() {
+        return mEnd;
+      }
+      function type() {
+        return mType;
+      }
+      return freeze2({ content, start, end, type });
+    }
+    return freeze2({
+      make: make2,
+      types: TokenType,
+      kBlankToken,
+      forTesting: { makeFromStringOnly }
+    });
+  })();
+
+  // src/character_crawler.ts
+  var CharacterCrawler = (() => {
+    const { freeze: freeze16 } = Object;
+    const injections2 = freeze16({
+      CrawlStrategies,
+      characterClassOf: CharacterClass.classOf,
+      characterClasses: CharacterClass.classes
+    });
+    function make2(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
+      const inst = freeze16({ reachedEnd, readToken, crawl });
+      let mStart = 0;
+      let mEnd = 0;
+      let mReadToken = Token.kBlankToken;
+      function readToken() {
+        return mReadToken;
+      }
+      function reachedEnd() {
+        return mEnd === mInput.length;
+      }
+      function crawledThrough() {
+        if (mStart >= mInput.length) {
+          throw Error("Cannot crawl at end of string");
+        }
+        const charClass = characterClassOf(mInput[mEnd]);
+        if (mReadToken.content() !== "" && charClass !== characterClasses.spacious) {
+          return;
+        }
+        const crawlFn = CrawlStrategies2[charClass];
+        const next = crawlFn(mInput, mEnd);
+        if (next <= mEnd) {
+          throw Error("progression failed");
+        }
+        mEnd = next;
+        if (charClass !== characterClasses.spacious) {
+          mReadToken = Token.make(mInput, mStart, mEnd);
+        }
+        mStart = mEnd;
+        return;
+      }
+      function crawl() {
+        mReadToken = Token.kBlankToken;
+        while (mReadToken.content() === "") {
+          crawledThrough();
+        }
+        if (mStart < mInput.length) {
+          crawledThrough();
+        }
+        return inst;
+      }
+      return inst;
+    }
+    return freeze16({ make: make2 });
+  })();
+
+  // src/tokenization.ts
+  var { freeze: freeze3 } = Object;
+  var TokenCollection = (() => {
+    function verifyNoTwoContiguousNewLineTokens(mTokens) {
+      const { length } = mTokens;
+      if (length < 2)
+        return;
+      for (let i = 1; i < length; ++i) {
+        if (mTokens[i].type() === Token.types.newLine && mTokens[i - 1].type() === Token.types.newLine) {
+          throw Error(`Contiguous new lines not allowed near element ${i}`);
+        }
+      }
+    }
+    function make2(mTokens) {
+      const mLength = mTokens.length;
+      verifyNoTwoContiguousNewLineTokens(mTokens);
+      function count() {
+        return mLength;
+      }
+      function at(i) {
+        return mTokens[i];
+      }
+      function forEach(fn) {
+        mTokens.forEach((token) => fn(token.content()));
+      }
+      function skipNewLine(i) {
+        if (at(i).type() === Token.types.newLine) {
+          return i + 1;
+        }
+        return i;
+      }
+      return freeze3({ count, at, forEach, skipNewLine });
+    }
+    return freeze3({ make: make2 });
+  })();
+  var Tokenization = (() => {
+    const injections2 = freeze3({ CharacterCrawler });
+    function make2({ CharacterCrawler: CharacterCrawler2 } = injections2) {
+      function tokenize(inp) {
+        const rv = [];
+        const crawler = CharacterCrawler2.make(inp);
+        while (!crawler.reachedEnd()) {
+          const readToken = crawler.crawl().readToken();
+          rv.push(readToken);
+        }
+        return TokenCollection.make(rv);
+      }
+      return freeze3({ tokenize });
+    }
+    return freeze3({ make: make2 });
+  })();
+
+  // tests/tokenization_tests.ts
+  var { describeNamed: describeNamed2 } = TestHelpers;
+  describeNamed2({ Tokenization }, () => {
+    const getTokens = (inp) => {
+      const strings = [];
+      Tokenization.make().tokenize(inp).forEach((str) => strings.push(str));
+      return strings;
+    };
+    it("splits a hello world program", () => {
+      expect(getTokens("puts('hello')")).toEqual(["puts", "(", "'hello'", ")"]);
+    });
+    describe("operators", () => {
+      [
+        [":==", [":=", "="]],
+        ["===", ["=", "=", "="]],
+        ["n := p", ["n", ":=", "p"]],
+        ["n:=p", ["n", ":=", "p"]],
+        ["n=p", ["n", "=", "p"]]
+      ].forEach((pair) => {
+        const [toSplit, expectedSplit] = pair;
+        it(`splits "${toSplit}" correctly`, () => {
+          expect(getTokens(toSplit)).toEqual(expectedSplit);
+        });
+      });
+    });
+    describe("whitespace", () => {
+      [
+        ["new lines", "a\nb\n\nc", ["a", "\n", "b", "\n\n", "c"]],
+        [
+          "spaces",
+          "puts ('hello',   'world')  ",
+          ["puts", "(", "'hello'", ",", "'world'", ")"]
+        ],
+        ["mixed with tabs", "n	:= 	p", ["n", ":=", "p"]]
+      ].forEach((tuple) => {
+        const [desc, toSplit, expectedSplit] = tuple;
+        it(`splits "${desc}" correctly`, () => {
+          expect(getTokens(toSplit)).toEqual(expectedSplit);
+        });
+      });
+    });
+  });
+
+  // src/ast_node.ts
+  var { freeze: freeze4 } = Object;
+  var AstNode = freeze4({
+    types: {
+      functionCall: Symbol(),
+      tuple: Symbol(),
+      stringLiteral: Symbol(),
+      identifier: Symbol(),
+      letDeclaration: Symbol(),
+      assignment: Symbol()
+    }
+  });
+  var AstNodeVisitor = (() => {
+    const kDefaultImplementations = (() => {
+      function visitFunctionCall(_0) {
+      }
+      function visitAssignment(_0, _1) {
+      }
+      function visitLetDeclaration(_0) {
+      }
+      return freeze4({ visitAssignment, visitFunctionCall, visitLetDeclaration });
+    })();
+    function makeFakeVisitor({
+      visitAssignment,
+      visitFunctionCall,
+      visitLetDeclaration
+    }) {
+      const defaults = kDefaultImplementations;
+      return freeze4({
+        visitAssignment: visitAssignment ?? defaults.visitAssignment,
+        visitFunctionCall: visitFunctionCall ?? defaults.visitFunctionCall,
+        visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration
+      });
+    }
+    return freeze4({ makeFakeVisitor });
+  })();
+
+  // src/ast_tuple_node.ts
+  var AstTupleNode = (() => {
+    const { freeze: freeze16 } = Object;
+    const tupleType = AstNode.types.tuple;
+    function makeBinary(lhs, rhs) {
+      return makeWithPair(lhs, rhs);
+    }
+    function makeUnary(lhs) {
+      return makeWithPair(lhs, void 0);
+    }
+    function makeWithPair(lhs, rhs) {
+      const mSubExpressions = [lhs];
+      const inst = make2(mSubExpressions);
+      if (rhs && inst.mergeWith(rhs)) {
+        mSubExpressions.push(rhs);
+      }
+      return inst;
+    }
+    function make2(mSubExpressions) {
+      const inst = freeze16({ forEach, count, visit, type, mergeWith });
+      function forEach(fn) {
+        mSubExpressions.forEach((node) => fn(node));
+      }
+      function count() {
+        return mSubExpressions.length;
+      }
+      function visit(visitor) {
+        mSubExpressions.forEach((node) => {
+          node.visit(visitor);
+        });
+      }
+      function type() {
+        return tupleType;
+      }
+      function mergeWith(node) {
+        if (node.type() !== tupleType) {
+          return node;
+        }
+        node.forEach((subNode) => {
+          mSubExpressions.push(subNode);
+        });
+        return void 0;
+      }
+      return inst;
+    }
+    return freeze16({ makeBinary, makeUnary, make: make2 });
+  })();
+
+  // src/tree_part_build/partial_tree_next_token_build.ts
+  var PartialTreeNextTokenBuild = (() => {
+    const { memoize: memoize2, freeze: freeze16 } = Helpers;
+    const kCloseMapping = freeze16({
+      ["("]: ")"
+    });
+    function make2(mTokenRange, mFindCloseBasedOn) {
+      const { error, setErrorMessage } = StandardError.make();
+      const { start, end, parentContainerSize, tokenAt } = mTokenRange;
+      const closeMapping = kCloseMapping[mFindCloseBasedOn];
+      const lineCont = closeMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
+      const closePosition = memoize2(() => {
+        if (!closeMapping) {
+          return end();
+        }
+        const count = parentContainerSize();
+        for (let i = start(); i < count; ++i) {
+          if (tokenAt(i).content() === closeMapping) {
+            return i;
+          }
+        }
+        return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
+      });
+      const unprocessedPart = memoize2(() => {
+        const pos = closePosition();
+        if (!pos)
+          return void 0;
+        return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
+      });
+      const remainingRange = memoize2(() => {
+        const pos = closePosition();
+        if (!pos) {
+          throw Error("call and test against unprocessedPart first");
+        }
+        return mTokenRange.clone(Math.min(end(), pos + 1), end());
+      });
+      return freeze16({ unprocessedPart, remainingRange, error });
+    }
+    return freeze16({ make: make2 });
+  })();
+
+  // src/node_expansion.ts
+  var { freeze: freeze5 } = Helpers;
+  var NodeExpansionVisitor = (() => {
+    function makeDefaultImplementations(fn) {
+      return freeze5({
+        visitLeftPartOnly: (_0) => {
+          fn();
+        },
+        visitLeftWithNode: (_0, _1) => {
+          fn();
+        },
+        visitRightPartOnly: (_0) => {
+          fn();
+        },
+        visitRightNodeOnly: (_0) => {
+          fn();
+        },
+        visitRightWithPart: (_0, _1) => {
+          fn();
+        }
+      });
+    }
+    function makeOverrider(defaultOnCallback = () => {
+    }) {
+      const mInstance = { ...makeDefaultImplementations(defaultOnCallback) };
+      const inst = freeze5({
+        visitLeftPartOnly,
+        visitLeftWithNode,
+        visitRightPartOnly,
+        visitRightNodeOnly,
+        visitRightWithPart,
+        finish
+      });
+      function visitLeftPartOnly(fn) {
+        mInstance.visitLeftPartOnly = fn;
+        return inst;
+      }
+      function visitLeftWithNode(fn) {
+        mInstance.visitLeftWithNode = fn;
+        return inst;
+      }
+      function visitRightPartOnly(fn) {
+        mInstance.visitRightPartOnly = fn;
+        return inst;
+      }
+      function visitRightNodeOnly(fn) {
+        mInstance.visitRightNodeOnly = fn;
+        return inst;
+      }
+      function visitRightWithPart(fn) {
+        mInstance.visitRightWithPart = fn;
+        return inst;
+      }
+      function finish() {
+        return freeze5(mInstance);
+      }
+      return inst;
+    }
+    return freeze5({ makeOverrider });
+  })();
+  var NodeExpansion = (() => {
+    const { freeze: freeze16, verifyInTesting: verifyInTesting3 } = Helpers;
+    function visit(_0) {
+    }
+    function makeBase() {
+      const { type, hasCreated } = TypeCheckable.make();
+      return freeze16({ hasCreated, type, freeze: freeze16, visit, verifyInTesting: verifyInTesting3 });
+    }
+    return freeze16({ makeBase });
+  })();
+  var EmptyNodeExpansion = (() => {
+    const { type, hasCreated, visit } = NodeExpansion.makeBase();
+    const kEmpty = [];
+    function expandIntoNodes(_0) {
+      return kEmpty;
+    }
+    const sharedInst = freeze5({
+      expandIntoNodes,
+      type,
+      visit
+    });
+    function make2() {
+      return sharedInst;
+    }
+    return freeze5({ make: make2, hasCreated });
+  })();
+
+  // src/left_side_node_expansion.ts
+  var BareLeftTreePartHandler = (() => {
+    const { freeze: freeze16 } = Object;
+    const kSharedInst = freeze16({ handleLeftSide, visit });
+    function handleLeftSide(nodes) {
+      return nodes;
+    }
+    function visit(leftPart, visitor) {
+      visitor.visitLeftPartOnly(leftPart);
+    }
+    function make2() {
+      return kSharedInst;
+    }
+    return freeze16({ make: make2 });
+  })();
+  var IncompleteNodeLeftTreePartHandler = (() => {
+    const { freeze: freeze16 } = Object;
+    function make2(incompleteNode) {
+      function handleLeftSide(nodes) {
+        const [head, ...tail] = nodes;
+        if (!head) {
+          return [];
+        }
+        return [incompleteNode.finish(head), ...tail];
+      }
+      function visit(leftPart, visitor) {
+        visitor.visitLeftWithNode(incompleteNode, leftPart);
+      }
+      return freeze16({ handleLeftSide, visit });
+    }
+    return freeze16({ make: make2 });
+  })();
+  var LeftSideNodeExpansion = (() => {
+    const { freeze: freeze16 } = Object;
+    function make2(leftPartHandler, leftPart, rightPart) {
+      const {
+        type,
+        verifyInTesting: verifyInTesting3
+      } = NodeExpansion.makeBase();
+      function expandIntoNodes(fn) {
+        return [
+          ...leftPartHandler.handleLeftSide(fn(leftPart)),
+          ...fn(rightPart)
+        ];
+      }
+      function visit(visitor) {
+        verifyInTesting3();
+        leftPartHandler.visit(leftPart, visitor);
+        visitor.visitRightPartOnly(rightPart);
+      }
+      return freeze16({ expandIntoNodes, type, visit });
+    }
+    return freeze16({ make: make2 });
+  })();
+
+  // src/tree_part_build/partial_tree_start_group_build.ts
+  var PartialTreeStartGroupBuild = (() => {
+    const { memoize: memoize2, freeze: freeze16 } = Helpers;
+    function make2(leftPartHandler, mTokenRange, mStartToken) {
+      const { setErrorMessage, error, setErrorFn } = StandardError.make();
+      const normalLineContinuation = LineContinuationScheme.normal;
+      const nextPart = memoize2(() => {
+        mTokenRange.skipNewLine();
+        return PartialTreeNextTokenBuild.make(mTokenRange, mStartToken.content());
+      });
+      function getLeftPart() {
+        return nextPart().unprocessedPart() ?? setErrorFn(nextPart().error);
+      }
+      function startGroupBuild() {
+        const leftPart = getLeftPart();
+        if (!leftPart) {
+          setErrorMessage("no left part??");
+          return;
+        }
+        const { remainingRange } = nextPart();
+        const rightPart = TreePartBuild.make(remainingRange(), normalLineContinuation);
+        return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
+      }
+      return freeze16({
+        startGroupBuild: memoize2(startGroupBuild),
+        error
+      });
+    }
+    return freeze16({ make: make2 });
+  })();
+
+  // src/ast_stringable_node.ts
+  var { freeze: freeze6 } = Object;
+  var AstStringableNode = (() => {
+    const tokenTypes = Token.types;
+    const nodeTypes = AstNode.types;
+    function _downcast(node) {
+      switch (node.type()) {
+        case nodeTypes.identifier:
+        case nodeTypes.stringLiteral:
+          return node;
+        default:
+          break;
+      }
+      return void 0;
+    }
+    function downcast(node) {
+      return _downcast(node) ?? (() => {
+        throw Error("AstNode is not a AstStringableNode");
+      })();
+    }
+    function hasCreated(node) {
+      return !!_downcast(node);
+    }
+    function makeForToken(token) {
+      return (() => {
+        switch (token.type()) {
+          case tokenTypes.identifier:
+            return AstIdentifierNode;
+          case tokenTypes.stringLiteral:
+            return AstStringLiteralNode;
+          default:
+            throw Error("cannot build stringable node from token");
+        }
+      })().make(token.content());
+    }
+    return freeze6({ downcast, hasCreated, makeForToken });
+  })();
+  function makeStringableNodeClass(nodeType) {
+    function make2(value, comesBeforeOperator) {
+      function visit(_0) {
+      }
+      function type() {
+        return nodeType;
+      }
+      function asString() {
+        return value;
+      }
+      return freeze6({ visit, type, asString, comesBeforeOperator });
+    }
+    return freeze6({ make: make2 });
+  }
+  var AstStringLiteralNode = (() => {
+    const Super = makeStringableNodeClass(AstNode.types.stringLiteral);
+    function make2(value) {
+      value = (() => {
+        if (value.length <= 2) {
+          throw Error("not a valid string");
+        }
+        return value.substring(1, value.length - 1);
+      })();
+      function comesBeforeOperator(operator) {
+        return operator.content() === ",";
+      }
+      function resolveType() {
+        return "String";
+      }
+      return freeze6({ resolveType, ...Super.make(value, comesBeforeOperator) });
+    }
+    return freeze6({ make: make2 });
+  })();
+  var AstIdentifierNode = (() => {
+    const Super = makeStringableNodeClass(AstNode.types.identifier);
+    function make2(value) {
+      function comesBeforeOperator(operator) {
+        const str = operator.content();
+        return str === "," || str === "(" || str === ":=";
+      }
+      return Super.make(value, comesBeforeOperator);
+    }
+    return freeze6({ make: make2 });
+  })();
+
+  // src/ast_function_call_node.ts
+  var AstFunctionCallNode = (() => {
+    const nodeTypes = AstNode.types;
+    function make2(lhs, rhs) {
+      const arguments_ = (() => {
+        if (rhs.type() === nodeTypes.tuple) {
+          return rhs;
+        }
+        return AstTupleNode.makeUnary(rhs);
+      })();
+      const name = (() => {
+        switch (lhs.type()) {
+          case nodeTypes.identifier:
+          case nodeTypes.stringLiteral:
+            return lhs.asString();
+          default:
+            throw Error("unhandled");
+        }
+      })();
+      const inst = Object.freeze({
+        name,
+        arguments: arguments_,
+        visit,
+        type: () => nodeTypes.functionCall
+      });
+      function visit(visitor) {
+        visitor.visitFunctionCall(inst);
+      }
+      return inst;
+    }
+    return Object.freeze({ make: make2 });
+  })();
+
+  // src/ast_assignment_node.ts
+  var AstAssignmentNode = (() => {
+    const { freeze: freeze16 } = Object;
+    const assignmentType = AstNode.types.assignment;
+    function make2(lhs, rhs) {
+      const { asString } = AstStringableNode.downcast(lhs);
+      const inst = freeze16({ visit, type, assigneeName: asString });
+      function visit(visitor) {
+        visitor.visitAssignment(inst, rhs);
+      }
+      function type() {
+        return assignmentType;
+      }
+      return inst;
+    }
+    return freeze16({ make: make2 });
+  })();
+
+  // src/ast_incomplete_binary_node.ts
+  var { freeze: freeze7 } = Helpers;
+  var AstIncompleteBinaryNode = (() => {
+    function make2(fn, lhs) {
+      function finish(rhs) {
+        return fn(lhs, rhs);
+      }
+      function lhsAsString() {
+        if (!AstStringableNode.hasCreated(lhs)) {
+          return void 0;
+        }
+        return AstStringableNode.downcast(lhs).asString();
+      }
+      return freeze7({ finish, lhsAsString });
+    }
+    return freeze7({ make: make2 });
+  })();
+  var IncompleteNodeCreation = (() => {
+    const { error, setErrorMessage } = StandardError.make();
+    function make2(mOperator, mLhs) {
+      function _selectedConstructor() {
+        const tokenStr = mOperator.content();
+        switch (tokenStr) {
+          case "(":
+            return AstFunctionCallNode.make;
+          case ",":
+          case "\n":
+            return AstTupleNode.makeBinary;
+          case ":=":
+            return AstAssignmentNode.make;
+          case "+":
+          case "-":
+          case "*":
+            break;
+          default:
+            break;
+        }
+        return setErrorMessage(`Token ${tokenStr} does not result in a binary operator`);
+      }
+      function makeNode() {
+        const selected = _selectedConstructor();
+        if (!selected) {
+          return;
+        }
+        return AstIncompleteBinaryNode.make(selected, mLhs);
+      }
+      return freeze7({ makeNode, error });
+    }
+    return freeze7({ make: make2 });
+  })();
+
+  // src/right_side_node_expansion.ts
+  var { freeze: freeze8 } = Helpers;
+  var BareRightTreePartHandler = (() => {
+    function make2() {
+      function handleRightSide(_0) {
+        return [];
+      }
+      function visit(node, visitor) {
+        visitor.visitRightNodeOnly(node);
+      }
+      return freeze8({ handleRightSide, visit });
+    }
+    return freeze8({ make: make2 });
+  })();
+  var BuildPartRightTreePartHandler = (() => {
+    function make2(rightPart) {
+      function handleRightSide(fn) {
+        return fn(rightPart);
+      }
+      function visit(node, visitor) {
+        visitor.visitRightWithPart(node, rightPart);
+      }
+      return freeze8({ handleRightSide, visit });
+    }
+    return freeze8({ make: make2 });
+  })();
+  var RightSideNodeExpansion = (() => {
+    function make2(node, rightHandler) {
+      const { type, verifyInTesting: verifyInTesting3 } = NodeExpansion.makeBase();
+      function expandIntoNodes(fn) {
+        return [
+          node,
+          ...rightHandler.handleRightSide(fn)
+        ];
+      }
+      function visit(visitor) {
+        verifyInTesting3();
+        rightHandler.visit(node, visitor);
+      }
+      return freeze8({ type, expandIntoNodes, visit });
+    }
+    return freeze8({ make: make2 });
+  })();
+
+  // src/tree_part_build/partial_tree_start_operator_build.ts
+  var PartialTreeStartOperatorBuild = (() => {
+    const { freeze: freeze16 } = Helpers;
+    function make2(mIncompleteNode, mNextToken, mTokenRange) {
+      const { setErrorFn, error } = StandardError.make();
+      function build() {
+        const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(mIncompleteNode);
+        const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(leftTreePartHandler, mTokenRange, mNextToken);
+        return startGroupBuild() ?? setErrorFn(error2);
+      }
+      return freeze16({ build, error });
+    }
+    return freeze16({ make: make2 });
+  })();
+
+  // src/token_range.ts
+  var { freeze: freeze9 } = Helpers;
+  var TokenRange = (() => {
+    function zeroSizedRange(range) {
+      return range.start() === range.end();
+    }
+    function makeStartingRange(mTokens) {
+      return make2(mTokens, 0, mTokens.count());
+    }
+    function make2(mTokens, mStart, mEnd) {
+      const parentContainerSize = mTokens.count;
+      const tokenAt = mTokens.at;
+      const inst = freeze9({
+        step,
+        skipNewLine,
+        clone,
+        tokenAt,
+        start,
+        end,
+        parentContainerSize
+        // set
+      });
+      function verifyValidRange() {
+        if (mStart > mEnd) {
+          throw Error(`Range start ${mStart} must be less than or equal to end ${mEnd}`);
+        } else if (mTokens.count() < mEnd) {
+          throw Error(`Range end ${mEnd} cannot exceed token count ${mTokens.count()}`);
+        }
+      }
+      function step() {
+        ++mStart;
+        return inst;
+      }
+      function skipNewLine() {
+        mStart = mTokens.skipNewLine(mStart);
+        return inst;
+      }
+      function clone(start2, end2) {
+        return make2(mTokens, start2 ?? mStart, end2 ?? mEnd);
+      }
+      function start() {
+        return mStart;
+      }
+      function end() {
+        return mEnd;
+      }
+      verifyValidRange();
+      return inst;
+    }
+    return freeze9({ make: make2, makeStartingRange, zeroSizedRange });
+  })();
+
+  // src/tree_part_build/partial_tree_start_identifier_build.ts
+  var { freeze: freeze10 } = Helpers;
+  var PartialTreeStartIdentifierBuild = (() => {
+    const tokenTypes = Token.types;
+    const makeStringableNodeFor = AstStringableNode.makeForToken;
+    const { zeroSizedRange } = TokenRange;
+    function make2(mStartToken, mTokenRange, mLineContScheme) {
+      const { error, setErrorMessage, setErrorFn } = StandardError.make();
+      function build() {
+        const lhsNode = makeStringableNodeFor(mStartToken);
+        if (zeroSizedRange(mTokenRange)) {
+          return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
+        }
+        if (mLineContScheme === LineContinuationScheme.inGroup) {
+          mTokenRange.skipNewLine();
+        }
+        const next = mTokenRange.tokenAt(mTokenRange.start());
+        mTokenRange.step();
+        if (next.type() === tokenTypes.operator) {
+          if (!lhsNode.comesBeforeOperator(next)) {
+            return setErrorMessage(`operator "${next.content()}" not allowed here`);
+          }
+          const nodeCreation = IncompleteNodeCreation.make(next, lhsNode);
+          const incompleteNode = nodeCreation.makeNode();
+          if (!incompleteNode) {
+            return setErrorFn(nodeCreation.error);
+          }
+          const { build: build2, error: error2 } = PartialTreeStartOperatorBuild.make(incompleteNode, next, mTokenRange);
+          return build2() ?? setErrorFn(error2);
+        } else if (next.type() === tokenTypes.newLine) {
+          if (mLineContScheme === LineContinuationScheme.normal) {
+            return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
+          }
+          if (mLineContScheme !== LineContinuationScheme.operatorContinued) {
+            throw Error("impossible branch??");
+          }
+          const { normal } = LineContinuationScheme;
+          const rightPart = TreePartBuild.make(mTokenRange, normal);
+          const ph = BuildPartRightTreePartHandler.make(rightPart);
+          return RightSideNodeExpansion.make(lhsNode, ph);
+        } else {
+          return setErrorMessage(`not sure how to handle token "${next.content()}"`);
+        }
+      }
+      return freeze10({ build, error });
+    }
+    return freeze10({ make: make2 });
+  })();
+
+  // src/ast_let_declaration_node.ts
+  var { freeze: freeze11 } = Helpers;
+  var AstLetDeclarationNode = (() => {
+    function make2(node) {
+      const inst = freeze11({ visit, type });
+      const { letDeclaration } = AstNode.types;
+      function visit(visitor) {
+        visitor.visitLetDeclaration(inst, node);
+      }
+      function type() {
+        return letDeclaration;
+      }
+      return inst;
+    }
+    return freeze11({ make: make2 });
+  })();
+  var AstIncompleteUnaryNode = (() => {
+    function _selectedConstructor(operatorStr) {
+      switch (operatorStr) {
+        case "let":
+          return AstLetDeclarationNode.make;
+        default:
+          break;
+      }
+      throw Error(`Token ${operatorStr} does not result in an unary operator`);
+    }
+    function makeForOperator(operatorStr) {
+      return make2(_selectedConstructor(operatorStr));
+    }
+    function make2(fn) {
+      return freeze11({ finish: fn });
+    }
+    return freeze11({ makeForOperator, make: make2 });
+  })();
+
+  // src/tree_part_build.ts
+  var { freeze: freeze12, verifyInTesting: verifyInTesting2 } = Helpers;
+  var LineContinuationScheme = freeze12({
+    inGroup: Symbol(),
+    operatorContinued: Symbol(),
+    normal: Symbol()
+  });
+  var TreePartBuild = (() => {
+    const tokenTypes = Token.types;
+    const { zeroSizedRange } = TokenRange;
+    function make2(mTokenRange, mLineContScheme) {
+      const { error, setErrorFn, setErrorMessage } = StandardError.make();
+      function buildPart() {
+        if (zeroSizedRange(mTokenRange)) {
+          return EmptyNodeExpansion.make();
+        }
+        mTokenRange.skipNewLine();
+        if (zeroSizedRange(mTokenRange)) {
+          return EmptyNodeExpansion.make();
+        }
+        const start = mTokenRange.tokenAt(mTokenRange.start());
+        mTokenRange.step();
+        if (start.type() === tokenTypes.identifier || start.type() === tokenTypes.stringLiteral) {
+          const { build, error: error2 } = PartialTreeStartIdentifierBuild.make(start, mTokenRange, mLineContScheme);
+          return build() ?? setErrorFn(error2);
+        } else if (start.content() === "(") {
+          const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(
+            BareLeftTreePartHandler.make(),
+            mTokenRange,
+            start
+          );
+          return startGroupBuild() ?? setErrorFn(error2);
+        } else if (start.type() == tokenTypes.operator) {
+          const incomplete = AstIncompleteUnaryNode.makeForOperator(start.content());
+          const { build, error: error2 } = PartialTreeStartOperatorBuild.make(incomplete, start, mTokenRange);
+          return build() ?? setErrorFn(error2);
+        }
+        setErrorMessage("unimplemented case");
+      }
+      function range() {
+        verifyInTesting2();
+        const { start, end } = mTokenRange;
+        return freeze12({ start: start(), end: end() });
+      }
+      return freeze12({ buildPart, error, range });
+    }
+    return freeze12({ make: make2 });
+  })();
+
+  // src/ast_build.ts
+  var AstBuild = (() => {
+    const { freeze: freeze16 } = Helpers;
+    const mErrors = [];
+    function buildProgramSequence(partBuild) {
+      const part = partBuild.buildPart();
+      if (!part) {
+        mErrors.push(partBuild.error());
+        return [];
+      }
+      return part.expandIntoNodes(buildProgramSequence);
+    }
+    function buildFor2(tokens) {
+      const range = TokenRange.makeStartingRange(tokens);
+      const partBuild = TreePartBuild.make(range, LineContinuationScheme.normal);
+      const res = buildProgramSequence(partBuild).map((n) => n);
+      return AstTupleNode.make(res);
+    }
+    return freeze16({ buildFor: buildFor2, testable: { buildProgramSequence } });
+  })();
+
+  // tests/ast_build_tests.ts
+  var { describeNamed: describeNamed3 } = TestHelpers;
+  describeNamed3({ AstBuild }, () => {
+    const makeToken = Token.forTesting.makeFromStringOnly;
+    describe("builds a mutli-line ast", () => {
+      let tokens = [];
+      const buildAst = () => AstBuild.buildFor(TokenCollection.make(tokens));
+      it("builds two function calls", () => {
+        tokens = [
+          makeToken("puts"),
+          makeToken("("),
+          makeToken("a"),
+          makeToken(")"),
+          makeToken("\n"),
+          makeToken("puts"),
+          makeToken("("),
+          makeToken("a"),
+          makeToken(")"),
+          makeToken("\n")
+        ];
+        let i = 0;
+        const visitor = AstNodeVisitor.makeFakeVisitor({
+          visitFunctionCall: (_0) => {
+            ++i;
+          }
+        });
+        buildAst().visit(visitor);
+        expect(i).toEqual(2);
+      });
+      it("two lines, operator first, call second", () => {
+        tokens = [
+          makeToken("\n"),
+          makeToken("a"),
+          makeToken(","),
+          makeToken("b"),
+          makeToken("\n"),
+          makeToken("puts"),
+          makeToken("("),
+          makeToken("a"),
+          makeToken(")"),
+          makeToken("\n")
+        ];
+        let i = 0;
+        const visitor = AstNodeVisitor.makeFakeVisitor({
+          visitFunctionCall: (_0) => {
+            ++i;
+          }
+        });
+        buildAst().visit(visitor);
+        expect(i).toEqual(1);
+      });
+    });
+  });
+
+  // tests/character_class_tests.ts
+  var { describeNamed: describeNamed4 } = TestHelpers;
+  describeNamed4({ CharacterClass }, () => {
+    describe(".classOf", () => {
+      const { classOf, classes } = CharacterClass;
+      it("numeric", () => {
+        expect(classOf("1")).toEqual(classes.numeric);
+      });
+      it("alphabetic", () => {
+        expect(classOf("q")).toEqual(classes.alphabetic);
+      });
+      it("operative", () => {
+        expect(classOf(",")).toEqual(classes.operative);
+      });
+      it("spacious", () => {
+        expect(classOf("	")).toEqual(classes.spacious);
+      });
+      it("new line", () => {
+        expect(classOf("\n")).toEqual(classes.newLine);
+      });
+    });
+  });
+
+  // tests/character_crawler_tests.ts
+  var { describeNamed: describeNamed5 } = TestHelpers;
+  describeNamed5({ CharacterCrawler }, () => {
+    it('crawls an operator ":="', () => {
+      const crawler = CharacterCrawler.make(":=");
+      const token = crawler.crawl().readToken().content();
+      expect(token).toEqual(":=");
+    });
+    it("skips whitespace", () => {
+      const crawler = CharacterCrawler.make("   :=");
+      const token = crawler.crawl().readToken().content();
+      expect(token).toEqual(":=");
+    });
+    it("treats trailing whitespace as having reached the end", () => {
+      const crawler = CharacterCrawler.make("a  ");
+      crawler.crawl().readToken();
+      expect(crawler.reachedEnd()).toBeTruthy();
+    });
+    it("crawls through the next token", () => {
+      const crawler = CharacterCrawler.make("puts('hello')");
+      const token = crawler.crawl().crawl().readToken().content();
+      expect(token).toEqual("(");
+    });
+  });
+
+  // tests/crawl_strategies_tests.ts
+  var { describeNamed: describeNamed6 } = TestHelpers;
+  describeNamed6({ CrawlStrategies }, () => {
+    const { alphabetic, literal, operative, spacious } = CharacterClass.classes;
+    const crawlAlphanumeric = CrawlStrategies[alphabetic];
+    const crawlOperator = CrawlStrategies[operative];
+    const crawlStringLiteral = CrawlStrategies[literal];
+    const crawlSpace = CrawlStrategies[spacious];
+    describeNamed6({ crawlAlphanumeric }, () => {
+      [
+        ["asdf", "end"],
+        ["asdf ", "spaces"],
+        ["asdf=", "operators"],
+        ["asdf'", "quotations"],
+        ["asdf\n", "new line"]
+      ].forEach((pair) => {
+        const [test, desc] = pair;
+        it(`stops at ${desc}`, () => {
+          expect(crawlAlphanumeric(test, 0)).toEqual(4);
+        });
+      });
+      it("stops at end with numbers", () => {
+        const str = "asdf123";
+        expect(crawlAlphanumeric(str, 0)).toEqual(str.length);
+      });
+    });
+    describeNamed6({ crawlOperator }, () => {
+      [
+        [":=", "re-assignable", 2],
+        ["= ", "assignment", 1],
+        ["+=", "accumulate", 2],
+        ["==", "two assignments", 1],
+        [",,", "commas", 1],
+        ["((", "parens", 1]
+      ].forEach((tuple) => {
+        const [test, desc, expected] = tuple;
+        it(`crawls out a: ${desc}`, () => {
+          expect(crawlOperator(test, 0)).toEqual(expected);
+        });
+      });
+    });
+    describeNamed6({ crawlSpace }, () => {
+      [
+        ["  a", "alphabetic"],
+        ["  ", "end"],
+        ["	\r=", "at operator with other whitespace"],
+        ["  +", "operator"],
+        ["  1", "numeric"],
+        ["  \n", "new line"]
+      ].forEach((pair) => {
+        const [test, desc] = pair;
+        it(`stops at ${desc}`, () => {
+          expect(crawlSpace(test, 0)).toEqual(2);
+        });
+      });
+    });
+    describeNamed6({ crawlStringLiteral }, () => {
+      it(`crawls stopping at nothing but another "'"`, () => {
+        const str = `'hello {" \\\\''`;
+        const end = crawlStringLiteral(str, 0);
+        expect(str.substring(0, end)).toEqual(`'hello {" \\\\'`);
+      });
+    });
+  });
+
+  // src/context.ts
+  var { freeze: freeze13 } = Object;
+  var ContextVariable = (() => {
+    const kStringAccessors = freeze13({
+      asString: (s) => s,
+      asNumber: (_0) => {
+        throw Error("not a number");
+      }
+    });
+    const kNumericAccessors = freeze13({
+      asString: (s) => `${s}`,
+      asNumber: (s) => s
+    });
+    const kUninitializedAccessors = freeze13({
+      asString: (_0) => {
+        throw Error(`not initialized`);
+      },
+      asNumber: kStringAccessors.asNumber
+    });
+    const kTypes = freeze13({
+      integer: Symbol(),
+      string: Symbol()
+    });
+    function make2(mValue) {
+      const inst = freeze13({ set, asString, asNumber, type });
+      let mAsString = kUninitializedAccessors.asString;
+      let mAsNumber = kUninitializedAccessors.asNumber;
+      let mType = Symbol();
+      function set(v) {
+        const accessors = (() => {
+          if (typeof v === "number") {
+            mType = kTypes.integer;
+            return kNumericAccessors;
+          } else if (typeof v === "string") {
+            mType = kTypes.string;
+            return kStringAccessors;
+          } else {
+            throw Error(`Cannot handle type "${typeof v}`);
+          }
+        })();
+        mAsString = accessors.asString;
+        mAsNumber = accessors.asNumber;
+        return inst;
+      }
+      function asString() {
+        return mAsString(mValue);
+      }
+      function asNumber() {
+        return mAsNumber(mValue);
+      }
+      function type() {
+        return mType;
+      }
+      return set(mValue);
+    }
+    return freeze13({ make: make2 });
+  })();
+  var Context = (() => {
+    function make2() {
+      const mAvailableVariables = {};
+      function declareVariable(name, value, type) {
+        if (mAvailableVariables[name]) {
+          throw Error(`name "${name}" already taken`);
+        }
+        mAvailableVariables[name] = ContextVariable.make(value, type);
+      }
+      function setVariable(name, value) {
+        mAvailableVariables[name] = value;
+      }
+      function getValueOfVariable(name) {
+        return mAvailableVariables[name];
+      }
+      return freeze13({ declareVariable, getValueOfVariable, setVariable });
+    }
+    return freeze13({ make: make2 });
+  })();
+
+  // src/interpreter.ts
+  var { freeze: freeze14 } = Object;
+  var LetVisitor = (() => {
+    function make2(context) {
+      let mAssigneeNameFn = () => {
+        throw Error("must assign assignee name fn");
+      };
+      function setAssigneeName(fn) {
+        mAssigneeNameFn = fn;
+      }
+      function visitFunctionCall(_0) {
+        throw Error("");
+      }
+      function visitAssignment(_0, lhs) {
+        context.declareVariable(mAssigneeNameFn(), AstStringableNode.downcast(lhs).asString());
+      }
+      function visitLetDeclaration(_0, _1) {
+        throw Error("");
+      }
+      return freeze14({
+        setAssigneeName,
+        visitFunctionCall,
+        visitAssignment,
+        visitLetDeclaration
+      });
+    }
+    return freeze14({ make: make2 });
+  })();
+  var Interpreter = freeze14({ make, buildFor });
+  var injections = freeze14({ putsFunction: console.log });
+  function make(context = Context.make(), { putsFunction } = injections) {
+    const nodeTypes = AstNode.types;
+    const mLetVisitor = LetVisitor.make(context);
+    function visitFunctionCall(node) {
+      if (node.name === "puts") {
+        node.arguments.forEach((node2) => {
+          putsFunction(getValueOf(node2));
+        });
+      }
+    }
+    function getValueOf(node) {
+      const val = node.asString();
+      switch (node.type()) {
+        case nodeTypes.stringLiteral:
+          return val;
+        case nodeTypes.identifier:
+          return context.getValueOfVariable(val) ?? (() => {
+            throw Error(`variable ${val} not declared`);
+          })();
+        default:
+          break;
+      }
+      throw Error("impossible branch??");
+    }
+    function visitLetDeclaration(_0, lhs) {
+      if (lhs.type() !== AstNode.types.assignment) {
+        throw Error("bad let");
+      }
+      const assignmentNode = lhs;
+      mLetVisitor.setAssigneeName(assignmentNode.assigneeName);
+      assignmentNode.visit(mLetVisitor);
+    }
+    function visitAssignment(node, rhs) {
+      context.setVariable(node.assigneeName(), getValueOf(rhs));
+    }
+    return freeze14({ visitFunctionCall, visitLetDeclaration, visitAssignment });
+  }
+  function buildFor(inp) {
+    const tokenCollection = Tokenization.make().tokenize(inp);
+    return AstBuild.buildFor(tokenCollection);
+  }
+  Helpers.expose({ Interpreter });
+
+  // tests/interpreter_tests.ts
+  var { describeNamed: describeNamed7 } = TestHelpers;
+  describeNamed7({ Interpreter }, () => {
+    function makePutsFunction() {
+      const printedStrings = [];
+      const putsFunction = (str) => {
+        printedStrings.push(str);
+      };
+      const injections2 = { putsFunction };
+      return { injections: injections2, printedStrings };
+    }
+    function makeWithInjections(injections2) {
+      return Interpreter.make(Context.make(), injections2);
+    }
+    describe("integration specs", () => {
+      it('compiles and runs a "hello world!" program', () => {
+        const programRootNode = Interpreter.buildFor("puts('hello', ' world!')");
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const interpreter = makeWithInjections(injections2);
+        programRootNode.visit(interpreter);
+        expect(printedStrings).toEqual(["hello", " world!"]);
+      });
+      it('compiles and runs a "hello world!" program with a variable', () => {
+        const context = Context.make();
+        context.declareVariable("foo", "hello world!");
+        const programRootNode = Interpreter.buildFor("puts(foo)");
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const interpreter = Interpreter.make(context, injections2);
+        programRootNode.visit(interpreter);
+        expect(printedStrings).toEqual(["hello world!"]);
+      });
+      it('compiles and runs a multiline "hello world!" program', () => {
+        const programRootNode = Interpreter.buildFor("puts('hello')\nputs('world!')");
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const interpreter = makeWithInjections(injections2);
+        programRootNode.visit(interpreter);
+        expect(printedStrings).toEqual(["hello", "world!"]);
+      });
+      it('compiles and runs a "hello world!" program with an assignment', () => {
+        const programRootNode = Interpreter.buildFor(`
         foo := 'hello world!'
         puts(foo)
-      `),{printedStrings:n,injections:r}=e(),i=o(r);t.visit(i),expect(n).toEqual(["hello world!"])}),it("compiles and runs a simple program with a let declaration",()=>{let t=R.buildFor(`
+      `);
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const intr = makeWithInjections(injections2);
+        programRootNode.visit(intr);
+        expect(printedStrings).toEqual(["hello world!"]);
+      });
+      it("compiles and runs a simple program with a let declaration", () => {
+        const programRootNode = Interpreter.buildFor(`
         let a := 'hello world!'
         puts(a)
-      `),{printedStrings:n,injections:r}=e(),i=o(r);t.visit(i),expect(n).toEqual(["hello world!"])})})});var{describeNamed:Ke}=A;Ke({AstAssignmentNode:M},()=>{let{make:e}=M,o=C.make;it("is reachable by visitor",()=>{let t=!1,n=q.makeFakeVisitor({visitAssignment:(r,i)=>{t=!0}});e(o(""),o("")).visit(n),expect(t).toBeTruthy()}),it("reports self as an assignment node type",()=>{let t=e(o(""),o("")).type();expect(t).toEqual(N.types.assignment)}),it("maybe visited for assigee name",()=>{let t="",n=q.makeFakeVisitor({visitAssignment:(r,i)=>{t=r.assigneeName()}});e(o("foo"),o("")).visit(n),expect(t).toEqual("foo")}),it("throws exception on attempt to instantiate with non-stringable node",()=>{let t=_.make([]);expect(()=>{e(t,o(""))}).toThrowError()})});var{describeNamed:Je}=A;Je({AstIncompleteBinaryNode:ce},()=>{let e=T.forTesting.makeFromStringOnly,o=ne.make;function t(){return C.make("")}function n(r){return o(e(r),t())?.makeNode()?.finish(t())}it("defers creation of a function call",()=>{let r=n("(")?.type();expect(r).toEqual(N.types.functionCall)}),it("defers creation of a tuple",()=>{let r=n(",")?.type();expect(r).toEqual(N.types.tuple)}),it("defers creation of an assignment",()=>{let r=n(":=")?.type();expect(r).toEqual(N.types.assignment)})});var{describeNamed:Qe}=A;Qe({TreePartBuild:w},()=>{let e=T.forTesting.makeFromStringOnly,o=v.normal,t=c=>w.make(O.makeStartingRange(V.make(c)),o),n=(...c)=>w.make(O.makeStartingRange(V.make(c)),o).buildPart(),r=(c,a)=>{c()?.visit(a())};function i(c){it("returns a result",()=>{expect(c()).toBeDefined()})}describe('handles general case "( \\n ..."',()=>{let c=[e("("),e(`
-`),e("a"),e(")")],a=()=>n(...c);i(a),it("is composed of a left and right part only",()=>{let d=0,m=0;r(a,()=>k.makeOverrider(fail).visitLeftPartOnly(f=>{++d}).visitRightPartOnly(f=>{++m}).finish()),expect(d).toEqual(1),expect(m).toEqual(1)}),it("makes right part with none of the tokens",()=>{r(a,()=>k.makeOverrider(fail).visitLeftPartOnly(d=>{}).visitRightPartOnly(d=>{let{start:m,end:f}=d.range();expect(m).toEqual(4),expect(f).toEqual(4)}).finish())}),it("makes left part with the remainder of the tokens, skipping new line",()=>{r(a,()=>k.makeOverrider(fail).visitLeftPartOnly(d=>{let{start:m,end:f}=d.range();expect(m).toEqual(2),expect(f).toEqual(3)}).visitRightPartOnly(d=>{}).finish())})});let s=(()=>{function c(d,m){let f=1,g=`Point ${m}`;function y(z,ue){if(f=z,d[m]++,d[m]>z)throw Error(`Reached "${g} too many times`);ue&&(g=ue)}function b(){if(d[m]!==f)throw Error(`Point "${g}" was not reached ${f} times`)}return Object.freeze({hitsAtExactly:y,verifySatisfied:b})}function a(d){let m=[];m.length=d,m.fill(0);let f=[];for(let b=0;b<d;++b)f.push(c(m,b));function g(){return f}function y(){return f.forEach(b=>{b.verifySatisfied()}),!0}return Object.freeze({points:g,verifyAllHit:y})}return Object.freeze({make:c,makeCollection:a})})();function u(c){it("has left and right point with no nodes",()=>{let{points:a,verifyAllHit:d}=s.makeCollection(2),[m,f]=a();r(c,()=>k.makeOverrider(fail).visitLeftPartOnly(g=>{m.hitsAtExactly(1)}).visitRightPartOnly(g=>{f.hitsAtExactly(1)}).finish()),expect(d()).toBeTruthy()})}describe('handles grouping case "( a )"',()=>{let c=[e("("),e("a"),e(")")],a=()=>n(...c);u(a),it("has left and right point with no nodes",()=>{let{points:d,verifyAllHit:m}=s.makeCollection(2),[f,g]=d();r(a,()=>k.makeOverrider(fail).visitLeftPartOnly(y=>{f.hitsAtExactly(1)}).visitRightPartOnly(y=>{g.hitsAtExactly(1)}).finish()),expect(m()).toBeTruthy()}),it("left part contains no tokens",()=>{r(a,()=>k.makeOverrider(fail).visitLeftPartOnly(d=>{expect(c[d.range().start].content()).toEqual("a")}).visitRightPartOnly(d=>{}).finish())}),it('right part contains the "a" token',()=>{r(a,()=>k.makeOverrider(fail).visitLeftPartOnly(d=>{}).visitRightPartOnly(d=>{let{start:m,end:f}=d.range();expect(m).toEqual(f)}).finish())})}),describe('handles grouping case "( a , b )"',()=>{let c=[e("("),e("a"),e(","),e("b"),e(")")],a=()=>n(...c);u(a),[["a",0],[",",1],["b",2]].forEach(([d,m])=>{it(`left part contains the "${d}" tokens`,()=>{r(a,()=>k.makeOverrider(fail).visitLeftPartOnly(f=>{let g=f.range().start+m;expect(g).toBeLessThan(c.length),expect(c[g]?.content()).toEqual(d)}).visitRightPartOnly(f=>{}).finish())})}),it("right part contains no tokens",()=>{r(a,()=>k.makeOverrider(fail).visitLeftPartOnly(d=>{}).visitRightPartOnly(d=>{let{start:m,end:f}=d.range();expect(m).toEqual(f)}).finish())})});function l(c,a){r(c,()=>k.makeOverrider(fail).visitLeftWithNode((d,m)=>{let f=d.finish(C.make("b"));f.type()===N.types.tuple?a(f):fail()}).visitRightPartOnly(d=>{}).finish())}describe('handles general operator case "a, b"',()=>{let c=[e("a"),e(","),e("b")],a=()=>n(...c);i(a),it("left part has incomplete node",()=>{let{points:d,verifyAllHit:m}=s.makeCollection(2),[f,g]=d();r(a,()=>k.makeOverrider(fail).visitLeftWithNode((y,b)=>f.hitsAtExactly(1)).visitRightPartOnly(y=>{g.hitsAtExactly(1)}).finish()),m()}),it("left part incomplete node, completes into a tuple node",()=>{l(a,d=>{expect(d.count()).toEqual(2)})}),it('left part incomplete node, completes into a tuple node, first is an "a" identifer',()=>{l(a,d=>{let m;d.forEach(f=>{m??=P.downcast(f).asString()}),expect(m).toEqual("a")})})}),describe('handles case operator across new line "a, \\n b \\n ...',()=>{let c=[e("a"),e(","),e(`
-`),e("b"),e(`
-`),e("c")],a=()=>n(...c);i(a),p(a),it("has left side has incomplete node, has new line adjusted range",()=>{r(a,()=>k.makeOverrider(fail).visitLeftWithNode((d,m)=>{let{start:f,end:g}=m.range();expect(f).toEqual(3),expect(g).toEqual(6)}).visitRightPartOnly(d=>{}).finish())}),it("has right side, has new line adjusted range",()=>{r(a,()=>k.makeOverrider(fail).visitLeftWithNode((d,m)=>{}).visitRightPartOnly(d=>{let{start:m,end:f}=d.range();expect(m).toEqual(6),expect(f).toEqual(6)}).finish())})});function p(c){it("has left side has incomplete node, and nodeless right side",()=>{let{points:a,verifyAllHit:d}=s.makeCollection(2),[m,f]=a();r(c,()=>k.makeOverrider(fail).visitLeftWithNode((g,y)=>m.hitsAtExactly(1)).visitRightPartOnly(g=>{f.hitsAtExactly(1)}).finish()),d()})}describe('handles function call case "f(...)..."',()=>{describe(`a simple one parameter function call "f('a')"`,()=>{let c=[e("f"),e("("),e("'a'"),e(")")],a=()=>n(...c);i(a),p(a),it("has left side whose incomplete node that completes into a function",()=>{r(a,()=>k.makeOverrider(fail).visitLeftWithNode((d,m)=>{let f=d.finish(C.make("c"));expect(f.type()).toEqual(N.types.functionCall)}).visitRightPartOnly(d=>{}).finish())}),it("has left side whose incomplete node that completes into the correct function",()=>{r(a,()=>k.makeOverrider(fail).visitLeftWithNode((d,m)=>{let f=d.finish(C.make("c"));if(f.type()!==N.types.functionCall){fail();return}expect(f.name).toEqual("f")}).visitRightPartOnly(d=>{}).finish())}),it("has left side, with one token",()=>{r(a,()=>k.makeOverrider(fail).visitLeftWithNode((d,m)=>{let{start:f,end:g}=m.range();expect(g-f).toEqual(1)}).visitRightPartOnly(d=>{}).finish())}),it("has empty right side",()=>{r(a,()=>k.makeOverrider(fail).visitLeftWithNode((d,m)=>{}).visitRightPartOnly(d=>{let{start:m,end:f}=d.range();expect(m).toEqual(f)}).finish())})})}),describe("let declaration",()=>{let c=[e("let"),e("a"),e("="),e("'hello'")],a=()=>n(...c);i(a),p(a),it("has left side whose incomplete node that completes into a let",()=>{r(a,()=>k.makeOverrider(fail).visitLeftWithNode((d,m)=>{let f=d.finish(C.make("c"));expect(f.type()).toEqual(N.types.letDeclaration)}).visitRightPartOnly(d=>{}).finish())})}),describe("simple cases",()=>{it("handles a single string literal",()=>{r(()=>t([e("'a'")]).buildPart(),()=>k.makeOverrider(fail).visitRightNodeOnly(a=>{let d=P.downcast(a).asString();expect(d).toEqual("a")}).finish())}),it("handles new lines followed by nothing statements",()=>{let c=t([e(`
-`)]).buildPart();expect(j.hasCreated(c)).toBeTruthy()}),it("handles empty statements",()=>{let c=t([]).buildPart();expect(j.hasCreated(c)).toBeTruthy()}),it("handles a lone token statement",()=>{let c=[e("a"),e(`
-`)],a=()=>t(c).buildPart(),{points:d,verifyAllHit:m}=s.makeCollection(1);r(a,()=>k.makeOverrider(fail).visitRightNodeOnly(f=>{let g=P.downcast(f).asString();d()[0].hitsAtExactly(1),expect(g).toEqual("a")}).finish()),m()})})});var{freeze:F}=h,S=F({isLike:Symbol(),isType:Symbol(),isInterface:Symbol()}),Y=(()=>{let e="<anonymous>";function o(){let t=Symbol(),n=[],r=[],i=e,s=F({arguments_:u,returns:l,uid:p,isComplete:c,setName:a,setArguments:d,setReturns:m,name:f,finish:g});function u(){return n}function l(){return r}function p(){return t}function c(){return!1}function a(y){return i=y,s}function d(y){return n.length=0,n.push(...y),s}function m(y){return r.length=0,r.push(...y),s}function f(){return i}function g(){return we.make(s)}return s}return F({make:o,reservedAnonymouseName:e})})(),we=(()=>{function e(n,r){if(n.fit===S.isType&&r.fit===S.isType&&n.fitName===r.fitName)return 0}function o(n,r){let i=Math.min(n.length,r.length),s=0;for(let u=0;u<i;++u){let l=n[u],p=r[u],c=e(l,p);if(c!==0)return;s+=c}return s}function t(n){let{arguments_:r,returns:i,uid:s,name:u}=n;function l(c){if(console.log("a"),c.arguments_().length!==r().length||c.returns().length!==i().length)return;console.log("b");let a=o(c.arguments_(),r());if(console.log("c"),a!==0)return;console.log("d");let d=o(c.returns(),i());if(console.log("e"),d===0)return console.log("f"),a+d}function p(){return!0}return F({satisfactionDegree:l,arguments_:r,returns:i,uid:s,name:u,isComplete:p})}return F({make:t,satisfactionDegreeOfParam:e})})();var de=(()=>{function e(o){o??="<anonymous>";let t={},n=F({lookUp:i,name:()=>o,uid:Symbol(),setLookUp:r});function r(s){return t=s,n}function i(s){return t[s]}return n}return F({make:e})})(),qr=(()=>{function e(){function o(){return de.make()}return F({makeMemberType:o})}return F({make:e})})(),Xe=Y.make().setName("+").setArguments([{fit:S.isType,fitName:"Interger32"}]).setReturns([{fit:S.isType,fitName:"Interger32"}]).finish(),Ye=Y.make().setName("-").setArguments([{fit:S.isType,fitName:"Interger32"}]).setReturns([{fit:S.isType,fitName:"Interger32"}]).finish(),Ze=Y.make().setName(":=").setArguments([{fit:S.isType,fitName:"Interger32"}]).setReturns([{fit:S.isType,fitName:"Interger32"}]).finish(),et=Y.make().setName("toString").setArguments([]).setReturns([{fit:S.isType,fitName:"String"}]).finish(),tt=Y.make().setName(":=").setArguments([{fit:S.isType,fitName:"String"}]).setReturns([{fit:S.isType,fitName:"String"}]).finish(),nt=de.make("Integer32").setLookUp({"+":Xe,"-":Ye,":=":Ze,toString:et}),rt=de.make("String").setLookUp({":=":tt});h.expose({intt:nt,strt:rt,ParameterFit:S,FunctionType:we});})();
+      `);
+        const { printedStrings, injections: injections2 } = makePutsFunction();
+        const intr = makeWithInjections(injections2);
+        programRootNode.visit(intr);
+        expect(printedStrings).toEqual(["hello world!"]);
+      });
+    });
+  });
+
+  // tests/ast_assignment_node_tests.ts
+  var { describeNamed: describeNamed8 } = TestHelpers;
+  describeNamed8({ AstAssignmentNode }, () => {
+    const { make: make2 } = AstAssignmentNode;
+    const makeIdentifier = AstIdentifierNode.make;
+    it("is reachable by visitor", () => {
+      let mustBeTrue = false;
+      const visitor = AstNodeVisitor.makeFakeVisitor({
+        visitAssignment: (_0, _1) => {
+          mustBeTrue = true;
+        }
+      });
+      make2(makeIdentifier(""), makeIdentifier("")).visit(visitor);
+      expect(mustBeTrue).toBeTruthy();
+    });
+    it("reports self as an assignment node type", () => {
+      const type = make2(makeIdentifier(""), makeIdentifier("")).type();
+      expect(type).toEqual(AstNode.types.assignment);
+    });
+    it("maybe visited for assigee name", () => {
+      let assigneeName = "";
+      const visitor = AstNodeVisitor.makeFakeVisitor({
+        visitAssignment: (node, _0) => {
+          assigneeName = node.assigneeName();
+        }
+      });
+      make2(makeIdentifier("foo"), makeIdentifier("")).visit(visitor);
+      expect(assigneeName).toEqual("foo");
+    });
+    it("throws exception on attempt to instantiate with non-stringable node", () => {
+      const tuple = AstTupleNode.make([]);
+      expect(() => {
+        make2(tuple, makeIdentifier(""));
+      }).toThrowError();
+    });
+  });
+
+  // tests/ast_incomplete_binary_node_tests.ts
+  var { describeNamed: describeNamed9 } = TestHelpers;
+  describeNamed9({ AstIncompleteBinaryNode }, () => {
+    const makeToken = Token.forTesting.makeFromStringOnly;
+    const makeForOperator = IncompleteNodeCreation.make;
+    function makeAnyNode() {
+      return AstIdentifierNode.make("");
+    }
+    function makeForOperatorWithAnyNodes(operator) {
+      return makeForOperator(makeToken(operator), makeAnyNode())?.makeNode()?.finish(makeAnyNode());
+    }
+    it("defers creation of a function call", () => {
+      const createdType = makeForOperatorWithAnyNodes("(")?.type();
+      expect(createdType).toEqual(AstNode.types.functionCall);
+    });
+    it("defers creation of a tuple", () => {
+      const createdType = makeForOperatorWithAnyNodes(",")?.type();
+      expect(createdType).toEqual(AstNode.types.tuple);
+    });
+    it("defers creation of an assignment", () => {
+      const createdType = makeForOperatorWithAnyNodes(":=")?.type();
+      expect(createdType).toEqual(AstNode.types.assignment);
+    });
+  });
+
+  // tests/partial_tree_build_tests.ts
+  var { describeNamed: describeNamed10 } = TestHelpers;
+  describeNamed10({ TreePartBuild }, () => {
+    const makeToken = Token.forTesting.makeFromStringOnly;
+    const normalCont = LineContinuationScheme.normal;
+    const make2 = (tokens) => TreePartBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont);
+    const makePtbRes = (...tokens) => TreePartBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont).buildPart();
+    const ptbWithVisitor = (ptbRes, fn) => {
+      ptbRes()?.visit(fn());
+    };
+    function includeHasAResultExample(ptbRes) {
+      it("returns a result", () => {
+        expect(ptbRes()).toBeDefined();
+      });
+    }
+    describe('handles general case "( \\n ..."', () => {
+      const args = [makeToken("("), makeToken("\n"), makeToken("a"), makeToken(")")];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      it("is composed of a left and right part only", () => {
+        let leftPartCalls = 0;
+        let rightPartCalls = 0;
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+          ++leftPartCalls;
+        }).visitRightPartOnly((_1) => {
+          ++rightPartCalls;
+        }).finish());
+        expect(leftPartCalls).toEqual(1);
+        expect(rightPartCalls).toEqual(1);
+      });
+      it("makes right part with none of the tokens", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+        }).visitRightPartOnly((rightPart) => {
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(4);
+          expect(end).toEqual(4);
+        }).finish());
+      });
+      it("makes left part with the remainder of the tokens, skipping new line", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((leftPart) => {
+          const { start, end } = leftPart.range();
+          expect(start).toEqual(2);
+          expect(end).toEqual(3);
+        }).visitRightPartOnly((_0) => {
+        }).finish());
+      });
+    });
+    ;
+    const ReachPoint = (() => {
+      function make3(mSet, mIdx) {
+        let mRequiredHits = 1;
+        let mName = `Point ${mIdx}`;
+        function hitsAtExactly(times, name) {
+          mRequiredHits = times;
+          mSet[mIdx]++;
+          if (mSet[mIdx] > times) {
+            throw Error(`Reached "${mName} too many times`);
+          }
+          if (name) {
+            mName = name;
+          }
+        }
+        function verifySatisfied() {
+          if (mSet[mIdx] !== mRequiredHits) {
+            throw Error(`Point "${mName}" was not reached ${mRequiredHits} times`);
+          }
+        }
+        return Object.freeze({ hitsAtExactly, verifySatisfied });
+      }
+      function makeCollection(size) {
+        const mSet = [];
+        mSet.length = size;
+        mSet.fill(0);
+        const mPoints = [];
+        for (let i = 0; i < size; ++i) {
+          mPoints.push(make3(mSet, i));
+        }
+        function points() {
+          return mPoints;
+        }
+        function verifyAllHit() {
+          mPoints.forEach((pt) => {
+            pt.verifySatisfied();
+          });
+          return true;
+        }
+        return Object.freeze({ points, verifyAllHit });
+      }
+      return Object.freeze({ make: make3, makeCollection });
+    })();
+    function includeHasLeftAndRightPointWithNoNodes(ptbRes) {
+      it("has left and right point with no nodes", () => {
+        const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+        const [pt1, pt2] = points();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+          pt1.hitsAtExactly(1);
+        }).visitRightPartOnly((_0) => {
+          pt2.hitsAtExactly(1);
+        }).finish());
+        expect(verifyAllHit()).toBeTruthy();
+      });
+    }
+    describe('handles grouping case "( a )"', () => {
+      const args = [makeToken("("), makeToken("a"), makeToken(")")];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasLeftAndRightPointWithNoNodes(ptbRes);
+      it("has left and right point with no nodes", () => {
+        const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+        const [pt1, pt2] = points();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+          pt1.hitsAtExactly(1);
+        }).visitRightPartOnly((_0) => {
+          pt2.hitsAtExactly(1);
+        }).finish());
+        expect(verifyAllHit()).toBeTruthy();
+      });
+      it("left part contains no tokens", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((leftPart) => {
+          expect(args[leftPart.range().start].content()).toEqual("a");
+        }).visitRightPartOnly((_0) => {
+        }).finish());
+      });
+      it('right part contains the "a" token', () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+        }).visitRightPartOnly((rightPart) => {
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(end);
+        }).finish());
+      });
+    });
+    describe('handles grouping case "( a , b )"', () => {
+      const args = [
+        makeToken("("),
+        makeToken("a"),
+        makeToken(","),
+        makeToken("b"),
+        makeToken(")")
+      ];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasLeftAndRightPointWithNoNodes(ptbRes);
+      [
+        ["a", 0],
+        [",", 1],
+        ["b", 2]
+      ].forEach(([token, position]) => {
+        it(`left part contains the "${token}" tokens`, () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((leftPart) => {
+            const idx = leftPart.range().start + position;
+            expect(idx).toBeLessThan(args.length);
+            expect(args[idx]?.content()).toEqual(token);
+          }).visitRightPartOnly((_0) => {
+          }).finish());
+        });
+      });
+      it(`right part contains no tokens`, () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftPartOnly((_0) => {
+        }).visitRightPartOnly((rightPart) => {
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(end);
+        }).finish());
+      });
+    });
+    function setupWithLeftPartCompletingTupleNode(ptbRes, fn) {
+      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((node, _1) => {
+        const compl = node.finish(AstIdentifierNode.make("b"));
+        if (compl.type() === AstNode.types.tuple) {
+          fn(compl);
+        } else {
+          fail();
+        }
+      }).visitRightPartOnly((_0) => {
+      }).finish());
+    }
+    describe('handles general operator case "a, b"', () => {
+      const args = [makeToken("a"), makeToken(","), makeToken("b")];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      it("left part has incomplete node", () => {
+        const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+        const [pt1, pt2] = points();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => pt1.hitsAtExactly(1)).visitRightPartOnly((_0) => {
+          pt2.hitsAtExactly(1);
+        }).finish());
+        verifyAllHit();
+      });
+      it("left part incomplete node, completes into a tuple node", () => {
+        setupWithLeftPartCompletingTupleNode(ptbRes, (node) => {
+          expect(node.count()).toEqual(2);
+        });
+      });
+      it('left part incomplete node, completes into a tuple node, first is an "a" identifer', () => {
+        setupWithLeftPartCompletingTupleNode(ptbRes, (node) => {
+          let first = void 0;
+          node.forEach((node2) => {
+            first ??= AstStringableNode.downcast(node2).asString();
+          });
+          expect(first).toEqual("a");
+        });
+      });
+    });
+    describe('handles case operator across new line "a, \\n b \\n ...', () => {
+      const args = [
+        makeToken("a"),
+        makeToken(","),
+        makeToken("\n"),
+        makeToken("b"),
+        makeToken("\n"),
+        makeToken("c")
+      ];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
+      it("has left side has incomplete node, has new line adjusted range", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, part) => {
+          const { start, end } = part.range();
+          expect(start).toEqual(3);
+          expect(end).toEqual(6);
+        }).visitRightPartOnly((_0) => {
+        }).finish());
+      });
+      it("has right side, has new line adjusted range", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => {
+        }).visitRightPartOnly((rightPart) => {
+          const { start, end } = rightPart.range();
+          expect(start).toEqual(6);
+          expect(end).toEqual(6);
+        }).finish());
+      });
+    });
+    function includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes) {
+      it("has left side has incomplete node, and nodeless right side", () => {
+        const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+        const [pt1, pt2] = points();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => pt1.hitsAtExactly(1)).visitRightPartOnly((_0) => {
+          pt2.hitsAtExactly(1);
+        }).finish());
+        verifyAllHit();
+      });
+    }
+    describe('handles function call case "f(...)..."', () => {
+      describe(`a simple one parameter function call "f('a')"`, () => {
+        const args = [
+          makeToken("f"),
+          makeToken("("),
+          makeToken("'a'"),
+          makeToken(")")
+        ];
+        const ptbRes = () => makePtbRes(...args);
+        includeHasAResultExample(ptbRes);
+        includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
+        it("has left side whose incomplete node that completes into a function", () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((node, _1) => {
+            const completed = node.finish(AstIdentifierNode.make("c"));
+            expect(completed.type()).toEqual(AstNode.types.functionCall);
+          }).visitRightPartOnly((_0) => {
+          }).finish());
+        });
+        it("has left side whose incomplete node that completes into the correct function", () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((node, _1) => {
+            const completed = node.finish(AstIdentifierNode.make("c"));
+            if (completed.type() !== AstNode.types.functionCall) {
+              fail();
+              return;
+            }
+            expect(completed.name).toEqual("f");
+          }).visitRightPartOnly((_0) => {
+          }).finish());
+        });
+        it("has left side, with one token", () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, part) => {
+            const { start, end } = part.range();
+            expect(end - start).toEqual(1);
+          }).visitRightPartOnly((_0) => {
+          }).finish());
+        });
+        it("has empty right side", () => {
+          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => {
+          }).visitRightPartOnly((rightPart) => {
+            const { start, end } = rightPart.range();
+            expect(start).toEqual(end);
+          }).finish());
+        });
+      });
+    });
+    describe("let declaration", () => {
+      const args = [
+        makeToken("let"),
+        makeToken("a"),
+        makeToken("="),
+        makeToken("'hello'")
+      ];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
+      it("has left side whose incomplete node that completes into a let", () => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((node, _1) => {
+          const completed = node.finish(AstIdentifierNode.make("c"));
+          expect(completed.type()).toEqual(AstNode.types.letDeclaration);
+        }).visitRightPartOnly((_0) => {
+        }).finish());
+      });
+    });
+    describe("simple cases", () => {
+      it("handles a single string literal", () => {
+        const ptbRes = () => make2([makeToken("'a'")]).buildPart();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightNodeOnly((node) => {
+          const str = AstStringableNode.downcast(node).asString();
+          expect(str).toEqual("a");
+        }).finish());
+      });
+      it("handles new lines followed by nothing statements", () => {
+        const res = make2([makeToken("\n")]).buildPart();
+        expect(EmptyNodeExpansion.hasCreated(res)).toBeTruthy();
+      });
+      it("handles empty statements", () => {
+        const res = make2([]).buildPart();
+        expect(EmptyNodeExpansion.hasCreated(res)).toBeTruthy();
+      });
+      it("handles a lone token statement", () => {
+        const args = [
+          makeToken("a"),
+          makeToken("\n")
+        ];
+        const ptbRes = () => make2(args).buildPart();
+        const { points, verifyAllHit } = ReachPoint.makeCollection(1);
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightNodeOnly((node) => {
+          const str = AstStringableNode.downcast(node).asString();
+          points()[0].hitsAtExactly(1);
+          expect(str).toEqual("a");
+        }).finish());
+        verifyAllHit();
+      });
+    });
+  });
+
+  // src/type_system.ts
+  var { freeze: freeze15 } = Helpers;
+  var ParameterFit = freeze15({
+    isLike: Symbol(),
+    isType: Symbol(),
+    isInterface: Symbol()
+  });
+  var IncompleteFunctionType = (() => {
+    const reservedAnonymouseName = "<anonymous>";
+    function make2() {
+      const mUid = Symbol();
+      const mArguments_ = [];
+      const mReturns = [];
+      let mName = reservedAnonymouseName;
+      const inst = freeze15({
+        arguments_,
+        returns,
+        uid,
+        isComplete,
+        setName,
+        setArguments,
+        setReturns,
+        name,
+        finish
+      });
+      function arguments_() {
+        return mArguments_;
+      }
+      function returns() {
+        return mReturns;
+      }
+      function uid() {
+        return mUid;
+      }
+      function isComplete() {
+        return false;
+      }
+      function setName(name2) {
+        mName = name2;
+        return inst;
+      }
+      function setArguments(args) {
+        mArguments_.length = 0;
+        mArguments_.push(...args);
+        return inst;
+      }
+      function setReturns(rets) {
+        mReturns.length = 0;
+        mReturns.push(...rets);
+        return inst;
+      }
+      function name() {
+        return mName;
+      }
+      function finish() {
+        return FunctionType.make(inst);
+      }
+      return inst;
+    }
+    return freeze15({ make: make2, reservedAnonymouseName });
+  })();
+  var FunctionType = (() => {
+    function satisfactionDegreeOfParam(lhs, rhs) {
+      if (lhs.fit === ParameterFit.isType && rhs.fit === ParameterFit.isType && lhs.fitName === rhs.fitName) {
+        return 0;
+      }
+    }
+    function satisfactionDegreeOfArray(lhs, rhs) {
+      const length = Math.min(lhs.length, rhs.length);
+      let degree = 0;
+      for (let i = 0; i < length; ++i) {
+        const lhsP = lhs[i];
+        const rhsP = rhs[i];
+        const deg = satisfactionDegreeOfParam(lhsP, rhsP);
+        if (deg !== 0)
+          return;
+        degree += deg;
+      }
+      return degree;
+    }
+    function make2(base) {
+      const { arguments_, returns, uid, name } = base;
+      function satisfactionDegree(fn) {
+        if (fn.arguments_().length !== arguments_().length || fn.returns().length !== returns().length) {
+          return void 0;
+        }
+        const argDeg = satisfactionDegreeOfArray(fn.arguments_(), arguments_());
+        if (argDeg !== 0)
+          return;
+        const rtDeg = satisfactionDegreeOfArray(fn.returns(), returns());
+        if (rtDeg !== 0)
+          return;
+        return argDeg + rtDeg;
+      }
+      function isComplete() {
+        return true;
+      }
+      return freeze15({
+        satisfactionDegree,
+        arguments_,
+        returns,
+        uid,
+        name,
+        isComplete
+      });
+    }
+    return freeze15({ make: make2, satisfactionDegreeOfParam });
+  })();
+  var ObjectType = (() => {
+    function make2(name) {
+      name ??= "<anonymous>";
+      let mLookupTable = {};
+      const inst = freeze15({ lookUp, name: () => name, uid: Symbol(), setLookUp });
+      function setLookUp(lookupTable) {
+        mLookupTable = lookupTable;
+        return inst;
+      }
+      function lookUp(operation) {
+        return mLookupTable[operation];
+      }
+      return inst;
+    }
+    return freeze15({ make: make2 });
+  })();
+  var ObjectLookUpTable = (() => {
+    function make2() {
+      function makeMemberType() {
+        return ObjectType.make();
+      }
+      return freeze15({ makeMemberType });
+    }
+    return freeze15({ make: make2 });
+  })();
+  var add = IncompleteFunctionType.make().setName("+").setArguments([{ fit: ParameterFit.isType, fitName: "Interger32" }]).setReturns([{ fit: ParameterFit.isType, fitName: "Interger32" }]).finish();
+  var sub = IncompleteFunctionType.make().setName("-").setArguments([{ fit: ParameterFit.isType, fitName: "Interger32" }]).setReturns([{ fit: ParameterFit.isType, fitName: "Interger32" }]).finish();
+  var assign = IncompleteFunctionType.make().setName(":=").setArguments([{ fit: ParameterFit.isType, fitName: "Interger32" }]).setReturns([{ fit: ParameterFit.isType, fitName: "Interger32" }]).finish();
+  var toS = IncompleteFunctionType.make().setName("toString").setArguments([]).setReturns([{ fit: ParameterFit.isType, fitName: "String" }]).finish();
+  var assignStr = IncompleteFunctionType.make().setName(":=").setArguments([{ fit: ParameterFit.isType, fitName: "String" }]).setReturns([{ fit: ParameterFit.isType, fitName: "String" }]).finish();
+  var intt = ObjectType.make("Integer32").setLookUp({
+    ["+"]: add,
+    ["-"]: sub,
+    [":="]: assign,
+    ["toString"]: toS
+  });
+  var strt = ObjectType.make("String").setLookUp({
+    [":="]: assignStr
+  });
+  Helpers.expose({ intt, strt, ParameterFit, FunctionType });
+})();

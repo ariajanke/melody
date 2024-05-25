@@ -1,7 +1,7 @@
 import { AstNode } from './ast_node';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstTupleNode } from './ast_tuple_node';
-import { AstAssignmentNode } from './ast_assignment_node';
+import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { AstStringableNode } from './ast_stringable_node';
 import { Helpers, StandardError } from './helpers';
 import { Token } from './token';
@@ -16,15 +16,15 @@ export interface AstIncompleteBinaryNode extends IncompleteNode {
   lhsAsString: () => string | undefined
 }
 
-type BinaryNodeCreationFn = (lhs: AstNode, rhs: AstNode) => AstNode;
+type BinaryNodeCreationFn = (operatorStr: string, lhs: AstNode, rhs: AstNode) => AstNode;
 
 export const AstIncompleteBinaryNode = (() => {
   function make
-    (fn: BinaryNodeCreationFn, lhs: AstNode):
+    (fn: BinaryNodeCreationFn, operatorStr: string, lhs: AstNode):
     AstIncompleteBinaryNode
   {
     function finish(rhs: AstNode): AstNode {
-      return fn(lhs, rhs);
+      return fn(operatorStr, lhs, rhs);
     }
 
     // defined for testing
@@ -54,11 +54,10 @@ export const IncompleteNodeCreation = (() => {
       case '\n':
         return AstTupleNode.makeBinary;
       case ':=':
-        return AstAssignmentNode.make;
       case '+':
       case '-':
       case '*':
-        break;
+        return AstBinaryOperatorNode.make;
       // +, -, *, /, and, or, =, [, .,
       // +=, -=, *=, /=
       default: break;
@@ -72,7 +71,7 @@ export const IncompleteNodeCreation = (() => {
         return;
       }
 
-      return AstIncompleteBinaryNode.make( selected, mLhs );
+      return AstIncompleteBinaryNode.make( selected, mOperator.content(), mLhs );
     }
 
     return freeze({ makeNode, error });

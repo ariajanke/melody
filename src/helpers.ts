@@ -7,6 +7,8 @@ export const Helpers = Object.freeze({
   depthOneCopy,
   memoize,
   verifyInTesting,
+  symbolToString: getSymbolThings().symbolToString,
+  registerSymbolStrings: getSymbolThings().registerSymbolStrings
   // passWhenInTesting
 });
 
@@ -122,4 +124,36 @@ function memoize<Type>(fn: () => Type): () => Type {
     return v;
   };
   return () => get();
+}
+
+function getSymbolThings() {
+  const impl = memoize(() => {
+    const mRegistry: { [id: symbol]: string } = {};
+
+    function symbolToString(id: symbol): string {
+      const got = mRegistry[id];
+      if (got) {
+        return got;
+      } else {
+        return '<unregistered symbol>';
+      }
+    }
+
+    function registerSymbolStrings
+      (topName: string, symbolTable: { [name:string]: symbol }): void
+    {
+      Object.
+        keys(symbolTable).
+        forEach((v: string) => {
+          mRegistry[symbolTable[v]] = `${topName}.${v}`;
+        });
+    }
+
+    return Object.freeze({
+      symbolToString,
+      registerSymbolStrings
+    });
+  });
+
+  return memoize(impl)();
 }

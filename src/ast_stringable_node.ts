@@ -1,5 +1,7 @@
 import { AstNode, AstNodeVisitor } from './ast_node';
+import { ContextVariable } from './context_variable';
 import { Token } from './token';
+import { ObjectLookUpTable } from './type_system';
 
 const { freeze } = Object;
 
@@ -49,6 +51,8 @@ export const AstStringableNode = (() => {
 })();
 
 function makeStringableNodeClass(nodeType: symbol) {
+  const stringExecutionType = ContextVariable.types.string;
+
   function make
     (value: string,
      comesBeforeOperator: (operator: Token) => boolean):
@@ -57,8 +61,10 @@ function makeStringableNodeClass(nodeType: symbol) {
     function visit(_0: AstNodeVisitor): void {}
     function type(): symbol { return nodeType; }
     function asString(): string { return value; }
+    function executionType(_0: ObjectLookUpTable): symbol
+      { return stringExecutionType; }
 
-    return freeze({ visit, type, asString, comesBeforeOperator });
+    return freeze({ visit, type, asString, comesBeforeOperator, executionType });
   }
 
   return freeze({ make });
@@ -78,7 +84,7 @@ export const AstStringLiteralNode = (() => {
     function comesBeforeOperator(operator: Token): boolean {
       return operator.content() === ',';
     }
-    
+
     function resolveType(): string {
       return 'String';
     }
