@@ -78,8 +78,12 @@ export const AstStringLiteralNode = (() => {
     function comesBeforeOperator(operator: Token): boolean {
       return operator.content() === ',';
     }
+    
+    function resolveType(): string {
+      return 'String';
+    }
 
-    return Super.make(value, comesBeforeOperator);
+    return freeze({ resolveType, ...Super.make(value, comesBeforeOperator) });
   }
 
   return freeze({ make });

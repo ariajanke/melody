@@ -8,3 +8,5 @@ import './tests/interpreter_tests';
 import './tests/ast_assignment_node_tests';
 import './tests/ast_incomplete_binary_node_tests'
 import './tests/partial_tree_build_tests';
+import './src/type_system';
+

@@ -1,3 +1,11 @@
+export interface ContextVariable {
+  value: () => string,
+  type: () => string
+}
+
+const ContextVariable = (() => {
+
+})();
 
 export interface Context {
   declareVariable: (name: string, value: string) => void,

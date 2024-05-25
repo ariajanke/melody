@@ -109,11 +109,11 @@ const FunctionType = (() => {
   {
     const length = Math.min(lhs.length, rhs.length);
     let degree = 0;
-    for (let i = 0; i !== length; ++i) {
+    for (let i = 0; i < length; ++i) {
       const lhsP = lhs[i];
       const rhsP = rhs[i];
       const deg = satisfactionDegreeOfParam( lhsP, rhsP );
-      if (!deg) return;
+      if (deg !== 0) return;
       degree += deg;
     }
     return degree;
@@ -128,11 +128,10 @@ const FunctionType = (() => {
       if (fn.arguments_().length !== arguments_().length ||
           fn.returns   ().length !== returns   ().length)
       { return undefined; }
-
       const argDeg = satisfactionDegreeOfArray(fn.arguments_(), arguments_());
-      if (!argDeg) return;
+      if (argDeg !== 0) return;
       const rtDeg = satisfactionDegreeOfArray(fn.returns(), returns());
-      if (!rtDeg) return;
+      if (rtDeg !== 0) return;
       return argDeg + rtDeg;
     }
 
@@ -143,7 +142,7 @@ const FunctionType = (() => {
     });
   }
 
-  return freeze({ make });
+  return freeze({ make, satisfactionDegreeOfParam });
 })();
 
 const FunctionLookUpTable = (() => {
@@ -171,7 +170,7 @@ const ObjectType = (() => {
     }
 
     function lookUp(operation: string): FunctionType {
-      throw 'shit';
+      return mLookupTable[operation];
     }
 
     return inst;
@@ -246,3 +245,5 @@ const strt = ObjectType.
 const TypeSystem = (() => {
 
 })();
+
+Helpers.expose({ intt, strt, ParameterFit, FunctionType });

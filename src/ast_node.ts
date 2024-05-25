@@ -6,7 +6,9 @@ const { freeze } = Object;
 
 export interface AstNode {
   visit: (visitor: AstNodeVisitor) => void,
-  type: () => symbol
+  type: () => symbol,
+  resolveType: () => string,
+  // resolveValue: () 
 }
 
 export const AstNode = freeze({

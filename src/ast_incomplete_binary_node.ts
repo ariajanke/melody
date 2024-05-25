@@ -55,6 +55,10 @@ export const IncompleteNodeCreation = (() => {
         return AstTupleNode.makeBinary;
       case ':=':
         return AstAssignmentNode.make;
+      case '+':
+      case '-':
+      case '*':
+        break;
       // +, -, *, /, and, or, =, [, .,
       // +=, -=, *=, /=
       default: break;

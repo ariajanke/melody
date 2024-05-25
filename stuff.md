@@ -471,7 +471,7 @@ There's a lot going on here. So more verbosely:
     return a + b
   end
   # numeric literal 1 has exactly one type, and many interfaces
-  # type: ConstInteger32
+  # type: Integer32(Void)
   # interfaces:
   # - Number
   # - Integer
@@ -481,7 +481,7 @@ There's a lot going on here. So more verbosely:
   # - Multipliable
   let c = 1
   # D here is slightly different
-  # type: Integer32
+  # type: Integer32(Writable)
   # and an additional interface
   # - Writable
   let d := 2
@@ -496,5 +496,39 @@ Checking returns is occasionally possible, the same is true for arguments for th
 
 # v depends on the types for a and b
 a, b = func(c, d)
+
+```
+
+```melody
+let foo = fn (a is Number, b is Number)
+  # error, 
+  return 2*a + b + 10
+end
+
+# All builtins tend to be like this
+let Integer32 = fn (additional is Interface)
+  let 'let' = fn (x is __IntergerExpression)
+
+    let more = fn
+      if additional = Writable
+        return table ':=' = __i32_set
+      else
+        return null
+      end
+    end()
+
+    return table
+      ...more,
+      '=' = __i32_equality,
+      '+' = __i32_addition,
+      '-' = __i32_subtraction,
+      '*' = __i32_multiplication
+    end
+  end
+
+  return table
+    'let' = .'let' # still need an "identification" operator, that or a way to access the current context using a string
+  end
+end
 
 ```

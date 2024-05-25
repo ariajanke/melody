@@ -108,9 +108,9 @@ function depthOneCopy<Type>
 
 function expose(braceEnclosedVar: object): void {
   const setToWindow = (k: string) => {
-    if (typeof window === 'undefined')
-      return;
-    window[k] = braceEnclosedVar[k];
+    // if (typeof window === 'undefined')
+    //   return;
+    globalThis[k] = braceEnclosedVar[k];
   };
   return Object.keys(braceEnclosedVar).forEach(setToWindow);
 }
