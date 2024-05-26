@@ -3,13 +3,15 @@ import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
 import { ObjectLookUpTable } from './type_system';
+import { Helpers } from './helpers';
+import { ObjectType } from './type_system';
 
-const { freeze } = Object;
+const { freeze, memoize } = Helpers;
 
 export interface AstNode {
   visit: (visitor: AstNodeVisitor) => void,
   type: () => symbol,
-  executionType: (objects: ObjectLookUpTable) => symbol
+  executionType: (objects: ObjectLookUpTable) => ObjectType
 }
 
 export const AstNode = (() => {

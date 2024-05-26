@@ -1,7 +1,7 @@
 import { AstNode, AstNodeVisitor } from './ast_node';
 import { ContextVariable } from './context_variable';
 import { Token } from './token';
-import { ObjectLookUpTable } from './type_system';
+import { ObjectLookUpTable, ObjectType } from './type_system';
 import { Helpers } from './helpers';
 
 const { freeze } = Helpers;
@@ -52,20 +52,15 @@ export const AstStringableNode = (() => {
 })();
 
 function makeStringableNodeClass(nodeType: symbol) {
-  const stringExecutionType = ContextVariable.types.string;
-
   function make
     (value: string,
-     comesBeforeOperator: (operator: Token) => boolean):
-    AstStringableNode
+     comesBeforeOperator: (operator: Token) => boolean)
   {
     function visit(_0: AstNodeVisitor): void {}
     function type(): symbol { return nodeType; }
     function asString(): string { return value; }
-    function executionType(_0: ObjectLookUpTable): symbol
-      { return stringExecutionType; }
-
-    return freeze({ visit, type, asString, comesBeforeOperator, executionType });
+    
+    return freeze({ visit, type, asString, comesBeforeOperator });
   }
 
   return freeze({ make });
@@ -86,11 +81,11 @@ export const AstStringLiteralNode = (() => {
       return operator.content() === ',';
     }
 
-    function resolveType(): string {
-      return 'String';
+    function executionType(_0: ObjectLookUpTable): ObjectType {
+      return ObjectLookUpTable.kBuiltinTypes.String;
     }
 
-    return freeze({ resolveType, ...Super.make(value, comesBeforeOperator) });
+    return freeze({ executionType, ...Super.make(value, comesBeforeOperator) });
   }
 
   return freeze({ make });
@@ -103,6 +98,10 @@ export const AstIdentifierNode = (() => {
     function comesBeforeOperator(operator: Token): boolean {
       const str = operator.content();
       return str === ',' || str === '(' || str === ':=';
+    }
+
+    function executionType(_0: ObjectLookUpTable): ObjectType {
+      ;
     }
 
     return Super.make(value, comesBeforeOperator);

@@ -8,23 +8,29 @@ const { freeze } = Helpers;
 
 export interface AstLetDeclarationNode {};
 
-export const AstLetDeclarationNode = (() => {
-  function make(node: AstNode): AstNode {
+export const AstLetDeclarationNode = freeze({
+  make: (node: AstNode): AstNode => {
     const { executionType } = node;
-    const inst = freeze({ visit, type, executionType });
+    // const inst = freeze({ visit, type, executionType });
     const { letDeclaration } = AstNode.types;
 
-    function visit(visitor: AstNodeVisitor) {
-      visitor.visitLetDeclaration(inst, node);
-    }
+    // function visit(visitor: AstNodeVisitor) {
+    //   visitor.visitLetDeclaration(inst, node);
+    // }
 
-    function type(): symbol { return letDeclaration; }
+    // function type(): symbol { return letDeclaration; }
+
+    const inst = freeze({
+      visit: (visitor: AstNodeVisitor) => {
+        visitor.visitLetDeclaration(inst, node);
+      },
+      type: () => letDeclaration,
+      executionType
+    });
 
     return inst;
   }
-
-  return freeze({ make });
-})();
+});
 
 export const AstIncompleteUnaryNode = (() => {
   function _selectedConstructor(operatorStr: string) {

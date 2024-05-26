@@ -306,7 +306,7 @@ export const ObjectLookUpTable = (() => {
     return inst;
   }
 
-  return freeze({ make });
+  return freeze({ make, kBuiltinTypes });
 })();
 
 

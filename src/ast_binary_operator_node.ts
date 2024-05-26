@@ -1,6 +1,6 @@
 import { AstNode, AstNodeVisitor } from './ast_node';
 import { Helpers } from './helpers';
-import { ObjectLookUpTable, FunctionType, ParameterFit } from './type_system';
+import { ObjectLookUpTable, FunctionType, ParameterFit, ObjectType } from './type_system';
 
 export interface AstBinaryOperatorNode extends AstNode {
   // assigneeName: () => string
@@ -14,8 +14,7 @@ export const AstBinaryOperatorNode = (() => {
   // as such time to read up then?
 
   function make(op: string, lhs: AstNode, rhs: AstNode): AstBinaryOperatorNode {
-    // const { asString } = AstStringableNode.downcast(lhs);
-    const inst = freeze({ visit, type, executionType });//, assigneeName: asString });
+    const inst = freeze({ visit, type, executionType });
 
     function visit(visitor: AstNodeVisitor) {
       visitor.visitBinaryOperation(op, lhs, rhs);
@@ -25,19 +24,19 @@ export const AstBinaryOperatorNode = (() => {
       return assignmentType;
     }
 
-    function executionType(objects: ObjectLookUpTable): symbol {
+    function executionType(objects: ObjectLookUpTable): ObjectType {
       // in order to resolve the execution type, there are several things that
       // I need to know
       // which function am I calling, and what is it's return type
       const lhsType = lhs.executionType(objects);
       const rhsType = rhs.executionType(objects);
 
-      const func = objects.lookUpByType(lhsType).lookUp(op);
-      const rhsObject = objects.lookUpByType(rhsType);
+      const func = lhsType.lookUp(op); //objects.lookUpByType(lhsType).lookUp(op);
+      // const rhsObject = objects.lookUpByType(rhsType);
       const deg = FunctionType.
-        satisfactionDegreeOfArguments(func.arguments_(), rhsObject.asSingluarParameter());
+        satisfactionDegreeOfArguments(func.arguments_(), rhsType.asSingluarParameter());
       if (deg === 0) {
-        return func.returns[0].typeUid as symbol;
+        return func.returns[0];
       }
       throw Error('incompatible');
     }
