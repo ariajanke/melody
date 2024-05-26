@@ -22,21 +22,24 @@ export const ContextVariable = (() => {
     asNumber: (s: string | number): number => s as number
   });
 
-  const kUninitializedAccessors = freeze({
-    asString_: (_0: string | number): string => {
-      throw Error(`not initialized`)
-    },
-    asNumber: kStringAccessors.asNumber,
-  });
+  const kUninitializedAccessors = (() => {
+    const kNotInitializedError = <Type>(_0: string | number): Type => {
+      throw Error(`not initialized`);
+    };
+    return freeze({
+      asString_: kNotInitializedError<string>,
+      asNumber : kNotInitializedError<number>
+    });
+  })();
 
   const kTypes = freeze({
     integer: Symbol(),
-    string: Symbol()
+    string : Symbol()
   });
 
   registerSymbolStrings('ContextVariable', kTypes);
 
-  function make(mValue: number | string): ContextVariable {
+  function make(mValue?: number | string): ContextVariable {
     const inst = freeze({ set, asString, asNumber, type });
 
     let mType = Symbol();
@@ -62,14 +65,14 @@ export const ContextVariable = (() => {
     }
 
     function asString(): string
-      { return mAsString(mValue); }
+      { return mAsString(mValue as string | number); }
 
     function asNumber(): number
-      { return mAsNumber(mValue); }
+      { return mAsNumber(mValue as string | number); }
 
     function type(): symbol { return mType; }
 
-    return set(mValue);
+    return mValue ? set(mValue) : inst;
   }
 
   return freeze({ make, types: kTypes });

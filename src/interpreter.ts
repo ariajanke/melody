@@ -5,7 +5,7 @@ import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
 // import { AstAssignmentNode } from './ast_assignment_node';
 import { AstBinaryOperatorNode } from './ast_binary_operator_node';
-import { Helpers } from './helpers';
+import { Helpers, PersistentStack } from './helpers';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
@@ -65,7 +65,8 @@ function make
 {
   const nodeTypes = AstNode.types;
   const mLetVisitor = LetVisitor.make(context);
-  const mAcculator = ContextVariable.make('anything');
+  
+  const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
   const mObjectLookupTable = ObjectLookUpTable.make().addBuiltinTypes();
   function visitFunctionCall(node: AstFunctionCallNode) {
     if (node.name === 'puts') {
