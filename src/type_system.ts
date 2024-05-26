@@ -10,8 +10,9 @@ export const ParameterFit = freeze({
 });
 
 interface Parameter {
-  fit: symbol,
-  fitName: string
+  fitType: symbol,
+  interfaceType: undefined,
+  objectType: symbol
 }
 
 interface ReturnType {
@@ -101,9 +102,9 @@ export const FunctionType = (() => {
   function satisfactionDegreeOfParam
     (lhs: Parameter, rhs: Parameter): number | undefined
   {
-    if (lhs.fit === ParameterFit.isType &&
-        rhs.fit === ParameterFit.isType &&
-        lhs.fitName === rhs.fitName)
+    if (lhs.fitType === ParameterFit.isType &&
+        rhs.fitType === ParameterFit.isType &&
+        lhs.objectType === rhs.objectType)
     {
       return 0;
     }
@@ -171,14 +172,17 @@ const FunctionLookUpTable = (() => {
 
 })();
 
-interface ObjectType {
+export interface ObjectType {
   name: () => string,
   lookUp: (operation: string) => FunctionType,
   uid: symbol,
-  setLookUp: (lookupTable: { [name: string]: FunctionType }) => ObjectType
+  setLookUp: (lookupTable: { [name: string]: FunctionType }) => ObjectType,
+  asSingluarParameter: () => Readonly<Parameter[]>
 }
 
-const ObjectType = (() => {
+export const ObjectType = (() => {
+  const { memoize } = Helpers;
+
   function makeUidFor(name: string) {
     switch (name) {
     case 'Integer': return ContextVariable.types.integer;
@@ -186,7 +190,6 @@ const ObjectType = (() => {
     default: return Symbol();
     }
   }
-
 
   function make
     (name?: string): ObjectType
@@ -196,7 +199,8 @@ const ObjectType = (() => {
     const inst = freeze({
       lookUp, name: () => name,
       uid: makeUidFor(name),
-      setLookUp
+      setLookUp,
+      asSingluarParameter: memoize(asSingluarParameter)
     });
 
     function setLookUp(lookupTable: { [name: string]: FunctionType }) {
@@ -206,6 +210,14 @@ const ObjectType = (() => {
 
     function lookUp(operation: string): FunctionType {
       return mLookupTable[operation];
+    }
+
+    function asSingluarParameter(): Readonly<Parameter[]> {
+      return [{
+        fitType: ParameterFit.isType,
+        interfaceType: undefined,
+        objectType: inst.uid
+      }];
     }
 
     return inst;
@@ -221,24 +233,27 @@ export interface ObjectLookUpTable {
 
 export const ObjectLookUpTable = (() => {
   const kBuiltinTypes = (() => {
+    const integer_ = ObjectType.make('Integer');
+    const string_ = ObjectType.make('String');
+
     const add = IncompleteFunctionType.
       make().
       setName('+').
-      setArguments([{ fit: ParameterFit.isType, fitName: 'Interger' }]).
+      setArguments(integer_.asSingluarParameter()).
       setReturns  ([{ typeUid: ContextVariable.types.integer }]).
       finish();
 
     const sub = IncompleteFunctionType.
       make().
       setName('-').
-      setArguments([{ fit: ParameterFit.isType, fitName: 'Interger' }]).
+      setArguments(integer_.asSingluarParameter()).
       setReturns  ([{ typeUid: ContextVariable.types.integer }]).
       finish();
 
     const assign = IncompleteFunctionType.
       make().
       setName(':=').
-      setArguments([{ fit: ParameterFit.isType, fitName: 'Interger' }]).
+      setArguments(integer_.asSingluarParameter()).
       setReturns  ([{ typeUid: ContextVariable.types.integer }]).
       finish();
 
@@ -252,21 +267,19 @@ export const ObjectLookUpTable = (() => {
     const assignStr = IncompleteFunctionType.
       make().
       setName(':=').
-      setArguments([{ fit: ParameterFit.isType, fitName: 'String' }]).
+      setArguments(string_.asSingluarParameter()).
       setReturns  ([{ typeUid: ContextVariable.types.string }]).
       finish();
 
     return freeze({
-      Integer: ObjectType.
-        make('Integer').
+      Integer: integer_.
         setLookUp({
           ['+' ]: add,
           ['-' ]: sub,
           [':=']: assign,
           ['toString']: toS
         }),
-      String: ObjectType.
-        make('String').
+      String: string_.
         setLookUp({
           [':=']: assignStr
         })

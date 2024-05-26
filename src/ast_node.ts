@@ -35,7 +35,8 @@ export const AstNode = (() => {
         stringLiteral: Symbol(),
         identifier: Symbol(),
         letDeclaration: Symbol(),
-        assignment: Symbol()
+        assignment: Symbol(),
+        integerLiteral: Symbol()
       }
     });
 })();

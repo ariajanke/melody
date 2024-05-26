@@ -1,5 +1,5 @@
 import { AstNode, AstNodeVisitor } from './ast_node';
-import { AstStringableNode } from './ast_stringable_node';
+import { Helpers } from './helpers';
 import { ObjectLookUpTable, FunctionType, ParameterFit } from './type_system';
 
 export interface AstBinaryOperatorNode extends AstNode {
@@ -7,7 +7,7 @@ export interface AstBinaryOperatorNode extends AstNode {
 }
 
 export const AstBinaryOperatorNode = (() => {
-  const { freeze } = Object;
+  const { freeze } = Helpers;
   const assignmentType = AstNode.types.assignment;
 
   // for rhs, I'm now entering the domain of evaluating expressions
@@ -34,11 +34,8 @@ export const AstBinaryOperatorNode = (() => {
 
       const func = objects.lookUpByType(lhsType).lookUp(op);
       const rhsObject = objects.lookUpByType(rhsType);
-      // yuck temporary
-      const rhsParams =
-        [{ fit: ParameterFit.isType, fitName: rhsObject.name() }];
       const deg = FunctionType.
-        satisfactionDegreeOfArguments(func.arguments_(), rhsParams);
+        satisfactionDegreeOfArguments(func.arguments_(), rhsObject.asSingluarParameter());
       if (deg === 0) {
         return func.returns[0].typeUid as symbol;
       }

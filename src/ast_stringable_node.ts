@@ -2,8 +2,9 @@ import { AstNode, AstNodeVisitor } from './ast_node';
 import { ContextVariable } from './context_variable';
 import { Token } from './token';
 import { ObjectLookUpTable } from './type_system';
+import { Helpers } from './helpers';
 
-const { freeze } = Object;
+const { freeze } = Helpers;
 
 export interface AstStringableNode extends AstNode {
   asString: () => string,

@@ -5,7 +5,8 @@ const TokenType = Object.freeze({
   operator: Symbol(),
   stringLiteral: Symbol(),
   newLine: Symbol(),
-  identifier: Symbol()
+  identifier: Symbol(),
+  integerLiteral: Symbol()
 });
 
 export interface Token {

@@ -1,6 +1,5 @@
 import { AstBuild } from './ast_build';
 import { AstNodeVisitor, AstNode } from './ast_node';
-import { ExecutionContext } from './execution_context';
 import { AstStringableNode } from './ast_stringable_node';
 import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
@@ -8,6 +7,9 @@ import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { Helpers } from './helpers';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
+import { ContextVariable } from './context_variable';
+import { ExecutionContext } from './execution_context';
+import { ObjectLookUpTable } from './type_system';
 
 const { freeze } = Object;
 
@@ -56,11 +58,15 @@ export const Interpreter = freeze({ make, buildFor });
 const injections = freeze({ putsFunction: console.log });
 
 function make
-  (context: ExecutionContext = Context.make(), { putsFunction } = injections):
+  (context: ExecutionContext = ExecutionContext.make(),
+   
+   { putsFunction } = injections):
   Interpreter
 {
   const nodeTypes = AstNode.types;
   const mLetVisitor = LetVisitor.make(context);
+  const mAcculator = ContextVariable.make('anything');
+  const mObjectLookupTable = ObjectLookUpTable.make().addBuiltinTypes();
   function visitFunctionCall(node: AstFunctionCallNode) {
     if (node.name === 'puts') {
       node.arguments.forEach((node: AstNode) => {
@@ -87,9 +93,9 @@ function make
     if (lhs.type() !== AstNode.types.assignment) {
       throw Error('bad let');
     }
-    const assignmentNode = (lhs as AstAssignmentNode);
-    mLetVisitor.setAssigneeName(assignmentNode.assigneeName);
-    assignmentNode.visit(mLetVisitor);
+    // const assignmentNode = (lhs as AstAssignmentNode);
+    // mLetVisitor.setAssigneeName(assignmentNode.assigneeName);
+    // assignmentNode.visit(mLetVisitor);
   }
 
   // function visitAssignment(node: AstAssignmentNode, rhs: AstNode) {
@@ -101,7 +107,10 @@ function make
     // select operator function
     // raise if rhs's resolved type is incompatible
     // how does this work in the general recursive case?
-    ;
+    //
+    // this ends up having to be executed DFS style
+    // there will be places that *have to* be executed BFS style
+    lhs.executionType(mObjectLookupTable);
   }
 
   return freeze({ visitFunctionCall, visitLetDeclaration, visitBinaryOperation });
