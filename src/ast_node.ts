@@ -5,13 +5,22 @@ import { ContextVariable } from './context_variable';
 import { ObjectLookUpTable } from './type_system';
 import { Helpers } from './helpers';
 import { ObjectType } from './type_system';
+import { ExecutionContext } from './execution_context';
 
 const { freeze, memoize } = Helpers;
+
+export interface TypeLookUpTable {
+  lookUpIdentifierType: (identifierName: string) => ObjectType
+}
 
 export interface AstNode {
   visit: (visitor: AstNodeVisitor) => void,
   type: () => symbol,
-  executionType: (objects: ObjectLookUpTable) => ObjectType
+  executionType: (types: TypeLookUpTable) => ObjectType
+}
+
+export interface AstEvaluatableNode extends AstNode {
+  evaluate: (context: ExecutionContext) => ContextVariable
 }
 
 export const AstNode = (() => {

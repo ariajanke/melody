@@ -1,12 +1,13 @@
-import { AstNode, AstNodeVisitor } from './ast_node';
-import { ContextVariable } from './context_variable';
+import { AstNode, AstNodeVisitor, TypeLookUpTable, AstEvaluatableNode } from './ast_node';
 import { Token } from './token';
 import { ObjectLookUpTable, ObjectType } from './type_system';
 import { Helpers } from './helpers';
+import { ExecutionContext } from './execution_context';
+import { ContextVariable } from './context_variable';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
-export interface AstStringableNode extends AstNode {
+export interface AstStringableNode extends AstEvaluatableNode {
   asString: () => string,
   comesBeforeOperator: (operator: Token) => boolean
 }
@@ -19,7 +20,7 @@ export const AstStringableNode = (() => {
     switch (node.type()) {
     case nodeTypes.identifier:
     case nodeTypes.stringLiteral:
-      return node as AstStringableNode;
+      return node  as unknown as AstStringableNode;
     default: break;
     }
     return undefined;
@@ -81,11 +82,19 @@ export const AstStringLiteralNode = (() => {
       return operator.content() === ',';
     }
 
-    function executionType(_0: ObjectLookUpTable): ObjectType {
+    function executionType(_0: TypeLookUpTable): ObjectType {
       return ObjectLookUpTable.kBuiltinTypes.String;
     }
 
-    return freeze({ executionType, ...Super.make(value, comesBeforeOperator) });
+    function evaluate(_0: ExecutionContext): ContextVariable {
+      return ContextVariable.make(value);
+    }
+
+    return freeze({
+      executionType,
+      evaluate,
+      ...Super.make(value, comesBeforeOperator)
+    });
   }
 
   return freeze({ make });
@@ -100,11 +109,15 @@ export const AstIdentifierNode = (() => {
       return str === ',' || str === '(' || str === ':=';
     }
 
-    function executionType(_0: ObjectLookUpTable): ObjectType {
-      ;
+    function executionType(types: TypeLookUpTable): ObjectType {
+      return types.lookUpIdentifierType(value);
     }
 
-    return Super.make(value, comesBeforeOperator);
+    function evaluate(context: ExecutionContext): ContextVariable {
+      return context.getVariable(value);
+    }
+
+    return freeze({ executionType, evaluate,  ...Super.make(value, comesBeforeOperator) });
   }
 
   return freeze({ make });

@@ -1,4 +1,4 @@
-import { AstNode, AstNodeVisitor } from './ast_node';
+import { AstNode, AstNodeVisitor, TypeLookUpTable } from './ast_node';
 import { Helpers } from './helpers';
 import { ObjectLookUpTable, FunctionType, ParameterFit, ObjectType } from './type_system';
 
@@ -24,15 +24,14 @@ export const AstBinaryOperatorNode = (() => {
       return assignmentType;
     }
 
-    function executionType(objects: ObjectLookUpTable): ObjectType {
+    function executionType(types: TypeLookUpTable): ObjectType {
       // in order to resolve the execution type, there are several things that
       // I need to know
       // which function am I calling, and what is it's return type
-      const lhsType = lhs.executionType(objects);
-      const rhsType = rhs.executionType(objects);
+      const lhsType = lhs.executionType(types);
+      const rhsType = rhs.executionType(types);
 
-      const func = lhsType.lookUp(op); //objects.lookUpByType(lhsType).lookUp(op);
-      // const rhsObject = objects.lookUpByType(rhsType);
+      const func = lhsType.lookUp(op);
       const deg = FunctionType.
         satisfactionDegreeOfArguments(func.arguments_(), rhsType.asSingluarParameter());
       if (deg === 0) {

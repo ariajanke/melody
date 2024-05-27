@@ -1,30 +1,29 @@
-import { AstNode, AstNodeVisitor } from './ast_node';
+import { AstEvaluatableNode, AstNode, AstNodeVisitor, TypeLookUpTable } from './ast_node';
+import { ContextVariable } from './context_variable';
+import { ExecutionContext } from './execution_context';
 import { Helpers } from './helpers';
 import { ObjectLookUpTable, ObjectType } from './type_system';
 
 const { freeze } = Helpers;
 
-interface AstIntegerLiteralNode extends AstNode {
+export interface AstIntegerLiteralNode extends AstEvaluatableNode {}
 
-}
-
-const AstIntegerLiteralNode = (() => {
+export const AstIntegerLiteralNode = (() => {
   const kIntType = AstNode.types.integerLiteral;
   
   function make(value: string): AstIntegerLiteralNode {
     return construct(Number.parseInt(value));
   }
 
-  function construct(mValue: number) {
-    function visit(_0: AstNodeVisitor) {}
-
-    function type(): symbol { return kIntType; }
-
-    function executionType(_0: ObjectLookUpTable): ObjectType {
-      return ObjectLookUpTable.kBuiltinTypes.Integer;
-    }
-
-    return freeze({ type, visit, executionType });
+  function construct(mValue: number): AstIntegerLiteralNode {
+    return freeze({ 
+      visit: (_0: AstNodeVisitor) => {},
+      type: (): symbol => kIntType,
+      executionType: (_0: TypeLookUpTable): ObjectType =>
+        ObjectLookUpTable.kBuiltinTypes.Integer,
+      evaluate: (_0: ExecutionContext): ContextVariable =>
+        ContextVariable.make(mValue)
+    });
   }
 
   return freeze({ make });

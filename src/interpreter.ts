@@ -1,5 +1,5 @@
 import { AstBuild } from './ast_build';
-import { AstNodeVisitor, AstNode } from './ast_node';
+import { AstNodeVisitor, AstNode, AstEvaluatableNode } from './ast_node';
 import { AstStringableNode } from './ast_stringable_node';
 import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
@@ -9,7 +9,7 @@ import { Helpers, PersistentStack } from './helpers';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
-import { ObjectLookUpTable } from './type_system';
+import { FunctionType, ObjectLookUpTable } from './type_system';
 
 const { freeze } = Object;
 
@@ -71,7 +71,8 @@ function make
   function visitFunctionCall(node: AstFunctionCallNode) {
     if (node.name === 'puts') {
       node.arguments.forEach((node: AstNode) => {
-        putsFunction(getValueOf(node as AstStringableNode));
+        const cv = valueOf(node);
+        putsFunction(cv.asString());
       });
     }
   }
@@ -102,6 +103,16 @@ function make
   // function visitAssignment(node: AstAssignmentNode, rhs: AstNode) {
   //   context.setVariable(node.assigneeName(), getValueOf(rhs as AstStringableNode));
   // }
+  function valueOf(node: AstNode): ContextVariable {
+    switch (node.type()) {
+    case AstNode.types.identifier:
+    case AstNode.types.integerLiteral:
+    case AstNode.types.stringLiteral:
+      return (node as AstEvaluatableNode).evaluate(context);
+    default:
+      return mStack.pop();
+    }
+  }
 
   function visitBinaryOperation(op: string, lhs: AstNode, rhs: AstNode) {
     // resolve lhs's type
@@ -111,7 +122,18 @@ function make
     //
     // this ends up having to be executed DFS style
     // there will be places that *have to* be executed BFS style
-    lhs.executionType(mObjectLookupTable);
+    // context.
+    const func = lhs.executionType(context).lookUp(op);
+    const deg = FunctionType.satisfactionDegreeOfArguments
+      (func.arguments_(),
+       rhs.executionType(context).asSingluarParameter());
+    if (typeof deg === 'undefined') {
+      throw Error('');
+    }
+    if (typeof func.builtIn === 'undefined') {
+      throw Error('');
+    }
+    func.builtIn(mStack, valueOf(lhs), valueOf(rhs));
   }
 
   return freeze({ visitFunctionCall, visitLetDeclaration, visitBinaryOperation });

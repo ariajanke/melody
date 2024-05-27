@@ -1,15 +1,19 @@
 import { Helpers } from './helpers';
+import { ObjectLookUpTable, ObjectType } from './type_system';
 
 const { freeze, registerSymbolStrings } = Helpers;
 
 export interface ContextVariable {
-  type: () => symbol
+  type: () => ObjectType
   set: (v: number | string) => ContextVariable,
+  copyTo: (cv: ContextVariable) => void,
   asString: () => string,
   asNumber: () => number
 }
 
 export const ContextVariable = (() => {
+  const { kBuiltinTypes } = ObjectLookUpTable;
+
   const kStringAccessors = freeze({
     asString_: (s: string | number): string => s as string,
     asNumber: (_0: string | number): number => {
@@ -40,19 +44,21 @@ export const ContextVariable = (() => {
   registerSymbolStrings('ContextVariable', kTypes);
 
   function make(mValue?: number | string): ContextVariable {
-    const inst = freeze({ set, asString, asNumber, type });
+    const inst = freeze({ set, asString, asNumber, type, copyTo });
 
-    let mType = Symbol();
+    let mType = kBuiltinTypes.Unresolved; //Symbol();
     let mAsString = kUninitializedAccessors.asString_;
     let mAsNumber = kUninitializedAccessors.asNumber;
 
     function set(v: number | string): ContextVariable {
       const accessors = (() => {
         if (typeof v === 'number') {
-          mType = kTypes.integer;
+          // mType = kTypes.integer;
+          mType = kBuiltinTypes.Integer;
           return kNumericAccessors;
         } else if (typeof v === 'string') {
-          mType = kTypes.string;
+          // mType = kTypes.string;
+          mType = kBuiltinTypes.String;
           return kStringAccessors
         } else {
           throw Error(`Cannot handle type "${typeof v}`);
@@ -64,13 +70,20 @@ export const ContextVariable = (() => {
       return inst;
     }
 
+    function copyTo(cv: ContextVariable): void {
+      if (typeof mValue === 'undefined') {
+        throw Error('Cannot copy uninitialized context variable');
+      }
+      cv.set(mValue);
+    }
+
     function asString(): string
       { return mAsString(mValue as string | number); }
 
     function asNumber(): number
       { return mAsNumber(mValue as string | number); }
 
-    function type(): symbol { return mType; }
+    function type(): ObjectType { return mType; }
 
     return mValue ? set(mValue) : inst;
   }

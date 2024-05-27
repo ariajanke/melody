@@ -1,4 +1,4 @@
-import { Helpers } from './helpers';
+import { Helpers, PersistentStack } from './helpers';
 import { ContextVariable } from './context_variable';
 
 const { freeze } = Helpers;
@@ -19,22 +19,30 @@ interface ReturnType {
   typeUid: symbol
 }
 
+export type BuiltInBinaryFunction =
+  (stack: PersistentStack<ContextVariable>,
+    lhs: ContextVariable,
+    rhs: ContextVariable) => void;
+
 interface FunctionTypeBase {
   arguments_: () => Readonly<Parameter[]>,
   returns: () => Readonly<ReturnType[]>,
   uid: () => symbol,
   isComplete: () => boolean,
-  name: () => string
+  name: () => string,
+  builtIn: BuiltInBinaryFunction | undefined
 }
 
 interface FunctionType extends FunctionTypeBase {
   satisfactionDegree: (fn: FunctionType) => number | undefined,
+  // assume function type for now
 }
 
 interface IncompleteFunctionType extends FunctionTypeBase {
   setName: (name: string) => IncompleteFunctionType,
   setArguments: (args: Readonly<Parameter[]>) => IncompleteFunctionType,
   setReturns: (args: Readonly<ReturnType[]>) => IncompleteFunctionType,
+  setBuiltin: (fn: BuiltInBinaryFunction) => IncompleteFunctionType,
   finish: () => FunctionType
 };
 
@@ -45,6 +53,7 @@ const IncompleteFunctionType = (() => {
     const mUid = Symbol();
     const mArguments_: Parameter[] = [];
     const mReturns   : ReturnType[] = [];
+    let mBuiltin: BuiltInBinaryFunction | undefined = undefined;
     let mName = reservedAnonymouseName;
 
     const inst = freeze({
@@ -56,7 +65,9 @@ const IncompleteFunctionType = (() => {
       setArguments,
       setReturns,
       name,
-      finish
+      finish,
+      setBuiltin,
+      builtIn
     });
 
     function arguments_(): Readonly<Parameter[]>
@@ -70,6 +81,9 @@ const IncompleteFunctionType = (() => {
     function isComplete(): boolean { return false; }
 
     function setName(name: string): IncompleteFunctionType {
+      if (name === reservedAnonymouseName) {
+        throw Error(`Cannot name function "${name}"`);
+      }
       mName = name;
       return inst;
     }
@@ -90,6 +104,15 @@ const IncompleteFunctionType = (() => {
 
     function finish() {
       return FunctionType.make(inst);
+    }
+
+    function setBuiltin(fn: BuiltInBinaryFunction): IncompleteFunctionType {
+      mBuiltin = fn;
+      return inst;
+    }
+
+    function builtIn(): BuiltInBinaryFunction | undefined {
+      return mBuiltin;
     }
 
     return inst;
@@ -138,7 +161,7 @@ export const FunctionType = (() => {
   }
 
   function make(base: FunctionTypeBase): FunctionType {
-    const { arguments_, returns, uid, name } = base;
+    const { arguments_, returns, uid, name, builtIn } = base;
 
     // 0 meaning 1-1 match
     // undefined for does not match at all
@@ -157,7 +180,7 @@ export const FunctionType = (() => {
     function isComplete() { return true; }
 
     return freeze({
-      satisfactionDegree, arguments_, returns, uid, name, isComplete
+      satisfactionDegree, arguments_, returns, uid, name, isComplete, builtIn
     });
   }
 
@@ -241,6 +264,13 @@ export const ObjectLookUpTable = (() => {
       setName('+').
       setArguments(integer_.asSingluarParameter()).
       setReturns  ([{ typeUid: ContextVariable.types.integer }]).
+      setBuiltin((stack: PersistentStack<ContextVariable>,
+                  lhs: ContextVariable,
+                  rhs: ContextVariable) =>
+        {
+          const res = lhs.asNumber() + rhs.asNumber();
+          stack.push().set(res);
+        }).
       finish();
 
     const sub = IncompleteFunctionType.
@@ -248,6 +278,13 @@ export const ObjectLookUpTable = (() => {
       setName('-').
       setArguments(integer_.asSingluarParameter()).
       setReturns  ([{ typeUid: ContextVariable.types.integer }]).
+      setBuiltin((stack: PersistentStack<ContextVariable>,
+                  lhs: ContextVariable,
+                  rhs: ContextVariable) =>
+        {
+          const res = lhs.asNumber() - rhs.asNumber();
+          stack.push().set(res);
+        }).
       finish();
 
     const assign = IncompleteFunctionType.
@@ -255,6 +292,13 @@ export const ObjectLookUpTable = (() => {
       setName(':=').
       setArguments(integer_.asSingluarParameter()).
       setReturns  ([{ typeUid: ContextVariable.types.integer }]).
+      setBuiltin((stack: PersistentStack<ContextVariable>,
+                  lhs: ContextVariable,
+                  rhs: ContextVariable) =>
+        {
+          rhs.copyTo(lhs);
+          lhs.copyTo( stack.push() );
+        }).
       finish();
 
     const toS = IncompleteFunctionType.
@@ -268,7 +312,15 @@ export const ObjectLookUpTable = (() => {
       make().
       setName(':=').
       setArguments(string_.asSingluarParameter()).
+      
       setReturns  ([{ typeUid: ContextVariable.types.string }]).
+      setBuiltin((stack: PersistentStack<ContextVariable>,
+                  lhs: ContextVariable,
+                  rhs: ContextVariable) =>
+        {
+          rhs.copyTo(lhs);
+          lhs.copyTo( stack.push() );
+        }).
       finish();
 
     return freeze({
@@ -282,7 +334,8 @@ export const ObjectLookUpTable = (() => {
       String: string_.
         setLookUp({
           [':=']: assignStr
-        })
+        }),
+      Unresolved: ObjectType.make('Unresolved')
     });
   })();
 
