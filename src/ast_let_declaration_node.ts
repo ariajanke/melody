@@ -6,19 +6,12 @@ type UnaryNodeCreationFn = (node: AstNode) => AstNode;
 
 const { freeze } = Helpers;
 
-export interface AstLetDeclarationNode {};
+export interface AstLetDeclarationNode extends AstNode {};
 
 export const AstLetDeclarationNode = freeze({
   make: (node: AstNode): AstNode => {
     const { executionType } = node;
-    // const inst = freeze({ visit, type, executionType });
     const { letDeclaration } = AstNode.types;
-
-    // function visit(visitor: AstNodeVisitor) {
-    //   visitor.visitLetDeclaration(inst, node);
-    // }
-
-    // function type(): symbol { return letDeclaration; }
 
     const inst = freeze({
       visit: (visitor: AstNodeVisitor) => {

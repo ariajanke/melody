@@ -532,3 +532,7 @@ let Integer32 = fn (additional is Interface)
 end
 
 ```
+
+### There is another problem to solve
+
+Type forwarding, a chicken and egg problem.

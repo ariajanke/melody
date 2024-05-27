@@ -1,12 +1,12 @@
 import { Helpers } from './helpers';
 import { ContextVariable } from './context_variable';
 import { TypeLookUpTable } from './ast_node';
-import { ObjectType } from './type_system';
+import { ObjectType } from './object_type';
 
 const { freeze } = Helpers
 
 export interface ExecutionContext extends TypeLookUpTable {
-  declareVariable: (name: string, value: string) => void,
+  declareVariable: (name: string) => ContextVariable,
   getValueOfVariable: (name: string) => string | undefined,
   setVariable: (name: string, value: string) => void,
   getVariable: (name: string) => ContextVariable
@@ -17,27 +17,31 @@ export const ExecutionContext = (() => {
     // I'm not sure about other types
     const mAvailableVariables: { [name: string]: ContextVariable } = {};
 
-    function declareVariable(name: string, value: string): void {
+    function declareVariable(name: string): ContextVariable {
       if (mAvailableVariables[name]) {
         throw Error(`name "${name}" already taken`);
       }
-      mAvailableVariables[name] = ContextVariable.make(value);
+      return (mAvailableVariables[name] = ContextVariable.make());
     }
 
     function setVariable(name: string, value: string): void {
-      mAvailableVariables[name].set(value);
+      getVariable(name).set(value);
     }
 
     function getVariable(name: string): ContextVariable {
-      return mAvailableVariables[name];
+      const gotten = mAvailableVariables[name];
+      if (!gotten) {
+        throw Error(`Undeclared variable "${name}"`);
+      }
+      return gotten;
     }
 
     function getValueOfVariable(name: string): string | undefined {
-      return mAvailableVariables[name].asString();
+      return getVariable(name).asString();
     }
 
     function lookUpIdentifierType(identifierName: string): ObjectType {
-      return mAvailableVariables[identifierName].type();
+      return getVariable(identifierName).type();
     }
 
     return freeze({

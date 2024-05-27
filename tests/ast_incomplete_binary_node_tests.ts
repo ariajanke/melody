@@ -10,7 +10,6 @@ import { Token } from '../src/token';
 const { describeNamed } = TestHelpers;
 
 describeNamed({ AstIncompleteBinaryNode }, () => {
-  // const { makeForOperator } = AstIncompleteBinaryNode;
   const makeToken = Token.forTesting.makeFromStringOnly;
   const makeForOperator = IncompleteNodeCreation.make;
 
@@ -36,6 +35,6 @@ describeNamed({ AstIncompleteBinaryNode }, () => {
 
   it('defers creation of an assignment', () => {
     const createdType = makeForOperatorWithAnyNodes(':=')?.type();
-    expect(createdType).toEqual(AstNode.types.assignment);
+    expect(createdType).toEqual(AstNode.types.binaryOperator);
   });
 });

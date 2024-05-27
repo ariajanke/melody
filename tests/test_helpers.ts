@@ -15,6 +15,62 @@ function fdescribeNamed(obj: object, descFn: () => void): void {
   fdescribe(Object.keys(obj)[0], descFn);
 }
 
+export interface ReachPoint {
+  hitsAtExactly: (times: number) => void,
+  verifySatisfied: () => void
+};
+
+export interface ReachPointCollection {
+  points: () => Readonly<ReachPoint[]>,
+  verifyAllHit: () => boolean
+}
+
+export const ReachPoint = (() => {
+  function make(mSet: number[], mIdx: number): ReachPoint {
+    let mRequiredHits = 1;
+    let mName = `Point ${mIdx}`;
+
+    return Object.freeze({
+      hitsAtExactly: (times: number, name?: string) => {
+        mRequiredHits = times;
+        mSet[mIdx]++;
+        if (mSet[mIdx] > times) {
+          throw Error(`Reached "${mName} too many times`);
+        }
+        if (name) {
+          mName = name;
+        }
+      },
+      verifySatisfied: () => {
+        if (mSet[mIdx] !== mRequiredHits) {
+          throw Error(`Point "${mName}" was not reached ${mRequiredHits} times`);
+        }
+      }
+    });
+  }
+
+  function makeCollection(size: number): ReachPointCollection {
+    const mSet: number[] = [];
+    mSet.length = size;
+    mSet.fill(0);
+    const mPoints: ReachPoint[] = [];
+    for (let i = 0; i < size; ++i) {
+      mPoints.push(make(mSet, i));
+    }
+
+    return Object.freeze({
+      points: (): Readonly<ReachPoint[]> => mPoints,
+      verifyAllHit: (): boolean => {
+        mPoints.forEach((pt) => { pt.verifySatisfied(); });
+        return true;
+      }
+    });
+  }
+
+  return Object.freeze({ make, makeCollection });
+})();
+
+
 // export interface InBetween {
 //   receivedArguments: any[][]
 // }

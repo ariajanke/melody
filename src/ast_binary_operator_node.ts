@@ -1,14 +1,12 @@
 import { AstNode, AstNodeVisitor, TypeLookUpTable } from './ast_node';
 import { Helpers } from './helpers';
-import { ObjectLookUpTable, FunctionType, ParameterFit, ObjectType } from './type_system';
+import { ObjectType } from './object_type';
 
-export interface AstBinaryOperatorNode extends AstNode {
-  // assigneeName: () => string
-}
+export interface AstBinaryOperatorNode extends AstNode {}
 
 export const AstBinaryOperatorNode = (() => {
   const { freeze } = Helpers;
-  const assignmentType = AstNode.types.assignment;
+  const binaryOperatorType = AstNode.types.binaryOperator;
 
   // for rhs, I'm now entering the domain of evaluating expressions
   // as such time to read up then?
@@ -21,7 +19,7 @@ export const AstBinaryOperatorNode = (() => {
     }
 
     function type(): symbol {
-      return assignmentType;
+      return binaryOperatorType;
     }
 
     function executionType(types: TypeLookUpTable): ObjectType {
@@ -32,10 +30,10 @@ export const AstBinaryOperatorNode = (() => {
       const rhsType = rhs.executionType(types);
 
       const func = lhsType.lookUp(op);
-      const deg = FunctionType.
-        satisfactionDegreeOfArguments(func.arguments_(), rhsType.asSingluarParameter());
+      const rhsAsSingluarParameter = rhsType.asSingluarParameter();
+      const deg = func.satisfactionDegreeOfArguments(rhsAsSingluarParameter);
       if (deg === 0) {
-        return func.returns[0];
+        return func.returns()[0];
       }
       throw Error('incompatible');
     }

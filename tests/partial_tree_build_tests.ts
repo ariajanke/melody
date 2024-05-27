@@ -1,5 +1,5 @@
 import { LineContinuationScheme, TreePartBuild } from '../src/tree_part_build';
-import { TestHelpers } from './test_helpers';
+import { TestHelpers, ReachPoint } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
 import { AstNode } from '../src/ast_node';
@@ -94,63 +94,6 @@ describeNamed({ TreePartBuild }, () => {
     });
   });
 
-  interface ReachPoint {
-    hitsAtExactly: (times: number) => void,
-    verifySatisfied: () => void
-  };
-
-  interface ReachPointCollection {
-    points: () => ReachPoint[],
-    verifyAllHit: () => boolean
-  }
-
-  const ReachPoint = (() => {
-
-    function make(mSet: number[], mIdx: number): ReachPoint {
-      let mRequiredHits = 1;
-      let mName = `Point ${mIdx}`;
-      function hitsAtExactly(times: number, name?: string) {
-        mRequiredHits = times;
-        mSet[mIdx]++;
-        if (mSet[mIdx] > times) {
-          throw Error(`Reached "${mName} too many times`);
-        }
-        if (name) {
-          mName = name;
-        }
-      }
-
-      function verifySatisfied() {
-        if (mSet[mIdx] !== mRequiredHits) {
-          throw Error(`Point "${mName}" was not reached ${mRequiredHits} times`);
-        }
-      }
-
-      return Object.freeze({ hitsAtExactly, verifySatisfied });
-    }
-
-    function makeCollection(size: number): ReachPointCollection {
-      const mSet: number[] = [];
-      mSet.length = size;
-      mSet.fill(0);
-      const mPoints: ReachPoint[] = [];
-      for (let i = 0; i < size; ++i) {
-        mPoints.push(make(mSet, i));
-      }
-      function points(): ReachPoint[] {
-        return mPoints;
-      }
-
-      function verifyAllHit(): boolean {
-        mPoints.forEach((pt) => { pt.verifySatisfied(); });
-        return true;
-      }
-
-      return Object.freeze({ points, verifyAllHit });
-    }
-
-    return Object.freeze({ make, makeCollection });
-  })();
 
   function includeHasLeftAndRightPointWithNoNodes
     (ptbRes: () => NodeExpansion | undefined)

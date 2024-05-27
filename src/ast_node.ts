@@ -2,12 +2,10 @@ import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
-import { ObjectLookUpTable } from './type_system';
 import { Helpers } from './helpers';
-import { ObjectType } from './type_system';
-import { ExecutionContext } from './execution_context';
+import { ObjectType } from './object_type';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
 
 export interface TypeLookUpTable {
   lookUpIdentifierType: (identifierName: string) => ObjectType
@@ -19,17 +17,13 @@ export interface AstNode {
   executionType: (types: TypeLookUpTable) => ObjectType
 }
 
-export interface AstEvaluatableNode extends AstNode {
-  evaluate: (context: ExecutionContext) => ContextVariable
-}
-
 export const AstNode = (() => {
   const executionTypes = ContextVariable.types;
 
   function makeUndefinedExecutionType(nodeTypeName: string):
-    (_0: ObjectLookUpTable) => symbol
+    (_0: TypeLookUpTable) => ObjectType
   {
-    return (_0: ObjectLookUpTable): symbol => {
+    return (_0: TypeLookUpTable): ObjectType => {
       throw Error(`${nodeTypeName} does not implement executionType`);
     };
   }
@@ -46,15 +40,36 @@ export const AstNode = (() => {
         stringLiteral: Symbol(),
         identifier: Symbol(),
         letDeclaration: Symbol(),
-        assignment: Symbol(),
+        binaryOperator: Symbol(),
         integerLiteral: Symbol()
       }
     });
 })();
 
+
+export interface AstEvaluatableNode extends AstNode {
+  evaluate: (getter: (name: string) => ContextVariable) => ContextVariable
+}
+
+export const AstEvaluatableNode = (() => {
+  const { stringLiteral, identifier, integerLiteral } = AstNode.types;
+
+  return freeze({
+    tryDowncast: (node: AstNode): AstEvaluatableNode | undefined => {
+      switch (node.type()) {
+      case stringLiteral:
+      case identifier:
+      case integerLiteral:
+        return node as AstEvaluatableNode;
+      default: return undefined;
+      }
+    }
+  });
+})();
+
+
 export interface AstNodeVisitor {
   visitFunctionCall: (node: AstFunctionCallNode) => void,
-  // visitAssignment: (node: AstBinaryOperatorNode, lhs: AstNode) => void,
   visitBinaryOperation: (operation: string, lhs: AstNode, rhs: AstNode) => void,
   visitLetDeclaration: (node: AstLetDeclarationNode, rhs: AstNode) => void,
 }

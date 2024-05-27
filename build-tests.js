@@ -5,8 +5,7 @@ import './tests/character_class_tests';
 import './tests/character_crawler_tests';
 import './tests/crawl_strategies_tests';
 import './tests/interpreter_tests';
-import './tests/ast_assignment_node_tests';
+import './tests/ast_binary_operator_node_tests';
 import './tests/ast_incomplete_binary_node_tests'
 import './tests/partial_tree_build_tests';
-import './src/type_system';
-
+import './src/object_look_up_table';

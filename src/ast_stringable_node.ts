@@ -1,9 +1,10 @@
 import { AstNode, AstNodeVisitor, TypeLookUpTable, AstEvaluatableNode } from './ast_node';
 import { Token } from './token';
-import { ObjectLookUpTable, ObjectType } from './type_system';
+import { ObjectLookUpTable } from './object_look_up_table';
 import { Helpers } from './helpers';
-import { ExecutionContext } from './execution_context';
+// import { ExecutionContext } from './execution_context';
 import { ContextVariable } from './context_variable';
+import { ObjectType } from './object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -60,7 +61,7 @@ function makeStringableNodeClass(nodeType: symbol) {
     function visit(_0: AstNodeVisitor): void {}
     function type(): symbol { return nodeType; }
     function asString(): string { return value; }
-    
+
     return freeze({ visit, type, asString, comesBeforeOperator });
   }
 
@@ -83,10 +84,10 @@ export const AstStringLiteralNode = (() => {
     }
 
     function executionType(_0: TypeLookUpTable): ObjectType {
-      return ObjectLookUpTable.kBuiltinTypes.String;
+      return ObjectLookUpTable.getBuiltinTypes().String;
     }
 
-    function evaluate(_0: ExecutionContext): ContextVariable {
+    function evaluate(_0: (name: string) => ContextVariable): ContextVariable {
       return ContextVariable.make(value);
     }
 
@@ -113,8 +114,8 @@ export const AstIdentifierNode = (() => {
       return types.lookUpIdentifierType(value);
     }
 
-    function evaluate(context: ExecutionContext): ContextVariable {
-      return context.getVariable(value);
+    function evaluate(getter: (name: string) => ContextVariable): ContextVariable {
+      return getter(value);
     }
 
     return freeze({ executionType, evaluate,  ...Super.make(value, comesBeforeOperator) });

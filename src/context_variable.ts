@@ -1,5 +1,6 @@
 import { Helpers } from './helpers';
-import { ObjectLookUpTable, ObjectType } from './type_system';
+import { ObjectLookUpTable } from './object_look_up_table';
+import { ObjectType } from './object_type';
 
 const { freeze, registerSymbolStrings } = Helpers;
 
@@ -12,8 +13,6 @@ export interface ContextVariable {
 }
 
 export const ContextVariable = (() => {
-  const { kBuiltinTypes } = ObjectLookUpTable;
-
   const kStringAccessors = freeze({
     asString_: (s: string | number): string => s as string,
     asNumber: (_0: string | number): number => {
@@ -44,20 +43,20 @@ export const ContextVariable = (() => {
   registerSymbolStrings('ContextVariable', kTypes);
 
   function make(mValue?: number | string): ContextVariable {
+    const { getBuiltinTypes } = ObjectLookUpTable;
+    const kBuiltinTypes = getBuiltinTypes();
     const inst = freeze({ set, asString, asNumber, type, copyTo });
 
-    let mType = kBuiltinTypes.Unresolved; //Symbol();
+    let mType = kBuiltinTypes.Unresolved;
     let mAsString = kUninitializedAccessors.asString_;
     let mAsNumber = kUninitializedAccessors.asNumber;
 
     function set(v: number | string): ContextVariable {
       const accessors = (() => {
         if (typeof v === 'number') {
-          // mType = kTypes.integer;
           mType = kBuiltinTypes.Integer;
           return kNumericAccessors;
         } else if (typeof v === 'string') {
-          // mType = kTypes.string;
           mType = kBuiltinTypes.String;
           return kStringAccessors
         } else {
