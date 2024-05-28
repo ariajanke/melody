@@ -377,7 +377,6 @@
       // TODO: try to get rid of this hack, blank token should
       // never be used
       content: () => "",
-      //unimplemented<string>('content'),
       start: unimplemented("start"),
       end: unimplemented("end")
     });
@@ -1080,7 +1079,7 @@
     return freeze20({ make: make2 });
   })();
 
-  // src/node_expansion.ts
+  // src/tree_part_build/node_expansion.ts
   var { freeze: freeze9 } = Helpers;
   var NodeExpansionVisitor = (() => {
     function makeDefaultImplementations(fn) {
@@ -1167,7 +1166,7 @@
     return freeze9({ make: make2, hasCreated });
   })();
 
-  // src/left_side_node_expansion.ts
+  // src/tree_part_build/left_side_node_expansion.ts
   var BareLeftTreePartHandler = (() => {
     const { freeze: freeze20 } = Object;
     const kSharedInst = freeze20({ handleLeftSide, visit });
@@ -1478,7 +1477,7 @@
     return freeze12({ make: make2 });
   })();
 
-  // src/right_side_node_expansion.ts
+  // src/tree_part_build/right_side_node_expansion.ts
   var { freeze: freeze13 } = Helpers;
   var BareRightTreePartHandler = (() => {
     function make2() {
@@ -2085,7 +2084,7 @@
         programRootNode.visit(intr);
         expect(printedStrings).toEqual(["hello world!"]);
       });
-      fit("compiles and runs a simple adder program", () => {
+      it("compiles and runs a simple adder program", () => {
         const programRootNode = Interpreter.buildFor(`
         let a := 2
         let b := a + 2

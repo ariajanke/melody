@@ -1,7 +1,11 @@
-import { Helpers } from './helpers';
-import { AstNode } from './ast_node';
-import { PartialBuildToNodesFn, NodeExpansionVisitor, NodeExpansion } from './node_expansion';
-import { TreePartBuild } from './tree_part_build';
+import { Helpers } from '../helpers';
+import { AstNode } from '../ast_node';
+import {
+  PartialBuildToNodesFn,
+  NodeExpansionVisitor,
+  NodeExpansion
+} from './node_expansion';
+import { TreePartBuild } from '../tree_part_build';
 
 const { freeze } = Helpers;
 

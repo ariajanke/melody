@@ -1,12 +1,24 @@
 import { Helpers, StandardError, StandardErrorFn } from './helpers';
 import { Token } from './token';
-import { PartialTreeStartGroupBuild } from './tree_part_build/partial_tree_start_group_build';
-import { PartialTreeStartIdentifierBuild } from './tree_part_build/partial_tree_start_identifier_build';
-import { NodeExpansion, EmptyNodeExpansion } from './node_expansion';
-import { BareLeftTreePartHandler } from './left_side_node_expansion';
-import { PartialTreeStartOperatorBuild } from './tree_part_build/partial_tree_start_operator_build';
 import { AstIncompleteUnaryNode } from './ast_let_declaration_node';
 import { TokenRange } from './token_range';
+// dependancies down one, should not be seen by the outside world
+import {
+  PartialTreeStartGroupBuild
+} from './tree_part_build/partial_tree_start_group_build';
+import {
+  PartialTreeStartIdentifierBuild
+} from './tree_part_build/partial_tree_start_identifier_build';
+import {
+  NodeExpansion,
+  EmptyNodeExpansion
+} from './tree_part_build/node_expansion';
+import {
+  BareLeftTreePartHandler
+} from './tree_part_build/left_side_node_expansion';
+import {
+  PartialTreeStartOperatorBuild
+} from './tree_part_build/partial_tree_start_operator_build';
 
 const { freeze, verifyInTesting } = Helpers;
 

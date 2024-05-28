@@ -2,10 +2,10 @@ import { TreePartBuild, LineContinuationScheme } from '../tree_part_build';
 import { StandardError, StandardErrorFn } from '../helpers';
 import { PartialTreeNextTokenBuild } from './partial_tree_next_token_build';
 import { Helpers } from '../helpers';
-import { NodeExpansion } from '../node_expansion';
+import { NodeExpansion } from './node_expansion';
 import {
   LeftTreePartHandler, LeftSideNodeExpansion
-} from '../left_side_node_expansion';
+} from './left_side_node_expansion';
 import { Token } from '../token';
 import { TokenRange } from '../token_range';
 

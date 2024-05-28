@@ -1,11 +1,11 @@
-import { TreePartBuild } from './tree_part_build';
+import { TreePartBuild } from '../tree_part_build';
 import {
   NodeExpansion,
   NodeExpansionVisitor,
   PartialBuildToNodesFn
 } from './node_expansion';
-import { IncompleteNode } from './ast_incomplete_binary_node';
-import { AstNode } from './ast_node';
+import { IncompleteNode } from '../ast_incomplete_binary_node';
+import { AstNode } from '../ast_node';
 
 export interface LeftTreePartHandler {
   handleLeftSide: (nodes: Readonly<AstNode[]>) => Readonly<AstNode[]>,

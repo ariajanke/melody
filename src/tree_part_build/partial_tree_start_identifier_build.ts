@@ -10,7 +10,7 @@ import {
   RightSideNodeExpansion,
   BareRightTreePartHandler,
   BuildPartRightTreePartHandler
-} from '../right_side_node_expansion';
+} from './right_side_node_expansion';
 import { PartialTreeStartOperatorBuild } from './partial_tree_start_operator_build';
 import { TokenRange } from '../token_range';
 

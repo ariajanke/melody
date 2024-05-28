@@ -4,7 +4,11 @@ import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
 import { AstNode } from '../src/ast_node';
 import { AstIdentifierNode, AstFringeNode } from '../src/ast_fringe_node';
-import { EmptyNodeExpansion, NodeExpansion, NodeExpansionVisitor } from '../src/node_expansion';
+import {
+  EmptyNodeExpansion,
+  NodeExpansion,
+  NodeExpansionVisitor
+} from '../src/tree_part_build/node_expansion';
 import { IncompleteNode } from '../src/ast_incomplete_binary_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
 import { AstFunctionCallNode } from '../src/ast_function_call_node';

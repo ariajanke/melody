@@ -1,7 +1,7 @@
 import { IncompleteNode } from '../ast_incomplete_binary_node';
 import { Helpers, StandardError } from '../helpers';
-import { NodeExpansion } from '../node_expansion';
-import { IncompleteNodeLeftTreePartHandler } from '../left_side_node_expansion';
+import { NodeExpansion } from './node_expansion';
+import { IncompleteNodeLeftTreePartHandler } from './left_side_node_expansion';
 import { PartialTreeStartGroupBuild } from '../tree_part_build/partial_tree_start_group_build';
 import { Token } from '../token';
 import { TokenRange } from '../token_range';
