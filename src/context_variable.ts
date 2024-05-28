@@ -9,7 +9,8 @@ export interface ContextVariable {
   set: (v: number | string) => ContextVariable,
   copyTo: (cv: ContextVariable) => void,
   asString: () => string,
-  asNumber: () => number
+  asNumber: () => number,
+  setType: (objType: ObjectType) => ContextVariable
 }
 
 export const ContextVariable = (() => {
@@ -45,7 +46,7 @@ export const ContextVariable = (() => {
   function make(mValue?: number | string): ContextVariable {
     const { getBuiltinTypes } = ObjectLookUpTable;
     const kBuiltinTypes = getBuiltinTypes();
-    const inst = freeze({ set, asString, asNumber, type, copyTo });
+    const inst = freeze({ set, asString, asNumber, type, copyTo, setType });
 
     let mType = kBuiltinTypes.Unresolved;
     let mAsString = kUninitializedAccessors.asString_;
@@ -66,6 +67,20 @@ export const ContextVariable = (() => {
       mValue = v;
       mAsString = accessors.asString_;
       mAsNumber = accessors.asNumber;
+      return inst;
+    }
+
+    function setType(objType: ObjectType) {
+      switch (objType.uid) {
+      case kBuiltinTypes.Integer.uid:
+        mType = kBuiltinTypes.Integer;
+        break;
+      case kBuiltinTypes.String .uid:
+        mType = kBuiltinTypes.String;
+        break;
+      default:
+        throw Error(`Cannot set to type "${objType.name()}"`);
+      }
       return inst;
     }
 

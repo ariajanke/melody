@@ -6,7 +6,7 @@ import { Helpers, PersistentStack } from './helpers';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
-import { ObjectLookUpTable } from './object_look_up_table';
+import { AstFringeNode } from './ast_fringe_node';
 
 const { freeze } = Object;
 
@@ -16,6 +16,28 @@ export interface Interpreter extends AstNodeVisitor {
 
 export const Interpreter = freeze({ make, buildFor });
 
+const LetVisitor = (() => {
+  function make(context: ExecutionContext): AstNodeVisitor {
+    const inst = freeze({
+      visitFunctionCall: (_0: AstFunctionCallNode): void => {},
+      visitLetDeclaration: (_0: AstLetDeclarationNode): void => {},
+      visitBinaryOperation:
+        (_0: string, lhs: AstNode, rhs: AstNode): void => {
+          const lhsName = AstFringeNode.downcast(lhs).asString();
+          context.declareVariable(lhsName).
+                  setType(rhs.executionType(context));
+          // STOP HERE
+        },
+      visitIdentifier: (node: AstFringeNode) => {
+
+      }
+    });
+    return inst;
+  }
+
+  return freeze({ make });
+})();
+
 const injections = freeze({ putsFunction: console.log });
 
 function make
@@ -24,9 +46,10 @@ function make
   Interpreter
 {
   const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
-  const mObjectLookupTable = ObjectLookUpTable.make().addBuiltinTypes();
-  let mGetVarFunc = context.getVariable;
-  const inst = freeze({ visitFunctionCall, visitLetDeclaration, visitBinaryOperation });
+  const mLetVisitor = LetVisitor.make(context);
+  const inst = freeze({
+    visitFunctionCall, visitLetDeclaration, visitBinaryOperation, visitIdentifier
+  });
   function visitFunctionCall(node: AstFunctionCallNode) {
     if (node.name === 'puts') {
       node.arguments.forEach((node: AstNode) => {
@@ -41,15 +64,16 @@ function make
     // if (lhs.type() !== AstNode.types.assignment) {
     //   throw Error('bad let');
     // }
-    mGetVarFunc = context.declareVariable;
+    // mGetVarFunc = context.declareVariable;
+    lhs.visit(mLetVisitor);
     lhs.visit(inst);
-    mGetVarFunc = context.getVariable;
+    // mGetVarFunc = context.getVariable;
   }
 
   function valueOf(node: AstNode): ContextVariable {
     const evalNode = AstEvaluatableNode.tryDowncast(node);
     if (evalNode) {
-      return evalNode.evaluate(mGetVarFunc);
+      return evalNode.evaluate(context.getVariable);
     }
     return mStack.pop();
   }
@@ -66,16 +90,22 @@ function make
     lhs.visit(inst);
     rhs.visit(inst);
     const func = lhs.executionType(context).lookUp(op);
-    const deg = func.satisfactionDegreeOfArguments(//FunctionType.satisfactionDegreeOfArguments
-      // (func.arguments_(),
-       rhs.executionType(context).asSingluarParameter());
+    const rhsAsParam = rhs.executionType(context).asSingluarParameter();
+    const deg = func.satisfactionDegreeOfArguments(rhsAsParam);
     if (typeof deg === 'undefined') {
       throw Error('');
     }
-    if (typeof func.builtIn === 'undefined') {
+    const builtIn = func.builtIn();
+    if (typeof builtIn === 'undefined') {
       throw Error('');
     }
-    func.builtIn(mStack, valueOf(lhs), valueOf(rhs));
+    const lhsVal = valueOf(lhs);
+    const rhsVal = valueOf(rhs);
+    builtIn(mStack, lhsVal, rhsVal);
+  }
+
+  function visitIdentifier(node: AstFringeNode) {
+
   }
 
   return inst;

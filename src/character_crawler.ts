@@ -50,7 +50,7 @@ export const CharacterCrawler = (() => {
       mEnd = next;
       if (charClass !== characterClasses.spacious) {
         // maybe have columnStart in the future
-        mReadToken = Token.make(mInput ,mStart, mEnd);
+        mReadToken = Token.make(mInput, mStart, mEnd);
       }
       mStart = mEnd;
 

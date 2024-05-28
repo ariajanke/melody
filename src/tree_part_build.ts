@@ -47,7 +47,8 @@ export const TreePartBuild = (() => {
       // but an operator in another
       mTokenRange.step();
       if (start.type() === tokenTypes.identifier ||
-          start.type() === tokenTypes.stringLiteral)
+          start.type() === tokenTypes.stringLiteral ||
+          start.type() === tokenTypes.integerLiteral)
       {
         const { build, error } = PartialTreeStartIdentifierBuild.
           make(start, mTokenRange, mLineContScheme);

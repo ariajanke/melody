@@ -4,6 +4,7 @@ import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
+import { AstFringeNode } from './ast_fringe_node';
 
 const { freeze } = Helpers;
 
@@ -67,40 +68,41 @@ export const AstEvaluatableNode = (() => {
   });
 })();
 
-
 export interface AstNodeVisitor {
   visitFunctionCall: (node: AstFunctionCallNode) => void,
   visitBinaryOperation: (operation: string, lhs: AstNode, rhs: AstNode) => void,
   visitLetDeclaration: (node: AstLetDeclarationNode, rhs: AstNode) => void,
+  visitIdentifier: (node: AstFringeNode) => void
 }
 
 export const AstNodeVisitor = (() => {
-  const kDefaultImplementations = (() => {
-
-    function visitFunctionCall(_0: AstFunctionCallNode): void {}
-    function visitBinaryOperation
-      (_0: string, _1: AstBinaryOperatorNode, _2: AstNode): void {}
-    function visitLetDeclaration(_0: AstLetDeclarationNode): void {}
-
-    return freeze({ visitBinaryOperation, visitFunctionCall, visitLetDeclaration });
-  })();
+  const kDefaultImplementations = freeze({
+    visitBinaryOperation:
+      (_0: string, _1: AstNode, _2: AstNode): void => {},
+    visitFunctionCall: (_0: AstFunctionCallNode): void => {},
+    visitLetDeclaration: (_0: AstLetDeclarationNode): void => {},
+    visitIdentifier: (_0: AstFringeNode): void => {}
+  });
 
   function makeFakeVisitor
     ({
       visitBinaryOperation,
       visitFunctionCall,
-      visitLetDeclaration
+      visitLetDeclaration,
+      visitIdentifier
     }: {
       visitFunctionCall?: (node: AstFunctionCallNode) => void | undefined,
-      visitBinaryOperation?: (op: string, node: AstBinaryOperatorNode, rhs: AstNode) => void | undefined,
-      visitLetDeclaration?: (node: AstLetDeclarationNode) => void | undefined
+      visitBinaryOperation?: (op: string, node: AstNode, rhs: AstNode) => void | undefined,
+      visitLetDeclaration?: (node: AstLetDeclarationNode) => void | undefined,
+      visitIdentifier?: typeof kDefaultImplementations.visitIdentifier
     }): AstNodeVisitor
   {
     const defaults = kDefaultImplementations;
     return freeze({
       visitBinaryOperation: visitBinaryOperation ?? defaults.visitBinaryOperation,
       visitFunctionCall: visitFunctionCall ?? defaults.visitFunctionCall,
-      visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration
+      visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration,
+      visitIdentifier: visitIdentifier ?? defaults.visitIdentifier
     });
   }
 

@@ -179,12 +179,12 @@ export const PersistentStack = (() => {
     }
 
     function push(): Type {
-      const rv = mDefaultMake();
-      if (mPosition === mMembers.length) {
-        mMembers.push(rv);
+      const { length } = mMembers;
+      if (mPosition + 1 === length) {
+        mMembers.push(mDefaultMake());
         ++mPosition;
       }
-      return rv;
+      return mMembers[length];
     }
 
     function pop(): Type {

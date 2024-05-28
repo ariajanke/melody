@@ -26,7 +26,7 @@ export const Token = (() => {
     type: unimplemented<symbol>('type'),
     // TODO: try to get rid of this hack, blank token should
     // never be used
-    content: () => '',//unimplemented<string>('content'),
+    content: () => '',
     start: unimplemented<number>('start'),
     end: unimplemented<number>('end')
   });
@@ -36,6 +36,9 @@ export const Token = (() => {
     switch (firstChar) {
     case '\'': return TokenType.stringLiteral;
     case '\n': return TokenType.newLine;
+    case '0': case '1': case '2': case '3': case '4':
+    case '5': case '6': case '7': case '8': case '9':
+      return TokenType.integerLiteral;
     // not fool-proof, just some protection
     case ' ': case '\t': case '\r':
       throw Error('cannot build token from whitespace');

@@ -1,6 +1,6 @@
 import { AstNode, AstNodeVisitor } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
-import { AstStringableNode } from './ast_stringable_node';
+import { AstFringeNode } from './ast_fringe_node';
 
 export interface AstFunctionCallNode extends AstNode {
   name: string,
@@ -25,7 +25,7 @@ export const AstFunctionCallNode = (() => {
       switch (lhs.type()) {
       case nodeTypes.identifier:
       case nodeTypes.stringLiteral:
-        return (lhs as AstStringableNode).asString();
+        return (lhs as AstFringeNode).asString();
       default: throw Error('unhandled');
       }
     })();

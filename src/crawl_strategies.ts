@@ -64,11 +64,21 @@ export const CrawlStrategies = (() => {
     return length;
   }
 
+  function crawlNumeric(input: string, start: number): number {
+    const { length } = input;
+    for (let i = start + 1; i < length; ++i) {
+      if (classOf(input[i]) !== classes.numeric) {
+        return i;
+      }
+    }
+    return length;
+  }
+
   return freeze({
     [classes.alphabetic]: crawlAlphanumeric ,
     [classes.literal   ]: crawlStringLiteral,
     [classes.operative ]: crawlOperator     ,
-    [classes.numeric   ]: crawlAlphanumeric ,
+    [classes.numeric   ]: crawlNumeric      ,
     [classes.spacious  ]: crawlSpace        ,
     [classes.newLine   ]: crawlNewLines
   });

@@ -3,7 +3,7 @@ import { TestHelpers, ReachPoint } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
 import { AstNode } from '../src/ast_node';
-import { AstIdentifierNode, AstStringableNode } from '../src/ast_stringable_node';
+import { AstIdentifierNode, AstFringeNode } from '../src/ast_fringe_node';
 import { EmptyNodeExpansion, NodeExpansion, NodeExpansionVisitor } from '../src/node_expansion';
 import { IncompleteNode } from '../src/ast_incomplete_binary_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
@@ -245,7 +245,7 @@ describeNamed({ TreePartBuild }, () => {
       setupWithLeftPartCompletingTupleNode(ptbRes, (node: AstTupleNode) => {
         let first: string | undefined = undefined;
         node.forEach((node: AstNode) => {
-          first ??= AstStringableNode.downcast(node).asString();
+          first ??= AstFringeNode.downcast(node).asString();
         });
         expect(first).toEqual('a');
       });
@@ -399,7 +399,7 @@ describeNamed({ TreePartBuild }, () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
         visitRightNodeOnly((node: AstNode) => {
-          const str = AstStringableNode.downcast(node).asString();
+          const str = AstFringeNode.downcast(node).asString();
           expect(str).toEqual('a');
         }).
         finish());
@@ -425,7 +425,7 @@ describeNamed({ TreePartBuild }, () => {
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
         visitRightNodeOnly((node: AstNode) => {
-          const str = AstStringableNode.downcast(node).asString();
+          const str = AstFringeNode.downcast(node).asString();
           points()[0].hitsAtExactly(1);
           expect(str).toEqual('a');
         }).

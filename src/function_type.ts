@@ -27,7 +27,7 @@ interface FunctionTypeBase {
   uid: () => symbol,
   isComplete: () => boolean,
   name: () => string,
-  builtIn: BuiltInBinaryFunction | undefined
+  builtIn: () => BuiltInBinaryFunction | undefined
 }
 
 export interface FunctionType extends FunctionTypeBase {
@@ -66,7 +66,7 @@ export const IncompleteFunctionType = (() => {
       name,
       finish,
       setBuiltin,
-      builtIn
+      builtIn: () => mBuiltin
     });
 
     function arguments_(): Readonly<Parameter[]>
@@ -109,11 +109,6 @@ export const IncompleteFunctionType = (() => {
       mBuiltin = fn;
       return inst;
     }
-
-    function builtIn(): BuiltInBinaryFunction | undefined {
-      return mBuiltin;
-    }
-
     return inst;
   }
 

@@ -1,6 +1,6 @@
 import { TreePartBuild, LineContinuationScheme } from '../tree_part_build';
 import { Helpers, StandardError } from '../helpers';
-import { AstStringableNode } from '../ast_stringable_node';
+import { AstFringeNode } from '../ast_fringe_node';
 import { Token } from '../token';
 import {
   IncompleteNodeCreation
@@ -18,7 +18,7 @@ const { freeze } = Helpers;
 
 export const PartialTreeStartIdentifierBuild = (() => {
   const tokenTypes = Token.types;
-  const makeStringableNodeFor = AstStringableNode.makeForToken;
+  const makeFringeNodeFor = AstFringeNode.makeForToken;
   const { zeroSizedRange } = TokenRange;
 
   function make(mStartToken: Token,
@@ -28,7 +28,7 @@ export const PartialTreeStartIdentifierBuild = (() => {
     const { error, setErrorMessage, setErrorFn } = StandardError.make();
 
     function build(): NodeExpansion | undefined {
-      const lhsNode = makeStringableNodeFor(mStartToken);
+      const lhsNode = makeFringeNodeFor(mStartToken);
       if (zeroSizedRange(mTokenRange)) {
         return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
       }

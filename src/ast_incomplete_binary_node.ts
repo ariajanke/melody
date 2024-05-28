@@ -2,7 +2,7 @@ import { AstNode } from './ast_node';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstTupleNode } from './ast_tuple_node';
 import { AstBinaryOperatorNode } from './ast_binary_operator_node';
-import { AstStringableNode } from './ast_stringable_node';
+import { AstFringeNode } from './ast_fringe_node';
 import { Helpers, StandardError } from './helpers';
 import { Token } from './token';
 
@@ -29,10 +29,10 @@ export const AstIncompleteBinaryNode = (() => {
 
     // defined for testing
     function lhsAsString(): string | undefined {
-      if (!AstStringableNode.hasCreated(lhs)) {
+      if (!AstFringeNode.hasCreated(lhs)) {
         return undefined;
       }
-      return AstStringableNode.downcast(lhs).asString();
+      return AstFringeNode.downcast(lhs).asString();
     }
 
     return freeze({ finish, lhsAsString });
