@@ -54,6 +54,9 @@ export const Token = (() => {
     ['('  ]: TokenType.operator,
     [')'  ]: TokenType.operator,
     [','  ]: TokenType.operator,
+    ['+'  ]: TokenType.operator,
+    ['-'  ]: TokenType.operator,
+    ['*'  ]: TokenType.operator,
     [':=' ]: TokenType.operator
   };
 

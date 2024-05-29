@@ -8,8 +8,19 @@ import { Token } from './token';
 
 const { freeze } = Helpers;
 
+interface AstIntegerLiteralNode extends AstFringeNode {
+  value: () => number
+}
+
 export const AstIntegerLiteralNode = (() => {
   const kIntType = AstNode.types.integerLiteral;
+
+  function valueOf(node: AstNode): number {
+    if (node.type() !== kIntType) {
+      throw Error('Node is not an integer literal');
+    }
+    return (node as AstIntegerLiteralNode).value();
+  }
 
   function make(value: string): AstFringeNode {
     return construct(Number.parseInt(value));
@@ -30,9 +41,10 @@ export const AstIntegerLiteralNode = (() => {
           return true;
         default: return false;
         }
-      }
+      },
+      value: () => mValue
     });
   }
 
-  return freeze({ make });
+  return freeze({ make, valueOf });
 })();

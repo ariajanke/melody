@@ -73,7 +73,7 @@ describeNamed({ Interpreter }, () => {
       expect(printedStrings).toEqual(['hello world!']);
     });
 
-    it('compiles and runs a simple adder program', () => {
+    fit('compiles and runs a simple adder program', () => {
       const programRootNode = Interpreter.buildFor(`
         let a := 2
         let b := a + 2
