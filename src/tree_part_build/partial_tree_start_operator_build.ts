@@ -8,23 +8,24 @@ import { TokenRange } from '../token_range';
 
 export const PartialTreeStartOperatorBuild = (() => {
   const { freeze } = Helpers;
-  
+
+  // looks a little lazy to me
   function make
     (mIncompleteNode: IncompleteNode,
-     mNextToken: Token,
+     mOperatorToken: Token,
      mTokenRange: TokenRange)
   {
     const { setErrorFn, error } = StandardError.make();
 
     function build(): NodeExpansion | undefined {
       const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(mIncompleteNode);
-      const { startGroupBuild, error } = PartialTreeStartGroupBuild.
-        make(leftTreePartHandler, mTokenRange, mNextToken);
-      return startGroupBuild() ?? setErrorFn(error);
+      const { build, error } = PartialTreeStartGroupBuild.
+        make(leftTreePartHandler, mTokenRange, mOperatorToken);
+      return build() ?? setErrorFn(error);
     }
 
     return freeze({ build, error });
-  } 
+  }
 
   return freeze({ make });
 })();

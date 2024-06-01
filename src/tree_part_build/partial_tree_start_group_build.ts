@@ -1,6 +1,5 @@
-import { TreePartBuild, LineContinuationScheme } from '../tree_part_build';
 import { StandardError, StandardErrorFn } from '../helpers';
-import { PartialTreeNextTokenBuild } from './partial_tree_next_token_build';
+import { TreePartTupleDivision } from './tree_part_tuple_division';
 import { Helpers } from '../helpers';
 import { NodeExpansion } from './node_expansion';
 import {
@@ -10,45 +9,35 @@ import { Token } from '../token';
 import { TokenRange } from '../token_range';
 
 interface PartialTreeStartGroupBuild {
-  startGroupBuild: () => NodeExpansion | undefined,
+  build: () => NodeExpansion | undefined,
   error: StandardErrorFn
 }
 
+// What's a group?? This is a tuple
 export const PartialTreeStartGroupBuild = (() => {
   const { memoize, freeze } = Helpers;
 
   function make(leftPartHandler: LeftTreePartHandler,
                 mTokenRange: TokenRange,
-                mStartToken: Token):
+                mOperatorToken: Token):
                 PartialTreeStartGroupBuild
   {
-    const { setErrorMessage, error, setErrorFn } = StandardError.make();
-    const normalLineContinuation = LineContinuationScheme.normal;
-    
-    const nextPart = memoize(() => {
-      mTokenRange.skipNewLine();
-      return PartialTreeNextTokenBuild.
-        make(mTokenRange, mStartToken.content());
-    });
+    const { error, setErrorFn } = StandardError.make();
 
-    function getLeftPart() {
-      return nextPart().unprocessedPart() ?? setErrorFn(nextPart().error);
-    }
-
-    function startGroupBuild(): NodeExpansion | undefined {
-      const leftPart = getLeftPart();
+    function build(): NodeExpansion | undefined {
+      const nextPart = TreePartTupleDivision.
+        make(mTokenRange.skipNewLine(), mOperatorToken)
+      const leftPart = nextPart.leftPart() ?? setErrorFn(nextPart.error);
       if (!leftPart) {
-        setErrorMessage('no left part??');
         return;
       }
-      const { remainingRange } = nextPart();
-      const rightPart = TreePartBuild.
-        make(remainingRange(), normalLineContinuation);
-      return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
+      const rightPart = nextPart.rightPart();
+      return LeftSideNodeExpansion.
+        make(leftPartHandler, leftPart, rightPart);
     }
 
     return freeze({
-      startGroupBuild: memoize(startGroupBuild),
+      build: memoize(build),
       error
     });
   }

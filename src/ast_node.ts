@@ -75,10 +75,74 @@ export interface AstNodeVisitor {
   visitIdentifier: (node: AstFringeNode) => void
 }
 
+export const AstNodeVisitorBuilder = (() => {
+  function makeDefaultVisitor() {
+    const inst = freeze({
+      visitBinaryOperation:
+        (_0: string, lhs: AstNode, rhs: AstNode): void =>
+      {
+        lhs.visit(inst);
+        rhs.visit(inst);
+      },
+      visitFunctionCall: (_0: AstFunctionCallNode): void => {},
+      visitLetDeclaration: (_0: AstLetDeclarationNode, rhs: AstNode): void =>
+        rhs.visit(inst),
+      visitIdentifier: (_0: AstFringeNode): void => {}
+    });
+
+    return inst;
+  }
+
+  const class_ = freeze({
+    make: () => {
+      let {
+        visitBinaryOperation,
+        visitFunctionCall,
+        visitLetDeclaration,
+        visitIdentifier
+      } = makeDefaultVisitor();
+
+      const inst = freeze({
+        visitBinaryOperation: (fn: AstNodeVisitor['visitBinaryOperation']) => {
+          visitBinaryOperation = fn;
+          return inst;
+        },
+        visitFunctionCall: (fn: AstNodeVisitor['visitFunctionCall']) => {
+          visitFunctionCall = fn;
+          return inst;
+        },
+        visitLetDeclaration: (fn: AstNodeVisitor['visitLetDeclaration']) => {
+          visitLetDeclaration = fn;
+          return inst;
+        },
+        visitIdentifier: (fn: AstNodeVisitor['visitIdentifier']) => {
+          visitIdentifier = fn;
+          return inst;
+        },
+        finish: (): AstNodeVisitor =>
+          freeze({
+            visitBinaryOperation,
+            visitFunctionCall,
+            visitLetDeclaration,
+            visitIdentifier
+          })
+      });
+
+      return inst;
+    }
+  });
+
+  return class_;
+})();
+
 export const AstNodeVisitor = (() => {
   const kDefaultImplementations = freeze({
     visitBinaryOperation:
-      (_0: string, _1: AstNode, _2: AstNode): void => {},
+      (_0: string, lhs: AstNode, rhs: AstNode): void =>
+    {
+      lhs.visit(kDefaultImplementations);
+      rhs.visit(kDefaultImplementations);
+    },
     visitFunctionCall: (_0: AstFunctionCallNode): void => {},
     visitLetDeclaration: (_0: AstLetDeclarationNode): void => {},
     visitIdentifier: (_0: AstFringeNode): void => {}
@@ -106,7 +170,7 @@ export const AstNodeVisitor = (() => {
     });
   }
 
-  return freeze({ makeFakeVisitor });
+  return freeze({ });
 })();
 
 // export interface AstLetNode extends AstNode {

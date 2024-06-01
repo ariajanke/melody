@@ -7,8 +7,8 @@ import {
   PartialTreeStartGroupBuild
 } from './tree_part_build/partial_tree_start_group_build';
 import {
-  PartialTreeStartIdentifierBuild
-} from './tree_part_build/partial_tree_start_identifier_build';
+  PartialTreeStartFringeBuild
+} from './tree_part_build/partial_tree_start_fringe_build';
 import {
   NodeExpansion,
   EmptyNodeExpansion
@@ -48,7 +48,15 @@ export const TreePartBuild = (() => {
       console.log(`from "${mTokenRange.tokenAt(mTokenRange.start())?.content()}" to \
   "${mTokenRange.tokenAt(mTokenRange.end() - 1)?.content()}"`);
     }
-    
+
+    function tokenProducingFringeNode(token: Token): boolean {
+      return ({
+        [tokenTypes.identifier]: true,
+        [tokenTypes.integerLiteral]: true,
+        [tokenTypes.stringLiteral]: true
+      })[token.type()] ?? false;
+    }
+
     function buildPart(): NodeExpansion | undefined {
       if (zeroSizedRange(mTokenRange)) {
         return EmptyNodeExpansion.make();
@@ -64,19 +72,16 @@ export const TreePartBuild = (() => {
       // "(" is a grouping token in one context
       // but an operator in another
       mTokenRange.step();
-      if (start.type() === tokenTypes.identifier ||
-          start.type() === tokenTypes.stringLiteral ||
-          start.type() === tokenTypes.integerLiteral)
-      {
-        const { build, error } = PartialTreeStartIdentifierBuild.
+      if (tokenProducingFringeNode(start)) {
+        const { build, error } = PartialTreeStartFringeBuild.
           make(start, mTokenRange, mLineContScheme);
         return build() ?? setErrorFn(error);
       } else if (start.content() === '(') {
-        const { startGroupBuild, error } = PartialTreeStartGroupBuild.
+        const { build, error } = PartialTreeStartGroupBuild.
           make(BareLeftTreePartHandler.make(),
                mTokenRange,
                start);
-        return startGroupBuild() ?? setErrorFn(error);
+        return build() ?? setErrorFn(error);
       } else if (start.type() == tokenTypes.operator) {
         const incomplete = AstIncompleteUnaryNode.makeForOperator(start.content());
         const { build, error } = PartialTreeStartOperatorBuild.

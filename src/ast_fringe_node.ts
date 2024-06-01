@@ -88,7 +88,7 @@ export const AstIdentifierNode = (() => {
   const kIndentifier = AstNode.types.identifier;
 
   function make(value: string): AstFringeNode {
-    return freeze({
+    const inst = freeze({
       comesBeforeOperator: (operator: Token): boolean => {
         const str = operator.content();
         return str === ',' || str === '(' || str === ':=';
@@ -99,8 +99,11 @@ export const AstIdentifierNode = (() => {
         getter(value),
       type: () => kIndentifier,
       asString: () => value,
-      visit: (_0: AstNodeVisitor) => {}
+      visit: (visitor: AstNodeVisitor) => {
+        visitor.visitIdentifier(inst);
+      }
     });
+    return inst;
   }
 
   return freeze({ make });

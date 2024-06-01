@@ -5,7 +5,7 @@ import { Token } from '../token';
 import {
   IncompleteNodeCreation
 } from '../ast_incomplete_binary_node';
-import { NodeExpansion } from '../node_expansion';
+import { NodeExpansion } from './node_expansion';
 import {
   RightSideNodeExpansion,
   BareRightTreePartHandler,
@@ -16,7 +16,7 @@ import { TokenRange } from '../token_range';
 
 const { freeze } = Helpers;
 
-export const PartialTreeStartIdentifierBuild = (() => {
+export const PartialTreeStartFringeBuild = (() => {
   const tokenTypes = Token.types;
   const makeFringeNodeFor = AstFringeNode.makeForToken;
   const { zeroSizedRange } = TokenRange;

@@ -957,9 +957,63 @@
       }
     });
   })();
+  var AstNodeVisitorBuilder = (() => {
+    function makeDefaultVisitor() {
+      const inst = freeze8({
+        visitBinaryOperation: (_0, lhs, rhs) => {
+          lhs.visit(inst);
+          rhs.visit(inst);
+        },
+        visitFunctionCall: (_0) => {
+        },
+        visitLetDeclaration: (_0, rhs) => rhs.visit(inst),
+        visitIdentifier: (_0) => {
+        }
+      });
+      return inst;
+    }
+    const class_ = freeze8({
+      make: () => {
+        let {
+          visitBinaryOperation,
+          visitFunctionCall,
+          visitLetDeclaration,
+          visitIdentifier
+        } = makeDefaultVisitor();
+        const inst = freeze8({
+          visitBinaryOperation: (fn) => {
+            visitBinaryOperation = fn;
+            return inst;
+          },
+          visitFunctionCall: (fn) => {
+            visitFunctionCall = fn;
+            return inst;
+          },
+          visitLetDeclaration: (fn) => {
+            visitLetDeclaration = fn;
+            return inst;
+          },
+          visitIdentifier: (fn) => {
+            visitIdentifier = fn;
+            return inst;
+          },
+          finish: () => freeze8({
+            visitBinaryOperation,
+            visitFunctionCall,
+            visitLetDeclaration,
+            visitIdentifier
+          })
+        });
+        return inst;
+      }
+    });
+    return class_;
+  })();
   var AstNodeVisitor = (() => {
     const kDefaultImplementations = freeze8({
-      visitBinaryOperation: (_0, _1, _2) => {
+      visitBinaryOperation: (_0, lhs, rhs) => {
+        lhs.visit(kDefaultImplementations);
+        rhs.visit(kDefaultImplementations);
       },
       visitFunctionCall: (_0) => {
       },
@@ -982,7 +1036,7 @@
         visitIdentifier: visitIdentifier ?? defaults.visitIdentifier
       });
     }
-    return freeze8({ makeFakeVisitor });
+    return freeze8({});
   })();
 
   // src/ast_tuple_node.ts
@@ -1115,45 +1169,53 @@
     return freeze10({ make: make2, makeStartingRange, zeroSizedRange });
   })();
 
-  // src/tree_part_build/partial_tree_next_token_build.ts
-  var PartialTreeNextTokenBuild = (() => {
+  // src/tree_part_build/tree_part_tuple_division.ts
+  var TreePartTupleDivision = (() => {
     const { memoize: memoize3, freeze: freeze20 } = Helpers;
     const kCloseMapping = freeze20({
       ["("]: ")"
+      // ['fn']: 'end'
     });
-    function make2(mTokenRange, mFindCloseBasedOn) {
+    const class_ = freeze20({
+      make: (mTokenRange, mOperatorToken) => construct(mTokenRange, mOperatorToken.content())
+    });
+    function construct(mTokenRange, mFindCloseBasedOn) {
       const { error, setErrorMessage } = StandardError.make();
       const { start, end, parentContainerSize, tokenAt } = mTokenRange;
-      const closeMapping = kCloseMapping[mFindCloseBasedOn];
-      const lineCont = closeMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
+      const mCloseMapping = kCloseMapping[mFindCloseBasedOn];
       const closePosition = memoize3(() => {
-        if (!closeMapping) {
+        if (!mCloseMapping) {
           return end();
         }
         const count = parentContainerSize();
         for (let i = start(); i < count; ++i) {
-          if (tokenAt(i).content() === closeMapping) {
+          if (tokenAt(i).content() === mCloseMapping) {
             return i;
           }
         }
         return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
       });
-      const unprocessedPart = memoize3(() => {
-        const pos = closePosition();
-        if (!pos)
-          return void 0;
-        return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
+      const inst = freeze20({
+        leftPart: memoize3(() => {
+          const pos = closePosition();
+          if (!pos)
+            return void 0;
+          const lineCont = mCloseMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
+          return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
+        }),
+        rightPart: memoize3(() => {
+          const pos = closePosition();
+          if (!pos) {
+            throw Error("call and test against leftPart first");
+          }
+          const start2 = Math.min(end(), pos + 1);
+          return TreePartBuild.make(mTokenRange.clone(start2, end()), LineContinuationScheme.normal);
+        }),
+        error
       });
-      const remainingRange = memoize3(() => {
-        const pos = closePosition();
-        if (!pos) {
-          throw Error("call and test against unprocessedPart first");
-        }
-        return mTokenRange.clone(Math.min(end(), pos + 1), end());
-      });
-      return freeze20({ unprocessedPart, remainingRange, error });
+      return inst;
     }
-    return freeze20({ make: make2 });
+    return class_;
   })();
 
   // src/tree_part_build/node_expansion.ts
@@ -1301,28 +1363,19 @@
   // src/tree_part_build/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
     const { memoize: memoize3, freeze: freeze20 } = Helpers;
-    function make2(leftPartHandler, mTokenRange, mStartToken) {
-      const { setErrorMessage, error, setErrorFn } = StandardError.make();
-      const normalLineContinuation = LineContinuationScheme.normal;
-      const nextPart = memoize3(() => {
-        mTokenRange.skipNewLine();
-        return PartialTreeNextTokenBuild.make(mTokenRange, mStartToken.content());
-      });
-      function getLeftPart() {
-        return nextPart().unprocessedPart() ?? setErrorFn(nextPart().error);
-      }
-      function startGroupBuild() {
-        const leftPart = getLeftPart();
+    function make2(leftPartHandler, mTokenRange, mOperatorToken) {
+      const { error, setErrorFn } = StandardError.make();
+      function build() {
+        const nextPart = TreePartTupleDivision.make(mTokenRange.skipNewLine(), mOperatorToken);
+        const leftPart = nextPart.leftPart() ?? setErrorFn(nextPart.error);
         if (!leftPart) {
-          setErrorMessage("no left part??");
           return;
         }
-        const { remainingRange } = nextPart();
-        const rightPart = TreePartBuild.make(remainingRange(), normalLineContinuation);
+        const rightPart = nextPart.rightPart();
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
       return freeze20({
-        startGroupBuild: memoize3(startGroupBuild),
+        build: memoize3(build),
         error
       });
     }
@@ -1432,7 +1485,7 @@
   var AstIdentifierNode = (() => {
     const kIndentifier = AstNode.types.identifier;
     function make2(value) {
-      return freeze13({
+      const inst = freeze13({
         comesBeforeOperator: (operator) => {
           const str = operator.content();
           return str === "," || str === "(" || str === ":=";
@@ -1441,9 +1494,11 @@
         evaluate: (getter) => getter(value),
         type: () => kIndentifier,
         asString: () => value,
-        visit: (_0) => {
+        visit: (visitor) => {
+          visitor.visitIdentifier(inst);
         }
       });
+      return inst;
     }
     return freeze13({ make: make2 });
   })();
@@ -1609,21 +1664,21 @@
   // src/tree_part_build/partial_tree_start_operator_build.ts
   var PartialTreeStartOperatorBuild = (() => {
     const { freeze: freeze20 } = Helpers;
-    function make2(mIncompleteNode, mNextToken, mTokenRange) {
+    function make2(mIncompleteNode, mOperatorToken, mTokenRange) {
       const { setErrorFn, error } = StandardError.make();
       function build() {
         const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(mIncompleteNode);
-        const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(leftTreePartHandler, mTokenRange, mNextToken);
-        return startGroupBuild() ?? setErrorFn(error2);
+        const { build: build2, error: error2 } = PartialTreeStartGroupBuild.make(leftTreePartHandler, mTokenRange, mOperatorToken);
+        return build2() ?? setErrorFn(error2);
       }
       return freeze20({ build, error });
     }
     return freeze20({ make: make2 });
   })();
 
-  // src/tree_part_build/partial_tree_start_identifier_build.ts
+  // src/tree_part_build/partial_tree_start_fringe_build.ts
   var { freeze: freeze16 } = Helpers;
-  var PartialTreeStartIdentifierBuild = (() => {
+  var PartialTreeStartFringeBuild = (() => {
     const tokenTypes = Token.types;
     const makeFringeNodeFor = AstFringeNode.makeForToken;
     const { zeroSizedRange } = TokenRange;
@@ -1687,6 +1742,13 @@
       } else {
         console.log(`from "${mTokenRange.tokenAt(mTokenRange.start())?.content()}" to   "${mTokenRange.tokenAt(mTokenRange.end() - 1)?.content()}"`);
       }
+      function tokenProducingFringeNode(token) {
+        return {
+          [tokenTypes.identifier]: true,
+          [tokenTypes.integerLiteral]: true,
+          [tokenTypes.stringLiteral]: true
+        }[token.type()] ?? false;
+      }
       function buildPart() {
         if (zeroSizedRange(mTokenRange)) {
           return EmptyNodeExpansion.make();
@@ -1697,16 +1759,16 @@
         }
         const start = mTokenRange.tokenAt(mTokenRange.start());
         mTokenRange.step();
-        if (start.type() === tokenTypes.identifier || start.type() === tokenTypes.stringLiteral || start.type() === tokenTypes.integerLiteral) {
-          const { build, error: error2 } = PartialTreeStartIdentifierBuild.make(start, mTokenRange, mLineContScheme);
+        if (tokenProducingFringeNode(start)) {
+          const { build, error: error2 } = PartialTreeStartFringeBuild.make(start, mTokenRange, mLineContScheme);
           return build() ?? setErrorFn(error2);
         } else if (start.content() === "(") {
-          const { startGroupBuild, error: error2 } = PartialTreeStartGroupBuild.make(
+          const { build, error: error2 } = PartialTreeStartGroupBuild.make(
             BareLeftTreePartHandler.make(),
             mTokenRange,
             start
           );
-          return startGroupBuild() ?? setErrorFn(error2);
+          return build() ?? setErrorFn(error2);
         } else if (start.type() == tokenTypes.operator) {
           const incomplete = AstIncompleteUnaryNode.makeForOperator(start.content());
           const { build, error: error2 } = PartialTreeStartOperatorBuild.make(incomplete, start, mTokenRange);
@@ -1766,11 +1828,10 @@
           makeToken(")"),
           makeToken("\n")
         ];
-        const visitor = AstNodeVisitor.makeFakeVisitor({
-          visitFunctionCall: (_0) => {
-            points()[0].hitsAtExactly(2);
-          }
-        });
+        const visitor = AstNodeVisitorBuilder.make().visitFunctionCall((node) => {
+          points()[0].hitsAtExactly(2);
+          node.visit(visitor);
+        }).finish();
         buildAst().visit(visitor);
         expect(verifyAllHit()).toBeTruthy();
       });
@@ -1788,12 +1849,10 @@
           makeToken(")"),
           makeToken("\n")
         ];
-        let i = 0;
-        const visitor = AstNodeVisitor.makeFakeVisitor({
-          visitFunctionCall: (_0) => {
-            points()[0].hitsAtExactly(1);
-          }
-        });
+        const visitor = AstNodeVisitorBuilder.make().visitFunctionCall((node) => {
+          points()[0].hitsAtExactly(1);
+          node.visit(visitor);
+        }).finish();
         buildAst().visit(visitor);
         expect(verifyAllHit()).toBeTruthy();
       });
@@ -1804,18 +1863,16 @@
           makeToken("2")
         ];
         let vop = "";
-        const visitor = AstNodeVisitor.makeFakeVisitor({
-          visitBinaryOperation: (op, lhs, rhs) => {
-            const { valueOf } = AstIntegerLiteralNode;
-            vop = op;
-            expect(valueOf(lhs)).toEqual(2);
-            expect(valueOf(rhs)).toEqual(2);
-          }
-        });
+        const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((op, lhs, rhs) => {
+          const { valueOf } = AstIntegerLiteralNode;
+          vop = op;
+          expect(valueOf(lhs)).toEqual(2);
+          expect(valueOf(rhs)).toEqual(2);
+        }).finish();
         buildAst().visit(visitor);
         expect(vop).toEqual("+");
       });
-      fit("builds ast with let declaration", () => {
+      it("builds ast with let declaration", () => {
         tokens = [
           makeToken("let"),
           makeToken("a"),
@@ -1825,19 +1882,18 @@
         const { points, verifyAllHit } = ReachPoint.makeCollection(3);
         const [pt1, pt2, pt3] = points();
         const foundOperators = [];
-        const visitor = AstNodeVisitor.makeFakeVisitor({
-          visitBinaryOperation: (op, lhs, rhs) => {
-            foundOperators.push(op);
-            pt1.hitsAtExactly(1);
-          },
-          visitLetDeclaration: (node) => {
-            pt2.hitsAtExactly(1);
-          },
-          visitIdentifier: (node) => {
-            expect(node.asString()).toEqual("2");
-            pt3.hitsAtExactly(1);
-          }
-        });
+        const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((op, lhs, rhs) => {
+          foundOperators.push(op);
+          pt1.hitsAtExactly(1);
+          lhs.visit(visitor);
+          rhs.visit(visitor);
+        }).visitLetDeclaration((_0, rhs) => {
+          pt2.hitsAtExactly(1);
+          rhs.visit(visitor);
+        }).visitIdentifier((node) => {
+          expect(node.asString()).toEqual("a");
+          pt3.hitsAtExactly(1);
+        }).finish();
         buildAst().visit(visitor);
         expect(foundOperators).toEqual([":="]);
         expect(verifyAllHit()).toBeTruthy();
@@ -1852,11 +1908,11 @@
           makeToken("3")
         ];
         const foundOperators = [];
-        const visitor = AstNodeVisitor.makeFakeVisitor({
-          visitBinaryOperation: (op, lhs, rhs) => {
-            foundOperators.push(op);
-          }
-        });
+        const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((op, lhs, rhs) => {
+          foundOperators.push(op);
+          lhs.visit(visitor);
+          rhs.visit(visitor);
+        }).finish();
         buildAst().visit(visitor);
         expect(foundOperators).toEqual([":=", "+"]);
       });

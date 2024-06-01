@@ -2,7 +2,7 @@ import { AstBuild } from '../src/ast_build';
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
-import { AstNode, AstNodeVisitor } from '../src/ast_node';
+import { AstNode, AstNodeVisitor, AstNodeVisitorBuilder } from '../src/ast_node';
 import { AstFunctionCallNode } from '../src/ast_function_call_node';
 import { AstIntegerLiteralNode } from '../src/ast_integer_literal_node';
 import { AstLetDeclarationNode } from '../src/ast_let_declaration_node';
@@ -26,11 +26,13 @@ describeNamed({ AstBuild }, () => {
         makeToken('\n'),
       ];
 
-      const visitor = AstNodeVisitor.makeFakeVisitor({
-        visitFunctionCall: (_0: AstFunctionCallNode) => {
+      const visitor = AstNodeVisitorBuilder.
+        make().
+        visitFunctionCall((node: AstFunctionCallNode) => {
           points()[0].hitsAtExactly(2);
-        },
-      });
+          node.visit(visitor);
+        }).
+        finish();
       buildAst().visit(visitor);
       expect(verifyAllHit()).toBeTruthy();
     });
@@ -44,12 +46,14 @@ describeNamed({ AstBuild }, () => {
         makeToken('\n'),
       ];
 
-      let i = 0;
-      const visitor = AstNodeVisitor.makeFakeVisitor({
-        visitFunctionCall: (_0: AstFunctionCallNode) => {
+      const visitor = AstNodeVisitorBuilder.
+        make().
+        visitFunctionCall((node: AstFunctionCallNode) => {
           points()[0].hitsAtExactly(1);
-        },
-      });
+          node.visit(visitor);
+        }).
+        finish();
+
       buildAst().visit(visitor);
       expect(verifyAllHit()).toBeTruthy();
     });
@@ -60,38 +64,44 @@ describeNamed({ AstBuild }, () => {
       ];
 
       let vop = '';
-      const visitor = AstNodeVisitor.makeFakeVisitor({
-        visitBinaryOperation: (op: string, lhs: AstNode, rhs: AstNode) => {
+      const visitor = AstNodeVisitorBuilder.
+        make().
+        visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
           const { valueOf } = AstIntegerLiteralNode;
           vop = op;
           expect(valueOf(lhs)).toEqual(2);
           expect(valueOf(rhs)).toEqual(2);
-        },
-      });
+        }).
+        finish();
+
       buildAst().visit(visitor);
       expect(vop).toEqual('+');
     });
 
-    fit('builds ast with let declaration', () => {
+    it('builds ast with let declaration', () => {
       tokens = [
         makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2')
       ];
       const { points, verifyAllHit } = ReachPoint.makeCollection(3);
       const [pt1, pt2, pt3] = points();
       const foundOperators: string[] = [];
-      const visitor = AstNodeVisitor.makeFakeVisitor({
-        visitBinaryOperation: (op: string, lhs: AstNode, rhs: AstNode) => {
+      const visitor = AstNodeVisitorBuilder.
+        make().
+        visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
           foundOperators.push(op);
           pt1.hitsAtExactly(1);
-        },
-        visitLetDeclaration: (node: AstLetDeclarationNode) => {
+          lhs.visit(visitor);
+          rhs.visit(visitor);
+        }).
+        visitLetDeclaration((_0: AstLetDeclarationNode, rhs: AstNode) => {
           pt2.hitsAtExactly(1);
-        },
-        visitIdentifier: (node: AstFringeNode) => {
-          expect(node.asString()).toEqual('2');
+          rhs.visit(visitor);
+        }).
+        visitIdentifier((node: AstFringeNode) => {
+          expect(node.asString()).toEqual('a');
           pt3.hitsAtExactly(1);
-        }
-      });
+        }).
+        finish();
       buildAst().visit(visitor);
       expect(foundOperators).toEqual([':=']);
       expect(verifyAllHit()).toBeTruthy();
@@ -103,11 +113,14 @@ describeNamed({ AstBuild }, () => {
         makeToken('2'), makeToken('+'), makeToken('3')
       ];
       const foundOperators: string[] = [];
-      const visitor = AstNodeVisitor.makeFakeVisitor({
-        visitBinaryOperation: (op: string, lhs: AstNode, rhs: AstNode) => {
+      const visitor = AstNodeVisitorBuilder.
+        make().
+        visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
           foundOperators.push(op);
-        },
-      });
+          lhs.visit(visitor);
+          rhs.visit(visitor);
+        }).
+        finish();
       buildAst().visit(visitor);
       expect(foundOperators).toEqual([':=', '+']);
     });
