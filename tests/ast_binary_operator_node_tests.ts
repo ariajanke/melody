@@ -1,6 +1,6 @@
 import { TestHelpers, ReachPoint } from './test_helpers';
 import { AstBinaryOperatorNode } from '../src/ast_binary_operator_node';
-import { AstEvaluatableNode, AstNode, AstNodeVisitor } from '../src/ast_node';
+import { AstEvaluatableNode, AstNode, AstNodeVisitorBuilder } from '../src/ast_node';
 import { AstIdentifierNode } from '../src/ast_fringe_node';
 import { TypeLookUpTable } from '../src/ast_node';
 import { ContextVariable } from '../src/context_variable';
@@ -16,14 +16,16 @@ describeNamed({ AstBinaryOperatorNode }, () => {
   // sort of meaning "set lhs (an identifier) to the rhs's string content" for
   // the program's current context
   it('is reachable by visitor', () => {
-    const { points, verifyAllHit } = ReachPoint.makeCollection(1);
-    const visitor = AstNodeVisitor.makeFakeVisitor({
-      visitBinaryOperation: (_0: string, _1: AstNode, _2: AstNode) => {
-        points()[0].hitsAtExactly(1);
-      }
-    });
+    const { hitsAtExactly, verifyHit } = ReachPoint.make();
+    const visitor = AstNodeVisitorBuilder.
+      make().
+      visitBinaryOperation((_0: string, _1: AstNode, _2: AstNode) => {
+        hitsAtExactly(1);
+        // NOTE terminates visiting deeper
+      }).
+      finish();
     make(':=', makeIdentifier(''), makeIdentifier('')).visit(visitor);
-    expect(verifyAllHit).toBeTruthy();
+    expect(verifyHit()).toBeTruthy();
   });
 
   it('reports self as a binary operator node type', () => {
@@ -33,14 +35,16 @@ describeNamed({ AstBinaryOperatorNode }, () => {
 
   it('maybe visited for assigee name', () => {
     let assigneeName = '';
-    const visitor = AstNodeVisitor.makeFakeVisitor({
-      visitBinaryOperation: (_0: string, node: AstNode, _1: AstNode) => {
+    const visitor = AstNodeVisitorBuilder.
+      make().
+      visitBinaryOperation((_0: string, node: AstNode, _2: AstNode) => {
         AstEvaluatableNode.tryDowncast(node)?.evaluate((name: string) => {
           assigneeName = name;
           return ContextVariable.make();
-        })
-      }
-    });
+        });
+        // NOTE terminates visiting deeper
+      }).
+      finish();
     make(':=', makeIdentifier('foo'), makeIdentifier('')).visit(visitor);
     expect(assigneeName).toEqual('foo');
   });
@@ -68,6 +72,4 @@ describeNamed({ AstBinaryOperatorNode }, () => {
       expect(extype.uid).toEqual(sampleReturnType.uid);
     });
   });
-
-  // so far, the *only* type that exist is the string
 });

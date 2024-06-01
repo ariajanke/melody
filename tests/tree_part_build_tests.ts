@@ -236,7 +236,7 @@ describeNamed({ TreePartBuild }, () => {
           pt2.hitsAtExactly(1);
         }).
         finish());
-      verifyAllHit();
+      expect(verifyAllHit()).toBeTruthy();
     });
 
     it('left part incomplete node, completes into a tuple node', () => {
@@ -308,7 +308,7 @@ describeNamed({ TreePartBuild }, () => {
           pt2.hitsAtExactly(1);
         }).
         finish());
-      verifyAllHit();
+      expect(verifyAllHit()).toBeTruthy();
     });
   }
 
@@ -394,6 +394,29 @@ describeNamed({ TreePartBuild }, () => {
         }).
         visitRightPartOnly((_0: TreePartBuild) => {}).
         finish());
+    });
+  });
+
+  describe('unary operator starting on a new line', () => {
+    const args =
+      [
+        makeToken('a'),
+        makeToken('\n'),
+        makeToken('let')
+      ];
+    const ptbRes = () => makePtbRes(...args);
+
+    includeHasAResultExample(ptbRes);
+
+    it('builds a node with an unprocessed right part', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
+        makeOverrider(fail).
+        visitRightWithPart((_0: AstNode, _1: TreePartBuild) => {
+          hitsAtExactly(1);
+        }).
+        finish());
+      expect(verifyHit()).toBeTruthy();
     });
   });
 

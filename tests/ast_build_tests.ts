@@ -7,6 +7,7 @@ import { AstFunctionCallNode } from '../src/ast_function_call_node';
 import { AstIntegerLiteralNode } from '../src/ast_integer_literal_node';
 import { AstLetDeclarationNode } from '../src/ast_let_declaration_node';
 import { AstFringeNode } from '../src/ast_fringe_node';
+import { AstTupleNode } from '../src/ast_tuple_node';
 
 const { describeNamed } = TestHelpers;
 
@@ -30,7 +31,9 @@ describeNamed({ AstBuild }, () => {
         make().
         visitFunctionCall((node: AstFunctionCallNode) => {
           points()[0].hitsAtExactly(2);
-          node.visit(visitor);
+          node.arguments.forEach((node: AstNode) => {
+            node.visit(visitor);
+          });
         }).
         finish();
       buildAst().visit(visitor);
@@ -50,7 +53,9 @@ describeNamed({ AstBuild }, () => {
         make().
         visitFunctionCall((node: AstFunctionCallNode) => {
           points()[0].hitsAtExactly(1);
-          node.visit(visitor);
+          node.arguments.forEach((node: AstNode) => {
+            node.visit(visitor);
+          });
         }).
         finish();
 
@@ -123,6 +128,19 @@ describeNamed({ AstBuild }, () => {
         finish();
       buildAst().visit(visitor);
       expect(foundOperators).toEqual([':=', '+']);
+    });
+
+    it('builds ast with multiple lines end on an unary operator', () => {
+      tokens = [
+        makeToken('a'),
+        makeToken('\n'),
+        makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2')
+      ];
+      const rootNode = buildAst();
+      if (rootNode.type() !== AstNode.types.tuple) {
+        return fail();
+      }
+      expect((rootNode as AstTupleNode).count()).toEqual(2);
     });
   });
 });

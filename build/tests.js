@@ -157,7 +157,10 @@
     fdescribe(Object.keys(obj)[0], descFn);
   }
   var ReachPoint = (() => {
-    function make2(mSet, mIdx) {
+    function make2() {
+      return construct([0], 0);
+    }
+    function construct(mSet, mIdx) {
       let mRequiredHits = 1;
       let mName = `Point ${mIdx}`;
       return Object.freeze({
@@ -171,10 +174,11 @@
             mName = name;
           }
         },
-        verifySatisfied: () => {
+        verifyHit: () => {
           if (mSet[mIdx] !== mRequiredHits) {
             throw Error(`Point "${mName}" was not reached ${mRequiredHits} times`);
           }
+          return true;
         }
       });
     }
@@ -184,13 +188,13 @@
       mSet.fill(0);
       const mPoints = [];
       for (let i = 0; i < size; ++i) {
-        mPoints.push(make2(mSet, i));
+        mPoints.push(construct(mSet, i));
       }
       return Object.freeze({
         points: () => mPoints,
         verifyAllHit: () => {
           mPoints.forEach((pt) => {
-            pt.verifySatisfied();
+            pt.verifyHit();
           });
           return true;
         }
@@ -958,51 +962,58 @@
     });
   })();
   var AstNodeVisitorBuilder = (() => {
-    function makeDefaultVisitor() {
-      const inst = freeze8({
-        visitBinaryOperation: (_0, lhs, rhs) => {
-          lhs.visit(inst);
-          rhs.visit(inst);
-        },
-        visitFunctionCall: (_0) => {
-        },
-        visitLetDeclaration: (_0, rhs) => rhs.visit(inst),
-        visitIdentifier: (_0) => {
-        }
-      });
-      return inst;
-    }
     const class_ = freeze8({
       make: () => {
-        let {
-          visitBinaryOperation,
-          visitFunctionCall,
-          visitLetDeclaration,
-          visitIdentifier
-        } = makeDefaultVisitor();
+        let mVisitBinaryOperation = void 0;
+        let mVisitFunctionCall = void 0;
+        let mVisitLetDeclaration = void 0;
+        let mVisitIdentifier = void 0;
         const inst = freeze8({
           visitBinaryOperation: (fn) => {
-            visitBinaryOperation = fn;
+            mVisitBinaryOperation = fn;
             return inst;
           },
           visitFunctionCall: (fn) => {
-            visitFunctionCall = fn;
+            mVisitFunctionCall = fn;
             return inst;
           },
           visitLetDeclaration: (fn) => {
-            visitLetDeclaration = fn;
+            mVisitLetDeclaration = fn;
             return inst;
           },
           visitIdentifier: (fn) => {
-            visitIdentifier = fn;
+            mVisitIdentifier = fn;
             return inst;
           },
-          finish: () => freeze8({
-            visitBinaryOperation,
-            visitFunctionCall,
-            visitLetDeclaration,
-            visitIdentifier
-          })
+          finish: () => {
+            const impl = freeze8({
+              visitBinaryOperation: (op, lhs, rhs) => {
+                if (mVisitBinaryOperation) {
+                  return mVisitBinaryOperation(op, lhs, rhs);
+                }
+                lhs.visit(impl);
+                rhs.visit(impl);
+              },
+              visitFunctionCall: (node) => {
+                if (mVisitFunctionCall) {
+                  return mVisitFunctionCall(node);
+                }
+                node.arguments.forEach((node2) => node2.visit(impl));
+              },
+              visitLetDeclaration: (node, rhs) => {
+                if (mVisitLetDeclaration) {
+                  return mVisitLetDeclaration(node, rhs);
+                }
+                rhs.visit(impl);
+              },
+              visitIdentifier: (node) => {
+                if (mVisitIdentifier) {
+                  return mVisitIdentifier(node);
+                }
+              }
+            });
+            return impl;
+          }
         });
         return inst;
       }
@@ -1706,12 +1717,6 @@
           const { build: build2, error: error2 } = PartialTreeStartOperatorBuild.make(incompleteNode, next, mTokenRange);
           return build2() ?? setErrorFn(error2);
         } else if (next.type() === tokenTypes.newLine) {
-          if (mLineContScheme === LineContinuationScheme.normal) {
-            return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
-          }
-          if (mLineContScheme !== LineContinuationScheme.operatorContinued) {
-            throw Error("impossible branch??");
-          }
           const { normal } = LineContinuationScheme;
           const rightPart = TreePartBuild.make(mTokenRange, normal);
           const ph = BuildPartRightTreePartHandler.make(rightPart);
@@ -1830,7 +1835,9 @@
         ];
         const visitor = AstNodeVisitorBuilder.make().visitFunctionCall((node) => {
           points()[0].hitsAtExactly(2);
-          node.visit(visitor);
+          node.arguments.forEach((node2) => {
+            node2.visit(visitor);
+          });
         }).finish();
         buildAst().visit(visitor);
         expect(verifyAllHit()).toBeTruthy();
@@ -1851,7 +1858,9 @@
         ];
         const visitor = AstNodeVisitorBuilder.make().visitFunctionCall((node) => {
           points()[0].hitsAtExactly(1);
-          node.visit(visitor);
+          node.arguments.forEach((node2) => {
+            node2.visit(visitor);
+          });
         }).finish();
         buildAst().visit(visitor);
         expect(verifyAllHit()).toBeTruthy();
@@ -1915,6 +1924,21 @@
         }).finish();
         buildAst().visit(visitor);
         expect(foundOperators).toEqual([":=", "+"]);
+      });
+      it("builds ast with multiple lines end on an unary operator", () => {
+        tokens = [
+          makeToken("a"),
+          makeToken("\n"),
+          makeToken("let"),
+          makeToken("a"),
+          makeToken(":="),
+          makeToken("2")
+        ];
+        const rootNode = buildAst();
+        if (rootNode.type() !== AstNode.types.tuple) {
+          return fail();
+        }
+        expect(rootNode.count()).toEqual(2);
       });
     });
   });
@@ -2227,14 +2251,12 @@
     const { make: make2 } = AstBinaryOperatorNode;
     const makeIdentifier = AstIdentifierNode.make;
     it("is reachable by visitor", () => {
-      const { points, verifyAllHit } = ReachPoint.makeCollection(1);
-      const visitor = AstNodeVisitor.makeFakeVisitor({
-        visitBinaryOperation: (_0, _1, _2) => {
-          points()[0].hitsAtExactly(1);
-        }
-      });
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((_0, _1, _2) => {
+        hitsAtExactly(1);
+      }).finish();
       make2(":=", makeIdentifier(""), makeIdentifier("")).visit(visitor);
-      expect(verifyAllHit).toBeTruthy();
+      expect(verifyHit()).toBeTruthy();
     });
     it("reports self as a binary operator node type", () => {
       const type = make2(":=", makeIdentifier(""), makeIdentifier("")).type();
@@ -2242,14 +2264,12 @@
     });
     it("maybe visited for assigee name", () => {
       let assigneeName = "";
-      const visitor = AstNodeVisitor.makeFakeVisitor({
-        visitBinaryOperation: (_0, node, _1) => {
-          AstEvaluatableNode.tryDowncast(node)?.evaluate((name) => {
-            assigneeName = name;
-            return ContextVariable.make();
-          });
-        }
-      });
+      const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((_0, node, _2) => {
+        AstEvaluatableNode.tryDowncast(node)?.evaluate((name) => {
+          assigneeName = name;
+          return ContextVariable.make();
+        });
+      }).finish();
       make2(":=", makeIdentifier("foo"), makeIdentifier("")).visit(visitor);
       expect(assigneeName).toEqual("foo");
     });
@@ -2298,7 +2318,7 @@
     });
   });
 
-  // tests/partial_tree_build_tests.ts
+  // tests/tree_part_build_tests.ts
   var { describeNamed: describeNamed10 } = TestHelpers;
   describeNamed10({ TreePartBuild }, () => {
     const makeToken = Token.forTesting.makeFromStringOnly;
@@ -2438,7 +2458,7 @@
         ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => pt1.hitsAtExactly(1)).visitRightPartOnly((_0) => {
           pt2.hitsAtExactly(1);
         }).finish());
-        verifyAllHit();
+        expect(verifyAllHit()).toBeTruthy();
       });
       it("left part incomplete node, completes into a tuple node", () => {
         setupWithLeftPartCompletingTupleNode(ptbRes, (node) => {
@@ -2491,7 +2511,7 @@
         ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitLeftWithNode((_0, _1) => pt1.hitsAtExactly(1)).visitRightPartOnly((_0) => {
           pt2.hitsAtExactly(1);
         }).finish());
-        verifyAllHit();
+        expect(verifyAllHit()).toBeTruthy();
       });
     }
     describe('handles function call case "f(...)..."', () => {
@@ -2555,6 +2575,22 @@
           expect(completed.type()).toEqual(AstNode.types.letDeclaration);
         }).visitRightPartOnly((_0) => {
         }).finish());
+      });
+    });
+    describe("unary operator starting on a new line", () => {
+      const args = [
+        makeToken("a"),
+        makeToken("\n"),
+        makeToken("let")
+      ];
+      const ptbRes = () => makePtbRes(...args);
+      includeHasAResultExample(ptbRes);
+      it("builds a node with an unprocessed right part", () => {
+        const { hitsAtExactly, verifyHit } = ReachPoint.make();
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightWithPart((_0, _1) => {
+          hitsAtExactly(1);
+        }).finish());
+        expect(verifyHit()).toBeTruthy();
       });
     });
     describe("simple cases", () => {

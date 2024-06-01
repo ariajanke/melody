@@ -51,12 +51,12 @@ export const PartialTreeStartFringeBuild = (() => {
         return build() ?? setErrorFn(error);
       } else if (next.type() === tokenTypes.newLine) {
         // also begging for extraction
-        if (mLineContScheme === LineContinuationScheme.normal) {
-          return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
-        }
-        if (mLineContScheme !== LineContinuationScheme.operatorContinued) {
-          throw Error('impossible branch??');
-        }
+        // if (mLineContScheme === LineContinuationScheme.normal) {
+        //   return RightSideNodeExpansion.make(lhsNode, BareRightTreePartHandler.make());
+        // }
+        // if (mLineContScheme !== LineContinuationScheme.operatorContinued) {
+        //   throw Error('impossible branch??');
+        // }
         const { normal } = LineContinuationScheme;
         const rightPart = TreePartBuild.make(mTokenRange, normal);
         const ph = BuildPartRightTreePartHandler.make(rightPart);

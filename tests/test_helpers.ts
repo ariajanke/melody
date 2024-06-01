@@ -17,7 +17,7 @@ function fdescribeNamed(obj: object, descFn: () => void): void {
 
 export interface ReachPoint {
   hitsAtExactly: (times: number) => void,
-  verifySatisfied: () => void
+  verifyHit: () => boolean
 };
 
 export interface ReachPointCollection {
@@ -26,7 +26,11 @@ export interface ReachPointCollection {
 }
 
 export const ReachPoint = (() => {
-  function make(mSet: number[], mIdx: number): ReachPoint {
+  function make() {
+    return construct([0], 0);
+  }
+
+  function construct(mSet: number[], mIdx: number): ReachPoint {
     let mRequiredHits = 1;
     let mName = `Point ${mIdx}`;
 
@@ -41,10 +45,11 @@ export const ReachPoint = (() => {
           mName = name;
         }
       },
-      verifySatisfied: () => {
+      verifyHit: () => {
         if (mSet[mIdx] !== mRequiredHits) {
           throw Error(`Point "${mName}" was not reached ${mRequiredHits} times`);
         }
+        return true;
       }
     });
   }
@@ -55,13 +60,13 @@ export const ReachPoint = (() => {
     mSet.fill(0);
     const mPoints: ReachPoint[] = [];
     for (let i = 0; i < size; ++i) {
-      mPoints.push(make(mSet, i));
+      mPoints.push(construct(mSet, i));
     }
 
     return Object.freeze({
       points: (): Readonly<ReachPoint[]> => mPoints,
       verifyAllHit: (): boolean => {
-        mPoints.forEach((pt) => { pt.verifySatisfied(); });
+        mPoints.forEach((pt) => { pt.verifyHit(); });
         return true;
       }
     });
