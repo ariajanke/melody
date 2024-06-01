@@ -28,17 +28,21 @@ export const TokenRange = (() => {
     TokenRange
   {
 
-    const parentContainerSize = mTokens.count;
-    const tokenAt = mTokens.at;
     const inst = freeze({
-      step,
-      skipNewLine,
-      clone,
-      tokenAt,
-      start,
-      end,
-      parentContainerSize, 
-      // set
+      step: () => {
+        ++mStart;
+        return verifyValidRange();
+      },
+      skipNewLine: () => {
+        mStart = mTokens.skipNewLine(mStart);
+        return inst;
+      },
+      clone: (start?: number, end?: number) =>
+        make(mTokens, start ?? mStart, end ?? mEnd),
+      tokenAt: mTokens.at,
+      start: () => mStart,
+      end: () => mEnd,
+      parentContainerSize: mTokens.count
     });
 
     function verifyValidRange() {
@@ -47,34 +51,10 @@ export const TokenRange = (() => {
       } else if (mTokens.count() < mEnd) {
         throw Error(`Range end ${mEnd} cannot exceed token count ${mTokens.count()}`);
       }
-    }
-
-    function step() {
-      ++mStart;
       return inst;
     }
 
-    function skipNewLine() {
-      mStart = mTokens.skipNewLine(mStart);
-      return inst;
-    }
-
-    function clone(start?: number, end?: number)
-      { return make(mTokens, start ?? mStart, end ?? mEnd); }
-
-    // function set(start: number, end: number) {
-    //   mStart = start;
-    //   mEnd = end;
-    //   verifyValidRange();
-    //   return inst;
-    // }
-
-    function start() { return mStart; }
-
-    function end() { return mEnd; }
-
-    verifyValidRange();
-    return inst;
+    return verifyValidRange();
   }
 
   return freeze({ make, makeStartingRange, zeroSizedRange });

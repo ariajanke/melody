@@ -23,6 +23,7 @@ export const AstIncompleteBinaryNode = (() => {
     (fn: BinaryNodeCreationFn, operatorStr: string, lhs: AstNode):
     AstIncompleteBinaryNode
   {
+    console.log('binary node: ' + operatorStr);
     function finish(rhs: AstNode): AstNode {
       return fn(operatorStr, lhs, rhs);
     }

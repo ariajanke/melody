@@ -1068,12 +1068,13 @@
       throw Error(`Token ${operatorStr} does not result in an unary operator`);
     }
     function makeForOperator(operatorStr) {
+      console.log("unary " + operatorStr);
       return make2(_selectedConstructor(operatorStr));
     }
     function make2(fn) {
       return freeze9({ finish: fn });
     }
-    return freeze9({ makeForOperator, make: make2 });
+    return freeze9({ makeForOperator });
   })();
 
   // src/token_range.ts
@@ -1086,17 +1087,20 @@
       return make2(mTokens, 0, mTokens.count());
     }
     function make2(mTokens, mStart, mEnd) {
-      const parentContainerSize = mTokens.count;
-      const tokenAt = mTokens.at;
       const inst = freeze10({
-        step,
-        skipNewLine,
-        clone,
-        tokenAt,
-        start,
-        end,
-        parentContainerSize
-        // set
+        step: () => {
+          ++mStart;
+          return verifyValidRange();
+        },
+        skipNewLine: () => {
+          mStart = mTokens.skipNewLine(mStart);
+          return inst;
+        },
+        clone: (start, end) => make2(mTokens, start ?? mStart, end ?? mEnd),
+        tokenAt: mTokens.at,
+        start: () => mStart,
+        end: () => mEnd,
+        parentContainerSize: mTokens.count
       });
       function verifyValidRange() {
         if (mStart > mEnd) {
@@ -1104,26 +1108,9 @@
         } else if (mTokens.count() < mEnd) {
           throw Error(`Range end ${mEnd} cannot exceed token count ${mTokens.count()}`);
         }
-      }
-      function step() {
-        ++mStart;
         return inst;
       }
-      function skipNewLine() {
-        mStart = mTokens.skipNewLine(mStart);
-        return inst;
-      }
-      function clone(start2, end2) {
-        return make2(mTokens, start2 ?? mStart, end2 ?? mEnd);
-      }
-      function start() {
-        return mStart;
-      }
-      function end() {
-        return mEnd;
-      }
-      verifyValidRange();
-      return inst;
+      return verifyValidRange();
     }
     return freeze10({ make: make2, makeStartingRange, zeroSizedRange });
   })();
@@ -1528,6 +1515,7 @@
   var { freeze: freeze14 } = Helpers;
   var AstIncompleteBinaryNode = (() => {
     function make2(fn, operatorStr, lhs) {
+      console.log("binary node: " + operatorStr);
       function finish(rhs) {
         return fn(operatorStr, lhs, rhs);
       }
@@ -1694,6 +1682,11 @@
     const { zeroSizedRange } = TokenRange;
     function make2(mTokenRange, mLineContScheme) {
       const { error, setErrorFn, setErrorMessage } = StandardError.make();
+      if (zeroSizedRange(mTokenRange)) {
+        console.log("empty range");
+      } else {
+        console.log(`from "${mTokenRange.tokenAt(mTokenRange.start())?.content()}" to   "${mTokenRange.tokenAt(mTokenRange.end() - 1)?.content()}"`);
+      }
       function buildPart() {
         if (zeroSizedRange(mTokenRange)) {
           return EmptyNodeExpansion.make();
@@ -1821,6 +1814,51 @@
         });
         buildAst().visit(visitor);
         expect(vop).toEqual("+");
+      });
+      fit("builds ast with let declaration", () => {
+        tokens = [
+          makeToken("let"),
+          makeToken("a"),
+          makeToken(":="),
+          makeToken("2")
+        ];
+        const { points, verifyAllHit } = ReachPoint.makeCollection(3);
+        const [pt1, pt2, pt3] = points();
+        const foundOperators = [];
+        const visitor = AstNodeVisitor.makeFakeVisitor({
+          visitBinaryOperation: (op, lhs, rhs) => {
+            foundOperators.push(op);
+            pt1.hitsAtExactly(1);
+          },
+          visitLetDeclaration: (node) => {
+            pt2.hitsAtExactly(1);
+          },
+          visitIdentifier: (node) => {
+            expect(node.asString()).toEqual("2");
+            pt3.hitsAtExactly(1);
+          }
+        });
+        buildAst().visit(visitor);
+        expect(foundOperators).toEqual([":="]);
+        expect(verifyAllHit()).toBeTruthy();
+      });
+      it("builds ast with multiple operators", () => {
+        tokens = [
+          makeToken("let"),
+          makeToken("a"),
+          makeToken(":="),
+          makeToken("2"),
+          makeToken("+"),
+          makeToken("3")
+        ];
+        const foundOperators = [];
+        const visitor = AstNodeVisitor.makeFakeVisitor({
+          visitBinaryOperation: (op, lhs, rhs) => {
+            foundOperators.push(op);
+          }
+        });
+        buildAst().visit(visitor);
+        expect(foundOperators).toEqual([":=", "+"]);
       });
     });
   });
@@ -2113,7 +2151,7 @@
         programRootNode.visit(intr);
         expect(printedStrings).toEqual(["hello world!"]);
       });
-      fit("compiles and runs a simple adder program", () => {
+      it("compiles and runs a simple adder program", () => {
         const programRootNode = Interpreter.buildFor(`
         let a := 2
         let b := a + 2
