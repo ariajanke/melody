@@ -142,5 +142,20 @@ describeNamed({ AstBuild }, () => {
       }
       expect((rootNode as AstTupleNode).count()).toEqual(2);
     });
+
+    it('builds ast with multiple lines of unary operators', () => {
+      tokens = [
+        makeToken('let'), makeToken('b'), makeToken(':='), makeToken('2'),
+        makeToken('\n'),
+        makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2'),
+        makeToken('\n'),
+        makeToken('a')
+      ];
+      const rootNode = buildAst();
+      if (rootNode.type() !== AstNode.types.tuple) {
+        return fail();
+      }
+      expect((rootNode as AstTupleNode).count()).toEqual(3);
+    });
   });
 });

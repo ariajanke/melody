@@ -1940,6 +1940,26 @@
         }
         expect(rootNode.count()).toEqual(2);
       });
+      it("builds ast with multiple lines of unary operators", () => {
+        tokens = [
+          makeToken("let"),
+          makeToken("b"),
+          makeToken(":="),
+          makeToken("2"),
+          makeToken("\n"),
+          makeToken("let"),
+          makeToken("a"),
+          makeToken(":="),
+          makeToken("2"),
+          makeToken("\n"),
+          makeToken("a")
+        ];
+        const rootNode = buildAst();
+        if (rootNode.type() !== AstNode.types.tuple) {
+          return fail();
+        }
+        expect(rootNode.count()).toEqual(3);
+      });
     });
   });
 
@@ -2616,7 +2636,7 @@
         ];
         const ptbRes = () => make2(args).buildPart();
         const { points, verifyAllHit } = ReachPoint.makeCollection(1);
-        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightNodeOnly((node) => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightWithPart((node, rightPart) => {
           const str = AstFringeNode.downcast(node).asString();
           points()[0].hitsAtExactly(1);
           expect(str).toEqual("a");

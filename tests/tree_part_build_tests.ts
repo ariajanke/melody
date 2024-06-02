@@ -451,7 +451,7 @@ describeNamed({ TreePartBuild }, () => {
       const { points, verifyAllHit } = ReachPoint.makeCollection(1);
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitRightNodeOnly((node: AstNode) => {
+        visitRightWithPart((node: AstNode, rightPart: TreePartBuild) => {
           const str = AstFringeNode.downcast(node).asString();
           points()[0].hitsAtExactly(1);
           expect(str).toEqual('a');
