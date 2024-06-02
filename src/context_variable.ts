@@ -59,7 +59,7 @@ export const ContextVariable = (() => {
           return kNumericAccessors;
         } else if (typeof v === 'string') {
           mType = kBuiltinTypes.String;
-          return kStringAccessors
+          return kStringAccessors;
         } else {
           throw Error(`Cannot handle type "${typeof v}`);
         }

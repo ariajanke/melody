@@ -2,7 +2,7 @@ import { AstBuild } from '../src/ast_build';
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenCollection } from '../src/tokenization';
-import { AstNode, AstNodeVisitor, AstNodeVisitorBuilder } from '../src/ast_node';
+import { AstNode, AstNodeVisitorBuilder } from '../src/ast_node';
 import { AstFunctionCallNode } from '../src/ast_function_call_node';
 import { AstIntegerLiteralNode } from '../src/ast_integer_literal_node';
 import { AstLetDeclarationNode } from '../src/ast_let_declaration_node';

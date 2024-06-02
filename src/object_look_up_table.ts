@@ -108,17 +108,11 @@ export const ObjectLookUpTable = (() => {
     }
 
     function lookUpByType(typeUid: symbol): ObjectType {
-      return mLookUpByUid[typeUid]
+      return mLookUpByUid[typeUid];
     }
 
     return inst;
   }
 
   return freeze({ make, getBuiltinTypes });
-})();
-
-
-
-const TypeSystem = (() => {
-
 })();

@@ -1,6 +1,6 @@
 import { AstNode } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
-import { LineContinuationScheme, TreePartBuild } from './tree_part_build';
+import { LineContinuationScheme, TreePartBuild } from './ast_build/tree_part_build';
 import { TokenCollection } from './tokenization';
 import { Helpers } from './helpers';
 import { TokenRange } from './token_range';

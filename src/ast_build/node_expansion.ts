@@ -1,4 +1,4 @@
-import { TreePartBuild } from '../tree_part_build';
+import { TreePartBuild } from './tree_part_build';
 import { AstNode } from '../ast_node';
 import { Helpers, TypeCheckable } from '../helpers';
 import { IncompleteNode } from '../ast_incomplete_binary_node';

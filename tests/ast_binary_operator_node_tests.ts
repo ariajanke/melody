@@ -61,7 +61,7 @@ describeNamed({ AstBinaryOperatorNode }, () => {
         finish();
       sampleObjectType.setLookUp({
         ['foo']: funcType
-      })
+      });
       const a: TypeLookUpTable = {
         lookUpIdentifierType: (_0: string): ObjectType => {
           return sampleObjectType;

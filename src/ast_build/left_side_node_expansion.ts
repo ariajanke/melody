@@ -1,4 +1,4 @@
-import { TreePartBuild } from '../tree_part_build';
+import { TreePartBuild } from './tree_part_build';
 import {
   NodeExpansion,
   NodeExpansionVisitor,

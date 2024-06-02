@@ -1,5 +1,5 @@
 import { Helpers, StandardError, StandardErrorFn } from '../helpers';
-import { TreePartBuild, LineContinuationScheme } from '../tree_part_build';
+import { TreePartBuild, LineContinuationScheme } from './tree_part_build';
 import { TokenRange } from '../token_range';
 import { Token } from '../token';
 

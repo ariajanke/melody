@@ -1,4 +1,4 @@
-import { TreePartBuild, LineContinuationScheme } from '../tree_part_build';
+import { TreePartBuild, LineContinuationScheme } from './tree_part_build';
 import { Helpers, StandardError } from '../helpers';
 import { AstFringeNode } from '../ast_fringe_node';
 import { Token } from '../token';

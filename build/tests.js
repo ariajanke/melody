@@ -115,7 +115,7 @@
   var PersistentStack = (() => {
     const { freeze: freeze20 } = Helpers;
     function make2(mDefaultMake) {
-      let mMembers = [];
+      const mMembers = [];
       let mPosition = -1;
       function _verifyNotEmpty() {
         if (!isEmpty())
@@ -1020,35 +1020,6 @@
     });
     return class_;
   })();
-  var AstNodeVisitor = (() => {
-    const kDefaultImplementations = freeze8({
-      visitBinaryOperation: (_0, lhs, rhs) => {
-        lhs.visit(kDefaultImplementations);
-        rhs.visit(kDefaultImplementations);
-      },
-      visitFunctionCall: (_0) => {
-      },
-      visitLetDeclaration: (_0) => {
-      },
-      visitIdentifier: (_0) => {
-      }
-    });
-    function makeFakeVisitor({
-      visitBinaryOperation,
-      visitFunctionCall,
-      visitLetDeclaration,
-      visitIdentifier
-    }) {
-      const defaults = kDefaultImplementations;
-      return freeze8({
-        visitBinaryOperation: visitBinaryOperation ?? defaults.visitBinaryOperation,
-        visitFunctionCall: visitFunctionCall ?? defaults.visitFunctionCall,
-        visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration,
-        visitIdentifier: visitIdentifier ?? defaults.visitIdentifier
-      });
-    }
-    return freeze8({});
-  })();
 
   // src/ast_tuple_node.ts
   var AstTupleNode = (() => {
@@ -1180,7 +1151,7 @@
     return freeze10({ make: make2, makeStartingRange, zeroSizedRange });
   })();
 
-  // src/tree_part_build/tree_part_tuple_division.ts
+  // src/ast_build/tree_part_tuple_division.ts
   var TreePartTupleDivision = (() => {
     const { memoize: memoize3, freeze: freeze20 } = Helpers;
     const kCloseMapping = freeze20({
@@ -1229,7 +1200,7 @@
     return class_;
   })();
 
-  // src/tree_part_build/node_expansion.ts
+  // src/ast_build/node_expansion.ts
   var { freeze: freeze11 } = Helpers;
   var NodeExpansionVisitor = (() => {
     function makeDefaultImplementations(fn) {
@@ -1316,7 +1287,7 @@
     return freeze11({ make: make2, hasCreated });
   })();
 
-  // src/tree_part_build/left_side_node_expansion.ts
+  // src/ast_build/left_side_node_expansion.ts
   var BareLeftTreePartHandler = (() => {
     const { freeze: freeze20 } = Object;
     const kSharedInst = freeze20({ handleLeftSide, visit });
@@ -1371,7 +1342,7 @@
     return freeze20({ make: make2 });
   })();
 
-  // src/tree_part_build/partial_tree_start_group_build.ts
+  // src/ast_build/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
     const { memoize: memoize3, freeze: freeze20 } = Helpers;
     function make2(leftPartHandler, mTokenRange, mOperatorToken) {
@@ -1628,7 +1599,7 @@
     return freeze14({ make: make2 });
   })();
 
-  // src/tree_part_build/right_side_node_expansion.ts
+  // src/ast_build/right_side_node_expansion.ts
   var { freeze: freeze15 } = Helpers;
   var BareRightTreePartHandler = (() => {
     function make2() {
@@ -1672,13 +1643,14 @@
     return freeze15({ make: make2 });
   })();
 
-  // src/tree_part_build/partial_tree_start_operator_build.ts
+  // src/ast_build/partial_tree_start_operator_build.ts
   var PartialTreeStartOperatorBuild = (() => {
     const { freeze: freeze20 } = Helpers;
-    function make2(mIncompleteNode, mOperatorToken, mTokenRange) {
+    function make2(mOperatorToken, mTokenRange) {
       const { setErrorFn, error } = StandardError.make();
       function build() {
-        const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(mIncompleteNode);
+        const incompleteNode = AstIncompleteUnaryNode.makeForOperator(mOperatorToken.content());
+        const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(incompleteNode);
         const { build: build2, error: error2 } = PartialTreeStartGroupBuild.make(leftTreePartHandler, mTokenRange, mOperatorToken);
         return build2() ?? setErrorFn(error2);
       }
@@ -1687,7 +1659,7 @@
     return freeze20({ make: make2 });
   })();
 
-  // src/tree_part_build/partial_tree_start_fringe_build.ts
+  // src/ast_build/partial_tree_start_fringe_build.ts
   var { freeze: freeze16 } = Helpers;
   var PartialTreeStartFringeBuild = (() => {
     const tokenTypes = Token.types;
@@ -1730,7 +1702,7 @@
     return freeze16({ make: make2 });
   })();
 
-  // src/tree_part_build.ts
+  // src/ast_build/tree_part_build.ts
   var { freeze: freeze17, verifyInTesting: verifyInTesting2 } = Helpers;
   var LineContinuationScheme = freeze17({
     inGroup: Symbol(),
@@ -2128,7 +2100,7 @@
           const lhsName = AstFringeNode.downcast(lhs).asString();
           context.declareVariable(lhsName).setType(rhs.executionType(context));
         },
-        visitIdentifier: (node) => {
+        visitIdentifier: (_0) => {
         }
       });
       return inst;
@@ -2181,7 +2153,7 @@
       const rhsVal = valueOf(rhs);
       builtIn(mStack, lhsVal, rhsVal);
     }
-    function visitIdentifier(node) {
+    function visitIdentifier(_0) {
     }
     return inst;
   }
@@ -2338,7 +2310,7 @@
     });
   });
 
-  // tests/tree_part_build_tests.ts
+  // tests/ast_build/tree_part_build_tests.ts
   var { describeNamed: describeNamed10 } = TestHelpers;
   describeNamed10({ TreePartBuild }, () => {
     const makeToken = Token.forTesting.makeFromStringOnly;
@@ -2636,7 +2608,7 @@
         ];
         const ptbRes = () => make2(args).buildPart();
         const { points, verifyAllHit } = ReachPoint.makeCollection(1);
-        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightWithPart((node, rightPart) => {
+        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.makeOverrider(fail).visitRightWithPart((node, _1) => {
           const str = AstFringeNode.downcast(node).asString();
           points()[0].hitsAtExactly(1);
           expect(str).toEqual("a");

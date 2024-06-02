@@ -1,5 +1,4 @@
 import { AstFunctionCallNode } from './ast_function_call_node';
-import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
@@ -79,9 +78,9 @@ export const AstNodeVisitorBuilder = (() => {
   const class_ = freeze({
     make: () => {
       let mVisitBinaryOperation:
-        AstNodeVisitor['visitBinaryOperation'] | undefined = undefined
+        AstNodeVisitor['visitBinaryOperation'] | undefined = undefined;
       let mVisitFunctionCall:
-        AstNodeVisitor['visitFunctionCall'] | undefined = undefined
+        AstNodeVisitor['visitFunctionCall'] | undefined = undefined;
       let mVisitLetDeclaration:
         AstNodeVisitor['visitLetDeclaration'] | undefined = undefined;
       let mVisitIdentifier:
@@ -142,43 +141,43 @@ export const AstNodeVisitorBuilder = (() => {
   return class_;
 })();
 
-export const AstNodeVisitor = (() => {
-  const kDefaultImplementations = freeze({
-    visitBinaryOperation:
-      (_0: string, lhs: AstNode, rhs: AstNode): void =>
-    {
-      lhs.visit(kDefaultImplementations);
-      rhs.visit(kDefaultImplementations);
-    },
-    visitFunctionCall: (_0: AstFunctionCallNode): void => {},
-    visitLetDeclaration: (_0: AstLetDeclarationNode): void => {},
-    visitIdentifier: (_0: AstFringeNode): void => {}
-  });
+// export const AstNodeVisitor = (() => {
+//   const kDefaultImplementations = freeze({
+//     visitBinaryOperation:
+//       (_0: string, lhs: AstNode, rhs: AstNode): void =>
+//     {
+//       lhs.visit(kDefaultImplementations);
+//       rhs.visit(kDefaultImplementations);
+//     },
+//     visitFunctionCall: (_0: AstFunctionCallNode): void => {},
+//     visitLetDeclaration: (_0: AstLetDeclarationNode): void => {},
+//     visitIdentifier: (_0: AstFringeNode): void => {}
+//   });
 
-  function makeFakeVisitor
-    ({
-      visitBinaryOperation,
-      visitFunctionCall,
-      visitLetDeclaration,
-      visitIdentifier
-    }: {
-      visitFunctionCall?: (node: AstFunctionCallNode) => void | undefined,
-      visitBinaryOperation?: (op: string, node: AstNode, rhs: AstNode) => void | undefined,
-      visitLetDeclaration?: (node: AstLetDeclarationNode) => void | undefined,
-      visitIdentifier?: typeof kDefaultImplementations.visitIdentifier
-    }): AstNodeVisitor
-  {
-    const defaults = kDefaultImplementations;
-    return freeze({
-      visitBinaryOperation: visitBinaryOperation ?? defaults.visitBinaryOperation,
-      visitFunctionCall: visitFunctionCall ?? defaults.visitFunctionCall,
-      visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration,
-      visitIdentifier: visitIdentifier ?? defaults.visitIdentifier
-    });
-  }
+//   // function makeFakeVisitor
+//   //   ({
+//   //     visitBinaryOperation,
+//   //     visitFunctionCall,
+//   //     visitLetDeclaration,
+//   //     visitIdentifier
+//   //   }: {
+//   //     visitFunctionCall?: (node: AstFunctionCallNode) => void | undefined,
+//   //     visitBinaryOperation?: (op: string, node: AstNode, rhs: AstNode) => void | undefined,
+//   //     visitLetDeclaration?: (node: AstLetDeclarationNode) => void | undefined,
+//   //     visitIdentifier?: typeof kDefaultImplementations.visitIdentifier
+//   //   }): AstNodeVisitor
+//   // {
+//   //   const defaults = kDefaultImplementations;
+//   //   return freeze({
+//   //     visitBinaryOperation: visitBinaryOperation ?? defaults.visitBinaryOperation,
+//   //     visitFunctionCall: visitFunctionCall ?? defaults.visitFunctionCall,
+//   //     visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration,
+//   //     visitIdentifier: visitIdentifier ?? defaults.visitIdentifier
+//   //   });
+//   // }
 
-  return freeze({ });
-})();
+//   return freeze({ });
+// })();
 
 // export interface AstLetNode extends AstNode {
 //   takenNames: () => string[],

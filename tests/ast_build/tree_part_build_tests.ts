@@ -1,18 +1,20 @@
-import { LineContinuationScheme, TreePartBuild } from '../src/tree_part_build';
-import { TestHelpers, ReachPoint } from './test_helpers';
-import { Token } from '../src/token';
-import { TokenCollection } from '../src/tokenization';
-import { AstNode } from '../src/ast_node';
-import { AstIdentifierNode, AstFringeNode } from '../src/ast_fringe_node';
+import {
+  LineContinuationScheme, TreePartBuild 
+} from '../../src/ast_build/tree_part_build';
+import { TestHelpers, ReachPoint } from '../test_helpers';
+import { Token } from '../../src/token';
+import { TokenCollection } from '../../src/tokenization';
+import { AstNode } from '../../src/ast_node';
+import { AstIdentifierNode, AstFringeNode } from '../../src/ast_fringe_node';
 import {
   EmptyNodeExpansion,
   NodeExpansion,
   NodeExpansionVisitor
-} from '../src/tree_part_build/node_expansion';
-import { IncompleteNode } from '../src/ast_incomplete_binary_node';
-import { AstTupleNode } from '../src/ast_tuple_node';
-import { AstFunctionCallNode } from '../src/ast_function_call_node';
-import { TokenRange } from '../src/token_range';
+} from '../../src/ast_build/node_expansion';
+import { IncompleteNode } from '../../src/ast_incomplete_binary_node';
+import { AstTupleNode } from '../../src/ast_tuple_node';
+import { AstFunctionCallNode } from '../../src/ast_function_call_node';
+import { TokenRange } from '../../src/token_range';
 
 const { describeNamed } = TestHelpers;
 
@@ -451,7 +453,7 @@ describeNamed({ TreePartBuild }, () => {
       const { points, verifyAllHit } = ReachPoint.makeCollection(1);
       ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
         makeOverrider(fail).
-        visitRightWithPart((node: AstNode, rightPart: TreePartBuild) => {
+        visitRightWithPart((node: AstNode, _1: TreePartBuild) => {
           const str = AstFringeNode.downcast(node).asString();
           points()[0].hitsAtExactly(1);
           expect(str).toEqual('a');

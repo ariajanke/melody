@@ -3,7 +3,7 @@ import { ContextVariable } from './context_variable';
 import { TypeLookUpTable } from './ast_node';
 import { ObjectType } from './object_type';
 
-const { freeze } = Helpers
+const { freeze } = Helpers;
 
 export interface ExecutionContext extends TypeLookUpTable {
   declareVariable: (name: string) => ContextVariable,

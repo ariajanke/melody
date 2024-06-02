@@ -170,7 +170,7 @@ export const PersistentStack = (() => {
   const { freeze } = Helpers;
 
   function make<Type>(mDefaultMake: () => Type) {
-    let mMembers: Type[] = [];
+    const mMembers: Type[] = [];
     let mPosition = -1;
 
     function _verifyNotEmpty() {

@@ -28,7 +28,7 @@ const LetVisitor = (() => {
                   setType(rhs.executionType(context));
           // STOP HERE
         },
-      visitIdentifier: (node: AstFringeNode) => {
+      visitIdentifier: (_0: AstFringeNode) => {
 
       }
     });
@@ -104,7 +104,7 @@ function make
     builtIn(mStack, lhsVal, rhsVal);
   }
 
-  function visitIdentifier(node: AstFringeNode) {
+  function visitIdentifier(_0: AstFringeNode) {
 
   }
 
