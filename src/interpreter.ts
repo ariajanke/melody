@@ -2,11 +2,12 @@ import { AstBuild } from './ast_build';
 import { AstNodeVisitor, AstNode, AstEvaluatableNode } from './ast_node';
 import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
-import { Helpers, PersistentStack } from './helpers';
+import { Helpers } from './helpers';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
 import { AstFringeNode } from './ast_fringe_node';
+import { PersistentStack } from './persistent_stack';
 
 const { freeze } = Object;
 

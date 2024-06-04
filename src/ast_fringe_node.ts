@@ -86,13 +86,19 @@ export const AstStringLiteralNode = (() => {
 
 export const AstIdentifierNode = (() => {
   const kIndentifier = AstNode.types.identifier;
+  const kOperators = freeze({
+    ',': true,
+    '(': true,
+    ':=': true,
+    '+': true,
+    '-': true,
+    '*': true
+  });
 
   function make(value: string): AstFringeNode {
     const inst = freeze({
-      comesBeforeOperator: (operator: Token): boolean => {
-        const str = operator.content();
-        return str === ',' || str === '(' || str === ':=';
-      },
+      comesBeforeOperator: (operator: Token): boolean =>
+        !!kOperators[operator.content()],
       executionType: (types: TypeLookUpTable): ObjectType =>
         types.lookUpIdentifierType(value),
       evaluate: (getter: (name: string) => ContextVariable): ContextVariable =>
