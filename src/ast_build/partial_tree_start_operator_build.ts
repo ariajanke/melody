@@ -5,7 +5,6 @@ import { IncompleteNodeLeftTreePartHandler } from './left_side_node_expansion';
 import { PartialTreeStartGroupBuild } from './partial_tree_start_group_build';
 import { Token } from '../token';
 import { TokenRange } from '../token_range';
-import { AstIncompleteUnaryNode } from '../ast_let_declaration_node';
 
 export const PartialTreeStartOperatorBuild = (() => {
   const { freeze } = Helpers;
@@ -19,7 +18,6 @@ export const PartialTreeStartOperatorBuild = (() => {
     const { setErrorFn, error } = StandardError.make();
 
     function build(): NodeExpansion | undefined {
-      // const incompleteNode = AstIncompleteUnaryNode.makeForOperator(mOperatorToken.content());
       const leftTreePartHandler = IncompleteNodeLeftTreePartHandler.make(mIncompleteNode);
       const { build, error } = PartialTreeStartGroupBuild.
         make(leftTreePartHandler, mTokenRange, mOperatorToken);

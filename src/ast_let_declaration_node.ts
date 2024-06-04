@@ -36,7 +36,6 @@ export const AstIncompleteUnaryNode = (() => {
   }
 
   function makeForOperator(operatorStr: string): IncompleteNode {
-    console.log('unary '+ operatorStr);
     return make(_selectedConstructor(operatorStr));
   }
 

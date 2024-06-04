@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npx esbuild build.js --bundle --outfile=build/stuff.m.js",
     "build_for_tests": "npx esbuild build-tests.js --bundle --outfile=build/tests.js",
-    "lint": "npx eslint src/*.ts $(find tests/ | grep -P '(?<!\\.d)\\.ts$')",
+    "lint": "npx eslint $(find src/ | grep '.ts$') $(find tests/ | grep -P '(?<!\\.d)\\.ts$')",
     "test": "npx jasmine build/tests.js"
   },
   "include": [

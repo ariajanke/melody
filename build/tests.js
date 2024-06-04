@@ -1,4 +1,7 @@
 (() => {
+  // tests/globals.ts
+  globalThis["debug_mode"] = true;
+
   // src/helpers.ts
   var kDebugMode = globalThis["debug_mode"] ?? false;
   var Helpers = Object.freeze({
@@ -966,7 +969,6 @@
       throw Error(`Token ${operatorStr} does not result in an unary operator`);
     }
     function makeForOperator(operatorStr) {
-      console.log("unary " + operatorStr);
       return make2(_selectedConstructor(operatorStr));
     }
     function make2(fn) {
@@ -1265,7 +1267,6 @@
   var { freeze: freeze13 } = Helpers;
   var AstIncompleteBinaryNode = (() => {
     function make2(fn, operatorStr, lhs) {
-      console.log("binary node: " + operatorStr);
       function finish(rhs) {
         return fn(operatorStr, lhs, rhs);
       }
@@ -1426,11 +1427,6 @@
     const { zeroSizedRange } = TokenRange;
     function make2(mTokenRange, mLineContScheme) {
       const { error, setErrorFn, setErrorMessage } = StandardError.make();
-      if (zeroSizedRange(mTokenRange)) {
-        console.log("empty range");
-      } else {
-        console.log(`from "${mTokenRange.tokenAt(mTokenRange.start())?.content()}" to   "${mTokenRange.tokenAt(mTokenRange.end() - 1)?.content()}"`);
-      }
       function tokenProducingFringeNode(token) {
         return {
           [tokenTypes.identifier]: true,
@@ -2365,9 +2361,6 @@
       });
     });
   });
-
-  // tests/globals.ts
-  globalThis["debug_mode"] = true;
 
   // src/execution_context.ts
   var { freeze: freeze18 } = Helpers;

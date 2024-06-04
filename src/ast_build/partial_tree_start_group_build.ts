@@ -26,7 +26,7 @@ export const PartialTreeStartGroupBuild = (() => {
 
     function build(): NodeExpansion | undefined {
       const nextPart = TreePartTupleDivision.
-        make(mTokenRange.skipNewLine(), mOperatorToken)
+        make(mTokenRange.skipNewLine(), mOperatorToken);
       const leftPart = nextPart.leftPart() ?? setErrorFn(nextPart.error);
       if (!leftPart) {
         return;

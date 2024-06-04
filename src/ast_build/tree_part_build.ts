@@ -42,12 +42,6 @@ export const TreePartBuild = (() => {
     (mTokenRange: TokenRange, mLineContScheme: symbol): TreePartBuild
   {
     const { error, setErrorFn, setErrorMessage } = StandardError.make();
-    if (zeroSizedRange(mTokenRange)) {
-      console.log('empty range');
-    } else {
-      console.log(`from "${mTokenRange.tokenAt(mTokenRange.start())?.content()}" to \
-  "${mTokenRange.tokenAt(mTokenRange.end() - 1)?.content()}"`);
-    }
 
     function tokenProducingFringeNode(token: Token): boolean {
       return ({
