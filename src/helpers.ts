@@ -69,11 +69,6 @@ function verifyInTesting() {
   throw Error('Cannot be called outside of a testing environment');
 }
 
-// function passWhenInTesting<Type>(fn: () => Type): Type {
-//   if (!kDebugMode) return {} as Type;
-//   return fn();
-// }
-
 function pass<Type>(arg: Type): Readonly<Type> { return arg; }
 
 function forEachKeyIn<Type>

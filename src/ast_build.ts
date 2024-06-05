@@ -1,9 +1,8 @@
 import { AstNode } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
 import { LineContinuationScheme, TreePartBuild } from './ast_build/tree_part_build';
-import { TokenCollection } from './tokenization';
-import { Helpers } from './helpers';
 import { TokenRange } from './token_range';
+import { Helpers } from './helpers';
 
 export const AstBuild = (() => {
   const { freeze } = Helpers;
@@ -21,10 +20,9 @@ export const AstBuild = (() => {
     return part.expandIntoNodes(buildProgramSequence);
   }
 
-  function buildFor(tokens: TokenCollection): AstNode {
-    const range = TokenRange.makeStartingRange(tokens);
+  function buildFor(tokens: TokenRange): AstNode {
     const partBuild = TreePartBuild.
-      make(range, LineContinuationScheme.normal);
+      make(tokens, LineContinuationScheme.normal);
     const res = buildProgramSequence(partBuild).map(n => n);
     return AstTupleNode.make(res);
   }

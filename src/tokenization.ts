@@ -1,74 +1,28 @@
 import { CharacterCrawler } from './character_crawler';
+import { Helpers } from './helpers';
 import { Token } from './token';
-
-export interface TokenCollection {
-  count: () => number,
-  at: (i: number) => Token
-  forEach: (fn: (token: string) => void) => void,
-  skipNewLine: (i: number) => number
-}
+import { TokenRange } from './token_range';
 
 export interface Tokenization {
-  tokenize: (input: string) => TokenCollection
+  tokenize: (input: string) => TokenRange
 }
 
-const { freeze } = Object;
-
-export const TokenCollection = (() => {
-  function verifyNoTwoContiguousNewLineTokens(mTokens: Token[]) {
-    const { length } = mTokens;
-    if (length < 2) return;
-    for (let i = 1; i < length; ++i) {
-      if (mTokens[i    ].type() === Token.types.newLine &&
-          mTokens[i - 1].type() === Token.types.newLine)
-      {
-        throw Error(`Contiguous new lines not allowed near element ${i}`);
-      }
-    }
-  }
-
-  function make(mTokens: Token[]): TokenCollection {
-    const mLength = mTokens.length;
-    verifyNoTwoContiguousNewLineTokens(mTokens);
-
-    function count(): number {
-      return mLength;
-    }
-
-    function at(i: number): Token {
-      return mTokens[i];
-    }
-
-    function forEach(fn: (token: string) => void): void {
-      mTokens.forEach((token: Token) => fn(token.content()));
-    }
-
-    function skipNewLine(i: number): number {
-      if (at(i).type() === Token.types.newLine) {
-        return i + 1;
-      }
-      return i;
-    }
-
-    return freeze({ count, at, forEach, skipNewLine });
-  }
-
-  return freeze({ make });
-})();
-
 export const Tokenization = (() => {
+  const { freeze } = Helpers;
 
-  const injections = freeze({ CharacterCrawler });
+  const injections = freeze({ CharacterCrawler, TokenRange });
 
-  function make({ CharacterCrawler } = injections) {
-    function tokenize(inp: string): TokenCollection {
+  function make
+    ({ CharacterCrawler, TokenRange } = injections)
+  {
+    function tokenize(inp: string): TokenRange {
       const rv: Token[] = [];
       const crawler = CharacterCrawler.make(inp);
       while (!crawler.reachedEnd()) {
         const readToken = crawler.crawl().readToken();
         rv.push(readToken);
       }
-      return TokenCollection.make(rv);
+      return TokenRange.makeStartingRange(rv);
     }
 
     return freeze({ tokenize });

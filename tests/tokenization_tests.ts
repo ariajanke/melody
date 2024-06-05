@@ -1,15 +1,16 @@
 import { TestHelpers } from './test_helpers';
 import { Tokenization } from '../src/tokenization';
+import { TokenRange } from '../src/token_range';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ Tokenization }, () => {
   const getTokens = (inp: string): string[] => {
     const strings: string[] = [];
-    Tokenization.
+    const range = Tokenization.
       make().
-      tokenize(inp).
-      forEach((str: string) => strings.push(str));
+      tokenize(inp);
+    TokenRange.forEachIn(range, (str: string) => strings.push(str));
     return strings;
   };
 

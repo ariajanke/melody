@@ -1,7 +1,8 @@
-import { Helpers, PersistentStack } from './helpers';
+import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { IncompleteFunctionType } from './function_type';
 import { ContextVariable } from './context_variable';
+import { PersistentStack } from './persistent_stack';
 
 const { freeze, memoize } = Helpers;
 

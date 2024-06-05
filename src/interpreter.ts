@@ -8,6 +8,7 @@ import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
 import { AstFringeNode } from './ast_fringe_node';
 import { PersistentStack } from './persistent_stack';
+import { TokenRange } from './token_range';
 
 const { freeze } = Object;
 
@@ -113,8 +114,8 @@ function make
 }
 
 function buildFor(inp: string): AstNode {
-  const tokenCollection = Tokenization.make().tokenize(inp);
-  return AstBuild.buildFor(tokenCollection);
+  const tokenRange = Tokenization.make().tokenize(inp);
+  return AstBuild.buildFor(tokenRange);
 }
 
 Helpers.expose({ Interpreter });

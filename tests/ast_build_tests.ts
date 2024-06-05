@@ -1,13 +1,13 @@
 import { AstBuild } from '../src/ast_build';
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
-import { TokenCollection } from '../src/tokenization';
 import { AstNode, AstNodeVisitorBuilder } from '../src/ast_node';
 import { AstFunctionCallNode } from '../src/ast_function_call_node';
 import { AstIntegerLiteralNode } from '../src/ast_integer_literal_node';
 import { AstLetDeclarationNode } from '../src/ast_let_declaration_node';
 import { AstFringeNode } from '../src/ast_fringe_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
+import { TokenRange } from '../src/token_range';
 
 const { describeNamed } = TestHelpers;
 
@@ -16,7 +16,7 @@ describeNamed({ AstBuild }, () => {
 
   describe('builds a mutli-line ast', () => {
     let tokens: Token[] = [];
-    const buildAst = () => AstBuild.buildFor(TokenCollection.make(tokens));
+    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
     it('builds two function calls', () => {
       const { points, verifyAllHit } = ReachPoint.makeCollection(1);

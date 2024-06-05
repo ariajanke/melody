@@ -3,7 +3,6 @@ import {
 } from '../../src/ast_build/tree_part_build';
 import { TestHelpers, ReachPoint } from '../test_helpers';
 import { Token } from '../../src/token';
-import { TokenCollection } from '../../src/tokenization';
 import { AstNode } from '../../src/ast_node';
 import { AstIdentifierNode, AstFringeNode } from '../../src/ast_fringe_node';
 import {
@@ -36,10 +35,10 @@ describeNamed({ TreePartBuild }, () => {
 
   const normalCont = LineContinuationScheme.normal;
   const make = (tokens: Token[]) =>
-    TreePartBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont);
+    TreePartBuild.make(TokenRange.makeStartingRange(tokens), normalCont);
   const makePtbRes = (...tokens: Token[]) =>
     TreePartBuild.
-      make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont).
+      make(TokenRange.makeStartingRange(tokens), normalCont).
       buildPart();
 
   const ptbWithVisitor =

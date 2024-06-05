@@ -1,20 +1,14 @@
+// unused??
 import { Helpers } from './helpers';
-import { TokenCollection } from './tokenization';
+import { TokenRange } from './token_range';
 
 export const TokenCrawler = (() => {
-  const { freeze } = Object;
-  const { memoize } = Helpers;
+  const { memoize, freeze } = Helpers;
 
   function make
-    (mTokens: TokenCollection,
-     mStart: number,
-     mEnd: number,
+    (mTokenRange: TokenRange,
      mIsTarget: (possibleTarget: string) => boolean)
   {
-    if (mEnd <= mStart || mEnd > mTokens.count()) {
-      throw Error('');
-    }
-
     let mErrorsFn: (() => { message: string }) | (() => undefined) =
       () => undefined;
 
@@ -23,11 +17,12 @@ export const TokenCrawler = (() => {
       return undefined;
     }
 
-    function crawl() {
-      for (let i = mStart; i < mEnd; ++i) {
+    function crawl(): number | undefined {
+      const [start, end] = [mTokenRange.start(), mTokenRange.end()];
+      for (let i = start; i < end; ++i) {
         let parenCount = 0;
         let curlyCount = 0;
-        const currentToken = mTokens.at(i);
+        const currentToken = mTokenRange.tokenAt(i);
         const tokenContent = currentToken.content();
         switch (tokenContent) {
         case '(': ++parenCount; break;
@@ -55,7 +50,7 @@ export const TokenCrawler = (() => {
         }
       }
 
-      return mEnd;
+      return end;
     }
 
     const stoppedAt = memoize(crawl);

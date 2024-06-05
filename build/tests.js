@@ -984,35 +984,45 @@
       return range.start() === range.end();
     }
     function makeStartingRange(mTokens) {
-      return make2(mTokens, 0, mTokens.count());
+      return make2(mTokens, 0, mTokens.length);
+    }
+    function forEachIn(tokenRange, fn) {
+      const { start, end } = tokenRange;
+      const rangeEnd = end();
+      for (let i = start(); i < rangeEnd; ++i) {
+        fn(tokenRange.tokenAt(i).content());
+      }
     }
     function make2(mTokens, mStart, mEnd) {
       const inst = freeze11({
         step: () => {
           ++mStart;
-          return verifyValidRange();
+          return _verifyValidRange();
         },
         skipNewLine: () => {
-          mStart = mTokens.skipNewLine(mStart);
+          if (inst.tokenAt(mStart).type() === Token.types.newLine) {
+            ++mStart;
+          }
           return inst;
         },
         clone: (start, end) => make2(mTokens, start ?? mStart, end ?? mEnd),
-        tokenAt: mTokens.at,
+        tokenAt: (i) => mTokens[i],
         start: () => mStart,
         end: () => mEnd,
-        parentContainerSize: mTokens.count
+        parentContainerSize: () => mTokens.length
       });
-      function verifyValidRange() {
+      function _verifyValidRange() {
+        const { length } = mTokens;
         if (mStart > mEnd) {
           throw Error(`Range start ${mStart} must be less than or equal to end ${mEnd}`);
-        } else if (mTokens.count() < mEnd) {
-          throw Error(`Range end ${mEnd} cannot exceed token count ${mTokens.count()}`);
+        } else if (length < mEnd) {
+          throw Error(`Range end ${mEnd} cannot exceed token count ${length}`);
         }
         return inst;
       }
-      return verifyValidRange();
+      return _verifyValidRange();
     }
-    return freeze11({ make: make2, makeStartingRange, zeroSizedRange });
+    return freeze11({ make: make2, makeStartingRange, zeroSizedRange, forEachIn });
   })();
 
   // src/ast_build/tree_part_tuple_division.ts
@@ -1484,275 +1494,11 @@
       return part.expandIntoNodes(buildProgramSequence);
     }
     function buildFor2(tokens) {
-      const range = TokenRange.makeStartingRange(tokens);
-      const partBuild = TreePartBuild.make(range, LineContinuationScheme.normal);
+      const partBuild = TreePartBuild.make(tokens, LineContinuationScheme.normal);
       const res = buildProgramSequence(partBuild).map((n) => n);
       return AstTupleNode.make(res);
     }
     return freeze20({ buildFor: buildFor2, testable: { buildProgramSequence } });
-  })();
-
-  // src/character_class.ts
-  var CharacterClass = (() => {
-    const { freeze: freeze20, assign } = Object;
-    const classes = freeze20({
-      numeric: Symbol(),
-      alphabetic: Symbol(),
-      operative: Symbol(),
-      spacious: Symbol(),
-      newLine: Symbol(),
-      literal: Symbol()
-    });
-    function arrayAsCharacterSetFor(arr, characterClass) {
-      return arr.map((k) => ({ [k]: characterClass })).reduce(assign);
-    }
-    const kCharacterToCharacterClass = assign(
-      {},
-      // arrayAsCharacterSetFor(
-      //   [
-      //     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
-      //   ],
-      //   classes.numeric),
-      arrayAsCharacterSetFor(
-        [
-          "=",
-          ":",
-          ",",
-          ".",
-          "(",
-          ")",
-          "{",
-          "}"
-        ],
-        classes.operative
-      ),
-      arrayAsCharacterSetFor(
-        [
-          " ",
-          "	",
-          "\r"
-        ],
-        classes.spacious
-      ),
-      arrayAsCharacterSetFor(
-        [
-          "'"
-        ],
-        classes.literal
-      ),
-      arrayAsCharacterSetFor(["\n"], classes.newLine)
-    );
-    function classOf(character) {
-      if (character.length !== 1) {
-        throw Error(`"${character}" is not one character`);
-      }
-      switch (character) {
-        case "0":
-        case "1":
-        case "2":
-        case "3":
-        case "4":
-        case "5":
-        case "6":
-        case "7":
-        case "8":
-        case "9":
-          return classes.numeric;
-        default:
-          break;
-      }
-      return kCharacterToCharacterClass[character] ?? classes.alphabetic;
-    }
-    return freeze20({
-      classes,
-      classOf
-    });
-  })();
-
-  // src/crawl_strategies.ts
-  var CrawlStrategies = (() => {
-    const { freeze: freeze20 } = Object;
-    const { classes, classOf } = CharacterClass;
-    function crawlAlphanumeric(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        switch (classOf(input[i])) {
-          case classes.operative:
-          case classes.spacious:
-          case classes.literal:
-          case classes.newLine:
-            return i;
-          default:
-            break;
-        }
-      }
-      return length;
-    }
-    function crawlStringLiteral(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        if (classOf(input[i]) === classes.literal) {
-          return i + 1;
-        }
-      }
-      return length;
-    }
-    function crawlOperator(input, start) {
-      if (start + 1 >= input.length) {
-        return start + 1;
-      } else if (input[start + 1] === "=" && input[start] !== "=") {
-        return start + 2;
-      }
-      return start + 1;
-    }
-    function crawlSpace(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        switch (classOf(input[i])) {
-          case classes.alphabetic:
-          case classes.numeric:
-          case classes.operative:
-          case classes.literal:
-          case classes.newLine:
-            return i;
-          default:
-            break;
-        }
-      }
-      return length;
-    }
-    function crawlNewLines(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        if (classOf(input[i]) !== classes.newLine) {
-          return i;
-        }
-      }
-      return length;
-    }
-    function crawlNumeric(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        if (classOf(input[i]) !== classes.numeric) {
-          return i;
-        }
-      }
-      return length;
-    }
-    return freeze20({
-      [classes.alphabetic]: crawlAlphanumeric,
-      [classes.literal]: crawlStringLiteral,
-      [classes.operative]: crawlOperator,
-      [classes.numeric]: crawlNumeric,
-      [classes.spacious]: crawlSpace,
-      [classes.newLine]: crawlNewLines
-    });
-  })();
-
-  // src/character_crawler.ts
-  var CharacterCrawler = (() => {
-    const { freeze: freeze20 } = Object;
-    const injections2 = freeze20({
-      CrawlStrategies,
-      characterClassOf: CharacterClass.classOf,
-      characterClasses: CharacterClass.classes
-    });
-    function make2(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
-      const inst = freeze20({ reachedEnd, readToken, crawl });
-      let mStart = 0;
-      let mEnd = 0;
-      let mReadToken = Token.kBlankToken;
-      function readToken() {
-        return mReadToken;
-      }
-      function reachedEnd() {
-        return mEnd === mInput.length;
-      }
-      function crawledThrough() {
-        if (mStart >= mInput.length) {
-          throw Error("Cannot crawl at end of string");
-        }
-        const charClass = characterClassOf(mInput[mEnd]);
-        if (mReadToken.content() !== "" && charClass !== characterClasses.spacious) {
-          return;
-        }
-        const crawlFn = CrawlStrategies2[charClass];
-        const next = crawlFn(mInput, mEnd);
-        if (next <= mEnd) {
-          throw Error("progression failed");
-        }
-        mEnd = next;
-        if (charClass !== characterClasses.spacious) {
-          mReadToken = Token.make(mInput, mStart, mEnd);
-        }
-        mStart = mEnd;
-        return;
-      }
-      function crawl() {
-        mReadToken = Token.kBlankToken;
-        while (mReadToken.content() === "") {
-          crawledThrough();
-        }
-        if (mStart < mInput.length) {
-          crawledThrough();
-        }
-        return inst;
-      }
-      return inst;
-    }
-    return freeze20({ make: make2 });
-  })();
-
-  // src/tokenization.ts
-  var { freeze: freeze17 } = Object;
-  var TokenCollection = (() => {
-    function verifyNoTwoContiguousNewLineTokens(mTokens) {
-      const { length } = mTokens;
-      if (length < 2)
-        return;
-      for (let i = 1; i < length; ++i) {
-        if (mTokens[i].type() === Token.types.newLine && mTokens[i - 1].type() === Token.types.newLine) {
-          throw Error(`Contiguous new lines not allowed near element ${i}`);
-        }
-      }
-    }
-    function make2(mTokens) {
-      const mLength = mTokens.length;
-      verifyNoTwoContiguousNewLineTokens(mTokens);
-      function count() {
-        return mLength;
-      }
-      function at(i) {
-        return mTokens[i];
-      }
-      function forEach(fn) {
-        mTokens.forEach((token) => fn(token.content()));
-      }
-      function skipNewLine(i) {
-        if (at(i).type() === Token.types.newLine) {
-          return i + 1;
-        }
-        return i;
-      }
-      return freeze17({ count, at, forEach, skipNewLine });
-    }
-    return freeze17({ make: make2 });
-  })();
-  var Tokenization = (() => {
-    const injections2 = freeze17({ CharacterCrawler });
-    function make2({ CharacterCrawler: CharacterCrawler2 } = injections2) {
-      function tokenize(inp) {
-        const rv = [];
-        const crawler = CharacterCrawler2.make(inp);
-        while (!crawler.reachedEnd()) {
-          const readToken = crawler.crawl().readToken();
-          rv.push(readToken);
-        }
-        return TokenCollection.make(rv);
-      }
-      return freeze17({ tokenize });
-    }
-    return freeze17({ make: make2 });
   })();
 
   // tests/ast_build_tests.ts
@@ -1761,7 +1507,7 @@
     const makeToken = Token.forTesting.makeFromStringOnly;
     describe("builds a mutli-line ast", () => {
       let tokens = [];
-      const buildAst = () => AstBuild.buildFor(TokenCollection.make(tokens));
+      const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
       it("builds two function calls", () => {
         const { points, verifyAllHit } = ReachPoint.makeCollection(1);
         tokens = [
@@ -1911,8 +1657,8 @@
   describeNamed4({ TreePartBuild }, () => {
     const makeToken = Token.forTesting.makeFromStringOnly;
     const normalCont = LineContinuationScheme.normal;
-    const make2 = (tokens) => TreePartBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont);
-    const makePtbRes = (...tokens) => TreePartBuild.make(TokenRange.makeStartingRange(TokenCollection.make(tokens)), normalCont).buildPart();
+    const make2 = (tokens) => TreePartBuild.make(TokenRange.makeStartingRange(tokens), normalCont);
+    const makePtbRes = (...tokens) => TreePartBuild.make(TokenRange.makeStartingRange(tokens), normalCont).buildPart();
     const ptbWithVisitor = (ptbRes, fn) => {
       ptbRes()?.visit(fn());
     };
@@ -2249,6 +1995,83 @@
     });
   });
 
+  // src/character_class.ts
+  var CharacterClass = (() => {
+    const { freeze: freeze20, assign } = Object;
+    const classes = freeze20({
+      numeric: Symbol(),
+      alphabetic: Symbol(),
+      operative: Symbol(),
+      spacious: Symbol(),
+      newLine: Symbol(),
+      literal: Symbol()
+    });
+    function arrayAsCharacterSetFor(arr, characterClass) {
+      return arr.map((k) => ({ [k]: characterClass })).reduce(assign);
+    }
+    const kCharacterToCharacterClass = assign(
+      {},
+      // arrayAsCharacterSetFor(
+      //   [
+      //     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
+      //   ],
+      //   classes.numeric),
+      arrayAsCharacterSetFor(
+        [
+          "=",
+          ":",
+          ",",
+          ".",
+          "(",
+          ")",
+          "{",
+          "}"
+        ],
+        classes.operative
+      ),
+      arrayAsCharacterSetFor(
+        [
+          " ",
+          "	",
+          "\r"
+        ],
+        classes.spacious
+      ),
+      arrayAsCharacterSetFor(
+        [
+          "'"
+        ],
+        classes.literal
+      ),
+      arrayAsCharacterSetFor(["\n"], classes.newLine)
+    );
+    function classOf(character) {
+      if (character.length !== 1) {
+        throw Error(`"${character}" is not one character`);
+      }
+      switch (character) {
+        case "0":
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+        case "9":
+          return classes.numeric;
+        default:
+          break;
+      }
+      return kCharacterToCharacterClass[character] ?? classes.alphabetic;
+    }
+    return freeze20({
+      classes,
+      classOf
+    });
+  })();
+
   // tests/character_class_tests.ts
   var { describeNamed: describeNamed7 } = TestHelpers;
   describeNamed7({ CharacterClass }, () => {
@@ -2271,6 +2094,140 @@
       });
     });
   });
+
+  // src/crawl_strategies.ts
+  var CrawlStrategies = (() => {
+    const { freeze: freeze20 } = Object;
+    const { classes, classOf } = CharacterClass;
+    function crawlAlphanumeric(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        switch (classOf(input[i])) {
+          case classes.operative:
+          case classes.spacious:
+          case classes.literal:
+          case classes.newLine:
+            return i;
+          default:
+            break;
+        }
+      }
+      return length;
+    }
+    function crawlStringLiteral(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOf(input[i]) === classes.literal) {
+          return i + 1;
+        }
+      }
+      return length;
+    }
+    function crawlOperator(input, start) {
+      if (start + 1 >= input.length) {
+        return start + 1;
+      } else if (input[start + 1] === "=" && input[start] !== "=") {
+        return start + 2;
+      }
+      return start + 1;
+    }
+    function crawlSpace(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        switch (classOf(input[i])) {
+          case classes.alphabetic:
+          case classes.numeric:
+          case classes.operative:
+          case classes.literal:
+          case classes.newLine:
+            return i;
+          default:
+            break;
+        }
+      }
+      return length;
+    }
+    function crawlNewLines(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOf(input[i]) !== classes.newLine) {
+          return i;
+        }
+      }
+      return length;
+    }
+    function crawlNumeric(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOf(input[i]) !== classes.numeric) {
+          return i;
+        }
+      }
+      return length;
+    }
+    return freeze20({
+      [classes.alphabetic]: crawlAlphanumeric,
+      [classes.literal]: crawlStringLiteral,
+      [classes.operative]: crawlOperator,
+      [classes.numeric]: crawlNumeric,
+      [classes.spacious]: crawlSpace,
+      [classes.newLine]: crawlNewLines
+    });
+  })();
+
+  // src/character_crawler.ts
+  var CharacterCrawler = (() => {
+    const { freeze: freeze20 } = Object;
+    const injections2 = freeze20({
+      CrawlStrategies,
+      characterClassOf: CharacterClass.classOf,
+      characterClasses: CharacterClass.classes
+    });
+    function make2(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
+      const inst = freeze20({ reachedEnd, readToken, crawl });
+      let mStart = 0;
+      let mEnd = 0;
+      let mReadToken = Token.kBlankToken;
+      function readToken() {
+        return mReadToken;
+      }
+      function reachedEnd() {
+        return mEnd === mInput.length;
+      }
+      function crawledThrough() {
+        if (mStart >= mInput.length) {
+          throw Error("Cannot crawl at end of string");
+        }
+        const charClass = characterClassOf(mInput[mEnd]);
+        if (mReadToken.content() !== "" && charClass !== characterClasses.spacious) {
+          return;
+        }
+        const crawlFn = CrawlStrategies2[charClass];
+        const next = crawlFn(mInput, mEnd);
+        if (next <= mEnd) {
+          throw Error("progression failed");
+        }
+        mEnd = next;
+        if (charClass !== characterClasses.spacious) {
+          mReadToken = Token.make(mInput, mStart, mEnd);
+        }
+        mStart = mEnd;
+        return;
+      }
+      function crawl() {
+        mReadToken = Token.kBlankToken;
+        while (mReadToken.content() === "") {
+          crawledThrough();
+        }
+        if (mStart < mInput.length) {
+          crawledThrough();
+        }
+        return inst;
+      }
+      return inst;
+    }
+    return freeze20({ make: make2 });
+  })();
 
   // tests/character_crawler_tests.ts
   var { describeNamed: describeNamed8 } = TestHelpers;
@@ -2362,6 +2319,25 @@
     });
   });
 
+  // src/tokenization.ts
+  var { freeze: freeze17 } = Helpers;
+  var Tokenization = (() => {
+    const injections2 = freeze17({ CharacterCrawler, TokenRange });
+    function make2({ CharacterCrawler: CharacterCrawler2, TokenRange: TokenRange2 } = injections2) {
+      function tokenize(inp) {
+        const rv = [];
+        const crawler = CharacterCrawler2.make(inp);
+        while (!crawler.reachedEnd()) {
+          const readToken = crawler.crawl().readToken();
+          rv.push(readToken);
+        }
+        return TokenRange2.makeStartingRange(rv);
+      }
+      return freeze17({ tokenize });
+    }
+    return freeze17({ make: make2 });
+  })();
+
   // src/execution_context.ts
   var { freeze: freeze18 } = Helpers;
   var ExecutionContext = (() => {
@@ -2401,7 +2377,7 @@
   })();
 
   // src/persistent_stack.ts
-  var PersistentStack3 = (() => {
+  var PersistentStack = (() => {
     const { freeze: freeze20 } = Helpers;
     function make2(mDefaultMake) {
       const mMembers = [];
@@ -2456,7 +2432,7 @@
   })();
   var injections = freeze19({ putsFunction: console.log });
   function make(context = ExecutionContext.make(), { putsFunction } = injections) {
-    const mStack = PersistentStack3.make(ContextVariable.make);
+    const mStack = PersistentStack.make(ContextVariable.make);
     const mLetVisitor = LetVisitor.make(context);
     const inst = freeze19({
       visitFunctionCall,
@@ -2505,8 +2481,8 @@
     return inst;
   }
   function buildFor(inp) {
-    const tokenCollection = Tokenization.make().tokenize(inp);
-    return AstBuild.buildFor(tokenCollection);
+    const tokenRange = Tokenization.make().tokenize(inp);
+    return AstBuild.buildFor(tokenRange);
   }
   Helpers.expose({ Interpreter });
 
@@ -2586,24 +2562,24 @@
 
   // tests/persistent_stack_tests.ts
   var { describeNamed: describeNamed11 } = TestHelpers;
-  describeNamed11({ PersistentStack: PersistentStack3 }, () => {
+  describeNamed11({ PersistentStack }, () => {
     it("pushes a new element and reports as not empty", () => {
-      const s = PersistentStack3.make(() => "a");
+      const s = PersistentStack.make(() => "a");
       s.push();
       expect(s.isEmpty()).not.toBeTruthy();
     });
     it("pushes a new element and returns that new element", () => {
-      const s = PersistentStack3.make(() => "a");
+      const s = PersistentStack.make(() => "a");
       expect(s.push()).toEqual("a");
     });
     it("popping an element on a one sized stack, produces an empty stack", () => {
-      const s = PersistentStack3.make(() => "a");
+      const s = PersistentStack.make(() => "a");
       s.push();
       s.pop();
       expect(s.isEmpty()).toBeTruthy();
     });
     it("persists old values of a stack even after being popped", () => {
-      const s = PersistentStack3.make(() => ({ e: 1 }));
+      const s = PersistentStack.make(() => ({ e: 1 }));
       s.push().e = 10;
       s.pop();
       expect(s.push()?.e).toEqual(10);
@@ -2615,7 +2591,8 @@
   describeNamed12({ Tokenization }, () => {
     const getTokens = (inp) => {
       const strings = [];
-      Tokenization.make().tokenize(inp).forEach((str) => strings.push(str));
+      const range = Tokenization.make().tokenize(inp);
+      TokenRange.forEachIn(range, (str) => strings.push(str));
       return strings;
     };
     it("splits a hello world program", () => {
