@@ -1,6 +1,6 @@
 import { CrawlStrategies } from './crawl_strategies';
 import { CharacterClass } from './character_class';
-import { Token } from './token';
+import { Token } from '../token';
 
 export interface CharacterCrawler {
   readToken: () => Token,

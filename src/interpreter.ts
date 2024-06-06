@@ -8,7 +8,6 @@ import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
 import { AstFringeNode } from './ast_fringe_node';
 import { PersistentStack } from './persistent_stack';
-import { TokenRange } from './token_range';
 
 const { freeze } = Object;
 

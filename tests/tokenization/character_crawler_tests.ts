@@ -1,5 +1,5 @@
-import { TestHelpers } from './test_helpers';
-import { CharacterCrawler } from '../src/character_crawler';
+import { TestHelpers } from '../test_helpers';
+import { CharacterCrawler } from '../../src/tokenization/character_crawler';
 
 const { describeNamed } = TestHelpers;
 

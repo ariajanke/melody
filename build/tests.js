@@ -622,7 +622,7 @@
 
   // src/token.ts
   var { freeze: freeze7 } = Object;
-  var TokenType = Object.freeze({
+  var TokenType = freeze7({
     declareFunction: Symbol(),
     operator: Symbol(),
     stringLiteral: Symbol(),
@@ -2013,7 +2013,7 @@
     });
   });
 
-  // src/character_class.ts
+  // src/tokenization/character_class.ts
   var CharacterClass = (() => {
     const { freeze: freeze19, assign } = Object;
     const classes = freeze19({
@@ -2090,30 +2090,7 @@
     });
   })();
 
-  // tests/character_class_tests.ts
-  var { describeNamed: describeNamed7 } = TestHelpers;
-  describeNamed7({ CharacterClass }, () => {
-    describe(".classOf", () => {
-      const { classOf, classes } = CharacterClass;
-      it("numeric", () => {
-        expect(classOf("1")).toEqual(classes.numeric);
-      });
-      it("alphabetic", () => {
-        expect(classOf("q")).toEqual(classes.alphabetic);
-      });
-      it("operative", () => {
-        expect(classOf(",")).toEqual(classes.operative);
-      });
-      it("spacious", () => {
-        expect(classOf("	")).toEqual(classes.spacious);
-      });
-      it("new line", () => {
-        expect(classOf("\n")).toEqual(classes.newLine);
-      });
-    });
-  });
-
-  // src/crawl_strategies.ts
+  // src/tokenization/crawl_strategies.ts
   var CrawlStrategies = (() => {
     const { freeze: freeze19 } = Object;
     const { classes, classOf } = CharacterClass;
@@ -2193,7 +2170,7 @@
     });
   })();
 
-  // src/character_crawler.ts
+  // src/tokenization/character_crawler.ts
   var CharacterCrawler = (() => {
     const { freeze: freeze19 } = Object;
     const injections2 = freeze19({
@@ -2246,96 +2223,6 @@
     }
     return freeze19({ make });
   })();
-
-  // tests/character_crawler_tests.ts
-  var { describeNamed: describeNamed8 } = TestHelpers;
-  describeNamed8({ CharacterCrawler }, () => {
-    it('crawls an operator ":="', () => {
-      const crawler = CharacterCrawler.make(":=");
-      const token = crawler.crawl().readToken().content();
-      expect(token).toEqual(":=");
-    });
-    it("skips whitespace", () => {
-      const crawler = CharacterCrawler.make("   :=");
-      const token = crawler.crawl().readToken().content();
-      expect(token).toEqual(":=");
-    });
-    it("treats trailing whitespace as having reached the end", () => {
-      const crawler = CharacterCrawler.make("a  ");
-      crawler.crawl().readToken();
-      expect(crawler.reachedEnd()).toBeTruthy();
-    });
-    it("crawls through the next token", () => {
-      const crawler = CharacterCrawler.make("puts('hello')");
-      const token = crawler.crawl().crawl().readToken().content();
-      expect(token).toEqual("(");
-    });
-  });
-
-  // tests/crawl_strategies_tests.ts
-  var { describeNamed: describeNamed9 } = TestHelpers;
-  describeNamed9({ CrawlStrategies }, () => {
-    const { alphabetic, literal, operative, spacious } = CharacterClass.classes;
-    const crawlAlphanumeric = CrawlStrategies[alphabetic];
-    const crawlOperator = CrawlStrategies[operative];
-    const crawlStringLiteral = CrawlStrategies[literal];
-    const crawlSpace = CrawlStrategies[spacious];
-    describeNamed9({ crawlAlphanumeric }, () => {
-      [
-        ["asdf", "end"],
-        ["asdf ", "spaces"],
-        ["asdf=", "operators"],
-        ["asdf'", "quotations"],
-        ["asdf\n", "new line"]
-      ].forEach((pair) => {
-        const [test, desc] = pair;
-        it(`stops at ${desc}`, () => {
-          expect(crawlAlphanumeric(test, 0)).toEqual(4);
-        });
-      });
-      it("stops at end with numbers", () => {
-        const str = "asdf123";
-        expect(crawlAlphanumeric(str, 0)).toEqual(str.length);
-      });
-    });
-    describeNamed9({ crawlOperator }, () => {
-      [
-        [":=", "re-assignable", 2],
-        ["= ", "assignment", 1],
-        ["+=", "accumulate", 2],
-        ["==", "two assignments", 1],
-        [",,", "commas", 1],
-        ["((", "parens", 1]
-      ].forEach((tuple) => {
-        const [test, desc, expected] = tuple;
-        it(`crawls out a: ${desc}`, () => {
-          expect(crawlOperator(test, 0)).toEqual(expected);
-        });
-      });
-    });
-    describeNamed9({ crawlSpace }, () => {
-      [
-        ["  a", "alphabetic"],
-        ["  ", "end"],
-        ["	\r=", "at operator with other whitespace"],
-        ["  +", "operator"],
-        ["  1", "numeric"],
-        ["  \n", "new line"]
-      ].forEach((pair) => {
-        const [test, desc] = pair;
-        it(`stops at ${desc}`, () => {
-          expect(crawlSpace(test, 0)).toEqual(2);
-        });
-      });
-    });
-    describeNamed9({ crawlStringLiteral }, () => {
-      it(`crawls stopping at nothing but another "'"`, () => {
-        const str = `'hello {" \\\\''`;
-        const end = crawlStringLiteral(str, 0);
-        expect(str.substring(0, end)).toEqual(`'hello {" \\\\'`);
-      });
-    });
-  });
 
   // src/tokenization.ts
   var Tokenization = (() => {
@@ -2519,8 +2406,8 @@
   Helpers.expose({ Interpreter });
 
   // tests/interpreter_tests.ts
-  var { describeNamed: describeNamed10 } = TestHelpers;
-  describeNamed10({ Interpreter }, () => {
+  var { describeNamed: describeNamed7 } = TestHelpers;
+  describeNamed7({ Interpreter }, () => {
     function makePutsFunction() {
       const printedStrings = [];
       const putsFunction = (str) => {
@@ -2593,8 +2480,8 @@
   });
 
   // tests/persistent_stack_tests.ts
-  var { describeNamed: describeNamed11 } = TestHelpers;
-  describeNamed11({ PersistentStack }, () => {
+  var { describeNamed: describeNamed8 } = TestHelpers;
+  describeNamed8({ PersistentStack }, () => {
     it("pushes a new element and reports as not empty", () => {
       const s = PersistentStack.make(() => "a");
       s.push();
@@ -2619,8 +2506,8 @@
   });
 
   // tests/tokenization_tests.ts
-  var { describeNamed: describeNamed12 } = TestHelpers;
-  describeNamed12({ Tokenization }, () => {
+  var { describeNamed: describeNamed9 } = TestHelpers;
+  describeNamed9({ Tokenization }, () => {
     const getTokens = (inp) => {
       const strings = [];
       const range = Tokenization.make().tokenize(inp);
@@ -2658,6 +2545,119 @@
         it(`splits "${desc}" correctly`, () => {
           expect(getTokens(toSplit)).toEqual(expectedSplit);
         });
+      });
+    });
+  });
+
+  // tests/tokenization/character_class_tests.ts
+  var { describeNamed: describeNamed10 } = TestHelpers;
+  describeNamed10({ CharacterClass }, () => {
+    describe(".classOf", () => {
+      const { classOf, classes } = CharacterClass;
+      it("numeric", () => {
+        expect(classOf("1")).toEqual(classes.numeric);
+      });
+      it("alphabetic", () => {
+        expect(classOf("q")).toEqual(classes.alphabetic);
+      });
+      it("operative", () => {
+        expect(classOf(",")).toEqual(classes.operative);
+      });
+      it("spacious", () => {
+        expect(classOf("	")).toEqual(classes.spacious);
+      });
+      it("new line", () => {
+        expect(classOf("\n")).toEqual(classes.newLine);
+      });
+    });
+  });
+
+  // tests/tokenization/character_crawler_tests.ts
+  var { describeNamed: describeNamed11 } = TestHelpers;
+  describeNamed11({ CharacterCrawler }, () => {
+    it('crawls an operator ":="', () => {
+      const crawler = CharacterCrawler.make(":=");
+      const token = crawler.crawl().readToken().content();
+      expect(token).toEqual(":=");
+    });
+    it("skips whitespace", () => {
+      const crawler = CharacterCrawler.make("   :=");
+      const token = crawler.crawl().readToken().content();
+      expect(token).toEqual(":=");
+    });
+    it("treats trailing whitespace as having reached the end", () => {
+      const crawler = CharacterCrawler.make("a  ");
+      crawler.crawl().readToken();
+      expect(crawler.reachedEnd()).toBeTruthy();
+    });
+    it("crawls through the next token", () => {
+      const crawler = CharacterCrawler.make("puts('hello')");
+      const token = crawler.crawl().crawl().readToken().content();
+      expect(token).toEqual("(");
+    });
+  });
+
+  // tests/tokenization/crawl_strategies_tests.ts
+  var { describeNamed: describeNamed12 } = TestHelpers;
+  describeNamed12({ CrawlStrategies }, () => {
+    const { alphabetic, literal, operative, spacious } = CharacterClass.classes;
+    const crawlAlphanumeric = CrawlStrategies[alphabetic];
+    const crawlOperator = CrawlStrategies[operative];
+    const crawlStringLiteral = CrawlStrategies[literal];
+    const crawlSpace = CrawlStrategies[spacious];
+    describeNamed12({ crawlAlphanumeric }, () => {
+      [
+        ["asdf", "end"],
+        ["asdf ", "spaces"],
+        ["asdf=", "operators"],
+        ["asdf'", "quotations"],
+        ["asdf\n", "new line"]
+      ].forEach((pair) => {
+        const [test, desc] = pair;
+        it(`stops at ${desc}`, () => {
+          expect(crawlAlphanumeric(test, 0)).toEqual(4);
+        });
+      });
+      it("stops at end with numbers", () => {
+        const str = "asdf123";
+        expect(crawlAlphanumeric(str, 0)).toEqual(str.length);
+      });
+    });
+    describeNamed12({ crawlOperator }, () => {
+      [
+        [":=", "re-assignable", 2],
+        ["= ", "assignment", 1],
+        ["+=", "accumulate", 2],
+        ["==", "two assignments", 1],
+        [",,", "commas", 1],
+        ["((", "parens", 1]
+      ].forEach((tuple) => {
+        const [test, desc, expected] = tuple;
+        it(`crawls out a: ${desc}`, () => {
+          expect(crawlOperator(test, 0)).toEqual(expected);
+        });
+      });
+    });
+    describeNamed12({ crawlSpace }, () => {
+      [
+        ["  a", "alphabetic"],
+        ["  ", "end"],
+        ["	\r=", "at operator with other whitespace"],
+        ["  +", "operator"],
+        ["  1", "numeric"],
+        ["  \n", "new line"]
+      ].forEach((pair) => {
+        const [test, desc] = pair;
+        it(`stops at ${desc}`, () => {
+          expect(crawlSpace(test, 0)).toEqual(2);
+        });
+      });
+    });
+    describeNamed12({ crawlStringLiteral }, () => {
+      it(`crawls stopping at nothing but another "'"`, () => {
+        const str = `'hello {" \\\\''`;
+        const end = crawlStringLiteral(str, 0);
+        expect(str.substring(0, end)).toEqual(`'hello {" \\\\'`);
       });
     });
   });

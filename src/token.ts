@@ -1,6 +1,6 @@
 const { freeze } = Object;
 
-const TokenType = Object.freeze({
+const TokenType = freeze({
   declareFunction: Symbol(),
   operator: Symbol(),
   stringLiteral: Symbol(),

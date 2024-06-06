@@ -1,4 +1,4 @@
-import { CharacterCrawler } from './character_crawler';
+import { CharacterCrawler } from './tokenization/character_crawler';
 import { Helpers } from './helpers';
 import { Token } from './token';
 import { TokenRange } from './token_range';

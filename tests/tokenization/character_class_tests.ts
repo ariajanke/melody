@@ -1,5 +1,5 @@
-import { TestHelpers } from './test_helpers';
-import { CharacterClass } from '../src/character_class';
+import { TestHelpers } from '../test_helpers';
+import { CharacterClass } from '../../src/tokenization/character_class';
 
 const { describeNamed } = TestHelpers;
 
