@@ -12,12 +12,6 @@ import { TokenRange } from './token_range';
 
 const { freeze } = Object;
 
-export interface Interpreter extends AstNodeVisitor {
-
-};
-
-export const Interpreter = freeze({ make, buildFor });
-
 const LetVisitor = (() => {
   function make(context: ExecutionContext): AstNodeVisitor {
     const inst = freeze({
@@ -42,80 +36,100 @@ const LetVisitor = (() => {
 
 const injections = freeze({ putsFunction: console.log });
 
-function make
-  (context: ExecutionContext = ExecutionContext.make(),
-   { putsFunction } = injections):
-  Interpreter
-{
-  const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
-  const mLetVisitor = LetVisitor.make(context);
-  const inst = freeze({
-    visitFunctionCall, visitLetDeclaration, visitBinaryOperation, visitIdentifier
-  });
-  function visitFunctionCall(node: AstFunctionCallNode) {
-    if (node.name === 'puts') {
-      node.arguments.forEach((node: AstNode) => {
-        const cv = valueOf(node);
-        putsFunction(cv.asString());
+export interface Interpreter extends AstNodeVisitor {
+
+};
+
+export const Interpreter = freeze({
+  make:
+    (context: ExecutionContext = ExecutionContext.make(),
+    { putsFunction } = injections):
+    Interpreter =>
+  {
+    const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
+    const mLetVisitor = LetVisitor.make(context);
+    const inst = freeze({
+      visitFunctionCall, visitLetDeclaration, visitBinaryOperation, visitIdentifier
+    });
+    function visitFunctionCall(node: AstFunctionCallNode) {
+      if (node.name === 'puts') {
+        node.arguments.forEach((node: AstNode) => {
+          const cv = valueOf(node);
+          putsFunction(cv.asString());
+        });
+      }
+    }
+
+    function visitLetDeclaration(dec: AstLetDeclarationNode, lhs: AstNode) {
+      // can't catch this, oof
+      // if (lhs.type() !== AstNode.types.assignment) {
+      //   throw Error('bad let');
+      // }
+      // mGetVarFunc = context.declareVariable;
+      lhs.visit(mLetVisitor);
+      lhs.visit(inst);
+      // mGetVarFunc = context.getVariable;
+    }
+
+    function valueOf(node: AstNode): ContextVariable {
+      const evalNode = AstEvaluatableNode.tryDowncast(node);
+      if (evalNode) {
+        return evalNode.evaluate(context.getVariable);
+      }
+      return mStack.pop();
+    }
+
+    function visitBinaryOperation(op: string, lhs: AstNode, rhs: AstNode) {
+      // resolve lhs's type
+      // select operator function
+      // raise if rhs's resolved type is incompatible
+      // how does this work in the general recursive case?
+      //
+      // this ends up having to be executed DFS style
+      // there will be places that *have to* be executed BFS style
+      // context.
+      lhs.visit(inst);
+      rhs.visit(inst);
+      const func = lhs.executionType(context).lookUp(op);
+      const rhsAsParam = rhs.executionType(context).asSingluarParameter();
+      const deg = func.satisfactionDegreeOfArguments(rhsAsParam);
+      if (typeof deg === 'undefined') {
+        throw Error('');
+      }
+      const builtIn = func.builtIn();
+      if (typeof builtIn === 'undefined') {
+        throw Error('');
+      }
+      const lhsVal = valueOf(lhs);
+      const rhsVal = valueOf(rhs);
+      builtIn(mStack, lhsVal, rhsVal);
+    }
+
+    function visitIdentifier(_0: AstFringeNode) {
+
+    }
+
+    return inst;
+  },
+
+  buildFor: (inp: string): AstNode => {
+    const tokenRange = Tokenization.make().tokenize(inp);
+    return AstBuild.buildFor(tokenRange);
+  },
+
+  buildAndRun: (inp: string): void => {
+    const tokenRange = Tokenization.make().tokenize(inp);
+    const astBuild = AstBuild.make(tokenRange);
+    const root = astBuild.build();
+    if (!root) {
+      console.log('cannot build program');
+      astBuild.errors().forEach(({ message } : { message: string }) => {
+        console.log(message);
       });
+      return;
     }
+    root.visit(Interpreter.make());
   }
-
-  function visitLetDeclaration(dec: AstLetDeclarationNode, lhs: AstNode) {
-    // can't catch this, oof
-    // if (lhs.type() !== AstNode.types.assignment) {
-    //   throw Error('bad let');
-    // }
-    // mGetVarFunc = context.declareVariable;
-    lhs.visit(mLetVisitor);
-    lhs.visit(inst);
-    // mGetVarFunc = context.getVariable;
-  }
-
-  function valueOf(node: AstNode): ContextVariable {
-    const evalNode = AstEvaluatableNode.tryDowncast(node);
-    if (evalNode) {
-      return evalNode.evaluate(context.getVariable);
-    }
-    return mStack.pop();
-  }
-
-  function visitBinaryOperation(op: string, lhs: AstNode, rhs: AstNode) {
-    // resolve lhs's type
-    // select operator function
-    // raise if rhs's resolved type is incompatible
-    // how does this work in the general recursive case?
-    //
-    // this ends up having to be executed DFS style
-    // there will be places that *have to* be executed BFS style
-    // context.
-    lhs.visit(inst);
-    rhs.visit(inst);
-    const func = lhs.executionType(context).lookUp(op);
-    const rhsAsParam = rhs.executionType(context).asSingluarParameter();
-    const deg = func.satisfactionDegreeOfArguments(rhsAsParam);
-    if (typeof deg === 'undefined') {
-      throw Error('');
-    }
-    const builtIn = func.builtIn();
-    if (typeof builtIn === 'undefined') {
-      throw Error('');
-    }
-    const lhsVal = valueOf(lhs);
-    const rhsVal = valueOf(rhs);
-    builtIn(mStack, lhsVal, rhsVal);
-  }
-
-  function visitIdentifier(_0: AstFringeNode) {
-
-  }
-
-  return inst;
-}
-
-function buildFor(inp: string): AstNode {
-  const tokenRange = Tokenization.make().tokenize(inp);
-  return AstBuild.buildFor(tokenRange);
-}
+});
 
 Helpers.expose({ Interpreter });
