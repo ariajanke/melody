@@ -1,6 +1,6 @@
 import { TestHelpers, ReachPoint } from './test_helpers';
 import { AstBinaryOperatorNode } from '../src/ast_binary_operator_node';
-import { AstEvaluatableNode, AstNode, AstNodeVisitorBuilder } from '../src/ast_node';
+import { AstEvaluatableNode, AstNode } from '../src/ast_node';
 import { AstIdentifierNode } from '../src/ast_fringe_node';
 import { TypeLookUpTable } from '../src/ast_node';
 import { ContextVariable } from '../src/context_variable';
@@ -8,6 +8,7 @@ import { ObjectType } from '../src/object_type';
 import { IncompleteFunctionType, ParameterFit } from '../src/function_type';
 import { TypeResolution } from '../src/type_resolution';
 import { ObjectLookUpTable } from '../src/object_look_up_table';
+import { AstNodeVisitorBuilder } from '../src/ast_node_visitor';
 
 const { describeNamed } = TestHelpers;
 

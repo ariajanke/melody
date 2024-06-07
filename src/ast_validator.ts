@@ -1,22 +1,37 @@
-import { AstNodeVisitor, AstNode } from './ast_node';
+import { AstNode } from './ast_node';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstFringeNode } from './ast_fringe_node';
-import { Helpers } from './helpers';
-
+import { Helpers, StandardErrorMessage } from './helpers';
+import { AstNodeVisitorBuilder, type AstNodeVisitor } from './ast_node_visitor';
+import { AstTupleNode } from './ast_tuple_node';
+import { ExecutionContext } from './execution_context';
 
 const { freeze } = Helpers;
 
 // what's the difference between validation, and compliation?
-const AstValidatorVisitor = freeze({
+const AstTypesValidatorVisitor = freeze({
   make: (): AstNodeVisitor => {
-    return freeze({
-      visitFunctionCall: (node: AstFunctionCallNode) => {},
-      visitBinaryOperation: (operation: string, lhs: AstNode, rhs: AstNode) => {},
-      // as of yet, there is no concept of "scope"
-      visitLetDeclaration: (node: AstLetDeclarationNode, rhs: AstNode) => {},
-      visitIdentifier: (node: AstFringeNode) => {}
-    });
+    const mContext = ExecutionContext.make();
+    const mErrors: StandardErrorMessage[] = [];
+    const inst =
+      AstNodeVisitorBuilder.
+      makeDefaultingToStop().
+      visitTuple((node: AstTupleNode) => {
+        node.forEach((node: AstNode) => {
+          const res = node.executionType( mContext );
+          if (!res.resolve()) {
+            const err = res.error();
+            if (!err) {
+              throw Error('at least one function must return something other ' +
+                          'than undefined');
+            }
+            mErrors.push(err);
+          }
+        });
+      }).
+      finish();
+    return inst;
   }
 });
 

@@ -1,6 +1,7 @@
-import { AstNode, AstNodeVisitor } from './ast_node';
+import { AstNode } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
 import { AstFringeNode } from './ast_fringe_node';
+import { type AstNodeVisitor } from './ast_node_visitor';
 
 export interface AstFunctionCallNode extends AstNode {
   name: string,
@@ -39,6 +40,7 @@ export const AstFunctionCallNode = (() => {
     });
 
     function visit(visitor: AstNodeVisitor): void {
+      visitor.visitTuple(arguments_);
       visitor.visitFunctionCall(inst);
     }
 

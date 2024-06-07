@@ -536,3 +536,60 @@ end
 ### There is another problem to solve
 
 Type forwarding, a chicken and egg problem.
+
+```melody
+# Another look at generics
+
+# how does type resolution work here?
+# perhaps we could have a "partial" resolution?
+# which still is an "Unresolved" type
+let RectangleTemplate = fn (scalar: number type)
+  return fn (x: scalar, y: scalar, width: scalar = 10, height: scalar = 10)
+    fn bottom() x + width
+    fn right() y + height
+
+    return table
+      x := x,
+      y := y,
+      width := width,
+      height := height,
+      bottom = bottom,
+      right = right
+    end
+  end
+end
+
+# deference would have to save the day here
+# but how would you reference this function?
+# it would depend on how references work in general
+let myFormioli = fn (a: number, b: number)
+  return a*10 + b + 1
+end
+
+myFormioli(1, 1.0)
+myFormioli(1, 2)
+myFormioli(MyDecimal.new(3), 2)
+# some sort of MyDecimal['*$IntegerLiteral'] (returning a MyDecimal)
+# then some sort of MyDecimal['+$Integer'] (return a MyDecimal)
+# and then MyDecimal['+$IntegerLiteral'] (return a MyDecimal)
+# conclusion: "myFormioli(MyDecimal.new(3), 2)" returns a MyDecimal
+
+# can't evaluate "askForMyDecimal()"
+# as its value is unresolvable
+
+<< # perhaps runtime code actually should live here...
+# types *must* be resolvable now
+
+puts(myFormioli(askForMyDecimal(), 3))
+>>
+
+let MyDecimal = type table
+  # in lieu of overloading?
+  $'+' = fn (rhs: number): MyDecimal
+  $'*' = fn (rhs: number): MyDecimal
+  asString = fn: String
+end
+
+```
+
+Deference and Unresolved, and partial resolution are quickly becoming things

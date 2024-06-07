@@ -16,7 +16,7 @@
     // passWhenInTesting
   });
   var StandardError = (() => {
-    const { freeze: freeze20 } = Helpers;
+    const { freeze: freeze21 } = Helpers;
     function make() {
       let mErrorFn = () => {
       };
@@ -24,14 +24,14 @@
         mErrorFn = fn;
       }
       function setErrorMessage(message) {
-        mErrorFn = () => freeze20({ message });
+        mErrorFn = () => freeze21({ message });
       }
       function error() {
         return mErrorFn();
       }
-      return freeze20({ setErrorFn, setErrorMessage, error });
+      return freeze21({ setErrorFn, setErrorMessage, error });
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
   expose({ Helpers });
   var TypeCheckable = (() => {
@@ -532,76 +532,6 @@
       }
     });
   })();
-  var AstNodeVisitorBuilder = (() => {
-    function makeContinuingImplementations() {
-      const inst = freeze6({
-        visitBinaryOperation: (_0, lhs, rhs) => {
-          lhs.visit(inst);
-          rhs.visit(inst);
-        },
-        visitFunctionCall: (node) => {
-          node.arguments.forEach((node2) => node2.visit(inst));
-        },
-        visitLetDeclaration: (_0, rhs) => {
-          rhs.visit(inst);
-        },
-        visitIdentifier: (_0) => {
-        }
-      });
-      return inst;
-    }
-    function makeStoppingImplementations() {
-      const inst = freeze6({
-        visitBinaryOperation: (_0, _1, _2) => {
-        },
-        visitFunctionCall: (_0) => {
-        },
-        visitLetDeclaration: (_0, _1) => {
-        },
-        visitIdentifier: (_0) => {
-        }
-      });
-      return inst;
-    }
-    const kContinuingImplementations = makeContinuingImplementations();
-    const kStoppingImplementations = makeStoppingImplementations();
-    const class_ = freeze6({
-      makeDefaultingToStop: () => class_.make(kStoppingImplementations),
-      makeDefaultingToContinue: () => class_.make(kContinuingImplementations),
-      make: (kDefaultImplementations) => {
-        let mVisitBinaryOperation = kDefaultImplementations.visitBinaryOperation;
-        let mVisitFunctionCall = kDefaultImplementations.visitFunctionCall;
-        let mVisitLetDeclaration = kDefaultImplementations.visitLetDeclaration;
-        let mVisitIdentifier = kDefaultImplementations.visitIdentifier;
-        const inst = freeze6({
-          visitBinaryOperation: (fn) => {
-            mVisitBinaryOperation = fn;
-            return inst;
-          },
-          visitFunctionCall: (fn) => {
-            mVisitFunctionCall = fn;
-            return inst;
-          },
-          visitLetDeclaration: (fn) => {
-            mVisitLetDeclaration = fn;
-            return inst;
-          },
-          visitIdentifier: (fn) => {
-            mVisitIdentifier = fn;
-            return inst;
-          },
-          finish: () => freeze6({
-            visitBinaryOperation: mVisitBinaryOperation,
-            visitFunctionCall: mVisitFunctionCall,
-            visitLetDeclaration: mVisitLetDeclaration,
-            visitIdentifier: mVisitIdentifier
-          })
-        });
-        return inst;
-      }
-    });
-    return class_;
-  })();
 
   // src/type_resolution.ts
   var { freeze: freeze7 } = Helpers;
@@ -632,11 +562,11 @@
 
   // src/ast_binary_operator_node.ts
   var AstBinaryOperatorNode = (() => {
-    const { freeze: freeze20 } = Helpers;
+    const { freeze: freeze21 } = Helpers;
     const binaryOperatorType = AstNode.types.binaryOperator;
-    return freeze20({
+    return freeze21({
       make: (op, lhs, rhs) => {
-        return freeze20({
+        return freeze21({
           visit: (visitor) => {
             visitor.visitBinaryOperation(op, lhs, rhs);
           },
@@ -876,6 +806,87 @@
     return freeze10({ make });
   })();
 
+  // src/ast_node_visitor.ts
+  var { freeze: freeze11 } = Helpers;
+  var AstNodeVisitorBuilder = (() => {
+    function makeContinuingImplementations() {
+      let mCurrentInst = freeze11({
+        visitBinaryOperation: (_0, lhs, rhs) => {
+          lhs.visit(mCurrentInst);
+          rhs.visit(mCurrentInst);
+        },
+        visitFunctionCall: (node) => {
+          node.arguments.forEach((node2) => node2.visit(mCurrentInst));
+        },
+        visitLetDeclaration: (_0, rhs) => {
+          rhs.visit(mCurrentInst);
+        },
+        visitIdentifier: (_0) => {
+        },
+        setInstanceReference: (inst) => {
+          mCurrentInst = inst;
+          return inst;
+        }
+      });
+      return mCurrentInst;
+    }
+    const kStoppingImplementations = (() => {
+      const inst = freeze11({
+        visitBinaryOperation: (_0, _1, _2) => {
+        },
+        visitFunctionCall: (_0) => {
+        },
+        visitLetDeclaration: (_0, _1) => {
+        },
+        visitIdentifier: (_0) => {
+        },
+        setInstanceReference: (passedInst) => {
+          return passedInst;
+        }
+      });
+      return inst;
+    })();
+    const class_ = freeze11({
+      makeDefaultingToStop: () => class_.make(kStoppingImplementations),
+      makeDefaultingToContinue: () => class_.make(makeContinuingImplementations()),
+      make: (mImplementations) => {
+        let mVisitBinaryOperation = mImplementations.visitBinaryOperation;
+        let mVisitFunctionCall = mImplementations.visitFunctionCall;
+        let mVisitLetDeclaration = mImplementations.visitLetDeclaration;
+        let mVisitIdentifier = mImplementations.visitIdentifier;
+        const inst = freeze11({
+          visitBinaryOperation: (fn) => {
+            mVisitBinaryOperation = fn;
+            return inst;
+          },
+          visitFunctionCall: (fn) => {
+            mVisitFunctionCall = fn;
+            return inst;
+          },
+          visitLetDeclaration: (fn) => {
+            mVisitLetDeclaration = fn;
+            return inst;
+          },
+          visitIdentifier: (fn) => {
+            mVisitIdentifier = fn;
+            return inst;
+          },
+          finish: () => {
+            const inst2 = freeze11({
+              visitBinaryOperation: mVisitBinaryOperation,
+              visitFunctionCall: mVisitFunctionCall,
+              visitLetDeclaration: mVisitLetDeclaration,
+              visitIdentifier: mVisitIdentifier
+            });
+            return mImplementations.setInstanceReference(inst2);
+          }
+        });
+        return inst;
+      }
+    });
+    return class_;
+  })();
+
   // tests/ast_binary_operator_node_tests.ts
   var { describeNamed: describeNamed2 } = TestHelpers;
   describeNamed2({ AstBinaryOperatorNode }, () => {
@@ -929,7 +940,7 @@
 
   // src/ast_tuple_node.ts
   var AstTupleNode = (() => {
-    const { freeze: freeze20 } = Object;
+    const { freeze: freeze21 } = Object;
     const tupleType = AstNode.types.tuple;
     const executionType = AstNode.base.makeUndefinedExecutionType("AstTupleNode");
     function makeBinary(_0, lhs, rhs) {
@@ -947,7 +958,7 @@
       return inst;
     }
     function make(mSubExpressions) {
-      const inst = freeze20({
+      const inst = freeze21({
         forEach,
         count,
         visit,
@@ -980,16 +991,16 @@
       }
       return inst;
     }
-    return freeze20({ makeBinary, makeUnary, make });
+    return freeze21({ makeBinary, makeUnary, make });
   })();
 
   // src/ast_let_declaration_node.ts
-  var { freeze: freeze11 } = Helpers;
-  var AstLetDeclarationNode = freeze11({
+  var { freeze: freeze12 } = Helpers;
+  var AstLetDeclarationNode = freeze12({
     make: (node) => {
       const { executionType } = node;
       const { letDeclaration } = AstNode.types;
-      const inst = freeze11({
+      const inst = freeze12({
         visit: (visitor) => {
           visitor.visitLetDeclaration(inst, node);
         },
@@ -1013,13 +1024,13 @@
       return make(_selectedConstructor(operatorStr));
     }
     function make(fn) {
-      return freeze11({ finish: fn });
+      return freeze12({ finish: fn });
     }
-    return freeze11({ makeForOperator });
+    return freeze12({ makeForOperator });
   })();
 
   // src/token_range.ts
-  var { freeze: freeze12 } = Helpers;
+  var { freeze: freeze13 } = Helpers;
   var TokenRange = (() => {
     function zeroSizedRange(range) {
       return range.start() === range.end();
@@ -1035,7 +1046,7 @@
       }
     }
     function make(mTokens, mStart, mEnd) {
-      const inst = freeze12({
+      const inst = freeze13({
         step: () => {
           ++mStart;
           return _verifyValidRange();
@@ -1063,17 +1074,17 @@
       }
       return _verifyValidRange();
     }
-    return freeze12({ make, makeStartingRange, zeroSizedRange, forEachIn });
+    return freeze13({ make, makeStartingRange, zeroSizedRange, forEachIn });
   })();
 
   // src/ast_build/tree_part_tuple_division.ts
   var TreePartTupleDivision = (() => {
-    const { memoize: memoize4, freeze: freeze20 } = Helpers;
-    const kCloseMapping = freeze20({
+    const { memoize: memoize4, freeze: freeze21 } = Helpers;
+    const kCloseMapping = freeze21({
       ["("]: ")"
       // ['fn']: 'end'
     });
-    const class_ = freeze20({
+    const class_ = freeze21({
       make: (mTokenRange, mOperatorToken) => construct(mTokenRange, mOperatorToken.content())
     });
     function construct(mTokenRange, mFindCloseBasedOn) {
@@ -1092,7 +1103,7 @@
         }
         return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
       });
-      const inst = freeze20({
+      const inst = freeze21({
         leftPart: memoize4(() => {
           const pos = closePosition();
           if (!pos)
@@ -1116,10 +1127,10 @@
   })();
 
   // src/ast_build/node_expansion.ts
-  var { freeze: freeze13 } = Helpers;
+  var { freeze: freeze14 } = Helpers;
   var NodeExpansionVisitor = (() => {
     function makeDefaultImplementations(fn) {
-      return freeze13({
+      return freeze14({
         visitLeftPartOnly: (_0) => {
           fn();
         },
@@ -1140,7 +1151,7 @@
     function makeOverrider(defaultOnCallback = () => {
     }) {
       const mInstance = { ...makeDefaultImplementations(defaultOnCallback) };
-      const inst = freeze13({
+      const inst = freeze14({
         visitLeftPartOnly,
         visitLeftWithNode,
         visitRightPartOnly,
@@ -1169,21 +1180,21 @@
         return inst;
       }
       function finish() {
-        return freeze13(mInstance);
+        return freeze14(mInstance);
       }
       return inst;
     }
-    return freeze13({ makeOverrider });
+    return freeze14({ makeOverrider });
   })();
   var NodeExpansion = (() => {
-    const { freeze: freeze20, verifyInTesting: verifyInTesting3 } = Helpers;
+    const { freeze: freeze21, verifyInTesting: verifyInTesting3 } = Helpers;
     function visit(_0) {
     }
     function makeBase() {
       const { type, hasCreated } = TypeCheckable.make();
-      return freeze20({ hasCreated, type, freeze: freeze20, visit, verifyInTesting: verifyInTesting3 });
+      return freeze21({ hasCreated, type, freeze: freeze21, visit, verifyInTesting: verifyInTesting3 });
     }
-    return freeze20({ makeBase });
+    return freeze21({ makeBase });
   })();
   var EmptyNodeExpansion = (() => {
     const { type, hasCreated, visit } = NodeExpansion.makeBase();
@@ -1191,7 +1202,7 @@
     function expandIntoNodes(_0) {
       return kEmpty;
     }
-    const sharedInst = freeze13({
+    const sharedInst = freeze14({
       expandIntoNodes,
       type,
       visit
@@ -1199,13 +1210,13 @@
     function make() {
       return sharedInst;
     }
-    return freeze13({ make, hasCreated });
+    return freeze14({ make, hasCreated });
   })();
 
   // src/ast_build/left_side_node_expansion.ts
   var BareLeftTreePartHandler = (() => {
-    const { freeze: freeze20 } = Object;
-    const kSharedInst = freeze20({ handleLeftSide, visit });
+    const { freeze: freeze21 } = Object;
+    const kSharedInst = freeze21({ handleLeftSide, visit });
     function handleLeftSide(nodes) {
       return nodes;
     }
@@ -1215,10 +1226,10 @@
     function make() {
       return kSharedInst;
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
   var IncompleteNodeLeftTreePartHandler = (() => {
-    const { freeze: freeze20 } = Object;
+    const { freeze: freeze21 } = Object;
     function make(incompleteNode) {
       function handleLeftSide(nodes) {
         const [head, ...tail] = nodes;
@@ -1230,12 +1241,12 @@
       function visit(leftPart, visitor) {
         visitor.visitLeftWithNode(incompleteNode, leftPart);
       }
-      return freeze20({ handleLeftSide, visit });
+      return freeze21({ handleLeftSide, visit });
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
   var LeftSideNodeExpansion = (() => {
-    const { freeze: freeze20 } = Object;
+    const { freeze: freeze21 } = Object;
     function make(leftPartHandler, leftPart, rightPart) {
       const {
         type,
@@ -1252,14 +1263,14 @@
         leftPartHandler.visit(leftPart, visitor);
         visitor.visitRightPartOnly(rightPart);
       }
-      return freeze20({ expandIntoNodes, type, visit });
+      return freeze21({ expandIntoNodes, type, visit });
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
 
   // src/ast_build/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
-    const { memoize: memoize4, freeze: freeze20 } = Helpers;
+    const { memoize: memoize4, freeze: freeze21 } = Helpers;
     function make(leftPartHandler, mTokenRange, mOperatorToken) {
       const { error, setErrorFn } = StandardError.make();
       function build() {
@@ -1271,12 +1282,12 @@
         const rightPart = nextPart.rightPart();
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
-      return freeze20({
+      return freeze21({
         build: memoize4(build),
         error
       });
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
 
   // src/ast_function_call_node.ts
@@ -1315,7 +1326,7 @@
   })();
 
   // src/ast_incomplete_binary_node.ts
-  var { freeze: freeze14 } = Helpers;
+  var { freeze: freeze15 } = Helpers;
   var AstIncompleteBinaryNode = (() => {
     function make(fn, operatorStr, lhs) {
       function finish(rhs) {
@@ -1327,9 +1338,9 @@
         }
         return AstFringeNode.downcast(lhs).asString();
       }
-      return freeze14({ finish, lhsAsString });
+      return freeze15({ finish, lhsAsString });
     }
-    return freeze14({ make });
+    return freeze15({ make });
   })();
   var IncompleteNodeCreation = (() => {
     const { error, setErrorMessage } = StandardError.make();
@@ -1359,13 +1370,13 @@
         }
         return AstIncompleteBinaryNode.make(selected, mOperator.content(), mLhs);
       }
-      return freeze14({ makeNode, error });
+      return freeze15({ makeNode, error });
     }
-    return freeze14({ make });
+    return freeze15({ make });
   })();
 
   // src/ast_build/right_side_node_expansion.ts
-  var { freeze: freeze15 } = Helpers;
+  var { freeze: freeze16 } = Helpers;
   var BareRightTreePartHandler = (() => {
     function make() {
       function handleRightSide(_0) {
@@ -1374,9 +1385,9 @@
       function visit(node, visitor) {
         visitor.visitRightNodeOnly(node);
       }
-      return freeze15({ handleRightSide, visit });
+      return freeze16({ handleRightSide, visit });
     }
-    return freeze15({ make });
+    return freeze16({ make });
   })();
   var BuildPartRightTreePartHandler = (() => {
     function make(rightPart) {
@@ -1386,9 +1397,9 @@
       function visit(node, visitor) {
         visitor.visitRightWithPart(node, rightPart);
       }
-      return freeze15({ handleRightSide, visit });
+      return freeze16({ handleRightSide, visit });
     }
-    return freeze15({ make });
+    return freeze16({ make });
   })();
   var RightSideNodeExpansion = (() => {
     function make(node, rightHandler) {
@@ -1403,14 +1414,14 @@
         verifyInTesting3();
         rightHandler.visit(node, visitor);
       }
-      return freeze15({ type, expandIntoNodes, visit });
+      return freeze16({ type, expandIntoNodes, visit });
     }
-    return freeze15({ make });
+    return freeze16({ make });
   })();
 
   // src/ast_build/partial_tree_start_operator_build.ts
   var PartialTreeStartOperatorBuild = (() => {
-    const { freeze: freeze20 } = Helpers;
+    const { freeze: freeze21 } = Helpers;
     function make(mIncompleteNode, mOperatorToken, mTokenRange) {
       const { setErrorFn, error } = StandardError.make();
       function build() {
@@ -1418,13 +1429,13 @@
         const { build: build2, error: error2 } = PartialTreeStartGroupBuild.make(leftTreePartHandler, mTokenRange, mOperatorToken);
         return build2() ?? setErrorFn(error2);
       }
-      return freeze20({ build, error });
+      return freeze21({ build, error });
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
 
   // src/ast_build/partial_tree_start_fringe_build.ts
-  var { freeze: freeze16 } = Helpers;
+  var { freeze: freeze17 } = Helpers;
   var PartialTreeStartFringeBuild = (() => {
     const tokenTypes = Token.types;
     const makeFringeNodeFor = AstFringeNode.makeForToken;
@@ -1461,14 +1472,14 @@
           return setErrorMessage(`not sure how to handle token "${next.content()}"`);
         }
       }
-      return freeze16({ build, error });
+      return freeze17({ build, error });
     }
-    return freeze16({ make });
+    return freeze17({ make });
   })();
 
   // src/ast_build/tree_part_build.ts
-  var { freeze: freeze17, verifyInTesting: verifyInTesting2 } = Helpers;
-  var LineContinuationScheme = freeze17({
+  var { freeze: freeze18, verifyInTesting: verifyInTesting2 } = Helpers;
+  var LineContinuationScheme = freeze18({
     inGroup: Symbol(),
     operatorContinued: Symbol(),
     normal: Symbol()
@@ -1515,17 +1526,17 @@
       function range() {
         verifyInTesting2();
         const { start, end } = mTokenRange;
-        return freeze17({ start: start(), end: end() });
+        return freeze18({ start: start(), end: end() });
       }
-      return freeze17({ buildPart, error, range });
+      return freeze18({ buildPart, error, range });
     }
-    return freeze17({ make });
+    return freeze18({ make });
   })();
 
   // src/ast_build.ts
   var AstBuild = (() => {
-    const { freeze: freeze20, memoize: memoize4 } = Helpers;
-    const class_ = freeze20({
+    const { freeze: freeze21, memoize: memoize4 } = Helpers;
+    const class_ = freeze21({
       make: (mTokens) => {
         const mErrors = [];
         function _buildProgramSequence(partBuild) {
@@ -1536,7 +1547,7 @@
           }
           return part.expandIntoNodes(_buildProgramSequence);
         }
-        const inst = freeze20({
+        const inst = freeze21({
           build: memoize4(() => {
             const partBuild = TreePartBuild.make(mTokens, LineContinuationScheme.normal);
             const res = _buildProgramSequence(partBuild).map((n) => n);
@@ -2056,8 +2067,8 @@
 
   // src/tokenization/character_class.ts
   var CharacterClass = (() => {
-    const { freeze: freeze20, assign } = Object;
-    const classes = freeze20({
+    const { freeze: freeze21, assign } = Object;
+    const classes = freeze21({
       numeric: Symbol(),
       alphabetic: Symbol(),
       operative: Symbol(),
@@ -2125,7 +2136,7 @@
       }
       return kCharacterToCharacterClass[character] ?? classes.alphabetic;
     }
-    return freeze20({
+    return freeze21({
       classes,
       classOf
     });
@@ -2133,7 +2144,7 @@
 
   // src/tokenization/crawl_strategies.ts
   var CrawlStrategies = (() => {
-    const { freeze: freeze20 } = Object;
+    const { freeze: freeze21 } = Object;
     const { classes, classOf } = CharacterClass;
     function crawlAlphanumeric(input, start) {
       const { length } = input;
@@ -2201,7 +2212,7 @@
       }
       return length;
     }
-    return freeze20({
+    return freeze21({
       [classes.alphabetic]: crawlAlphanumeric,
       [classes.literal]: crawlStringLiteral,
       [classes.operative]: crawlOperator,
@@ -2213,14 +2224,14 @@
 
   // src/tokenization/character_crawler.ts
   var CharacterCrawler = (() => {
-    const { freeze: freeze20 } = Object;
-    const injections2 = freeze20({
+    const { freeze: freeze21 } = Object;
+    const injections2 = freeze21({
       CrawlStrategies,
       characterClassOf: CharacterClass.classOf,
       characterClasses: CharacterClass.classes
     });
     function make(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
-      const inst = freeze20({ reachedEnd, readToken, crawl });
+      const inst = freeze21({ reachedEnd, readToken, crawl });
       let mStart = 0;
       let mEnd = 0;
       let mReadToken = Token.kBlankToken;
@@ -2262,13 +2273,13 @@
       }
       return inst;
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
 
   // src/tokenization.ts
   var Tokenization = (() => {
-    const { freeze: freeze20 } = Helpers;
-    const injections2 = freeze20({ CharacterCrawler, TokenRange });
+    const { freeze: freeze21 } = Helpers;
+    const injections2 = freeze21({ CharacterCrawler, TokenRange });
     function make({ CharacterCrawler: CharacterCrawler2, TokenRange: TokenRange2 } = injections2) {
       function tokenize(inp) {
         const rv = [];
@@ -2279,13 +2290,13 @@
         }
         return TokenRange2.makeStartingRange(rv);
       }
-      return freeze20({ tokenize });
+      return freeze21({ tokenize });
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
 
   // src/execution_context.ts
-  var { freeze: freeze18, memoize: memoize3 } = Helpers;
+  var { freeze: freeze19, memoize: memoize3 } = Helpers;
   var ExecutionContext = (() => {
     function make() {
       const mAvailableVariables = {};
@@ -2318,18 +2329,18 @@
       function lookUpIdentifierType(identifierName) {
         const gotten = mAvailableVariables[identifierName];
         if (gotten) {
-          return freeze18({
+          return freeze19({
             resolve: gotten.type,
             error: () => void 0
           });
         } else {
-          return freeze18({
+          return freeze19({
             resolve: () => void 0,
             error: memoize3(() => ({ message: `Undeclared variable "${identifierName}"` }))
           });
         }
       }
-      return freeze18({
+      return freeze19({
         lookUpIdentifierType,
         lookUpStringLiteralType: () => string_resolution,
         lookUpIntegerLiteralType: () => integer_resolution,
@@ -2339,12 +2350,12 @@
         getVariable
       });
     }
-    return freeze18({ make });
+    return freeze19({ make });
   })();
 
   // src/persistent_stack.ts
   var PersistentStack = (() => {
-    const { freeze: freeze20 } = Helpers;
+    const { freeze: freeze21 } = Helpers;
     function make(mDefaultMake) {
       const mMembers = [];
       let mPosition = -1;
@@ -2370,16 +2381,16 @@
       function isEmpty() {
         return mPosition === -1;
       }
-      return freeze20({ push, pop, isEmpty });
+      return freeze21({ push, pop, isEmpty });
     }
-    return freeze20({ make });
+    return freeze21({ make });
   })();
 
   // src/interpreter.ts
-  var { freeze: freeze19 } = Object;
+  var { freeze: freeze20 } = Object;
   var LetVisitor = (() => {
     function make(context) {
-      const inst = freeze19({
+      const inst = freeze20({
         visitFunctionCall: (_0) => {
         },
         visitLetDeclaration: (_0) => {
@@ -2398,14 +2409,14 @@
       });
       return inst;
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
-  var injections = freeze19({ putsFunction: console.log });
-  var Interpreter = freeze19({
+  var injections = freeze20({ putsFunction: console.log });
+  var Interpreter = freeze20({
     make: (context = ExecutionContext.make(), { putsFunction } = injections) => {
       const mStack = PersistentStack.make(ContextVariable.make);
       const mLetVisitor = LetVisitor.make(context);
-      const inst = freeze19({
+      const inst = freeze20({
         visitFunctionCall,
         visitLetDeclaration,
         visitBinaryOperation,

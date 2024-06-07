@@ -1,9 +1,10 @@
-import { AstNode, AstNodeVisitor, TypeLookUpTable, AstEvaluatableNode } from './ast_node';
+import { AstNode, TypeLookUpTable, AstEvaluatableNode } from './ast_node';
 import { Token } from './token';
 import { Helpers } from './helpers';
 import { ContextVariable } from './context_variable';
 import { AstIntegerLiteralNode } from './ast_integer_literal_node';
 import { TypeResolution } from './type_resolution';
+import { type AstNodeVisitor } from './ast_node_visitor';
 
 const { freeze } = Helpers;
 
