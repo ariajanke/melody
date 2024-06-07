@@ -17,10 +17,14 @@ const LetVisitor = (() => {
       visitFunctionCall: (_0: AstFunctionCallNode): void => {},
       visitLetDeclaration: (_0: AstLetDeclarationNode): void => {},
       visitBinaryOperation:
-        (_0: string, lhs: AstNode, rhs: AstNode): void => {
+        (op: string, lhs: AstNode, rhs: AstNode): void => {
           const lhsName = AstFringeNode.downcast(lhs).asString();
-          context.declareVariable(lhsName).
-                  setType(rhs.executionType(context));
+          const rhsRes = rhs.executionType(context);
+          const rhsType = rhsRes.resolve();
+          if (!rhsType) {
+            throw Error(`Cannot figure out type of function call "${op}"`);
+          }
+          context.declareVariable(lhsName).setType(rhsType);
           // STOP HERE
         },
       visitIdentifier: (_0: AstFringeNode) => {
@@ -89,8 +93,15 @@ export const Interpreter = freeze({
       // context.
       lhs.visit(inst);
       rhs.visit(inst);
-      const func = lhs.executionType(context).lookUp(op);
-      const rhsAsParam = rhs.executionType(context).asSingluarParameter();
+      const func = lhs.executionType(context).resolve()?.lookUp(op);
+      if (!func) {
+        throw Error(`Cannot look up function "${op}"`);
+      }
+
+      const rhsAsParam = rhs.executionType(context).resolve()?.asSingluarParameter();
+      if (!rhsAsParam) {
+        throw Error(`Cannot look up rhs type`);
+      }
       const deg = func.satisfactionDegreeOfArguments(rhsAsParam);
       if (typeof deg === 'undefined') {
         throw Error('');

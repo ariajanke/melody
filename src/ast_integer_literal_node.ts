@@ -1,10 +1,9 @@
 import { AstNode, AstNodeVisitor, TypeLookUpTable } from './ast_node';
 import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
-import { ObjectLookUpTable } from './object_look_up_table';
-import { ObjectType } from './object_type';
 import { AstFringeNode } from './ast_fringe_node';
 import { Token } from './token';
+import { TypeResolution } from './type_resolution';
 
 const { freeze } = Helpers;
 
@@ -30,8 +29,8 @@ export const AstIntegerLiteralNode = (() => {
     return freeze({
       visit: (_0: AstNodeVisitor) => {},
       type: (): symbol => kIntType,
-      executionType: (_0: TypeLookUpTable): ObjectType =>
-        ObjectLookUpTable.getBuiltinTypes().Integer,
+      executionType: (types: TypeLookUpTable): TypeResolution =>
+        types.lookUpIntegerLiteralType(),
       evaluate: (_0: (name: string) => ContextVariable): ContextVariable =>
         ContextVariable.make(mValue),
       asString: (): string => `${mValue}`,

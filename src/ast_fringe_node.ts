@@ -1,10 +1,9 @@
 import { AstNode, AstNodeVisitor, TypeLookUpTable, AstEvaluatableNode } from './ast_node';
 import { Token } from './token';
-import { ObjectLookUpTable } from './object_look_up_table';
 import { Helpers } from './helpers';
 import { ContextVariable } from './context_variable';
-import { ObjectType } from './object_type';
 import { AstIntegerLiteralNode } from './ast_integer_literal_node';
+import { TypeResolution } from './type_resolution';
 
 const { freeze } = Helpers;
 
@@ -57,7 +56,6 @@ export const AstFringeNode = (() => {
 
 export const AstStringLiteralNode = (() => {
   const kStringLiteral = AstNode.types.stringLiteral;
-  const { getBuiltinTypes } = ObjectLookUpTable;
 
   function make(mValue: string): AstFringeNode {
     mValue = (() => {
@@ -71,8 +69,8 @@ export const AstStringLiteralNode = (() => {
     return freeze({
       comesBeforeOperator: (operator: Token): boolean =>
         operator.content() === ',',
-      executionType: (_0: TypeLookUpTable): ObjectType =>
-        getBuiltinTypes().String,
+      executionType: (types: TypeLookUpTable): TypeResolution =>
+        types.lookUpStringLiteralType(),
       evaluate: (_0: (name: string) => ContextVariable): ContextVariable =>
         mAsContextVar,
       type: () => kStringLiteral,
@@ -99,7 +97,7 @@ export const AstIdentifierNode = (() => {
     const inst = freeze({
       comesBeforeOperator: (operator: Token): boolean =>
         !!kOperators[operator.content()],
-      executionType: (types: TypeLookUpTable): ObjectType =>
+      executionType: (types: TypeLookUpTable): TypeResolution =>
         types.lookUpIdentifierType(value),
       evaluate: (getter: (name: string) => ContextVariable): ContextVariable =>
         getter(value),

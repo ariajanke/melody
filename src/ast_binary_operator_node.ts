@@ -1,6 +1,6 @@
 import { AstNode, AstNodeVisitor, TypeLookUpTable } from './ast_node';
 import { Helpers } from './helpers';
-import { ObjectType } from './object_type';
+import { TypeResolution } from './type_resolution';
 
 export interface AstBinaryOperatorNode extends AstNode {}
 
@@ -22,20 +22,23 @@ export const AstBinaryOperatorNode = (() => {
       return binaryOperatorType;
     }
 
-    function executionType(types: TypeLookUpTable): ObjectType {
+    function executionType(types: TypeLookUpTable): TypeResolution {
       // in order to resolve the execution type, there are several things that
       // I need to know
       // which function am I calling, and what is it's return type
-      const lhsType = lhs.executionType(types);
-      const rhsType = rhs.executionType(types);
-
-      const func = lhsType.lookUp(op);
-      const rhsAsSingluarParameter = rhsType.asSingluarParameter();
-      const deg = func.satisfactionDegreeOfArguments(rhsAsSingluarParameter);
-      if (deg === 0) {
-        return func.returns()[0];
+      const lhsRes = lhs.executionType(types);
+      const lhsType = lhsRes.resolve();
+      if (!lhsType) {
+        return lhsRes;
       }
-      throw Error('incompatible');
+      const rhsRes = rhs.executionType(types);
+      const rhsType = rhsRes.resolve();
+      if (!rhsType) {
+        return rhsRes;
+      }
+
+      return TypeResolution.
+        makeFunctionResolution(lhsType, op, rhsType.asSingluarParameter());
     }
 
     return inst;

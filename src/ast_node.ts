@@ -4,17 +4,22 @@ import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { AstFringeNode } from './ast_fringe_node';
+import { type TypeResolution } from './type_resolution';
 
 const { freeze } = Helpers;
 
 export interface TypeLookUpTable {
-  lookUpIdentifierType: (identifierName: string) => ObjectType
+  lookUpIdentifierType: (identifierName: string) => TypeResolution,
+  lookUpStringLiteralType: () => TypeResolution,
+  lookUpIntegerLiteralType: () => TypeResolution
 }
 
 export interface AstNode {
   visit: (visitor: AstNodeVisitor) => void,
   type: () => symbol,
-  executionType: (types: TypeLookUpTable) => ObjectType
+  // I should first probably fix this...
+  // this could fail, in which case you'd have Either an ObjectType or an Error
+  executionType: (types: TypeLookUpTable) => TypeResolution
 }
 
 export const AstNode = (() => {
@@ -140,46 +145,3 @@ export const AstNodeVisitorBuilder = (() => {
 
   return class_;
 })();
-
-// export const AstNodeVisitor = (() => {
-//   const kDefaultImplementations = freeze({
-//     visitBinaryOperation:
-//       (_0: string, lhs: AstNode, rhs: AstNode): void =>
-//     {
-//       lhs.visit(kDefaultImplementations);
-//       rhs.visit(kDefaultImplementations);
-//     },
-//     visitFunctionCall: (_0: AstFunctionCallNode): void => {},
-//     visitLetDeclaration: (_0: AstLetDeclarationNode): void => {},
-//     visitIdentifier: (_0: AstFringeNode): void => {}
-//   });
-
-//   // function makeFakeVisitor
-//   //   ({
-//   //     visitBinaryOperation,
-//   //     visitFunctionCall,
-//   //     visitLetDeclaration,
-//   //     visitIdentifier
-//   //   }: {
-//   //     visitFunctionCall?: (node: AstFunctionCallNode) => void | undefined,
-//   //     visitBinaryOperation?: (op: string, node: AstNode, rhs: AstNode) => void | undefined,
-//   //     visitLetDeclaration?: (node: AstLetDeclarationNode) => void | undefined,
-//   //     visitIdentifier?: typeof kDefaultImplementations.visitIdentifier
-//   //   }): AstNodeVisitor
-//   // {
-//   //   const defaults = kDefaultImplementations;
-//   //   return freeze({
-//   //     visitBinaryOperation: visitBinaryOperation ?? defaults.visitBinaryOperation,
-//   //     visitFunctionCall: visitFunctionCall ?? defaults.visitFunctionCall,
-//   //     visitLetDeclaration: visitLetDeclaration ?? defaults.visitLetDeclaration,
-//   //     visitIdentifier: visitIdentifier ?? defaults.visitIdentifier
-//   //   });
-//   // }
-
-//   return freeze({ });
-// })();
-
-// export interface AstLetNode extends AstNode {
-//   takenNames: () => string[],
-//   primaryName: () => string
-// };

@@ -16,7 +16,7 @@
     // passWhenInTesting
   });
   var StandardError = (() => {
-    const { freeze: freeze19 } = Helpers;
+    const { freeze: freeze20 } = Helpers;
     function make() {
       let mErrorFn = () => {
       };
@@ -24,14 +24,14 @@
         mErrorFn = fn;
       }
       function setErrorMessage(message) {
-        mErrorFn = () => freeze19({ message });
+        mErrorFn = () => freeze20({ message });
       }
       function error() {
         return mErrorFn();
       }
-      return freeze19({ setErrorFn, setErrorMessage, error });
+      return freeze20({ setErrorFn, setErrorMessage, error });
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
   expose({ Helpers });
   var TypeCheckable = (() => {
@@ -309,7 +309,7 @@
   // src/object_type.ts
   var { freeze: freeze3 } = Helpers;
   var ObjectType = (() => {
-    const { memoize: memoize3 } = Helpers;
+    const { memoize: memoize4 } = Helpers;
     const kBuiltInTypeUids = freeze3({
       integer: Symbol(),
       string: Symbol()
@@ -332,7 +332,7 @@
         name: () => name,
         uid: makeUidFor(name),
         setLookUp,
-        asSingluarParameter: memoize3(asSingluarParameter)
+        asSingluarParameter: memoize4(asSingluarParameter)
       });
       function setLookUp(lookupTable) {
         mLookupTable = lookupTable;
@@ -592,12 +592,41 @@
     return class_;
   })();
 
+  // src/type_resolution.ts
+  var { freeze: freeze7 } = Helpers;
+  var TypeResolution = freeze7({
+    makeFunctionResolution: (mCaller, mName, mParameters) => {
+      const { setErrorMessage, error } = StandardError.make();
+      return freeze7({
+        resolve: () => {
+          const func = mCaller.lookUp(mName);
+          const deg = func.satisfactionDegreeOfArguments(mParameters);
+          if (deg === 0) {
+            const rets = func.returns();
+            if (rets.length > 1) {
+              throw Error("Tuple returns not implemented");
+            }
+            return func.returns()[0];
+          }
+          return setErrorMessage(`Could not resolve function call for "${mName}"`);
+        },
+        error
+      });
+    },
+    makeFixedForType: (object) => {
+      return freeze7({
+        resolve: () => object,
+        error: () => void 0
+      });
+    }
+  });
+
   // src/ast_binary_operator_node.ts
   var AstBinaryOperatorNode = (() => {
-    const { freeze: freeze19 } = Helpers;
+    const { freeze: freeze20 } = Helpers;
     const binaryOperatorType = AstNode.types.binaryOperator;
     function make(op, lhs, rhs) {
-      const inst = freeze19({ visit, type, executionType });
+      const inst = freeze20({ visit, type, executionType });
       function visit(visitor) {
         visitor.visitBinaryOperation(op, lhs, rhs);
       }
@@ -605,24 +634,26 @@
         return binaryOperatorType;
       }
       function executionType(types) {
-        const lhsType = lhs.executionType(types);
-        const rhsType = rhs.executionType(types);
-        const func = lhsType.lookUp(op);
-        const rhsAsSingluarParameter = rhsType.asSingluarParameter();
-        const deg = func.satisfactionDegreeOfArguments(rhsAsSingluarParameter);
-        if (deg === 0) {
-          return func.returns()[0];
+        const lhsRes = lhs.executionType(types);
+        const lhsType = lhsRes.resolve();
+        if (!lhsType) {
+          return lhsRes;
         }
-        throw Error("incompatible");
+        const rhsRes = rhs.executionType(types);
+        const rhsType = rhsRes.resolve();
+        if (!rhsType) {
+          return rhsRes;
+        }
+        return TypeResolution.makeFunctionResolution(lhsType, op, rhsType.asSingluarParameter());
       }
       return inst;
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
 
   // src/token.ts
-  var { freeze: freeze7 } = Object;
-  var TokenType = freeze7({
+  var { freeze: freeze8 } = Object;
+  var TokenType = freeze8({
     declareFunction: Symbol(),
     operator: Symbol(),
     stringLiteral: Symbol(),
@@ -636,7 +667,7 @@
         throw Error(`Cannot call ${desc} unimplemented`);
       };
     }
-    const kBlankToken = freeze7({
+    const kBlankToken = freeze8({
       type: unimplemented("type"),
       // TODO: try to get rid of this hack, blank token should
       // never be used
@@ -702,9 +733,9 @@
       function type() {
         return mType;
       }
-      return freeze7({ content, start, end, type });
+      return freeze8({ content, start, end, type });
     }
-    return freeze7({
+    return freeze8({
       make,
       types: TokenType,
       kBlankToken,
@@ -713,7 +744,7 @@
   })();
 
   // src/ast_integer_literal_node.ts
-  var { freeze: freeze8 } = Helpers;
+  var { freeze: freeze9 } = Helpers;
   var AstIntegerLiteralNode = (() => {
     const kIntType = AstNode.types.integerLiteral;
     function valueOf(node) {
@@ -726,11 +757,11 @@
       return construct(Number.parseInt(value));
     }
     function construct(mValue) {
-      return freeze8({
+      return freeze9({
         visit: (_0) => {
         },
         type: () => kIntType,
-        executionType: (_0) => ObjectLookUpTable.getBuiltinTypes().Integer,
+        executionType: (types) => types.lookUpIntegerLiteralType(),
         evaluate: (_0) => ContextVariable.make(mValue),
         asString: () => `${mValue}`,
         comesBeforeOperator: (operator) => {
@@ -747,11 +778,11 @@
         value: () => mValue
       });
     }
-    return freeze8({ make, valueOf });
+    return freeze9({ make, valueOf });
   })();
 
   // src/ast_fringe_node.ts
-  var { freeze: freeze9 } = Helpers;
+  var { freeze: freeze10 } = Helpers;
   var AstFringeNode = (() => {
     const tokenTypes = Token.types;
     const nodeTypes = AstNode.types;
@@ -787,11 +818,10 @@
         }
       })().make(token.content());
     }
-    return freeze9({ downcast, hasCreated, makeForToken });
+    return freeze10({ downcast, hasCreated, makeForToken });
   })();
   var AstStringLiteralNode = (() => {
     const kStringLiteral = AstNode.types.stringLiteral;
-    const { getBuiltinTypes } = ObjectLookUpTable;
     function make(mValue) {
       mValue = (() => {
         if (mValue.length <= 2) {
@@ -800,9 +830,9 @@
         return mValue.substring(1, mValue.length - 1);
       })();
       const mAsContextVar = ContextVariable.make(mValue);
-      return freeze9({
+      return freeze10({
         comesBeforeOperator: (operator) => operator.content() === ",",
-        executionType: (_0) => getBuiltinTypes().String,
+        executionType: (types) => types.lookUpStringLiteralType(),
         evaluate: (_0) => mAsContextVar,
         type: () => kStringLiteral,
         asString: () => mValue,
@@ -810,11 +840,11 @@
         }
       });
     }
-    return freeze9({ make });
+    return freeze10({ make });
   })();
   var AstIdentifierNode = (() => {
     const kIndentifier = AstNode.types.identifier;
-    const kOperators = freeze9({
+    const kOperators = freeze10({
       ",": true,
       "(": true,
       ":=": true,
@@ -823,7 +853,7 @@
       "*": true
     });
     function make(value) {
-      const inst = freeze9({
+      const inst = freeze10({
         comesBeforeOperator: (operator) => !!kOperators[operator.content()],
         executionType: (types) => types.lookUpIdentifierType(value),
         evaluate: (getter) => getter(value),
@@ -835,7 +865,7 @@
       });
       return inst;
     }
-    return freeze9({ make });
+    return freeze10({ make });
   })();
 
   // tests/ast_binary_operator_node_tests.ts
@@ -876,19 +906,22 @@
         });
         const a = {
           lookUpIdentifierType: (_0) => {
-            return sampleObjectType;
-          }
+            return TypeResolution.makeFixedForType(sampleObjectType);
+          },
+          lookUpIntegerLiteralType: () => TypeResolution.makeFixedForType(ObjectLookUpTable.getBuiltinTypes().Integer),
+          lookUpStringLiteralType: () => TypeResolution.makeFixedForType(ObjectLookUpTable.getBuiltinTypes().String)
         };
         const node = make("foo", makeIdentifier(""), makeIdentifier(""));
-        const extype = node.executionType(a);
-        expect(extype.uid).toEqual(sampleReturnType.uid);
+        const exres = node.executionType(a);
+        const extype = exres.resolve();
+        expect(extype?.uid).toEqual(sampleReturnType.uid);
       });
     });
   });
 
   // src/ast_tuple_node.ts
   var AstTupleNode = (() => {
-    const { freeze: freeze19 } = Object;
+    const { freeze: freeze20 } = Object;
     const tupleType = AstNode.types.tuple;
     const executionType = AstNode.base.makeUndefinedExecutionType("AstTupleNode");
     function makeBinary(_0, lhs, rhs) {
@@ -906,7 +939,7 @@
       return inst;
     }
     function make(mSubExpressions) {
-      const inst = freeze19({
+      const inst = freeze20({
         forEach,
         count,
         visit,
@@ -939,16 +972,16 @@
       }
       return inst;
     }
-    return freeze19({ makeBinary, makeUnary, make });
+    return freeze20({ makeBinary, makeUnary, make });
   })();
 
   // src/ast_let_declaration_node.ts
-  var { freeze: freeze10 } = Helpers;
-  var AstLetDeclarationNode = freeze10({
+  var { freeze: freeze11 } = Helpers;
+  var AstLetDeclarationNode = freeze11({
     make: (node) => {
       const { executionType } = node;
       const { letDeclaration } = AstNode.types;
-      const inst = freeze10({
+      const inst = freeze11({
         visit: (visitor) => {
           visitor.visitLetDeclaration(inst, node);
         },
@@ -972,13 +1005,13 @@
       return make(_selectedConstructor(operatorStr));
     }
     function make(fn) {
-      return freeze10({ finish: fn });
+      return freeze11({ finish: fn });
     }
-    return freeze10({ makeForOperator });
+    return freeze11({ makeForOperator });
   })();
 
   // src/token_range.ts
-  var { freeze: freeze11 } = Helpers;
+  var { freeze: freeze12 } = Helpers;
   var TokenRange = (() => {
     function zeroSizedRange(range) {
       return range.start() === range.end();
@@ -994,7 +1027,7 @@
       }
     }
     function make(mTokens, mStart, mEnd) {
-      const inst = freeze11({
+      const inst = freeze12({
         step: () => {
           ++mStart;
           return _verifyValidRange();
@@ -1022,24 +1055,24 @@
       }
       return _verifyValidRange();
     }
-    return freeze11({ make, makeStartingRange, zeroSizedRange, forEachIn });
+    return freeze12({ make, makeStartingRange, zeroSizedRange, forEachIn });
   })();
 
   // src/ast_build/tree_part_tuple_division.ts
   var TreePartTupleDivision = (() => {
-    const { memoize: memoize3, freeze: freeze19 } = Helpers;
-    const kCloseMapping = freeze19({
+    const { memoize: memoize4, freeze: freeze20 } = Helpers;
+    const kCloseMapping = freeze20({
       ["("]: ")"
       // ['fn']: 'end'
     });
-    const class_ = freeze19({
+    const class_ = freeze20({
       make: (mTokenRange, mOperatorToken) => construct(mTokenRange, mOperatorToken.content())
     });
     function construct(mTokenRange, mFindCloseBasedOn) {
       const { error, setErrorMessage } = StandardError.make();
       const { start, end, parentContainerSize, tokenAt } = mTokenRange;
       const mCloseMapping = kCloseMapping[mFindCloseBasedOn];
-      const closePosition = memoize3(() => {
+      const closePosition = memoize4(() => {
         if (!mCloseMapping) {
           return end();
         }
@@ -1051,15 +1084,15 @@
         }
         return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
       });
-      const inst = freeze19({
-        leftPart: memoize3(() => {
+      const inst = freeze20({
+        leftPart: memoize4(() => {
           const pos = closePosition();
           if (!pos)
             return void 0;
           const lineCont = mCloseMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
           return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
         }),
-        rightPart: memoize3(() => {
+        rightPart: memoize4(() => {
           const pos = closePosition();
           if (!pos) {
             throw Error("call and test against leftPart first");
@@ -1075,10 +1108,10 @@
   })();
 
   // src/ast_build/node_expansion.ts
-  var { freeze: freeze12 } = Helpers;
+  var { freeze: freeze13 } = Helpers;
   var NodeExpansionVisitor = (() => {
     function makeDefaultImplementations(fn) {
-      return freeze12({
+      return freeze13({
         visitLeftPartOnly: (_0) => {
           fn();
         },
@@ -1099,7 +1132,7 @@
     function makeOverrider(defaultOnCallback = () => {
     }) {
       const mInstance = { ...makeDefaultImplementations(defaultOnCallback) };
-      const inst = freeze12({
+      const inst = freeze13({
         visitLeftPartOnly,
         visitLeftWithNode,
         visitRightPartOnly,
@@ -1128,21 +1161,21 @@
         return inst;
       }
       function finish() {
-        return freeze12(mInstance);
+        return freeze13(mInstance);
       }
       return inst;
     }
-    return freeze12({ makeOverrider });
+    return freeze13({ makeOverrider });
   })();
   var NodeExpansion = (() => {
-    const { freeze: freeze19, verifyInTesting: verifyInTesting3 } = Helpers;
+    const { freeze: freeze20, verifyInTesting: verifyInTesting3 } = Helpers;
     function visit(_0) {
     }
     function makeBase() {
       const { type, hasCreated } = TypeCheckable.make();
-      return freeze19({ hasCreated, type, freeze: freeze19, visit, verifyInTesting: verifyInTesting3 });
+      return freeze20({ hasCreated, type, freeze: freeze20, visit, verifyInTesting: verifyInTesting3 });
     }
-    return freeze19({ makeBase });
+    return freeze20({ makeBase });
   })();
   var EmptyNodeExpansion = (() => {
     const { type, hasCreated, visit } = NodeExpansion.makeBase();
@@ -1150,7 +1183,7 @@
     function expandIntoNodes(_0) {
       return kEmpty;
     }
-    const sharedInst = freeze12({
+    const sharedInst = freeze13({
       expandIntoNodes,
       type,
       visit
@@ -1158,13 +1191,13 @@
     function make() {
       return sharedInst;
     }
-    return freeze12({ make, hasCreated });
+    return freeze13({ make, hasCreated });
   })();
 
   // src/ast_build/left_side_node_expansion.ts
   var BareLeftTreePartHandler = (() => {
-    const { freeze: freeze19 } = Object;
-    const kSharedInst = freeze19({ handleLeftSide, visit });
+    const { freeze: freeze20 } = Object;
+    const kSharedInst = freeze20({ handleLeftSide, visit });
     function handleLeftSide(nodes) {
       return nodes;
     }
@@ -1174,10 +1207,10 @@
     function make() {
       return kSharedInst;
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
   var IncompleteNodeLeftTreePartHandler = (() => {
-    const { freeze: freeze19 } = Object;
+    const { freeze: freeze20 } = Object;
     function make(incompleteNode) {
       function handleLeftSide(nodes) {
         const [head, ...tail] = nodes;
@@ -1189,12 +1222,12 @@
       function visit(leftPart, visitor) {
         visitor.visitLeftWithNode(incompleteNode, leftPart);
       }
-      return freeze19({ handleLeftSide, visit });
+      return freeze20({ handleLeftSide, visit });
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
   var LeftSideNodeExpansion = (() => {
-    const { freeze: freeze19 } = Object;
+    const { freeze: freeze20 } = Object;
     function make(leftPartHandler, leftPart, rightPart) {
       const {
         type,
@@ -1211,14 +1244,14 @@
         leftPartHandler.visit(leftPart, visitor);
         visitor.visitRightPartOnly(rightPart);
       }
-      return freeze19({ expandIntoNodes, type, visit });
+      return freeze20({ expandIntoNodes, type, visit });
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
 
   // src/ast_build/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
-    const { memoize: memoize3, freeze: freeze19 } = Helpers;
+    const { memoize: memoize4, freeze: freeze20 } = Helpers;
     function make(leftPartHandler, mTokenRange, mOperatorToken) {
       const { error, setErrorFn } = StandardError.make();
       function build() {
@@ -1230,12 +1263,12 @@
         const rightPart = nextPart.rightPart();
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
-      return freeze19({
-        build: memoize3(build),
+      return freeze20({
+        build: memoize4(build),
         error
       });
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
 
   // src/ast_function_call_node.ts
@@ -1274,7 +1307,7 @@
   })();
 
   // src/ast_incomplete_binary_node.ts
-  var { freeze: freeze13 } = Helpers;
+  var { freeze: freeze14 } = Helpers;
   var AstIncompleteBinaryNode = (() => {
     function make(fn, operatorStr, lhs) {
       function finish(rhs) {
@@ -1286,9 +1319,9 @@
         }
         return AstFringeNode.downcast(lhs).asString();
       }
-      return freeze13({ finish, lhsAsString });
+      return freeze14({ finish, lhsAsString });
     }
-    return freeze13({ make });
+    return freeze14({ make });
   })();
   var IncompleteNodeCreation = (() => {
     const { error, setErrorMessage } = StandardError.make();
@@ -1318,13 +1351,13 @@
         }
         return AstIncompleteBinaryNode.make(selected, mOperator.content(), mLhs);
       }
-      return freeze13({ makeNode, error });
+      return freeze14({ makeNode, error });
     }
-    return freeze13({ make });
+    return freeze14({ make });
   })();
 
   // src/ast_build/right_side_node_expansion.ts
-  var { freeze: freeze14 } = Helpers;
+  var { freeze: freeze15 } = Helpers;
   var BareRightTreePartHandler = (() => {
     function make() {
       function handleRightSide(_0) {
@@ -1333,9 +1366,9 @@
       function visit(node, visitor) {
         visitor.visitRightNodeOnly(node);
       }
-      return freeze14({ handleRightSide, visit });
+      return freeze15({ handleRightSide, visit });
     }
-    return freeze14({ make });
+    return freeze15({ make });
   })();
   var BuildPartRightTreePartHandler = (() => {
     function make(rightPart) {
@@ -1345,9 +1378,9 @@
       function visit(node, visitor) {
         visitor.visitRightWithPart(node, rightPart);
       }
-      return freeze14({ handleRightSide, visit });
+      return freeze15({ handleRightSide, visit });
     }
-    return freeze14({ make });
+    return freeze15({ make });
   })();
   var RightSideNodeExpansion = (() => {
     function make(node, rightHandler) {
@@ -1362,14 +1395,14 @@
         verifyInTesting3();
         rightHandler.visit(node, visitor);
       }
-      return freeze14({ type, expandIntoNodes, visit });
+      return freeze15({ type, expandIntoNodes, visit });
     }
-    return freeze14({ make });
+    return freeze15({ make });
   })();
 
   // src/ast_build/partial_tree_start_operator_build.ts
   var PartialTreeStartOperatorBuild = (() => {
-    const { freeze: freeze19 } = Helpers;
+    const { freeze: freeze20 } = Helpers;
     function make(mIncompleteNode, mOperatorToken, mTokenRange) {
       const { setErrorFn, error } = StandardError.make();
       function build() {
@@ -1377,13 +1410,13 @@
         const { build: build2, error: error2 } = PartialTreeStartGroupBuild.make(leftTreePartHandler, mTokenRange, mOperatorToken);
         return build2() ?? setErrorFn(error2);
       }
-      return freeze19({ build, error });
+      return freeze20({ build, error });
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
 
   // src/ast_build/partial_tree_start_fringe_build.ts
-  var { freeze: freeze15 } = Helpers;
+  var { freeze: freeze16 } = Helpers;
   var PartialTreeStartFringeBuild = (() => {
     const tokenTypes = Token.types;
     const makeFringeNodeFor = AstFringeNode.makeForToken;
@@ -1420,14 +1453,14 @@
           return setErrorMessage(`not sure how to handle token "${next.content()}"`);
         }
       }
-      return freeze15({ build, error });
+      return freeze16({ build, error });
     }
-    return freeze15({ make });
+    return freeze16({ make });
   })();
 
   // src/ast_build/tree_part_build.ts
-  var { freeze: freeze16, verifyInTesting: verifyInTesting2 } = Helpers;
-  var LineContinuationScheme = freeze16({
+  var { freeze: freeze17, verifyInTesting: verifyInTesting2 } = Helpers;
+  var LineContinuationScheme = freeze17({
     inGroup: Symbol(),
     operatorContinued: Symbol(),
     normal: Symbol()
@@ -1474,17 +1507,17 @@
       function range() {
         verifyInTesting2();
         const { start, end } = mTokenRange;
-        return freeze16({ start: start(), end: end() });
+        return freeze17({ start: start(), end: end() });
       }
-      return freeze16({ buildPart, error, range });
+      return freeze17({ buildPart, error, range });
     }
-    return freeze16({ make });
+    return freeze17({ make });
   })();
 
   // src/ast_build.ts
   var AstBuild = (() => {
-    const { freeze: freeze19, memoize: memoize3 } = Helpers;
-    const class_ = freeze19({
+    const { freeze: freeze20, memoize: memoize4 } = Helpers;
+    const class_ = freeze20({
       make: (mTokens) => {
         const mErrors = [];
         function _buildProgramSequence(partBuild) {
@@ -1495,8 +1528,8 @@
           }
           return part.expandIntoNodes(_buildProgramSequence);
         }
-        const inst = freeze19({
-          build: memoize3(() => {
+        const inst = freeze20({
+          build: memoize4(() => {
             const partBuild = TreePartBuild.make(mTokens, LineContinuationScheme.normal);
             const res = _buildProgramSequence(partBuild).map((n) => n);
             if (mErrors.length !== 0) {
@@ -2015,8 +2048,8 @@
 
   // src/tokenization/character_class.ts
   var CharacterClass = (() => {
-    const { freeze: freeze19, assign } = Object;
-    const classes = freeze19({
+    const { freeze: freeze20, assign } = Object;
+    const classes = freeze20({
       numeric: Symbol(),
       alphabetic: Symbol(),
       operative: Symbol(),
@@ -2084,7 +2117,7 @@
       }
       return kCharacterToCharacterClass[character] ?? classes.alphabetic;
     }
-    return freeze19({
+    return freeze20({
       classes,
       classOf
     });
@@ -2092,7 +2125,7 @@
 
   // src/tokenization/crawl_strategies.ts
   var CrawlStrategies = (() => {
-    const { freeze: freeze19 } = Object;
+    const { freeze: freeze20 } = Object;
     const { classes, classOf } = CharacterClass;
     function crawlAlphanumeric(input, start) {
       const { length } = input;
@@ -2160,7 +2193,7 @@
       }
       return length;
     }
-    return freeze19({
+    return freeze20({
       [classes.alphabetic]: crawlAlphanumeric,
       [classes.literal]: crawlStringLiteral,
       [classes.operative]: crawlOperator,
@@ -2172,14 +2205,14 @@
 
   // src/tokenization/character_crawler.ts
   var CharacterCrawler = (() => {
-    const { freeze: freeze19 } = Object;
-    const injections2 = freeze19({
+    const { freeze: freeze20 } = Object;
+    const injections2 = freeze20({
       CrawlStrategies,
       characterClassOf: CharacterClass.classOf,
       characterClasses: CharacterClass.classes
     });
     function make(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
-      const inst = freeze19({ reachedEnd, readToken, crawl });
+      const inst = freeze20({ reachedEnd, readToken, crawl });
       let mStart = 0;
       let mEnd = 0;
       let mReadToken = Token.kBlankToken;
@@ -2221,13 +2254,13 @@
       }
       return inst;
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
 
   // src/tokenization.ts
   var Tokenization = (() => {
-    const { freeze: freeze19 } = Helpers;
-    const injections2 = freeze19({ CharacterCrawler, TokenRange });
+    const { freeze: freeze20 } = Helpers;
+    const injections2 = freeze20({ CharacterCrawler, TokenRange });
     function make({ CharacterCrawler: CharacterCrawler2, TokenRange: TokenRange2 } = injections2) {
       function tokenize(inp) {
         const rv = [];
@@ -2238,16 +2271,23 @@
         }
         return TokenRange2.makeStartingRange(rv);
       }
-      return freeze19({ tokenize });
+      return freeze20({ tokenize });
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
 
   // src/execution_context.ts
-  var { freeze: freeze17 } = Helpers;
+  var { freeze: freeze18, memoize: memoize3 } = Helpers;
   var ExecutionContext = (() => {
     function make() {
       const mAvailableVariables = {};
+      const [string_resolution, integer_resolution] = (() => {
+        const { String, Integer } = ObjectLookUpTable.getBuiltinTypes();
+        return [
+          TypeResolution.makeFixedForType(String),
+          TypeResolution.makeFixedForType(Integer)
+        ];
+      })();
       function declareVariable(name) {
         if (mAvailableVariables[name]) {
           throw Error(`name "${name}" already taken`);
@@ -2268,22 +2308,35 @@
         return getVariable(name).asString();
       }
       function lookUpIdentifierType(identifierName) {
-        return getVariable(identifierName).type();
+        const gotten = mAvailableVariables[identifierName];
+        if (gotten) {
+          return freeze18({
+            resolve: gotten.type,
+            error: () => void 0
+          });
+        } else {
+          return freeze18({
+            resolve: () => void 0,
+            error: memoize3(() => ({ message: `Undeclared variable "${identifierName}"` }))
+          });
+        }
       }
-      return freeze17({
+      return freeze18({
         lookUpIdentifierType,
+        lookUpStringLiteralType: () => string_resolution,
+        lookUpIntegerLiteralType: () => integer_resolution,
         declareVariable,
         getValueOfVariable,
         setVariable,
         getVariable
       });
     }
-    return freeze17({ make });
+    return freeze18({ make });
   })();
 
   // src/persistent_stack.ts
   var PersistentStack = (() => {
-    const { freeze: freeze19 } = Helpers;
+    const { freeze: freeze20 } = Helpers;
     function make(mDefaultMake) {
       const mMembers = [];
       let mPosition = -1;
@@ -2309,37 +2362,42 @@
       function isEmpty() {
         return mPosition === -1;
       }
-      return freeze19({ push, pop, isEmpty });
+      return freeze20({ push, pop, isEmpty });
     }
-    return freeze19({ make });
+    return freeze20({ make });
   })();
 
   // src/interpreter.ts
-  var { freeze: freeze18 } = Object;
+  var { freeze: freeze19 } = Object;
   var LetVisitor = (() => {
     function make(context) {
-      const inst = freeze18({
+      const inst = freeze19({
         visitFunctionCall: (_0) => {
         },
         visitLetDeclaration: (_0) => {
         },
-        visitBinaryOperation: (_0, lhs, rhs) => {
+        visitBinaryOperation: (op, lhs, rhs) => {
           const lhsName = AstFringeNode.downcast(lhs).asString();
-          context.declareVariable(lhsName).setType(rhs.executionType(context));
+          const rhsRes = rhs.executionType(context);
+          const rhsType = rhsRes.resolve();
+          if (!rhsType) {
+            throw Error(`Cannot figure out type of function call "${op}"`);
+          }
+          context.declareVariable(lhsName).setType(rhsType);
         },
         visitIdentifier: (_0) => {
         }
       });
       return inst;
     }
-    return freeze18({ make });
+    return freeze19({ make });
   })();
-  var injections = freeze18({ putsFunction: console.log });
-  var Interpreter = freeze18({
+  var injections = freeze19({ putsFunction: console.log });
+  var Interpreter = freeze19({
     make: (context = ExecutionContext.make(), { putsFunction } = injections) => {
       const mStack = PersistentStack.make(ContextVariable.make);
       const mLetVisitor = LetVisitor.make(context);
-      const inst = freeze18({
+      const inst = freeze19({
         visitFunctionCall,
         visitLetDeclaration,
         visitBinaryOperation,
@@ -2367,8 +2425,14 @@
       function visitBinaryOperation(op, lhs, rhs) {
         lhs.visit(inst);
         rhs.visit(inst);
-        const func = lhs.executionType(context).lookUp(op);
-        const rhsAsParam = rhs.executionType(context).asSingluarParameter();
+        const func = lhs.executionType(context).resolve()?.lookUp(op);
+        if (!func) {
+          throw Error(`Cannot look up function "${op}"`);
+        }
+        const rhsAsParam = rhs.executionType(context).resolve()?.asSingluarParameter();
+        if (!rhsAsParam) {
+          throw Error(`Cannot look up rhs type`);
+        }
         const deg = func.satisfactionDegreeOfArguments(rhsAsParam);
         if (typeof deg === "undefined") {
           throw Error("");

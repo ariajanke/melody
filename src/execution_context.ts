@@ -1,9 +1,10 @@
 import { Helpers } from './helpers';
 import { ContextVariable } from './context_variable';
 import { TypeLookUpTable } from './ast_node';
-import { ObjectType } from './object_type';
+import { ObjectLookUpTable } from './object_look_up_table';
+import { TypeResolution } from './type_resolution';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export interface ExecutionContext extends TypeLookUpTable {
   declareVariable: (name: string) => ContextVariable,
@@ -16,6 +17,14 @@ export const ExecutionContext = (() => {
   function make(): ExecutionContext {
     // I'm not sure about other types
     const mAvailableVariables: { [name: string]: ContextVariable } = {};
+
+    const [string_resolution, integer_resolution] = (() => {
+      const { String, Integer } = ObjectLookUpTable.getBuiltinTypes();
+      return [
+        TypeResolution.makeFixedForType(String),
+        TypeResolution.makeFixedForType(Integer)
+      ];
+    })();
 
     function declareVariable(name: string): ContextVariable {
       if (mAvailableVariables[name]) {
@@ -40,12 +49,25 @@ export const ExecutionContext = (() => {
       return getVariable(name).asString();
     }
 
-    function lookUpIdentifierType(identifierName: string): ObjectType {
-      return getVariable(identifierName).type();
+    function lookUpIdentifierType(identifierName: string): TypeResolution {
+      const gotten = mAvailableVariables[identifierName];
+      if (gotten) {
+        return freeze({
+          resolve: gotten.type,
+          error: () => undefined
+        });
+      } else {
+        return freeze({
+          resolve: () => undefined,
+          error: memoize(() => ({ message: `Undeclared variable "${identifierName}"` }))
+        });
+      }
     }
 
     return freeze({
       lookUpIdentifierType,
+      lookUpStringLiteralType: () => string_resolution,
+      lookUpIntegerLiteralType: () => integer_resolution,
       declareVariable,
       getValueOfVariable,
       setVariable,

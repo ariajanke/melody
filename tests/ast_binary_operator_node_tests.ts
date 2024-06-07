@@ -6,6 +6,8 @@ import { TypeLookUpTable } from '../src/ast_node';
 import { ContextVariable } from '../src/context_variable';
 import { ObjectType } from '../src/object_type';
 import { IncompleteFunctionType, ParameterFit } from '../src/function_type';
+import { TypeResolution } from '../src/type_resolution';
+import { ObjectLookUpTable } from '../src/object_look_up_table';
 
 const { describeNamed } = TestHelpers;
 
@@ -63,13 +65,18 @@ describeNamed({ AstBinaryOperatorNode }, () => {
         ['foo']: funcType
       });
       const a: TypeLookUpTable = {
-        lookUpIdentifierType: (_0: string): ObjectType => {
-          return sampleObjectType;
-        }
+        lookUpIdentifierType: (_0: string): TypeResolution => {
+          return TypeResolution.makeFixedForType(sampleObjectType);
+        },
+        lookUpIntegerLiteralType: () =>
+          TypeResolution.makeFixedForType(ObjectLookUpTable.getBuiltinTypes().Integer),
+        lookUpStringLiteralType: () =>
+          TypeResolution.makeFixedForType(ObjectLookUpTable.getBuiltinTypes().String)
       };
       const node = make('foo', makeIdentifier(''), makeIdentifier(''));
-      const extype = node.executionType(a);
-      expect(extype.uid).toEqual(sampleReturnType.uid);
+      const exres = node.executionType(a);
+      const extype = exres.resolve();
+      expect(extype?.uid).toEqual(sampleReturnType.uid);
     });
   });
 });
