@@ -533,12 +533,46 @@
     });
   })();
   var AstNodeVisitorBuilder = (() => {
+    function makeContinuingImplementations() {
+      const inst = freeze6({
+        visitBinaryOperation: (_0, lhs, rhs) => {
+          lhs.visit(inst);
+          rhs.visit(inst);
+        },
+        visitFunctionCall: (node) => {
+          node.arguments.forEach((node2) => node2.visit(inst));
+        },
+        visitLetDeclaration: (_0, rhs) => {
+          rhs.visit(inst);
+        },
+        visitIdentifier: (_0) => {
+        }
+      });
+      return inst;
+    }
+    function makeStoppingImplementations() {
+      const inst = freeze6({
+        visitBinaryOperation: (_0, _1, _2) => {
+        },
+        visitFunctionCall: (_0) => {
+        },
+        visitLetDeclaration: (_0, _1) => {
+        },
+        visitIdentifier: (_0) => {
+        }
+      });
+      return inst;
+    }
+    const kContinuingImplementations = makeContinuingImplementations();
+    const kStoppingImplementations = makeStoppingImplementations();
     const class_ = freeze6({
-      make: () => {
-        let mVisitBinaryOperation = void 0;
-        let mVisitFunctionCall = void 0;
-        let mVisitLetDeclaration = void 0;
-        let mVisitIdentifier = void 0;
+      makeDefaultingToStop: () => class_.make(kStoppingImplementations),
+      makeDefaultingToContinue: () => class_.make(kContinuingImplementations),
+      make: (kDefaultImplementations) => {
+        let mVisitBinaryOperation = kDefaultImplementations.visitBinaryOperation;
+        let mVisitFunctionCall = kDefaultImplementations.visitFunctionCall;
+        let mVisitLetDeclaration = kDefaultImplementations.visitLetDeclaration;
+        let mVisitIdentifier = kDefaultImplementations.visitIdentifier;
         const inst = freeze6({
           visitBinaryOperation: (fn) => {
             mVisitBinaryOperation = fn;
@@ -556,35 +590,12 @@
             mVisitIdentifier = fn;
             return inst;
           },
-          finish: () => {
-            const impl = freeze6({
-              visitBinaryOperation: (op, lhs, rhs) => {
-                if (mVisitBinaryOperation) {
-                  return mVisitBinaryOperation(op, lhs, rhs);
-                }
-                lhs.visit(impl);
-                rhs.visit(impl);
-              },
-              visitFunctionCall: (node) => {
-                if (mVisitFunctionCall) {
-                  return mVisitFunctionCall(node);
-                }
-                node.arguments.forEach((node2) => node2.visit(impl));
-              },
-              visitLetDeclaration: (node, rhs) => {
-                if (mVisitLetDeclaration) {
-                  return mVisitLetDeclaration(node, rhs);
-                }
-                rhs.visit(impl);
-              },
-              visitIdentifier: (node) => {
-                if (mVisitIdentifier) {
-                  return mVisitIdentifier(node);
-                }
-              }
-            });
-            return impl;
-          }
+          finish: () => freeze6({
+            visitBinaryOperation: mVisitBinaryOperation,
+            visitFunctionCall: mVisitFunctionCall,
+            visitLetDeclaration: mVisitLetDeclaration,
+            visitIdentifier: mVisitIdentifier
+          })
         });
         return inst;
       }
@@ -613,42 +624,39 @@
         error
       });
     },
-    makeFixedForType: (object) => {
-      return freeze7({
-        resolve: () => object,
-        error: () => void 0
-      });
-    }
+    makeFixedForType: (object) => freeze7({
+      resolve: () => object,
+      error: () => void 0
+    })
   });
 
   // src/ast_binary_operator_node.ts
   var AstBinaryOperatorNode = (() => {
     const { freeze: freeze20 } = Helpers;
     const binaryOperatorType = AstNode.types.binaryOperator;
-    function make(op, lhs, rhs) {
-      const inst = freeze20({ visit, type, executionType });
-      function visit(visitor) {
-        visitor.visitBinaryOperation(op, lhs, rhs);
+    return freeze20({
+      make: (op, lhs, rhs) => {
+        return freeze20({
+          visit: (visitor) => {
+            visitor.visitBinaryOperation(op, lhs, rhs);
+          },
+          type: () => binaryOperatorType,
+          executionType: (types) => {
+            const lhsRes = lhs.executionType(types);
+            const lhsType = lhsRes.resolve();
+            if (!lhsType) {
+              return lhsRes;
+            }
+            const rhsRes = rhs.executionType(types);
+            const rhsType = rhsRes.resolve();
+            if (!rhsType) {
+              return rhsRes;
+            }
+            return TypeResolution.makeFunctionResolution(lhsType, op, rhsType.asSingluarParameter());
+          }
+        });
       }
-      function type() {
-        return binaryOperatorType;
-      }
-      function executionType(types) {
-        const lhsRes = lhs.executionType(types);
-        const lhsType = lhsRes.resolve();
-        if (!lhsType) {
-          return lhsRes;
-        }
-        const rhsRes = rhs.executionType(types);
-        const rhsType = rhsRes.resolve();
-        if (!rhsType) {
-          return rhsRes;
-        }
-        return TypeResolution.makeFunctionResolution(lhsType, op, rhsType.asSingluarParameter());
-      }
-      return inst;
-    }
-    return freeze20({ make });
+    });
   })();
 
   // src/token.ts
@@ -875,7 +883,7 @@
     const makeIdentifier = AstIdentifierNode.make;
     it("is reachable by visitor", () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((_0, _1, _2) => {
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, _1, _2) => {
         hitsAtExactly(1);
       }).finish();
       make(":=", makeIdentifier(""), makeIdentifier("")).visit(visitor);
@@ -887,7 +895,7 @@
     });
     it("maybe visited for assigee name", () => {
       let assigneeName = "";
-      const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((_0, node, _2) => {
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, node, _2) => {
         AstEvaluatableNode.tryDowncast(node)?.evaluate((name) => {
           assigneeName = name;
           return ContextVariable.make();
@@ -1573,7 +1581,7 @@
           makeToken(")"),
           makeToken("\n")
         ];
-        const visitor = AstNodeVisitorBuilder.make().visitFunctionCall((node) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitFunctionCall((node) => {
           points()[0].hitsAtExactly(2);
           node.arguments.forEach((node2) => {
             node2.visit(visitor);
@@ -1596,7 +1604,7 @@
           makeToken(")"),
           makeToken("\n")
         ];
-        const visitor = AstNodeVisitorBuilder.make().visitFunctionCall((node) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitFunctionCall((node) => {
           points()[0].hitsAtExactly(1);
           node.arguments.forEach((node2) => {
             node2.visit(visitor);
@@ -1612,7 +1620,7 @@
           makeToken("2")
         ];
         let vop = "";
-        const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((op, lhs, rhs) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, lhs, rhs) => {
           const { valueOf } = AstIntegerLiteralNode;
           vop = op;
           expect(valueOf(lhs)).toEqual(2);
@@ -1631,7 +1639,7 @@
         const { points, verifyAllHit } = ReachPoint.makeCollection(3);
         const [pt1, pt2, pt3] = points();
         const foundOperators = [];
-        const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((op, lhs, rhs) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, lhs, rhs) => {
           foundOperators.push(op);
           pt1.hitsAtExactly(1);
           lhs.visit(visitor);
@@ -1657,7 +1665,7 @@
           makeToken("3")
         ];
         const foundOperators = [];
-        const visitor = AstNodeVisitorBuilder.make().visitBinaryOperation((op, lhs, rhs) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, lhs, rhs) => {
           foundOperators.push(op);
           lhs.visit(visitor);
           rhs.visit(visitor);

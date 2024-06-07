@@ -7,6 +7,7 @@ import { Helpers } from './helpers';
 
 const { freeze } = Helpers;
 
+// what's the difference between validation, and compliation?
 const AstValidatorVisitor = freeze({
   make: (): AstNodeVisitor => {
     return freeze({

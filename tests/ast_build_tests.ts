@@ -28,7 +28,7 @@ describeNamed({ AstBuild }, () => {
       ];
 
       const visitor = AstNodeVisitorBuilder.
-        make().
+        makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
           points()[0].hitsAtExactly(2);
           node.arguments.forEach((node: AstNode) => {
@@ -50,7 +50,7 @@ describeNamed({ AstBuild }, () => {
       ];
 
       const visitor = AstNodeVisitorBuilder.
-        make().
+        makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
           points()[0].hitsAtExactly(1);
           node.arguments.forEach((node: AstNode) => {
@@ -70,7 +70,7 @@ describeNamed({ AstBuild }, () => {
 
       let vop = '';
       const visitor = AstNodeVisitorBuilder.
-        make().
+        makeDefaultingToContinue().
         visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
           const { valueOf } = AstIntegerLiteralNode;
           vop = op;
@@ -91,7 +91,7 @@ describeNamed({ AstBuild }, () => {
       const [pt1, pt2, pt3] = points();
       const foundOperators: string[] = [];
       const visitor = AstNodeVisitorBuilder.
-        make().
+        makeDefaultingToContinue().
         visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
           foundOperators.push(op);
           pt1.hitsAtExactly(1);
@@ -119,7 +119,7 @@ describeNamed({ AstBuild }, () => {
       ];
       const foundOperators: string[] = [];
       const visitor = AstNodeVisitorBuilder.
-        make().
+        makeDefaultingToContinue().
         visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
           foundOperators.push(op);
           lhs.visit(visitor);
