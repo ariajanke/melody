@@ -9,23 +9,23 @@ export const Helpers = Object.freeze({
   verifyInTesting,
   symbolToString: getSymbolThings().symbolToString,
   registerSymbolStrings: getSymbolThings().registerSymbolStrings
-  // passWhenInTesting
 });
 
 
 export type StandardErrorMessage = Readonly<{ message: string }>;
-export type StandardErrorFn = (() => StandardErrorMessage | undefined);
+export type StandardErrorFn = (() => StandardErrorMessage);
 export interface StandardError {
   setErrorFn: (fn: StandardErrorFn) => undefined,
   setErrorMessage: (message: string) => undefined,
-  error: () => StandardErrorMessage | undefined
+  error: () => StandardErrorMessage
 };
 
 export const StandardError = (() => {
   const { freeze } = Helpers;
 
   function make(): StandardError {
-    let mErrorFn: StandardErrorFn = (): undefined => {};
+    let mErrorFn: StandardErrorFn = (): StandardErrorMessage =>
+      { throw Error('No error set, this method should not be called'); };
 
     function setErrorFn(fn: StandardErrorFn): undefined
       { mErrorFn = fn; }
@@ -33,7 +33,7 @@ export const StandardError = (() => {
     function setErrorMessage(message: string): undefined
       { mErrorFn = () => freeze({ message }); }
 
-    function error(): StandardErrorMessage | undefined
+    function error(): StandardErrorMessage
       { return mErrorFn(); }
 
     return freeze({ setErrorFn, setErrorMessage, error });
@@ -107,8 +107,6 @@ function depthOneCopy<Type>
 
 function expose(braceEnclosedVar: object): void {
   const setToWindow = (k: string) => {
-    // if (typeof window === 'undefined')
-    //   return;
     globalThis[k] = braceEnclosedVar[k];
   };
   return Object.keys(braceEnclosedVar).forEach(setToWindow);

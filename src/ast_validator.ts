@@ -81,7 +81,7 @@ const AstLetBinaryOperatorValidatorVisitor = freeze({
           // we declared lhs, and are totally, totally done
           return;
         }
-        mErrorsCollector.pushMessage(typeRes.error()?.message as string);
+        mErrorsCollector.pushMessage(typeRes.error().message);
       }).
       finish();
     return freeze({
@@ -108,7 +108,7 @@ const AstGeneralValidator = freeze({
         const typeRes = binNode.executionType( mContext );
         const type = typeRes.resolve();
         if (type) { return; }
-        mErrorsCollector.pushMessage(typeRes.error()?.message as string);
+        mErrorsCollector.pushMessage(typeRes.error().message);
       }).
       visitLetDeclaration((node: AstLetDeclarationNode, _1: AstNode) => {
         node.visit(mGetMemoizedLetValidator());
@@ -117,7 +117,7 @@ const AstGeneralValidator = freeze({
         const typeRes = node.executionType( mContext );
         const type = typeRes.resolve();
         if (type) { return; }
-        mErrorsCollector.pushMessage(typeRes.error()?.message as string);
+        mErrorsCollector.pushMessage(typeRes.error().message);
       }).
       visitTuple((node: AstTupleNode) =>
         node.forEach((node: AstNode) => { node.visit(visitor); })).

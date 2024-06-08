@@ -34,6 +34,6 @@ export const TypeResolution = freeze({
   makeFixedForType: (object: ObjectType): TypeResolution =>
     freeze({
       resolve: () => object,
-      error: () => undefined
+      error: () => StandardError.make().error()
     })
 });

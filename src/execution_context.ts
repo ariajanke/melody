@@ -1,10 +1,10 @@
-import { Helpers } from './helpers';
+import { Helpers, StandardError } from './helpers';
 import { ContextVariable } from './context_variable';
 import { TypeLookUpTable } from './ast_node';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { TypeResolution } from './type_resolution';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
 
 export interface ExecutionContext extends TypeLookUpTable {
   declareVariable: (name: string) => ContextVariable,
@@ -54,12 +54,14 @@ export const ExecutionContext = (() => {
       if (gotten) {
         return freeze({
           resolve: gotten.type,
-          error: () => undefined
+          error: () => StandardError.make().error()
         });
       } else {
+        const { error, setErrorMessage } = StandardError.make();
+        setErrorMessage(`Undeclared variable "${identifierName}"`);
         return freeze({
           resolve: () => undefined,
-          error: memoize(() => ({ message: `Undeclared variable "${identifierName}"` }))
+          error
         });
       }
     }

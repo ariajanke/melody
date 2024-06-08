@@ -44,14 +44,8 @@ export const AstBuild = (() => {
         throw Error('Cannot use buildFor for errorful tokens');
       }
       return res;
-      // const partBuild = TreePartBuild.
-      //   make(tokens, LineContinuationScheme.normal);
-      // const res = buildProgramSequence(partBuild).map(n => n);
-      // return AstTupleNode.make(res);
     }
   });
 
   return class_;
-
-  // return freeze({ buildFor, testable: { buildProgramSequence } });
 })();

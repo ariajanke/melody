@@ -13,12 +13,12 @@
     verifyInTesting,
     symbolToString: getSymbolThings().symbolToString,
     registerSymbolStrings: getSymbolThings().registerSymbolStrings
-    // passWhenInTesting
   });
   var StandardError = (() => {
     const { freeze: freeze24 } = Helpers;
     function make() {
       let mErrorFn = () => {
+        throw Error("No error set, this method should not be called");
       };
       function setErrorFn(fn) {
         mErrorFn = fn;
@@ -571,7 +571,7 @@
     },
     makeFixedForType: (object) => freeze7({
       resolve: () => object,
-      error: () => void 0
+      error: () => StandardError.make().error()
     })
   });
 
@@ -2346,12 +2346,14 @@
         if (gotten) {
           return freeze21({
             resolve: gotten.type,
-            error: () => void 0
+            error: () => StandardError.make().error()
           });
         } else {
+          const { error, setErrorMessage } = StandardError.make();
+          setErrorMessage(`Undeclared variable "${identifierName}"`);
           return freeze21({
             resolve: () => void 0,
-            error: memoize5(() => ({ message: `Undeclared variable "${identifierName}"` }))
+            error
           });
         }
       }
@@ -2793,7 +2795,7 @@
           declaredVar.setType(rhsType);
           return;
         }
-        mErrorsCollector.pushMessage(typeRes.error()?.message);
+        mErrorsCollector.pushMessage(typeRes.error().message);
       }).finish();
       return freeze23({
         ...visitor,
@@ -2811,7 +2813,7 @@
         if (type) {
           return;
         }
-        mErrorsCollector.pushMessage(typeRes.error()?.message);
+        mErrorsCollector.pushMessage(typeRes.error().message);
       }).visitLetDeclaration((node, _1) => {
         node.visit(mGetMemoizedLetValidator());
       }).visitIdentifier((node) => {
@@ -2820,12 +2822,10 @@
         if (type) {
           return;
         }
-        mErrorsCollector.pushMessage(typeRes.error()?.message);
-      }).visitTuple((node) => {
-        node.forEach((node2) => {
-          node2.visit(visitor);
-        });
-      }).finish();
+        mErrorsCollector.pushMessage(typeRes.error().message);
+      }).visitTuple((node) => node.forEach((node2) => {
+        node2.visit(visitor);
+      })).finish();
       return freeze23({
         ...visitor,
         errors: mErrorsCollector.errors
