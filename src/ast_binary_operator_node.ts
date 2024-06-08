@@ -3,7 +3,9 @@ import { Helpers } from './helpers';
 import { TypeResolution } from './type_resolution';
 import { AstNodeVisitor } from './ast_node_visitor';
 
-export interface AstBinaryOperatorNode extends AstNode {}
+export interface AstBinaryOperatorNode extends AstNode {
+  operation: () => string
+}
 
 export const AstBinaryOperatorNode = (() => {
   const { freeze } = Helpers;
@@ -15,9 +17,9 @@ export const AstBinaryOperatorNode = (() => {
   return freeze({
     make: (op: string, lhs: AstNode, rhs: AstNode): AstBinaryOperatorNode => {
       const inst = freeze({
-        visit: (visitor: AstNodeVisitor) => {
-          visitor.visitBinaryOperation(op, inst, lhs, rhs);
-        },
+        operation: () => op,
+        visit: (visitor: AstNodeVisitor) =>
+          visitor.visitBinaryOperation(inst, lhs, rhs),
         type: () => binaryOperatorType,
         executionType: (types: TypeLookUpTable): TypeResolution => {
           // I need to "dress up" type look up table for lhs

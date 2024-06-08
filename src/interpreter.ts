@@ -18,12 +18,12 @@ const LetVisitor = (() => {
     const inst = 
       AstNodeVisitorBuilder.
       makeDefaultingToStop().
-      visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode): void => {
+      visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode): void => {
         const lhsName = AstFringeNode.downcast(lhs).asString();
         const rhsRes = rhs.executionType(context);
         const rhsType = rhsRes.resolve();
         if (!rhsType) {
-          throw Error(`Cannot figure out type of function call "${op}"`);
+          throw Error(`Cannot figure out type of function call "${node.operation()}"`);
         }
         context.declareVariable(lhsName).setType(rhsType);
         // STOP HERE
@@ -73,7 +73,7 @@ export const Interpreter = freeze({
         lhs.visit(mLetVisitor);
         lhs.visit(inst);
       }).
-      visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+      visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
         // resolving value... far touch much logic lives here
         // resolve lhs's type
         // select operator function
@@ -85,6 +85,7 @@ export const Interpreter = freeze({
         // context.
         lhs.visit(inst);
         rhs.visit(inst);
+        const op = node.operation();
         const func = lhs.executionType(context).resolve()?.lookUp(op);
         if (!func) {
           throw Error(`Cannot look up function "${op}"`);

@@ -73,9 +73,9 @@ describeNamed({ AstBuild }, () => {
       let vop = '';
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+        visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
           const { valueOf } = AstIntegerLiteralNode;
-          vop = op;
+          vop = node.operation();
           expect(valueOf(lhs)).toEqual(2);
           expect(valueOf(rhs)).toEqual(2);
         }).
@@ -94,8 +94,8 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-          foundOperators.push(op);
+        visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+          foundOperators.push(node.operation());
           pt1.hitsAtExactly(1);
           lhs.visit(visitor);
           rhs.visit(visitor);
@@ -122,8 +122,8 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-          foundOperators.push(op);
+        visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+          foundOperators.push(node.operation());
           lhs.visit(visitor);
           rhs.visit(visitor);
         }).

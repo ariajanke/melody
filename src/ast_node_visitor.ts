@@ -11,10 +11,7 @@ const { freeze } = Helpers;
 export interface AstNodeVisitor {
   visitFunctionCall: (node: AstFunctionCallNode) => void,
   visitBinaryOperation:
-    (operation: string,
-     binOp: AstBinaryOperatorNode,
-     lhs: AstNode,
-     rhs: AstNode) => void,
+    (node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => void,
   visitLetDeclaration: (node: AstLetDeclarationNode, rhs: AstNode) => void,
   visitIdentifier: (node: AstFringeNode) => void,
   visitTuple: (node: AstTupleNode) => void
@@ -27,7 +24,7 @@ interface ReseatableAstNodeVisitor extends AstNodeVisitor {
 export const AstNodeVisitorBuilder = (() => {
   function makeContinuingImplementations(): ReseatableAstNodeVisitor {
     let mCurrentInst: AstNodeVisitor | ReseatableAstNodeVisitor = freeze({
-      visitBinaryOperation: (_0: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode): void => {
+      visitBinaryOperation: (_0: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode): void => {
         lhs.visit(mCurrentInst);
         rhs.visit(mCurrentInst);
       },
@@ -51,15 +48,14 @@ export const AstNodeVisitorBuilder = (() => {
 
   const kStoppingImplementations = ((): ReseatableAstNodeVisitor => {
     const inst = freeze({
-      visitBinaryOperation: (_0: string, _1: AstBinaryOperatorNode, _2: AstNode, _3: AstNode): void => {},
+      visitBinaryOperation: 
+        (_0: AstBinaryOperatorNode, _1: AstNode, _2: AstNode): void => {},
       visitFunctionCall: (_0: AstFunctionCallNode): void => {},
       visitLetDeclaration: (_0: AstLetDeclarationNode, _1: AstNode): void => {},
       visitIdentifier: (_0: AstFringeNode) => {},
       visitTuple: (_0: AstTupleNode) => {},
-      setInstanceReference: (passedInst: AstNodeVisitor) => {
-        // ignore
-        return passedInst;
-      }
+      setInstanceReference: (passedInst: AstNodeVisitor) =>
+        passedInst
     });
     return inst;
   })();

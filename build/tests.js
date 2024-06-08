@@ -582,9 +582,8 @@
     return freeze24({
       make: (op, lhs, rhs) => {
         const inst = freeze24({
-          visit: (visitor) => {
-            visitor.visitBinaryOperation(op, inst, lhs, rhs);
-          },
+          operation: () => op,
+          visit: (visitor) => visitor.visitBinaryOperation(inst, lhs, rhs),
           type: () => binaryOperatorType,
           executionType: (types) => {
             const lhsRes = lhs.executionType(types);
@@ -636,7 +635,7 @@
   var AstNodeVisitorBuilder = (() => {
     function makeContinuingImplementations() {
       let mCurrentInst = freeze9({
-        visitBinaryOperation: (_0, _1, lhs, rhs) => {
+        visitBinaryOperation: (_0, lhs, rhs) => {
           lhs.visit(mCurrentInst);
           rhs.visit(mCurrentInst);
         },
@@ -660,7 +659,7 @@
     }
     const kStoppingImplementations = (() => {
       const inst = freeze9({
-        visitBinaryOperation: (_0, _1, _2, _3) => {
+        visitBinaryOperation: (_0, _1, _2) => {
         },
         visitFunctionCall: (_0) => {
         },
@@ -670,9 +669,7 @@
         },
         visitTuple: (_0) => {
         },
-        setInstanceReference: (passedInst) => {
-          return passedInst;
-        }
+        setInstanceReference: (passedInst) => passedInst
       });
       return inst;
     })();
@@ -730,7 +727,7 @@
     const makeIdentifier = AstIdentifierNode.make;
     it("is reachable by visitor", () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, _1, _2, _3) => {
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, _1, _2) => {
         hitsAtExactly(1);
       }).finish();
       make(":=", makeIdentifier(""), makeIdentifier("")).visit(visitor);
@@ -742,7 +739,7 @@
     });
     it("maybe visited for assigee name", () => {
       let assigneeName = "";
-      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, _1, node, _3) => {
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, node, _1) => {
         AstEvaluatableNode.tryDowncast(node)?.evaluate((name) => {
           assigneeName = name;
           return ContextVariable.make();
@@ -1649,9 +1646,9 @@
           makeToken("2")
         ];
         let vop = "";
-        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, _1, lhs, rhs) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((node, lhs, rhs) => {
           const { valueOf } = AstIntegerLiteralNode;
-          vop = op;
+          vop = node.operation();
           expect(valueOf(lhs)).toEqual(2);
           expect(valueOf(rhs)).toEqual(2);
         }).finish();
@@ -1668,8 +1665,8 @@
         const { points, verifyAllHit } = ReachPoint.makeCollection(3);
         const [pt1, pt2, pt3] = points();
         const foundOperators = [];
-        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, _1, lhs, rhs) => {
-          foundOperators.push(op);
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((node, lhs, rhs) => {
+          foundOperators.push(node.operation());
           pt1.hitsAtExactly(1);
           lhs.visit(visitor);
           rhs.visit(visitor);
@@ -1694,8 +1691,8 @@
           makeToken("3")
         ];
         const foundOperators = [];
-        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, _1, lhs, rhs) => {
-          foundOperators.push(op);
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((node, lhs, rhs) => {
+          foundOperators.push(node.operation());
           lhs.visit(visitor);
           rhs.visit(visitor);
         }).finish();
@@ -2408,12 +2405,12 @@
   var { freeze: freeze22 } = Object;
   var LetVisitor = (() => {
     function make(context) {
-      const inst = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((op, _1, lhs, rhs) => {
+      const inst = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((node, lhs, rhs) => {
         const lhsName = AstFringeNode.downcast(lhs).asString();
         const rhsRes = rhs.executionType(context);
         const rhsType = rhsRes.resolve();
         if (!rhsType) {
-          throw Error(`Cannot figure out type of function call "${op}"`);
+          throw Error(`Cannot figure out type of function call "${node.operation()}"`);
         }
         context.declareVariable(lhsName).setType(rhsType);
       }).finish();
@@ -2444,9 +2441,10 @@
       }).visitLetDeclaration((_0, lhs) => {
         lhs.visit(mLetVisitor);
         lhs.visit(inst);
-      }).visitBinaryOperation((op, _1, lhs, rhs) => {
+      }).visitBinaryOperation((node, lhs, rhs) => {
         lhs.visit(inst);
         rhs.visit(inst);
+        const op = node.operation();
         const func = lhs.executionType(context).resolve()?.lookUp(op);
         if (!func) {
           throw Error(`Cannot look up function "${op}"`);
@@ -2748,37 +2746,26 @@
 
   // src/ast_validator.ts
   var { freeze: freeze23, memoize: memoize6 } = Helpers;
-  var AstTypesValidatorVisitor = freeze23({
-    make: (mContext) => {
+  var ErrorsCollector = freeze23({
+    make: () => {
       const mErrors = [];
-      const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitTuple((node) => {
-        node.forEach((node2) => {
-          const res = node2.executionType(mContext);
-          if (!res.resolve()) {
-            const err = res.error();
-            if (!err) {
-              throw Error("at least one function must return something other than undefined");
-            }
-            mErrors.push(err);
-          }
-        });
-      }).finish();
       return freeze23({
-        ...visitor,
+        pushMessage: (message) => {
+          mErrors.push({ message });
+        },
         errors: () => mErrors
       });
     }
   });
   var AstLetBinaryOperatorValidatorVisitor = freeze23({
-    make: (mContext, mGeneralValidator) => {
-      const mErrors = [];
-      const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((op, _1, lhs, rhs) => {
-        if (op !== ":=") {
-          mErrors.push({ message: `Cannot use operator "${op}" in a let declaration` });
+    make: (mContext, mGeneralValidator, mErrorsCollector) => {
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((node, lhs, rhs) => {
+        if (node.operation() !== ":=") {
+          mErrorsCollector.pushMessage(`Cannot use operator "${node.operation()}" in a let declaration`);
           return;
         }
-        if (lhs.type() != AstNode.types.identifier) {
-          mErrors.push({ message: `Cannot use ${AstNode.typeToString(lhs.type())} to name a variable` });
+        if (lhs.type() !== AstNode.types.identifier) {
+          mErrorsCollector.pushMessage(`Cannot use ${AstNode.typeToString(lhs.type())} to name a variable`);
           return;
         }
         const declaredVar = mContext.declareVariable(lhs.asString());
@@ -2797,7 +2784,7 @@
           [AstNode.types.integerLiteral]: forceAsEvaluatable
         }[rhs.type()]();
         if (!evalNode) {
-          mErrors.push({ message: `Cannot deduce type of ${AstNode.typeToString(rhs.type())} node` });
+          mErrorsCollector.pushMessage(`Cannot deduce type of ${AstNode.typeToString(rhs.type())} node`);
           return;
         }
         const typeRes = evalNode.executionType(mContext);
@@ -2806,28 +2793,25 @@
           declaredVar.setType(rhsType);
           return;
         }
-        mErrors.push(typeRes.error());
+        mErrorsCollector.pushMessage(typeRes.error()?.message);
       }).finish();
       return freeze23({
         ...visitor,
-        errors: () => {
-          return mErrors;
-        }
+        errors: mErrorsCollector.errors
       });
     }
   });
   var AstGeneralValidator = freeze23({
-    make: (mContext, mGetMemoizedLetValidator) => {
-      const mErrors = [];
+    make: (mContext, mErrorsCollector, mGetMemoizedLetValidator) => {
       const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitFunctionCall((_0) => {
-        ;
-      }).visitBinaryOperation((_0, binNode, _2, _3) => {
+        throw Error("unimplemented");
+      }).visitBinaryOperation((binNode, _2, _3) => {
         const typeRes = binNode.executionType(mContext);
         const type = typeRes.resolve();
         if (type) {
           return;
         }
-        mErrors.push(typeRes.error());
+        mErrorsCollector.pushMessage(typeRes.error()?.message);
       }).visitLetDeclaration((node, _1) => {
         node.visit(mGetMemoizedLetValidator());
       }).visitIdentifier((node) => {
@@ -2836,7 +2820,7 @@
         if (type) {
           return;
         }
-        mErrors.push(typeRes.error());
+        mErrorsCollector.pushMessage(typeRes.error()?.message);
       }).visitTuple((node) => {
         node.forEach((node2) => {
           node2.visit(visitor);
@@ -2844,41 +2828,39 @@
       }).finish();
       return freeze23({
         ...visitor,
-        errors: () => {
-          const letValErrors = mGetMemoizedLetValidator().errors();
-          if (letValErrors.length > 0)
-            return letValErrors;
-          return mErrors;
-        }
+        errors: mErrorsCollector.errors
       });
     }
   });
   var AstLetsValidatorVisitor = freeze23({
-    make: (mBinaryOperatorVisitor) => {
-      const mErrors = [];
+    make: (mBinaryOperatorVisitor, mErrorsCollector) => {
       const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitLetDeclaration((_0, node) => {
         if (node.type() !== AstNode.types.binaryOperator) {
-          mErrors.push({ message: `Cannot declare using a(n) ${AstNode.typeToString(node.type())}` });
+          mErrorsCollector.pushMessage(`Cannot declare using a(n) ${AstNode.typeToString(node.type())}`);
           return;
         }
         node.visit(mBinaryOperatorVisitor);
       }).finish();
       return freeze23({
         ...visitor,
-        errors: () => mErrors
+        errors: mErrorsCollector.errors
       });
     }
   });
   var AstValidator = freeze23({
-    make: (mContext = ExecutionContext.make()) => {
-      const genVal = AstGeneralValidator.make(mContext, memoize6(() => {
-        const binLetVal = AstLetBinaryOperatorValidatorVisitor.make(mContext, genVal);
-        return AstLetsValidatorVisitor.make(binLetVal);
-      }));
+    make: (mContext = ExecutionContext.make(), mErrorsCollector = ErrorsCollector.make()) => {
+      const mGeneralValidator = AstGeneralValidator.make(
+        mContext,
+        mErrorsCollector,
+        memoize6(() => {
+          const binLetVal = AstLetBinaryOperatorValidatorVisitor.make(mContext, mGeneralValidator, mErrorsCollector);
+          return AstLetsValidatorVisitor.make(binLetVal, mErrorsCollector);
+        })
+      );
       return freeze23({
         validate: (node) => {
-          node.visit(genVal);
-          return genVal.errors();
+          node.visit(mGeneralValidator);
+          return mErrorsCollector.errors();
         }
       });
     }
