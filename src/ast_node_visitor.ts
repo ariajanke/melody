@@ -33,8 +33,8 @@ export const AstNodeVisitorBuilder = (() => {
         rhs.visit(mCurrentInst);
       },
       visitIdentifier: (_0: AstFringeNode) => {},
-      visitTuple: (_0: AstTupleNode) => {
-        ;
+      visitTuple: (tuple: AstTupleNode) => {
+        tuple.forEach((node: AstNode) => node.visit(mCurrentInst));
       },
       setInstanceReference: (inst: AstNodeVisitor) => {
         mCurrentInst = inst;

@@ -1,68 +1,64 @@
-import { AstNode, AstNodeVisitor } from './ast_node';
+import { AstNode } from './ast_node';
+import { AstNodeVisitor } from './ast_node_visitor';
+import { Helpers } from './helpers';
 
 export interface AstTupleNode extends AstNode {
   count: () => number,
   forEach: (fn: (node: AstNode) => void) => void,
   /// @returns undefined if "consumed"
-  mergeWith: (node: AstNode) => AstNode | undefined
+  consume: (node: AstNode) => AstNode | undefined
 }
 
 export const AstTupleNode = (() => {
-  const { freeze } = Object;
+  const { freeze } = Helpers;
   const tupleType = AstNode.types.tuple;
   const executionType = AstNode.base.makeUndefinedExecutionType('AstTupleNode');
-
-  function makeBinary(_0: string, lhs: AstNode, rhs: AstNode): AstTupleNode {
-    return makeWithPair(lhs, rhs);
-  }
-
-  function makeUnary(lhs: AstNode): AstTupleNode {
-    return makeWithPair(lhs, undefined);
-  }
 
   function makeWithPair(lhs: AstNode, rhs: AstNode | undefined): AstTupleNode {
     // NOTE: work around by taking advantage of how things are referenced in
     //       JavaScript. The passed in array is the member variable
     const mSubExpressions = [lhs];
-    const inst = make(mSubExpressions);
-    if (rhs && inst.mergeWith(rhs)) {
+    const inst = class_.make(mSubExpressions);
+    if (rhs && inst.consume(rhs)) {
       mSubExpressions.push(rhs);
     }
     return inst;
   }
 
-  function make(mSubExpressions: AstNode[]): AstTupleNode {
-    const inst = freeze({
-      forEach, count, visit, type, mergeWith, executionType
-    });
+  const class_ = freeze({
+    makeBinary: (_0: string, lhs: AstNode, rhs: AstNode): AstTupleNode =>
+      makeWithPair(lhs, rhs),
 
-    function forEach(fn: (node: AstNode) => void): void {
-      mSubExpressions.forEach((node: AstNode) => fn(node));
-    }
+    makeUnary: (lhs: AstNode): AstTupleNode =>
+      makeWithPair(lhs, undefined),
 
-    function count(): number {
-      return mSubExpressions.length;
-    }
+    make: (mSubExpressions: AstNode[]): AstTupleNode => {
+      const inst = freeze({
+        forEach: (fn: (node: AstNode) => void): void =>
+          mSubExpressions.forEach((node: AstNode) => fn(node)),
+        
+        count: (): number => mSubExpressions.length,
 
-    function visit(visitor: AstNodeVisitor): void {
-      mSubExpressions.forEach((node: AstNode) => { node.visit(visitor); });
-    }
+        visit: (visitor: AstNodeVisitor): void =>
+          visitor.visitTuple(inst),
+        
+        type: (): symbol => tupleType,
+        
+        consume: (node: AstNode): AstNode | undefined => {
+          if (node.type() !== tupleType)
+            { return node; }
+          (node as AstTupleNode).forEach((subNode: AstNode) => {
+            mSubExpressions.push(subNode);
+          });
+          return undefined;
+        },
 
-    function type(): symbol { return tupleType; }
-
-    /// if mergeWith return undefined, then the node is 'consumed', otherwise it
-    /// is returned
-    function mergeWith(node: AstNode): AstNode | undefined {
-      if (node.type() !== tupleType)
-        { return node; }
-      (node as AstTupleNode).forEach((subNode: AstNode) => {
-        mSubExpressions.push(subNode);
+        executionType
       });
-      return undefined;
+
+      return inst;
     }
+  });
 
-    return inst;
-  }
-
-  return freeze({ makeBinary, makeUnary, make });
+  return class_;
 })();

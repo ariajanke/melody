@@ -1,12 +1,11 @@
-import { AstNode, TypeLookUpTable, AstEvaluatableNode } from './ast_node';
+import { AstNode, AstEvaluatableNode } from './ast_node';
 import { Token } from './token';
 import { Helpers } from './helpers';
-import { ContextVariable } from './context_variable';
 import { AstIntegerLiteralNode } from './ast_integer_literal_node';
-import { TypeResolution } from './type_resolution';
-import { type AstNodeVisitor } from './ast_node_visitor';
+import { AstIdentifierNode } from './ast_identifier_node';
+import { AstStringLiteralNode } from './ast_string_literal_node';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
 
 export interface AstFringeNode extends AstEvaluatableNode {
   asString: () => string,
@@ -53,63 +52,4 @@ export const AstFringeNode = (() => {
   }
 
   return freeze({ downcast, hasCreated, makeForToken });
-})();
-
-export const AstStringLiteralNode = (() => {
-  const kStringLiteral = AstNode.types.stringLiteral;
-
-  function make(mValue: string): AstFringeNode {
-    mValue = (() => {
-      if (mValue.length <= 2) {
-        throw Error('not a valid string');
-      }
-      return mValue.substring(1, mValue.length - 1);
-    })();
-    const mGetAsContextVar = memoize(() => ContextVariable.make(mValue));
-
-    return freeze({
-      comesBeforeOperator: (operator: Token): boolean =>
-        operator.content() === ',',
-      executionType: (types: TypeLookUpTable): TypeResolution =>
-        types.lookUpStringLiteralType(),
-      evaluate: (_0: (name: string) => ContextVariable): ContextVariable =>
-        mGetAsContextVar(),
-      type: () => kStringLiteral,
-      asString: () => mValue,
-      visit: (_0: AstNodeVisitor) => {}
-    });
-  }
-
-  return freeze({ make });
-})();
-
-export const AstIdentifierNode = (() => {
-  const kIndentifier = AstNode.types.identifier;
-  const kOperators = freeze({
-    ',': true,
-    '(': true,
-    ':=': true,
-    '+': true,
-    '-': true,
-    '*': true
-  });
-
-  function make(value: string): AstFringeNode {
-    const inst = freeze({
-      comesBeforeOperator: (operator: Token): boolean =>
-        !!kOperators[operator.content()],
-      executionType: (types: TypeLookUpTable): TypeResolution =>
-        types.lookUpIdentifierType(value),
-      evaluate: (getter: (name: string) => ContextVariable): ContextVariable =>
-        getter(value),
-      type: () => kIndentifier,
-      asString: () => value,
-      visit: (visitor: AstNodeVisitor) => {
-        visitor.visitIdentifier(inst);
-      }
-    });
-    return inst;
-  }
-
-  return freeze({ make });
 })();

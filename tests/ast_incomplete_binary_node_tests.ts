@@ -4,7 +4,7 @@ import {
   IncompleteNodeCreation
 } from '../src/ast_incomplete_binary_node';
 import { AstNode } from '../src/ast_node';
-import { AstIdentifierNode } from '../src/ast_fringe_node';
+import { AstIdentifierNode } from '../src/ast_identifier_node';
 import { Token } from '../src/token';
 
 const { describeNamed } = TestHelpers;

@@ -4,12 +4,13 @@ import {
 import { TestHelpers, ReachPoint } from '../test_helpers';
 import { Token } from '../../src/token';
 import { AstNode } from '../../src/ast_node';
-import { AstIdentifierNode, AstFringeNode } from '../../src/ast_fringe_node';
+import { AstFringeNode } from '../../src/ast_fringe_node';
 import {
   EmptyNodeExpansion,
   NodeExpansion,
   NodeExpansionVisitor
 } from '../../src/ast_build/node_expansion';
+import { AstIdentifierNode } from '../../src/ast_identifier_node';
 import { IncompleteNode } from '../../src/ast_incomplete_binary_node';
 import { AstTupleNode } from '../../src/ast_tuple_node';
 import { AstFunctionCallNode } from '../../src/ast_function_call_node';

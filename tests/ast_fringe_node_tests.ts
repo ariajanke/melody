@@ -1,6 +1,7 @@
-import { AstFringeNode, AstIdentifierNode } from '../src/ast_fringe_node';
+import { AstFringeNode } from '../src/ast_fringe_node';
 import { TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
+import { AstIdentifierNode } from '../src/ast_identifier_node';
 
 const { describeNamed } = TestHelpers;
 
