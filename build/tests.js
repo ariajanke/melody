@@ -309,7 +309,7 @@
   // src/object_type.ts
   var { freeze: freeze3 } = Helpers;
   var ObjectType = (() => {
-    const { memoize: memoize7 } = Helpers;
+    const { memoize: memoize6 } = Helpers;
     const kBuiltInTypeUids = freeze3({
       integer: Symbol(),
       string: Symbol()
@@ -332,7 +332,7 @@
         name: () => name,
         uid: makeUidFor(name),
         setLookUp,
-        asSingluarParameter: memoize7(asSingluarParameter)
+        asSingluarParameter: memoize6(asSingluarParameter)
       });
       function setLookUp(lookupTable) {
         mLookupTable = lookupTable;
@@ -501,11 +501,25 @@
         throw Error(`${nodeTypeName} does not implement executionType`);
       };
     }
-    return freeze6({
+    let sStringTable = void 0;
+    const class_ = freeze6({
       base: {
         makeUndefinedExecutionType
       },
       executionTypes,
+      typeToString: (type) => {
+        const str = (sStringTable ??= freeze6({
+          [class_.types.binaryOperator]: "binary operator",
+          [class_.types.tuple]: "tuple",
+          [class_.types.stringLiteral]: "string literal",
+          [class_.types.identifier]: "identifier",
+          [class_.types.letDeclaration]: "declaration",
+          [class_.types.integerLiteral]: "integer literal"
+        }))[type];
+        if (str)
+          return str;
+        throw Error("given symbol is not an AstNode type");
+      },
       types: {
         functionCall: Symbol(),
         tuple: Symbol(),
@@ -516,6 +530,7 @@
         integerLiteral: Symbol()
       }
     });
+    return class_;
   })();
   var AstEvaluatableNode = (() => {
     const { stringLiteral, identifier, integerLiteral } = AstNode.types;
@@ -974,7 +989,7 @@
 
   // src/ast_build/tree_part_tuple_division.ts
   var TreePartTupleDivision = (() => {
-    const { memoize: memoize7, freeze: freeze24 } = Helpers;
+    const { memoize: memoize6, freeze: freeze24 } = Helpers;
     const kCloseMapping = freeze24({
       ["("]: ")"
       // ['fn']: 'end'
@@ -986,7 +1001,7 @@
       const { error, setErrorMessage } = StandardError.make();
       const { start, end, parentContainerSize, tokenAt } = mTokenRange;
       const mCloseMapping = kCloseMapping[mFindCloseBasedOn];
-      const closePosition = memoize7(() => {
+      const closePosition = memoize6(() => {
         if (!mCloseMapping) {
           return end();
         }
@@ -999,14 +1014,14 @@
         return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
       });
       const inst = freeze24({
-        leftPart: memoize7(() => {
+        leftPart: memoize6(() => {
           const pos = closePosition();
           if (!pos)
             return void 0;
           const lineCont = mCloseMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
           return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
         }),
-        rightPart: memoize7(() => {
+        rightPart: memoize6(() => {
           const pos = closePosition();
           if (!pos) {
             throw Error("call and test against leftPart first");
@@ -1165,7 +1180,7 @@
 
   // src/ast_build/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
-    const { memoize: memoize7, freeze: freeze24 } = Helpers;
+    const { memoize: memoize6, freeze: freeze24 } = Helpers;
     function make(leftPartHandler, mTokenRange, mOperatorToken) {
       const { error, setErrorFn } = StandardError.make();
       function build() {
@@ -1178,7 +1193,7 @@
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
       return freeze24({
-        build: memoize7(build),
+        build: memoize6(build),
         error
       });
     }
@@ -1250,7 +1265,7 @@
   })();
 
   // src/ast_fringe_node.ts
-  var { freeze: freeze16, memoize: memoize5 } = Helpers;
+  var { freeze: freeze16 } = Helpers;
   var AstFringeNode = (() => {
     const tokenTypes = Token.types;
     const nodeTypes = AstNode.types;
@@ -1535,7 +1550,7 @@
 
   // src/ast_build.ts
   var AstBuild = (() => {
-    const { freeze: freeze24, memoize: memoize7 } = Helpers;
+    const { freeze: freeze24, memoize: memoize6 } = Helpers;
     const class_ = freeze24({
       make: (mTokens) => {
         const mErrors = [];
@@ -1548,7 +1563,7 @@
           return part.expandIntoNodes(_buildProgramSequence);
         }
         const inst = freeze24({
-          build: memoize7(() => {
+          build: memoize6(() => {
             const partBuild = TreePartBuild.make(mTokens, LineContinuationScheme.normal);
             const res = _buildProgramSequence(partBuild).map((n) => n);
             if (mErrors.length !== 0) {
@@ -2296,7 +2311,7 @@
   })();
 
   // src/execution_context.ts
-  var { freeze: freeze21, memoize: memoize6 } = Helpers;
+  var { freeze: freeze21, memoize: memoize5 } = Helpers;
   var ExecutionContext = (() => {
     function make() {
       const mAvailableVariables = {};
@@ -2336,7 +2351,7 @@
         } else {
           return freeze21({
             resolve: () => void 0,
-            error: memoize6(() => ({ message: `Undeclared variable "${identifierName}"` }))
+            error: memoize5(() => ({ message: `Undeclared variable "${identifierName}"` }))
           });
         }
       }
@@ -2731,7 +2746,7 @@
   // src/ast_validator.ts
   var { freeze: freeze23 } = Helpers;
   var AstTypesValidatorVisitor = freeze23({
-    make: (mContext = ExecutionContext.make()) => {
+    make: (mContext) => {
       const mErrors = [];
       const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitTuple((node) => {
         node.forEach((node2) => {
@@ -2747,18 +2762,57 @@
       }).finish();
       return freeze23({
         ...visitor,
-        // everyone will know I'm fucking stupid though
+        errors: () => mErrors
+      });
+    }
+  });
+  var AstLetBinaryOperatorValidatorVisitor = freeze23({
+    make: (mContext) => {
+      const mErrors = [];
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((op, lhs, _2) => {
+        if (op !== ":=") {
+          mErrors.push({ message: `Cannot use operator "${op}" in a let declaration` });
+          return;
+        }
+        if (lhs.type() != AstNode.types.identifier) {
+          mErrors.push({ message: `Cannot use ${AstNode.typeToString(lhs.type())} to name a variable` });
+          return;
+        }
+      }).finish();
+      return freeze23({
+        ...visitor,
+        errors: () => mErrors
+      });
+    }
+  });
+  var AstLetsValidatorVisitor = freeze23({
+    make: (mBinaryOperatorVisitor) => {
+      const mErrors = [];
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitLetDeclaration((_0, node) => {
+        if (node.type() !== AstNode.types.binaryOperator) {
+          mErrors.push({ message: `Cannot declare using a(n) ${AstNode.typeToString(node.type())}` });
+          return;
+        }
+        node.visit(mBinaryOperatorVisitor);
+      }).finish();
+      return freeze23({
+        ...visitor,
         errors: () => mErrors
       });
     }
   });
   var AstValidator = freeze23({
     make: (mContext = ExecutionContext.make()) => {
+      const letBinaryOpValidator = AstLetBinaryOperatorValidatorVisitor.make(mContext);
+      const letValidator = AstLetsValidatorVisitor.make(letBinaryOpValidator);
       const validator = AstTypesValidatorVisitor.make(mContext);
       return freeze23({
         validate: (node) => {
           node.visit(validator);
-          return validator.errors();
+          let errors = validator.errors();
+          if (errors.length > 0)
+            return errors;
+          return letValidator.errors();
         }
       });
     }
@@ -2767,25 +2821,59 @@
   // tests/ast_validator_tests.ts
   var { describeNamed: describeNamed13 } = TestHelpers;
   describeNamed13({ AstValidator }, () => {
+    function validateAsTuple(node, validator) {
+      const topTupleNode = AstTupleNode.make([node]);
+      return validator.validate(topTupleNode);
+    }
     it("Cannot find function call for binary operator", () => {
-      const context = ExecutionContext.make();
-      const validator = AstValidator.make(context);
+      const validator = AstValidator.make();
       const intNode = AstIntegerLiteralNode.make("1");
       const strNode = AstStringLiteralNode.make("'hello'");
       const topBinNode = AstBinaryOperatorNode.make("+", intNode, strNode);
-      const topTupleNode = AstTupleNode.make([topBinNode]);
-      const errors = validator.validate(topTupleNode);
+      const errors = validateAsTuple(topBinNode, validator);
       expect(errors).toEqual([{ message: 'Could not resolve function call for "+"' }]);
     });
     it("cannot use an undefined variable", () => {
-      const context = ExecutionContext.make();
-      const validator = AstValidator.make(context);
+      const validator = AstValidator.make();
       const idNode = AstIdentifierNode.make("name");
       const strNode = AstStringLiteralNode.make("'hello'");
       const topBinNode = AstBinaryOperatorNode.make("+", idNode, strNode);
-      const topTupleNode = AstTupleNode.make([topBinNode]);
-      const errors = validator.validate(topTupleNode);
+      const errors = validateAsTuple(topBinNode, validator);
       expect(errors).toEqual([{ message: 'Undeclared variable "name"' }]);
+    });
+    it("cannot use an identifier (alone) to declare a variable", () => {
+      const validator = AstValidator.make();
+      const idNode = AstIdentifierNode.make("name");
+      const topLetNode = AstLetDeclarationNode.make(idNode);
+      const errors = validateAsTuple(topLetNode, validator);
+      expect(errors).toEqual([{ message: "Cannot declare using a(n) identifier" }]);
+    });
+    it('cannot use a "+" to declare a variable', () => {
+      const validator = AstValidator.make();
+      const idNode = AstIdentifierNode.make("name");
+      const strNode = AstStringLiteralNode.make("'hello'");
+      const binNode = AstBinaryOperatorNode.make("+", idNode, strNode);
+      const topLetNode = AstLetDeclarationNode.make(binNode);
+      const errors = validateAsTuple(topLetNode, validator);
+      expect(errors).toEqual([{ message: 'Cannot use operator "+" in a let declaration' }]);
+    });
+    it("cannot use a string literal (directly) to name a variable", () => {
+      const validator = AstValidator.make();
+      const strNode = AstStringLiteralNode.make("'hello'");
+      const intNode = AstIntegerLiteralNode.make("1");
+      const binNode = AstBinaryOperatorNode.make(":=", strNode, intNode);
+      const topLetNode = AstLetDeclarationNode.make(binNode);
+      const errors = validateAsTuple(topLetNode, validator);
+      expect(errors).toEqual([{ message: "Cannot use string literal to name a variable" }]);
+    });
+    it("a totally valid let declaration, produces no errors", () => {
+      const validator = AstValidator.make();
+      const idNode = AstIdentifierNode.make("name");
+      const strNode = AstStringLiteralNode.make("'hello'");
+      const binNode = AstBinaryOperatorNode.make(":=", idNode, strNode);
+      const topLetNode = AstLetDeclarationNode.make(binNode);
+      const errors = validateAsTuple(topLetNode, validator);
+      expect(errors).toEqual([]);
     });
   });
 })();

@@ -1,7 +1,8 @@
-import { AstNode } from './ast_node';
+import { AstNode, type TypeLookUpTable } from './ast_node';
 import { Helpers } from './helpers';
 import { IncompleteNode } from './ast_incomplete_binary_node';
 import { AstNodeVisitor } from './ast_node_visitor';
+import { type TypeResolution } from './type_resolution';
 
 type UnaryNodeCreationFn = (node: AstNode) => AstNode;
 
@@ -19,7 +20,11 @@ export const AstLetDeclarationNode = freeze({
         visitor.visitLetDeclaration(inst, node);
       },
       type: () => letDeclaration,
-      executionType
+      executionType: (types: TypeLookUpTable): TypeResolution => {
+        // I need to "dress up" the type look up table
+        // so that I can give lhs identifier node permission to not yet exist
+        return executionType(types);
+      }
     });
 
     return inst;

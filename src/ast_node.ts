@@ -14,8 +14,6 @@ export interface TypeLookUpTable {
 export interface AstNode {
   visit: (visitor: AstNodeVisitor) => void,
   type: () => symbol,
-  // I should first probably fix this...
-  // this could fail, in which case you'd have Either an ObjectType or an Error
   executionType: (types: TypeLookUpTable) => TypeResolution
 }
 
@@ -30,11 +28,26 @@ export const AstNode = (() => {
     };
   }
 
-  return freeze({
+  let sStringTable: undefined | Readonly<{ [type: symbol]: string }> = undefined;
+
+  const class_ = freeze({
     base: {
       makeUndefinedExecutionType
     },
     executionTypes,
+    typeToString: (type: symbol): string => {
+      const str = (sStringTable ??= freeze({
+        [class_.types.binaryOperator]: 'binary operator',
+        [class_.types.tuple         ]: 'tuple',
+        [class_.types.stringLiteral ]: 'string literal',
+        [class_.types.identifier    ]: 'identifier',
+        [class_.types.letDeclaration]: 'declaration',
+        [class_.types.integerLiteral]: 'integer literal'
+      }))[type];
+      if (str)
+        return str;
+      throw Error('given symbol is not an AstNode type');
+    },
     types:
       {
         functionCall: Symbol(),
@@ -46,6 +59,9 @@ export const AstNode = (() => {
         integerLiteral: Symbol()
       }
     });
+  
+  
+  return class_;
 })();
 
 export interface AstEvaluatableNode extends AstNode {

@@ -20,9 +20,8 @@ export const AstBinaryOperatorNode = (() => {
         },
         type: () => binaryOperatorType,
         executionType: (types: TypeLookUpTable): TypeResolution => {
-          // in order to resolve the execution type, there are several things that
-          // I need to know
-          // which function am I calling, and what is it's return type
+          // I need to "dress up" type look up table for lhs
+          // I need permission for lhs type to be unresolved for let declarations
           const lhsRes = lhs.executionType(types);
           const lhsType = lhsRes.resolve();
           if (!lhsType) {
