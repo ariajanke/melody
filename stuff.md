@@ -537,24 +537,26 @@ end
 
 Type forwarding, a chicken and egg problem.
 
-```melody
-# Another look at generics
+### Another look at generics
 
+```melody
 # how does type resolution work here?
 # perhaps we could have a "partial" resolution?
 # which still is an "Unresolved" type
 let RectangleTemplate = fn (scalar: number type)
-  return fn (x: scalar, y: scalar, width: scalar = 10, height: scalar = 10)
-    fn bottom() x + width
-    fn right() y + height
+  return table
+    new = fn (x: scalar, y: scalar, width: scalar = 10, height: scalar = 10)
+      let bottom = fn () inst.x + inst.width
+      let right  = fn () inst.y + inst.height
 
-    return table
-      x := x,
-      y := y,
-      width := width,
-      height := height,
-      bottom = bottom,
-      right = right
+      return let inst = table
+        x := x,
+        y := y,
+        width := width,
+        height := height,
+        bottom = bottom,
+        right = right
+      end
     end
   end
 end
@@ -588,6 +590,18 @@ let MyDecimal = type table
   $'+' = fn (rhs: number): MyDecimal
   $'*' = fn (rhs: number): MyDecimal
   asString = fn: String
+end
+
+let RectangleI = RectangleTemplate(Integer)
+let RectangleF = RectangleTemplate(Float)
+let RectangleR = RectangleTemplate(Rational)
+<<
+let a = RectangleI.new(5, 5)
+puts(a.bottom())
+>>
+
+let Rational = type table
+
 end
 
 ```

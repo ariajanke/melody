@@ -6,7 +6,7 @@ import { AstIntegerLiteralNode } from './ast_integer_literal_node';
 import { TypeResolution } from './type_resolution';
 import { type AstNodeVisitor } from './ast_node_visitor';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export interface AstFringeNode extends AstEvaluatableNode {
   asString: () => string,
@@ -65,7 +65,7 @@ export const AstStringLiteralNode = (() => {
       }
       return mValue.substring(1, mValue.length - 1);
     })();
-    const mAsContextVar = ContextVariable.make(mValue);
+    const mGetAsContextVar = memoize(() => ContextVariable.make(mValue));
 
     return freeze({
       comesBeforeOperator: (operator: Token): boolean =>
@@ -73,7 +73,7 @@ export const AstStringLiteralNode = (() => {
       executionType: (types: TypeLookUpTable): TypeResolution =>
         types.lookUpStringLiteralType(),
       evaluate: (_0: (name: string) => ContextVariable): ContextVariable =>
-        mAsContextVar,
+        mGetAsContextVar(),
       type: () => kStringLiteral,
       asString: () => mValue,
       visit: (_0: AstNodeVisitor) => {}

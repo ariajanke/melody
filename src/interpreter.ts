@@ -1,5 +1,5 @@
 import { AstBuild } from './ast_build';
-import { AstNodeVisitor, AstNode, AstEvaluatableNode } from './ast_node';
+import { AstNode, AstEvaluatableNode } from './ast_node';
 import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { Helpers } from './helpers';
@@ -8,29 +8,26 @@ import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
 import { AstFringeNode } from './ast_fringe_node';
 import { PersistentStack } from './persistent_stack';
+import { AstNodeVisitor, AstNodeVisitorBuilder } from './ast_node_visitor';
 
 const { freeze } = Object;
 
 const LetVisitor = (() => {
   function make(context: ExecutionContext): AstNodeVisitor {
-    const inst = freeze({
-      visitFunctionCall: (_0: AstFunctionCallNode): void => {},
-      visitLetDeclaration: (_0: AstLetDeclarationNode): void => {},
-      visitBinaryOperation:
-        (op: string, lhs: AstNode, rhs: AstNode): void => {
-          const lhsName = AstFringeNode.downcast(lhs).asString();
-          const rhsRes = rhs.executionType(context);
-          const rhsType = rhsRes.resolve();
-          if (!rhsType) {
-            throw Error(`Cannot figure out type of function call "${op}"`);
-          }
-          context.declareVariable(lhsName).setType(rhsType);
-          // STOP HERE
-        },
-      visitIdentifier: (_0: AstFringeNode) => {
-
-      }
-    });
+    const inst = 
+      AstNodeVisitorBuilder.
+      makeDefaultingToStop().
+      visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode): void => {
+        const lhsName = AstFringeNode.downcast(lhs).asString();
+        const rhsRes = rhs.executionType(context);
+        const rhsType = rhsRes.resolve();
+        if (!rhsType) {
+          throw Error(`Cannot figure out type of function call "${op}"`);
+        }
+        context.declareVariable(lhsName).setType(rhsType);
+        // STOP HERE
+      }).
+      finish();
     return inst;
   }
 
@@ -51,30 +48,8 @@ export const Interpreter = freeze({
   {
     const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
     const mLetVisitor = LetVisitor.make(context);
-    const inst = freeze({
-      visitFunctionCall, visitLetDeclaration, visitBinaryOperation, visitIdentifier
-    });
-    function visitFunctionCall(node: AstFunctionCallNode) {
-      if (node.name === 'puts') {
-        node.arguments.forEach((node: AstNode) => {
-          const cv = valueOf(node);
-          putsFunction(cv.asString());
-        });
-      }
-    }
 
-    function visitLetDeclaration(dec: AstLetDeclarationNode, lhs: AstNode) {
-      // can't catch this, oof
-      // if (lhs.type() !== AstNode.types.assignment) {
-      //   throw Error('bad let');
-      // }
-      // mGetVarFunc = context.declareVariable;
-      lhs.visit(mLetVisitor);
-      lhs.visit(inst);
-      // mGetVarFunc = context.getVariable;
-    }
-
-    function valueOf(node: AstNode): ContextVariable {
+    function mValueOf(node: AstNode): ContextVariable {
       const evalNode = AstEvaluatableNode.tryDowncast(node);
       if (evalNode) {
         return evalNode.evaluate(context.getVariable);
@@ -82,42 +57,55 @@ export const Interpreter = freeze({
       return mStack.pop();
     }
 
-    function visitBinaryOperation(op: string, lhs: AstNode, rhs: AstNode) {
-      // resolve lhs's type
-      // select operator function
-      // raise if rhs's resolved type is incompatible
-      // how does this work in the general recursive case?
-      //
-      // this ends up having to be executed DFS style
-      // there will be places that *have to* be executed BFS style
-      // context.
-      lhs.visit(inst);
-      rhs.visit(inst);
-      const func = lhs.executionType(context).resolve()?.lookUp(op);
-      if (!func) {
-        throw Error(`Cannot look up function "${op}"`);
-      }
+    const inst = AstNodeVisitorBuilder.
+      makeDefaultingToContinue().
+      visitFunctionCall((node: AstFunctionCallNode) => {
+        if (node.name !== 'puts') {
+          throw Error(`unimplemented function "${node.name}"`);
+        }
+        node.arguments.forEach((node: AstNode) => {
+          const cv = mValueOf(node);
+          putsFunction(cv.asString());
+        });
+      }).
+      visitLetDeclaration((_0: AstLetDeclarationNode, lhs: AstNode) => {
+        lhs.visit(mLetVisitor);
+        lhs.visit(inst);
+      }).
+      visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
+        // resolving value... far touch much logic lives here
+        // resolve lhs's type
+        // select operator function
+        // raise if rhs's resolved type is incompatible
+        // how does this work in the general recursive case?
+        //
+        // this ends up having to be executed DFS style
+        // there will be places that *have to* be executed BFS style
+        // context.
+        lhs.visit(inst);
+        rhs.visit(inst);
+        const func = lhs.executionType(context).resolve()?.lookUp(op);
+        if (!func) {
+          throw Error(`Cannot look up function "${op}"`);
+        }
 
-      const rhsAsParam = rhs.executionType(context).resolve()?.asSingluarParameter();
-      if (!rhsAsParam) {
-        throw Error(`Cannot look up rhs type`);
-      }
-      const deg = func.satisfactionDegreeOfArguments(rhsAsParam);
-      if (typeof deg === 'undefined') {
-        throw Error('');
-      }
-      const builtIn = func.builtIn();
-      if (typeof builtIn === 'undefined') {
-        throw Error('');
-      }
-      const lhsVal = valueOf(lhs);
-      const rhsVal = valueOf(rhs);
-      builtIn(mStack, lhsVal, rhsVal);
-    }
-
-    function visitIdentifier(_0: AstFringeNode) {
-
-    }
+        const rhsAsParam = rhs.executionType(context).resolve()?.asSingluarParameter();
+        if (!rhsAsParam) {
+          throw Error(`Cannot look up rhs type`);
+        }
+        const deg = func.satisfactionDegreeOfArguments(rhsAsParam);
+        if (typeof deg === 'undefined') {
+          throw Error('');
+        }
+        const builtIn = func.builtIn();
+        if (typeof builtIn === 'undefined') {
+          throw Error('');
+        }
+        const lhsVal = mValueOf(lhs);
+        const rhsVal = mValueOf(rhs);
+        builtIn(mStack, lhsVal, rhsVal);
+      }).
+      finish();
 
     return inst;
   },

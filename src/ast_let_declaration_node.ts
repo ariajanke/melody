@@ -1,6 +1,7 @@
-import { AstNode, AstNodeVisitor } from './ast_node';
+import { AstNode } from './ast_node';
 import { Helpers } from './helpers';
 import { IncompleteNode } from './ast_incomplete_binary_node';
+import { AstNodeVisitor } from './ast_node_visitor';
 
 type UnaryNodeCreationFn = (node: AstNode) => AstNode;
 

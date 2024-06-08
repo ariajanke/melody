@@ -1,7 +1,4 @@
 import { AstNode } from './ast_node';
-import { AstLetDeclarationNode } from './ast_let_declaration_node';
-import { AstFunctionCallNode } from './ast_function_call_node';
-import { AstFringeNode } from './ast_fringe_node';
 import { Helpers, StandardErrorMessage } from './helpers';
 import { AstNodeVisitorBuilder, type AstNodeVisitor } from './ast_node_visitor';
 import { AstTupleNode } from './ast_tuple_node';
@@ -9,13 +6,18 @@ import { ExecutionContext } from './execution_context';
 
 const { freeze } = Helpers;
 
+interface AstTypesValidatorVisitor extends AstNodeVisitor {
+  errors: () => Readonly<StandardErrorMessage[]>
+}
+
 // what's the difference between validation, and compliation?
 const AstTypesValidatorVisitor = freeze({
-  make: (): AstNodeVisitor => {
-    const mContext = ExecutionContext.make();
+  make: (mContext: ExecutionContext = ExecutionContext.make()):
+    AstTypesValidatorVisitor =>
+  {
     const mErrors: StandardErrorMessage[] = [];
-    const inst =
-      AstNodeVisitorBuilder.
+    // prefer being explicit?
+    const visitor = AstNodeVisitorBuilder.
       makeDefaultingToStop().
       visitTuple((node: AstTupleNode) => {
         node.forEach((node: AstNode) => {
@@ -31,12 +33,25 @@ const AstTypesValidatorVisitor = freeze({
         });
       }).
       finish();
-    return inst;
+    return freeze({
+      ...visitor, // everyone will know I'm fucking stupid though
+      errors: (): Readonly<StandardErrorMessage[]> => mErrors
+    });
   }
 });
 
-export const AstValidator = freeze({
-  make: () => {
+export interface AstValidator {
+  validate: (node: AstNode) => Readonly<StandardErrorMessage[]>
+}
 
+export const AstValidator = freeze({
+  make: (mContext: ExecutionContext = ExecutionContext.make()) => {
+    const validator = AstTypesValidatorVisitor.make(mContext);
+    return freeze({
+      validate: (node: AstNode): Readonly<StandardErrorMessage[]> => {
+        node.visit(validator);
+        return validator.errors();
+      }
+    });
   }
 });

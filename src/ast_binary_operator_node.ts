@@ -1,6 +1,7 @@
-import { AstNode, AstNodeVisitor, TypeLookUpTable } from './ast_node';
+import { AstNode, TypeLookUpTable } from './ast_node';
 import { Helpers } from './helpers';
 import { TypeResolution } from './type_resolution';
+import { AstNodeVisitor } from './ast_node_visitor';
 
 export interface AstBinaryOperatorNode extends AstNode {}
 
@@ -36,7 +37,7 @@ export const AstBinaryOperatorNode = (() => {
           return TypeResolution.
             makeFunctionResolution(lhsType, op, rhsType.asSingluarParameter());
         }
-      })
+      });
     }
   });
 })();
