@@ -14,9 +14,9 @@ export const AstBinaryOperatorNode = (() => {
 
   return freeze({
     make: (op: string, lhs: AstNode, rhs: AstNode): AstBinaryOperatorNode => {
-      return freeze({
+      const inst = freeze({
         visit: (visitor: AstNodeVisitor) => {
-          visitor.visitBinaryOperation(op, lhs, rhs);
+          visitor.visitBinaryOperation(op, inst, lhs, rhs);
         },
         type: () => binaryOperatorType,
         executionType: (types: TypeLookUpTable): TypeResolution => {
@@ -37,6 +37,7 @@ export const AstBinaryOperatorNode = (() => {
             makeFunctionResolution(lhsType, op, rhsType.asSingluarParameter());
         }
       });
+      return inst;
     }
   });
 })();

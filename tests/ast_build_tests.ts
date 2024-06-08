@@ -9,6 +9,7 @@ import { AstFringeNode } from '../src/ast_fringe_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
 import { TokenRange } from '../src/token_range';
 import { AstNodeVisitorBuilder } from '../src/ast_node_visitor';
+import { AstBinaryOperatorNode } from '../src/ast_binary_operator_node';
 
 const { describeNamed } = TestHelpers;
 
@@ -72,7 +73,7 @@ describeNamed({ AstBuild }, () => {
       let vop = '';
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
+        visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
           const { valueOf } = AstIntegerLiteralNode;
           vop = op;
           expect(valueOf(lhs)).toEqual(2);
@@ -93,7 +94,7 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
+        visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
           foundOperators.push(op);
           pt1.hitsAtExactly(1);
           lhs.visit(visitor);
@@ -121,7 +122,7 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
+        visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
           foundOperators.push(op);
           lhs.visit(visitor);
           rhs.visit(visitor);

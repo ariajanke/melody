@@ -309,7 +309,7 @@
   // src/object_type.ts
   var { freeze: freeze3 } = Helpers;
   var ObjectType = (() => {
-    const { memoize: memoize6 } = Helpers;
+    const { memoize: memoize7 } = Helpers;
     const kBuiltInTypeUids = freeze3({
       integer: Symbol(),
       string: Symbol()
@@ -332,7 +332,7 @@
         name: () => name,
         uid: makeUidFor(name),
         setLookUp,
-        asSingluarParameter: memoize6(asSingluarParameter)
+        asSingluarParameter: memoize7(asSingluarParameter)
       });
       function setLookUp(lookupTable) {
         mLookupTable = lookupTable;
@@ -581,9 +581,9 @@
     const binaryOperatorType = AstNode.types.binaryOperator;
     return freeze24({
       make: (op, lhs, rhs) => {
-        return freeze24({
+        const inst = freeze24({
           visit: (visitor) => {
-            visitor.visitBinaryOperation(op, lhs, rhs);
+            visitor.visitBinaryOperation(op, inst, lhs, rhs);
           },
           type: () => binaryOperatorType,
           executionType: (types) => {
@@ -600,6 +600,7 @@
             return TypeResolution.makeFunctionResolution(lhsType, op, rhsType.asSingluarParameter());
           }
         });
+        return inst;
       }
     });
   })();
@@ -635,7 +636,7 @@
   var AstNodeVisitorBuilder = (() => {
     function makeContinuingImplementations() {
       let mCurrentInst = freeze9({
-        visitBinaryOperation: (_0, lhs, rhs) => {
+        visitBinaryOperation: (_0, _1, lhs, rhs) => {
           lhs.visit(mCurrentInst);
           rhs.visit(mCurrentInst);
         },
@@ -659,7 +660,7 @@
     }
     const kStoppingImplementations = (() => {
       const inst = freeze9({
-        visitBinaryOperation: (_0, _1, _2) => {
+        visitBinaryOperation: (_0, _1, _2, _3) => {
         },
         visitFunctionCall: (_0) => {
         },
@@ -729,7 +730,7 @@
     const makeIdentifier = AstIdentifierNode.make;
     it("is reachable by visitor", () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, _1, _2) => {
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, _1, _2, _3) => {
         hitsAtExactly(1);
       }).finish();
       make(":=", makeIdentifier(""), makeIdentifier("")).visit(visitor);
@@ -741,7 +742,7 @@
     });
     it("maybe visited for assigee name", () => {
       let assigneeName = "";
-      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, node, _2) => {
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((_0, _1, node, _3) => {
         AstEvaluatableNode.tryDowncast(node)?.evaluate((name) => {
           assigneeName = name;
           return ContextVariable.make();
@@ -915,7 +916,9 @@
           visitor.visitLetDeclaration(inst, node);
         },
         type: () => letDeclaration,
-        executionType
+        executionType: (types) => {
+          return executionType(types);
+        }
       });
       return inst;
     }
@@ -989,7 +992,7 @@
 
   // src/ast_build/tree_part_tuple_division.ts
   var TreePartTupleDivision = (() => {
-    const { memoize: memoize6, freeze: freeze24 } = Helpers;
+    const { memoize: memoize7, freeze: freeze24 } = Helpers;
     const kCloseMapping = freeze24({
       ["("]: ")"
       // ['fn']: 'end'
@@ -1001,7 +1004,7 @@
       const { error, setErrorMessage } = StandardError.make();
       const { start, end, parentContainerSize, tokenAt } = mTokenRange;
       const mCloseMapping = kCloseMapping[mFindCloseBasedOn];
-      const closePosition = memoize6(() => {
+      const closePosition = memoize7(() => {
         if (!mCloseMapping) {
           return end();
         }
@@ -1014,14 +1017,14 @@
         return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
       });
       const inst = freeze24({
-        leftPart: memoize6(() => {
+        leftPart: memoize7(() => {
           const pos = closePosition();
           if (!pos)
             return void 0;
           const lineCont = mCloseMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
           return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
         }),
-        rightPart: memoize6(() => {
+        rightPart: memoize7(() => {
           const pos = closePosition();
           if (!pos) {
             throw Error("call and test against leftPart first");
@@ -1180,7 +1183,7 @@
 
   // src/ast_build/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
-    const { memoize: memoize6, freeze: freeze24 } = Helpers;
+    const { memoize: memoize7, freeze: freeze24 } = Helpers;
     function make(leftPartHandler, mTokenRange, mOperatorToken) {
       const { error, setErrorFn } = StandardError.make();
       function build() {
@@ -1193,7 +1196,7 @@
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
       return freeze24({
-        build: memoize6(build),
+        build: memoize7(build),
         error
       });
     }
@@ -1550,7 +1553,7 @@
 
   // src/ast_build.ts
   var AstBuild = (() => {
-    const { freeze: freeze24, memoize: memoize6 } = Helpers;
+    const { freeze: freeze24, memoize: memoize7 } = Helpers;
     const class_ = freeze24({
       make: (mTokens) => {
         const mErrors = [];
@@ -1563,7 +1566,7 @@
           return part.expandIntoNodes(_buildProgramSequence);
         }
         const inst = freeze24({
-          build: memoize6(() => {
+          build: memoize7(() => {
             const partBuild = TreePartBuild.make(mTokens, LineContinuationScheme.normal);
             const res = _buildProgramSequence(partBuild).map((n) => n);
             if (mErrors.length !== 0) {
@@ -1646,7 +1649,7 @@
           makeToken("2")
         ];
         let vop = "";
-        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, lhs, rhs) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, _1, lhs, rhs) => {
           const { valueOf } = AstIntegerLiteralNode;
           vop = op;
           expect(valueOf(lhs)).toEqual(2);
@@ -1665,7 +1668,7 @@
         const { points, verifyAllHit } = ReachPoint.makeCollection(3);
         const [pt1, pt2, pt3] = points();
         const foundOperators = [];
-        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, lhs, rhs) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, _1, lhs, rhs) => {
           foundOperators.push(op);
           pt1.hitsAtExactly(1);
           lhs.visit(visitor);
@@ -1691,7 +1694,7 @@
           makeToken("3")
         ];
         const foundOperators = [];
-        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, lhs, rhs) => {
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((op, _1, lhs, rhs) => {
           foundOperators.push(op);
           lhs.visit(visitor);
           rhs.visit(visitor);
@@ -2405,7 +2408,7 @@
   var { freeze: freeze22 } = Object;
   var LetVisitor = (() => {
     function make(context) {
-      const inst = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((op, lhs, rhs) => {
+      const inst = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((op, _1, lhs, rhs) => {
         const lhsName = AstFringeNode.downcast(lhs).asString();
         const rhsRes = rhs.executionType(context);
         const rhsType = rhsRes.resolve();
@@ -2441,7 +2444,7 @@
       }).visitLetDeclaration((_0, lhs) => {
         lhs.visit(mLetVisitor);
         lhs.visit(inst);
-      }).visitBinaryOperation((op, lhs, rhs) => {
+      }).visitBinaryOperation((op, _1, lhs, rhs) => {
         lhs.visit(inst);
         rhs.visit(inst);
         const func = lhs.executionType(context).resolve()?.lookUp(op);
@@ -2744,7 +2747,7 @@
   });
 
   // src/ast_validator.ts
-  var { freeze: freeze23 } = Helpers;
+  var { freeze: freeze23, memoize: memoize6 } = Helpers;
   var AstTypesValidatorVisitor = freeze23({
     make: (mContext) => {
       const mErrors = [];
@@ -2767,9 +2770,9 @@
     }
   });
   var AstLetBinaryOperatorValidatorVisitor = freeze23({
-    make: (mContext) => {
+    make: (mContext, mGeneralValidator) => {
       const mErrors = [];
-      const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((op, lhs, _2) => {
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((op, _1, lhs, rhs) => {
         if (op !== ":=") {
           mErrors.push({ message: `Cannot use operator "${op}" in a let declaration` });
           return;
@@ -2778,10 +2781,75 @@
           mErrors.push({ message: `Cannot use ${AstNode.typeToString(lhs.type())} to name a variable` });
           return;
         }
+        const declaredVar = mContext.declareVariable(lhs.asString());
+        rhs.visit(mGeneralValidator);
+        if (mGeneralValidator.errors().length > 0) {
+          return;
+        }
+        const forceAsEvaluatable = () => rhs;
+        const failToCase = () => void 0;
+        const evalNode = {
+          [AstNode.types.binaryOperator]: forceAsEvaluatable,
+          [AstNode.types.tuple]: failToCase,
+          [AstNode.types.stringLiteral]: forceAsEvaluatable,
+          [AstNode.types.identifier]: forceAsEvaluatable,
+          [AstNode.types.letDeclaration]: forceAsEvaluatable,
+          [AstNode.types.integerLiteral]: forceAsEvaluatable
+        }[rhs.type()]();
+        if (!evalNode) {
+          mErrors.push({ message: `Cannot deduce type of ${AstNode.typeToString(rhs.type())} node` });
+          return;
+        }
+        const typeRes = evalNode.executionType(mContext);
+        const rhsType = typeRes.resolve();
+        if (rhsType) {
+          declaredVar.setType(rhsType);
+          return;
+        }
+        mErrors.push(typeRes.error());
       }).finish();
       return freeze23({
         ...visitor,
-        errors: () => mErrors
+        errors: () => {
+          return mErrors;
+        }
+      });
+    }
+  });
+  var AstGeneralValidator = freeze23({
+    make: (mContext, mGetMemoizedLetValidator) => {
+      const mErrors = [];
+      const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitFunctionCall((_0) => {
+        ;
+      }).visitBinaryOperation((_0, binNode, _2, _3) => {
+        const typeRes = binNode.executionType(mContext);
+        const type = typeRes.resolve();
+        if (type) {
+          return;
+        }
+        mErrors.push(typeRes.error());
+      }).visitLetDeclaration((node, _1) => {
+        node.visit(mGetMemoizedLetValidator());
+      }).visitIdentifier((node) => {
+        const typeRes = node.executionType(mContext);
+        const type = typeRes.resolve();
+        if (type) {
+          return;
+        }
+        mErrors.push(typeRes.error());
+      }).visitTuple((node) => {
+        node.forEach((node2) => {
+          node2.visit(visitor);
+        });
+      }).finish();
+      return freeze23({
+        ...visitor,
+        errors: () => {
+          const letValErrors = mGetMemoizedLetValidator().errors();
+          if (letValErrors.length > 0)
+            return letValErrors;
+          return mErrors;
+        }
       });
     }
   });
@@ -2803,16 +2871,14 @@
   });
   var AstValidator = freeze23({
     make: (mContext = ExecutionContext.make()) => {
-      const letBinaryOpValidator = AstLetBinaryOperatorValidatorVisitor.make(mContext);
-      const letValidator = AstLetsValidatorVisitor.make(letBinaryOpValidator);
-      const validator = AstTypesValidatorVisitor.make(mContext);
+      const genVal = AstGeneralValidator.make(mContext, memoize6(() => {
+        const binLetVal = AstLetBinaryOperatorValidatorVisitor.make(mContext, genVal);
+        return AstLetsValidatorVisitor.make(binLetVal);
+      }));
       return freeze23({
         validate: (node) => {
-          node.visit(validator);
-          let errors = validator.errors();
-          if (errors.length > 0)
-            return errors;
-          return letValidator.errors();
+          node.visit(genVal);
+          return genVal.errors();
         }
       });
     }

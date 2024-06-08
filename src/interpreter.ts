@@ -9,6 +9,7 @@ import { ExecutionContext } from './execution_context';
 import { AstFringeNode } from './ast_fringe_node';
 import { PersistentStack } from './persistent_stack';
 import { AstNodeVisitor, AstNodeVisitorBuilder } from './ast_node_visitor';
+import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 
 const { freeze } = Object;
 
@@ -17,7 +18,7 @@ const LetVisitor = (() => {
     const inst = 
       AstNodeVisitorBuilder.
       makeDefaultingToStop().
-      visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode): void => {
+      visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode): void => {
         const lhsName = AstFringeNode.downcast(lhs).asString();
         const rhsRes = rhs.executionType(context);
         const rhsType = rhsRes.resolve();
@@ -72,7 +73,7 @@ export const Interpreter = freeze({
         lhs.visit(mLetVisitor);
         lhs.visit(inst);
       }).
-      visitBinaryOperation((op: string, lhs: AstNode, rhs: AstNode) => {
+      visitBinaryOperation((op: string, _1: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
         // resolving value... far touch much logic lives here
         // resolve lhs's type
         // select operator function

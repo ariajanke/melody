@@ -22,7 +22,7 @@ describeNamed({ AstBinaryOperatorNode }, () => {
     const { hitsAtExactly, verifyHit } = ReachPoint.make();
     const visitor = AstNodeVisitorBuilder.
       makeDefaultingToContinue().
-      visitBinaryOperation((_0: string, _1: AstNode, _2: AstNode) => {
+      visitBinaryOperation((_0: string, _1: AstBinaryOperatorNode, _2: AstNode, _3: AstNode) => {
         hitsAtExactly(1);
         // NOTE terminates visiting deeper
       }).
@@ -40,7 +40,7 @@ describeNamed({ AstBinaryOperatorNode }, () => {
     let assigneeName = '';
     const visitor = AstNodeVisitorBuilder.
       makeDefaultingToContinue().
-      visitBinaryOperation((_0: string, node: AstNode, _2: AstNode) => {
+      visitBinaryOperation((_0: string, _1: AstBinaryOperatorNode, node: AstNode, _3: AstNode) => {
         AstEvaluatableNode.tryDowncast(node)?.evaluate((name: string) => {
           assigneeName = name;
           return ContextVariable.make();
