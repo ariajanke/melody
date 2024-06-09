@@ -35,16 +35,31 @@ const LetVisitor = (() => {
   return freeze({ make });
 })();
 
-const injections = freeze({ putsFunction: console.log });
+const injections = freeze({
+  putsFunction: console.log,
+  askStringFunction: (resume: (gotten: string) => void) => {
+    new Promise<string>((resolve: (value: string) => void) => {
+      Helpers.expose({ answer: (inp: string) => {
+        resolve(inp);
+      } });
+    }).then((gotten: string) => {
+      resume(gotten);
+    });
+  }
+});
 
 export interface Interpreter extends AstNodeVisitor {
 
 };
 
+// Can't use async *script here
+// if you can't do it in Melody, you can't do it here
+// (until way up on the call stack)
+
 export const Interpreter = freeze({
   make:
     (context: ExecutionContext = ExecutionContext.make(),
-    { putsFunction } = injections):
+    { putsFunction, askStringFunction } = injections):
     Interpreter =>
   {
     const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
@@ -58,16 +73,28 @@ export const Interpreter = freeze({
       return mStack.pop();
     }
 
-    const inst = AstNodeVisitorBuilder.
-      makeDefaultingToContinue().
-      visitFunctionCall((node: AstFunctionCallNode) => {
-        if (node.name !== 'puts') {
-          throw Error(`unimplemented function "${node.name}"`);
-        }
+    const kBuiltinFunctions = freeze({
+      puts: (node: AstFunctionCallNode): void => {
         node.arguments.forEach((node: AstNode) => {
           const cv = mValueOf(node);
           putsFunction(cv.asString());
         });
+      },
+      askString: (_0: AstFunctionCallNode): void => {
+        askStringFunction((gotten: string) => {
+          mStack.push().set(gotten);
+        });
+      }
+    });
+
+    const inst = AstNodeVisitorBuilder.
+      makeDefaultingToContinue().
+      visitFunctionCall((node: AstFunctionCallNode) => {
+        const fn = kBuiltinFunctions[node.name];
+        if (!fn) {
+          throw Error(`unimplemented function "${node.name}"`);
+        }
+        fn(node);
       }).
       visitLetDeclaration((_0: AstLetDeclarationNode, lhs: AstNode) => {
         lhs.visit(mLetVisitor);

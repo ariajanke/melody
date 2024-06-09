@@ -309,7 +309,7 @@
   // src/object_type.ts
   var { freeze: freeze3 } = Helpers;
   var ObjectType = (() => {
-    const { memoize: memoize7 } = Helpers;
+    const { memoize: memoize6 } = Helpers;
     const kBuiltInTypeUids = freeze3({
       integer: Symbol(),
       string: Symbol()
@@ -332,7 +332,7 @@
         name: () => name,
         uid: makeUidFor(name),
         setLookUp,
-        asSingluarParameter: memoize7(asSingluarParameter)
+        asSingluarParameter: memoize6(asSingluarParameter)
       });
       function setLookUp(lookupTable) {
         mLookupTable = lookupTable;
@@ -496,16 +496,8 @@
   var { freeze: freeze6 } = Helpers;
   var AstNode = (() => {
     const executionTypes = ContextVariable.types;
-    function makeUndefinedExecutionType(nodeTypeName) {
-      return (_0) => {
-        throw Error(`${nodeTypeName} does not implement executionType`);
-      };
-    }
     let sStringTable = void 0;
     const class_ = freeze6({
-      base: {
-        makeUndefinedExecutionType
-      },
       executionTypes,
       typeToString: (type) => {
         const str = (sStringTable ??= freeze6({
@@ -534,17 +526,15 @@
   })();
   var AstEvaluatableNode = (() => {
     const { stringLiteral, identifier, integerLiteral } = AstNode.types;
+    const _forceCastToEvaluatableNode = (node) => node;
+    const _defaultCase = (_0) => void 0;
+    const kDowncastTable = freeze6({
+      [stringLiteral]: _forceCastToEvaluatableNode,
+      [identifier]: _forceCastToEvaluatableNode,
+      [integerLiteral]: _forceCastToEvaluatableNode
+    });
     return freeze6({
-      tryDowncast: (node) => {
-        switch (node.type()) {
-          case stringLiteral:
-          case identifier:
-          case integerLiteral:
-            return node;
-          default:
-            return void 0;
-        }
-      }
+      tryDowncast: (node) => (kDowncastTable[node.type()] ?? _defaultCase)(node)
     });
   })();
 
@@ -775,7 +765,6 @@
   var AstTupleNode = (() => {
     const { freeze: freeze24 } = Helpers;
     const tupleType = AstNode.types.tuple;
-    const executionType = AstNode.base.makeUndefinedExecutionType("AstTupleNode");
     function makeWithPair(lhs, rhs) {
       const mSubExpressions = [lhs];
       const inst = class_.make(mSubExpressions);
@@ -802,7 +791,9 @@
             });
             return void 0;
           },
-          executionType
+          executionType: (_0) => {
+            throw Error(`AstTupleNode does not implement executionType`);
+          }
         });
         return inst;
       }
@@ -989,7 +980,7 @@
 
   // src/ast_build/tree_part_tuple_division.ts
   var TreePartTupleDivision = (() => {
-    const { memoize: memoize7, freeze: freeze24 } = Helpers;
+    const { memoize: memoize6, freeze: freeze24 } = Helpers;
     const kCloseMapping = freeze24({
       ["("]: ")"
       // ['fn']: 'end'
@@ -1001,7 +992,7 @@
       const { error, setErrorMessage } = StandardError.make();
       const { start, end, parentContainerSize, tokenAt } = mTokenRange;
       const mCloseMapping = kCloseMapping[mFindCloseBasedOn];
-      const closePosition = memoize7(() => {
+      const closePosition = memoize6(() => {
         if (!mCloseMapping) {
           return end();
         }
@@ -1014,14 +1005,14 @@
         return setErrorMessage(`Cannot find close position for ${mFindCloseBasedOn}`);
       });
       const inst = freeze24({
-        leftPart: memoize7(() => {
+        leftPart: memoize6(() => {
           const pos = closePosition();
           if (!pos)
             return void 0;
           const lineCont = mCloseMapping ? LineContinuationScheme.inGroup : LineContinuationScheme.operatorContinued;
           return TreePartBuild.make(mTokenRange.clone(start(), pos), lineCont);
         }),
-        rightPart: memoize7(() => {
+        rightPart: memoize6(() => {
           const pos = closePosition();
           if (!pos) {
             throw Error("call and test against leftPart first");
@@ -1180,7 +1171,7 @@
 
   // src/ast_build/partial_tree_start_group_build.ts
   var PartialTreeStartGroupBuild = (() => {
-    const { memoize: memoize7, freeze: freeze24 } = Helpers;
+    const { memoize: memoize6, freeze: freeze24 } = Helpers;
     function make(leftPartHandler, mTokenRange, mOperatorToken) {
       const { error, setErrorFn } = StandardError.make();
       function build() {
@@ -1193,7 +1184,7 @@
         return LeftSideNodeExpansion.make(leftPartHandler, leftPart, rightPart);
       }
       return freeze24({
-        build: memoize7(build),
+        build: memoize6(build),
         error
       });
     }
@@ -1307,7 +1298,6 @@
   // src/ast_function_call_node.ts
   var AstFunctionCallNode = (() => {
     const nodeTypes = AstNode.types;
-    const executionType = AstNode.base.makeUndefinedExecutionType("AstFunctionCallNode");
     function make(_0, lhs, rhs) {
       const arguments_ = (() => {
         if (rhs.type() === nodeTypes.tuple) {
@@ -1329,7 +1319,9 @@
         arguments: arguments_,
         visit,
         type: () => nodeTypes.functionCall,
-        executionType
+        executionType: (_02) => {
+          throw Error("executionType is not implemented for function call nodes");
+        }
       });
       function visit(visitor) {
         visitor.visitTuple(arguments_);
@@ -1550,7 +1542,7 @@
 
   // src/ast_build.ts
   var AstBuild = (() => {
-    const { freeze: freeze24, memoize: memoize7 } = Helpers;
+    const { freeze: freeze24, memoize: memoize6 } = Helpers;
     const class_ = freeze24({
       make: (mTokens) => {
         const mErrors = [];
@@ -1563,7 +1555,7 @@
           return part.expandIntoNodes(_buildProgramSequence);
         }
         const inst = freeze24({
-          build: memoize7(() => {
+          build: memoize6(() => {
             const partBuild = TreePartBuild.make(mTokens, LineContinuationScheme.normal);
             const res = _buildProgramSequence(partBuild).map((n) => n);
             if (mErrors.length !== 0) {
@@ -2311,7 +2303,7 @@
   })();
 
   // src/execution_context.ts
-  var { freeze: freeze21, memoize: memoize5 } = Helpers;
+  var { freeze: freeze21 } = Helpers;
   var ExecutionContext = (() => {
     function make() {
       const mAvailableVariables = {};
@@ -2747,7 +2739,7 @@
   });
 
   // src/ast_validator.ts
-  var { freeze: freeze23, memoize: memoize6 } = Helpers;
+  var { freeze: freeze23, memoize: memoize5 } = Helpers;
   var ErrorsCollector = freeze23({
     make: () => {
       const mErrors = [];
@@ -2775,21 +2767,11 @@
         if (mGeneralValidator.errors().length > 0) {
           return;
         }
-        const forceAsEvaluatable = () => rhs;
-        const failToCase = () => void 0;
-        const evalNode = {
-          [AstNode.types.binaryOperator]: forceAsEvaluatable,
-          [AstNode.types.tuple]: failToCase,
-          [AstNode.types.stringLiteral]: forceAsEvaluatable,
-          [AstNode.types.identifier]: forceAsEvaluatable,
-          [AstNode.types.letDeclaration]: forceAsEvaluatable,
-          [AstNode.types.integerLiteral]: forceAsEvaluatable
-        }[rhs.type()]();
-        if (!evalNode) {
+        if (rhs.type() === AstNode.types.tuple || rhs.type() === AstNode.types.functionCall) {
           mErrorsCollector.pushMessage(`Cannot deduce type of ${AstNode.typeToString(rhs.type())} node`);
           return;
         }
-        const typeRes = evalNode.executionType(mContext);
+        const typeRes = rhs.executionType(mContext);
         const rhsType = typeRes.resolve();
         if (rhsType) {
           declaredVar.setType(rhsType);
@@ -2852,7 +2834,7 @@
       const mGeneralValidator = AstGeneralValidator.make(
         mContext,
         mErrorsCollector,
-        memoize6(() => {
+        memoize5(() => {
           const binLetVal = AstLetBinaryOperatorValidatorVisitor.make(mContext, mGeneralValidator, mErrorsCollector);
           return AstLetsValidatorVisitor.make(binLetVal, mErrorsCollector);
         })

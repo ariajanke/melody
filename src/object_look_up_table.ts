@@ -14,7 +14,7 @@ export interface ObjectLookUpTable {
 export const ObjectLookUpTable = (() => {
   const getBuiltinTypes = memoize(() => {
     const integer_ = ObjectType.make('Integer');
-    const string_ = ObjectType.make('String');
+    const string_  = ObjectType.make('String' );
 
     const add = IncompleteFunctionType.
       make().
@@ -25,8 +25,7 @@ export const ObjectLookUpTable = (() => {
                   lhs: ContextVariable,
                   rhs: ContextVariable) =>
         {
-          const res = lhs.asNumber() + rhs.asNumber();
-          stack.push().set(res);
+          stack.push().set(lhs.asNumber() + rhs.asNumber());
         }).
       finish();
 
@@ -39,8 +38,20 @@ export const ObjectLookUpTable = (() => {
                   lhs: ContextVariable,
                   rhs: ContextVariable) =>
         {
-          const res = lhs.asNumber() - rhs.asNumber();
-          stack.push().set(res);
+          stack.push().set(lhs.asNumber() - rhs.asNumber());
+        }).
+      finish();
+
+    const mul = IncompleteFunctionType.
+      make().
+      setName('*').
+      setArguments(integer_.asSingluarParameter()).
+      setReturns  ([ integer_ ]).
+      setBuiltin((stack: PersistentStack<ContextVariable>,
+                  lhs: ContextVariable,
+                  rhs: ContextVariable) =>
+        {
+          stack.push().set(lhs.asNumber()*rhs.asNumber());
         }).
       finish();
 
@@ -82,6 +93,7 @@ export const ObjectLookUpTable = (() => {
     return freeze({
       Integer: integer_.
         setLookUp({
+          ['*' ]: mul,
           ['+' ]: add,
           ['-' ]: sub,
           [':=']: assign,

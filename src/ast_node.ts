@@ -20,20 +20,9 @@ export interface AstNode {
 export const AstNode = (() => {
   const executionTypes = ContextVariable.types;
 
-  function makeUndefinedExecutionType(nodeTypeName: string):
-    (_0: TypeLookUpTable) => TypeResolution
-  {
-    return (_0: TypeLookUpTable): TypeResolution => {
-      throw Error(`${nodeTypeName} does not implement executionType`);
-    };
-  }
-
   let sStringTable: undefined | Readonly<{ [type: symbol]: string }> = undefined;
 
   const class_ = freeze({
-    base: {
-      makeUndefinedExecutionType
-    },
     executionTypes,
     typeToString: (type: symbol): string => {
       const str = (sStringTable ??= freeze({
@@ -50,10 +39,10 @@ export const AstNode = (() => {
     },
     types:
       {
-        functionCall: Symbol(),
-        tuple: Symbol(),
-        stringLiteral: Symbol(),
-        identifier: Symbol(),
+        functionCall  : Symbol(),
+        tuple         : Symbol(),
+        stringLiteral : Symbol(),
+        identifier    : Symbol(),
         letDeclaration: Symbol(),
         binaryOperator: Symbol(),
         integerLiteral: Symbol()
@@ -71,15 +60,21 @@ export interface AstEvaluatableNode extends AstNode {
 export const AstEvaluatableNode = (() => {
   const { stringLiteral, identifier, integerLiteral } = AstNode.types;
 
+  const _forceCastToEvaluatableNode =
+    (node: AstNode): AstEvaluatableNode | undefined =>
+    node as AstEvaluatableNode;
+
+  const _defaultCase = (_0: AstNode): AstEvaluatableNode | undefined =>
+    undefined;
+
+  const kDowncastTable = freeze({
+    [stringLiteral ]: _forceCastToEvaluatableNode,
+    [identifier    ]: _forceCastToEvaluatableNode,
+    [integerLiteral]: _forceCastToEvaluatableNode
+  });
+
   return freeze({
-    tryDowncast: (node: AstNode): AstEvaluatableNode | undefined => {
-      switch (node.type()) {
-      case stringLiteral:
-      case identifier:
-      case integerLiteral:
-        return node as AstEvaluatableNode;
-      default: return undefined;
-      }
-    }
+    tryDowncast: (node: AstNode): AstEvaluatableNode | undefined =>
+      (kDowncastTable[node.type()] ?? _defaultCase)(node)
   });
 })();

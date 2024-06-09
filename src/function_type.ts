@@ -1,7 +1,7 @@
 import { Helpers } from './helpers';
 import { type ContextVariable } from './context_variable';
 import { type ObjectType } from './object_type';
-import { PersistentStack } from './persistent_stack';
+import { type PersistentStack } from './persistent_stack';
 
 const { freeze } = Helpers;
 
@@ -183,7 +183,6 @@ export const FunctionType = (() => {
 
   return freeze({
     make,
-    satisfactionDegreeOfParam//,
-    // satisfactionDegreeOfArguments
+    satisfactionDegreeOfParam
   });
 })();

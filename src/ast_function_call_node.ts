@@ -1,7 +1,8 @@
-import { AstNode } from './ast_node';
+import { AstNode, type TypeLookUpTable } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
 import { AstFringeNode } from './ast_fringe_node';
 import { type AstNodeVisitor } from './ast_node_visitor';
+import { type TypeResolution } from './type_resolution';
 
 export interface AstFunctionCallNode extends AstNode {
   name: string,
@@ -10,8 +11,6 @@ export interface AstFunctionCallNode extends AstNode {
 
 export const AstFunctionCallNode = (() => {
   const nodeTypes = AstNode.types;
-  const executionType = AstNode.base.
-    makeUndefinedExecutionType('AstFunctionCallNode');
 
   function make(_0: string, lhs: AstNode, rhs: AstNode) {
     const arguments_: AstTupleNode = (() => {
@@ -36,7 +35,9 @@ export const AstFunctionCallNode = (() => {
       arguments: arguments_,
       visit,
       type: () => nodeTypes.functionCall,
-      executionType
+      executionType: (_0: TypeLookUpTable): TypeResolution => {
+        throw Error('executionType is not implemented for function call nodes');
+      }
     });
 
     function visit(visitor: AstNodeVisitor): void {

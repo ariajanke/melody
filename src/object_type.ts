@@ -16,15 +16,16 @@ export const ObjectType = (() => {
 
   const kBuiltInTypeUids = freeze({
     integer: Symbol(),
-    string: Symbol()
+    string : Symbol()
+  });
+
+  const kUidBuiltinStrategy = freeze({
+    Integer: kBuiltInTypeUids.integer,
+    String : kBuiltInTypeUids.string ,
   });
 
   function makeUidFor(name: string) {
-    switch (name) {
-    case 'Integer': return kBuiltInTypeUids.integer;
-    case 'String' : return kBuiltInTypeUids.string;
-    default: return Symbol();
-    }
+    return kUidBuiltinStrategy[name] ?? Symbol();
   }
 
   function make

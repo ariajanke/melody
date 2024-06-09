@@ -1,6 +1,8 @@
 import { AstNode } from './ast_node';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { Helpers } from './helpers';
+import { type TypeResolution } from './type_resolution';
+import { type TypeLookUpTable } from './ast_node';
 
 export interface AstTupleNode extends AstNode {
   count: () => number,
@@ -12,8 +14,7 @@ export interface AstTupleNode extends AstNode {
 export const AstTupleNode = (() => {
   const { freeze } = Helpers;
   const tupleType = AstNode.types.tuple;
-  const executionType = AstNode.base.makeUndefinedExecutionType('AstTupleNode');
-
+  
   function makeWithPair(lhs: AstNode, rhs: AstNode | undefined): AstTupleNode {
     // NOTE: work around by taking advantage of how things are referenced in
     //       JavaScript. The passed in array is the member variable
@@ -53,7 +54,9 @@ export const AstTupleNode = (() => {
           return undefined;
         },
 
-        executionType
+        executionType: (_0: TypeLookUpTable): TypeResolution => {
+          throw Error(`AstTupleNode does not implement executionType`);
+        }
       });
 
       return inst;

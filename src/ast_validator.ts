@@ -1,4 +1,4 @@
-import { AstEvaluatableNode, AstNode } from './ast_node';
+import { AstNode } from './ast_node';
 import { Helpers, StandardErrorMessage } from './helpers';
 import { AstNodeVisitorBuilder, type AstNodeVisitor } from './ast_node_visitor';
 import { AstTupleNode } from './ast_tuple_node';
@@ -55,25 +55,15 @@ const AstLetBinaryOperatorValidatorVisitor = freeze({
         if (mGeneralValidator.errors().length > 0) {
           return;
         }
-        // rhs has now been *fully* validated, without error
-        const forceAsEvaluatable = (): AstEvaluatableNode | undefined =>
-          rhs as AstEvaluatableNode;
-        const failToCase = (): AstEvaluatableNode | undefined =>
-          undefined;
-        const evalNode = ({
-          [AstNode.types.binaryOperator]: forceAsEvaluatable,
-          [AstNode.types.tuple         ]: failToCase,
-          [AstNode.types.stringLiteral ]: forceAsEvaluatable,
-          [AstNode.types.identifier    ]: forceAsEvaluatable,
-          [AstNode.types.letDeclaration]: forceAsEvaluatable,
-          [AstNode.types.integerLiteral]: forceAsEvaluatable
-        })[rhs.type()]();
-        if (!evalNode) {
+        // TODO remove this error once types for these nodes are implemented
+        if (rhs.type() === AstNode.types.tuple ||
+            rhs.type() === AstNode.types.functionCall)
+        {
           mErrorsCollector.
             pushMessage(`Cannot deduce type of ${AstNode.typeToString(rhs.type())} node`);
           return;
         }
-        const typeRes = evalNode.executionType(mContext);
+        const typeRes = rhs.executionType(mContext);
         const rhsType = typeRes.resolve();
         if (rhsType) {
           declaredVar.setType(rhsType);
