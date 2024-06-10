@@ -301,8 +301,6 @@
     return freeze2({
       make,
       satisfactionDegreeOfParam
-      //,
-      // satisfactionDegreeOfArguments
     });
   })();
 
@@ -314,15 +312,12 @@
       integer: Symbol(),
       string: Symbol()
     });
+    const kUidBuiltinStrategy = freeze3({
+      Integer: kBuiltInTypeUids.integer,
+      String: kBuiltInTypeUids.string
+    });
     function makeUidFor(name) {
-      switch (name) {
-        case "Integer":
-          return kBuiltInTypeUids.integer;
-        case "String":
-          return kBuiltInTypeUids.string;
-        default:
-          return Symbol();
-      }
+      return kUidBuiltinStrategy[name] ?? Symbol();
     }
     function make(name) {
       name ??= "<anonymous>";
@@ -360,12 +355,13 @@
       const integer_ = ObjectType.make("Integer");
       const string_ = ObjectType.make("String");
       const add = IncompleteFunctionType.make().setName("+").setArguments(integer_.asSingluarParameter()).setReturns([integer_]).setBuiltin((stack, lhs, rhs) => {
-        const res = lhs.asNumber() + rhs.asNumber();
-        stack.push().set(res);
+        stack.push().set(lhs.asNumber() + rhs.asNumber());
       }).finish();
       const sub = IncompleteFunctionType.make().setName("-").setArguments(integer_.asSingluarParameter()).setReturns([integer_]).setBuiltin((stack, lhs, rhs) => {
-        const res = lhs.asNumber() - rhs.asNumber();
-        stack.push().set(res);
+        stack.push().set(lhs.asNumber() - rhs.asNumber());
+      }).finish();
+      const mul = IncompleteFunctionType.make().setName("*").setArguments(integer_.asSingluarParameter()).setReturns([integer_]).setBuiltin((stack, lhs, rhs) => {
+        stack.push().set(lhs.asNumber() * rhs.asNumber());
       }).finish();
       const assign = IncompleteFunctionType.make().setName(":=").setArguments(integer_.asSingluarParameter()).setReturns([integer_]).setBuiltin((stack, lhs, rhs) => {
         rhs.copyTo(lhs);
@@ -378,6 +374,7 @@
       }).finish();
       return freeze4({
         Integer: integer_.setLookUp({
+          ["*"]: mul,
           ["+"]: add,
           ["-"]: sub,
           [":="]: assign,
@@ -1727,6 +1724,47 @@
         expect(rootNode.count()).toEqual(3);
       });
     });
+    describe("single line ast", () => {
+      let tokens = [];
+      const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+      fit("builds a simple function call", () => {
+        tokens = [
+          makeToken("\n"),
+          makeToken("askString"),
+          makeToken("("),
+          makeToken(")"),
+          makeToken("\n")
+        ];
+        const { verifyHit, hitsAtExactly } = ReachPoint.make();
+        const rootNode = buildAst();
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitFunctionCall((node) => {
+          hitsAtExactly(1);
+          expect(node.name).toEqual("askString");
+          expect(node.arguments.count()).toEqual(0);
+        }).finish();
+        rootNode.visit(visitor);
+        expect(verifyHit()).toBeTruthy();
+      });
+      it("build a simple function call with two arguments", () => {
+        tokens = [
+          makeToken("puts"),
+          makeToken("("),
+          makeToken("a"),
+          makeToken("b"),
+          makeToken(")"),
+          makeToken("\n")
+        ];
+        const { verifyHit, hitsAtExactly } = ReachPoint.make();
+        const rootNode = buildAst();
+        const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitFunctionCall((node) => {
+          hitsAtExactly(1);
+          expect(node.name).toEqual("askString");
+          expect(node.arguments.count()).toEqual(0);
+        }).finish();
+        rootNode.visit(visitor);
+        expect(verifyHit()).toBeTruthy();
+      });
+    });
   });
 
   // tests/ast_build/tree_part_build_tests.ts
@@ -2412,9 +2450,19 @@
     }
     return freeze22({ make });
   })();
-  var injections = freeze22({ putsFunction: console.log });
+  var injections = freeze22({
+    putsFunction: console.log,
+    askStringFunction: (resume) => {
+      new Promise((resolve) => {
+        const answer = (inp) => resolve(inp);
+        Helpers.expose({ answer });
+      }).then((gotten) => {
+        resume(gotten);
+      });
+    }
+  });
   var Interpreter = freeze22({
-    make: (context = ExecutionContext.make(), { putsFunction } = injections) => {
+    make: (context = ExecutionContext.make(), { putsFunction, askStringFunction } = injections) => {
       const mStack = PersistentStack.make(ContextVariable.make);
       const mLetVisitor = LetVisitor.make(context);
       function mValueOf(node) {
@@ -2424,14 +2472,25 @@
         }
         return mStack.pop();
       }
+      const kBuiltinFunctions = freeze22({
+        puts: (node) => {
+          node.arguments.forEach((node2) => {
+            const cv = mValueOf(node2);
+            putsFunction(cv.asString());
+          });
+        },
+        askString: (_0) => {
+          askStringFunction((gotten) => {
+            mStack.push().set(gotten);
+          });
+        }
+      });
       const inst = AstNodeVisitorBuilder.makeDefaultingToContinue().visitFunctionCall((node) => {
-        if (node.name !== "puts") {
+        const fn = kBuiltinFunctions[node.name];
+        if (!fn) {
           throw Error(`unimplemented function "${node.name}"`);
         }
-        node.arguments.forEach((node2) => {
-          const cv = mValueOf(node2);
-          putsFunction(cv.asString());
-        });
+        fn(node);
       }).visitLetDeclaration((_0, lhs) => {
         lhs.visit(mLetVisitor);
         lhs.visit(inst);

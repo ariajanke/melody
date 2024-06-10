@@ -45,9 +45,9 @@ export const TreePartBuild = (() => {
 
     function tokenProducingFringeNode(token: Token): boolean {
       return ({
-        [tokenTypes.identifier]: true,
+        [tokenTypes.identifier    ]: true,
         [tokenTypes.integerLiteral]: true,
-        [tokenTypes.stringLiteral]: true
+        [tokenTypes.stringLiteral ]: true
       })[token.type()] ?? false;
     }
 
@@ -70,6 +70,10 @@ export const TreePartBuild = (() => {
         const { build, error } = PartialTreeStartFringeBuild.
           make(start, mTokenRange, mLineContScheme);
         return build() ?? setErrorFn(error);
+      // groupings
+      // ()
+      // table end
+      // maybe a few other (:?
       } else if (start.content() === '(') {
         const { build, error } = PartialTreeStartGroupBuild.
           make(BareLeftTreePartHandler.make(),

@@ -5,6 +5,7 @@ import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { AstFringeNode } from './ast_fringe_node';
 import { Helpers, StandardError } from './helpers';
 import { Token } from './token';
+import { AstNodeVisitor } from './ast_node_visitor';
 
 const { freeze } = Helpers;
 
@@ -44,24 +45,24 @@ export const AstIncompleteBinaryNode = (() => {
 export const IncompleteNodeCreation = (() => {
   const { error, setErrorMessage } = StandardError.make();
 
+  let sConstructorTable:
+    { [content: string]: BinaryNodeCreationFn } | undefined =
+    undefined;
+
   function make(mOperator: Token, mLhs: AstNode) {
     function _selectedConstructor(): BinaryNodeCreationFn | undefined {
+      sConstructorTable ??= freeze({
+        ['(' ]: AstFunctionCallNode  .make,
+        [',' ]: AstTupleNode         .makeBinary,
+        ['\n']: AstTupleNode         .makeBinary,
+        [':=']: AstBinaryOperatorNode.make,
+        ['+' ]: AstBinaryOperatorNode.make,
+        ['-' ]: AstBinaryOperatorNode.make,
+        ['*' ]: AstBinaryOperatorNode.make
+      });
       const tokenStr = mOperator.content();
-      switch (tokenStr) {
-      case '(':
-        return AstFunctionCallNode.make;
-      case ',':
-      case '\n':
-        return AstTupleNode.makeBinary;
-      case ':=':
-      case '+':
-      case '-':
-      case '*':
-        return AstBinaryOperatorNode.make;
-      // +, -, *, /, and, or, =, [, .,
-      // +=, -=, *=, /=
-      default: break;
-      }
+      const selected = sConstructorTable[tokenStr];
+      if (selected) { return selected; }
       return setErrorMessage(`Token ${tokenStr} does not result in a binary operator`);
     }
 

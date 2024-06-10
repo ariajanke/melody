@@ -39,9 +39,8 @@ const injections = freeze({
   putsFunction: console.log,
   askStringFunction: (resume: (gotten: string) => void) => {
     new Promise<string>((resolve: (value: string) => void) => {
-      Helpers.expose({ answer: (inp: string) => {
-        resolve(inp);
-      } });
+      const answer = (inp: string) => resolve(inp);
+      Helpers.expose({ answer });
     }).then((gotten: string) => {
       resume(gotten);
     });

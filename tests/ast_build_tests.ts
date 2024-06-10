@@ -160,4 +160,50 @@ describeNamed({ AstBuild }, () => {
       expect((rootNode as AstTupleNode).count()).toEqual(3);
     });
   });
+
+  describe('single line ast', () => {
+    let tokens: Token[] = [];
+    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+
+    fit('builds a simple function call', () => {
+      // IncompleteNodeLeftTreePartHandler
+      // "head" is undefined
+      tokens = [
+        makeToken('\n'),
+        makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
+      ];
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      const rootNode = buildAst();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          hitsAtExactly(1);
+          expect(node.name).toEqual('askString');
+          expect(node.arguments.count()).toEqual(0);
+        }).
+        finish();
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+
+    it('build a simple function call with two arguments', () => {
+      tokens = [
+        makeToken('puts'), makeToken('('), makeToken('a'), makeToken(','),
+        makeToken('b'),
+        makeToken(')'), makeToken('\n')
+      ];
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      const rootNode = buildAst();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          hitsAtExactly(1);
+          expect(node.name).toEqual('askString');
+          expect(node.arguments.count()).toEqual(0);
+        }).
+        finish();
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
 });

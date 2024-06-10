@@ -32,7 +32,7 @@ export const TreePartTupleDivision = (() => {
       if (!mCloseMapping) {
         // not necessary try to find the new line
         return end();
-      }
+      } 
 
       const count: number = parentContainerSize();
       for (let i = start(); i < count; ++i) {
