@@ -53,6 +53,8 @@ export const CharacterClass = (() => {
       }
       // NOTE limitation in JavaScript
       //      language makes no distinction between numeric/string keys
+      //      switch statements are not going to be a supported or even
+      //      thought about construct in my scripting language
       switch (character) {
       case '1': case '2': case '3': case '4': case '5':
       case '6': case '7': case '8': case '9': case '0':
