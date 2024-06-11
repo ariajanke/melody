@@ -165,7 +165,7 @@ describeNamed({ AstBuild }, () => {
     let tokens: Token[] = [];
     const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
-    fit('builds a simple function call', () => {
+    it('builds a simple function call', () => {
       // IncompleteNodeLeftTreePartHandler
       // "head" is undefined
       tokens = [

@@ -13,7 +13,7 @@ export const CharacterCrawler = (() => {
 
   const injections = freeze({
     CrawlStrategies,
-    characterClassOf: CharacterClass.classOf,
+    characterClassOf: CharacterClass.classOfString,
     characterClasses: CharacterClass.classes
   });
 

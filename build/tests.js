@@ -798,137 +798,221 @@
     return class_;
   })();
 
-  // src/token.ts
-  var { freeze: freeze10 } = Object;
-  var TokenType = freeze10({
-    declareFunction: Symbol(),
-    operator: Symbol(),
-    stringLiteral: Symbol(),
-    newLine: Symbol(),
-    identifier: Symbol(),
-    integerLiteral: Symbol()
-  });
-  var Token = (() => {
-    function unimplemented(desc) {
-      return () => {
-        throw Error(`Cannot call ${desc} unimplemented`);
-      };
-    }
-    const kBlankToken = freeze10({
-      type: unimplemented("type"),
-      // TODO: try to get rid of this hack, blank token should
-      // never be used
-      content: () => "",
-      start: unimplemented("start"),
-      end: unimplemented("end")
+  // src/tokenization/character_class.ts
+  var CharacterClass = (() => {
+    const { freeze: freeze24, assign } = Object;
+    const classes = freeze24({
+      numeric: Symbol(),
+      alphabetic: Symbol(),
+      operative: Symbol(),
+      spacious: Symbol(),
+      newLine: Symbol(),
+      literal: Symbol()
     });
-    function identifyNonKeyword(token) {
-      const firstChar = token[0];
-      switch (firstChar) {
-        case "'":
-          return TokenType.stringLiteral;
-        case "\n":
-          return TokenType.newLine;
-        case "0":
-        case "1":
-        case "2":
-        case "3":
-        case "4":
-        case "5":
-        case "6":
-        case "7":
-        case "8":
-        case "9":
-          return TokenType.integerLiteral;
-        case " ":
-        case "	":
-        case "\r":
-          throw Error("cannot build token from whitespace");
-      }
-      return TokenType.identifier;
+    function arrayAsCharacterSetFor(arr, characterClass) {
+      return arr.map((k) => ({ [k]: characterClass })).reduce(assign);
     }
-    const controlSeqs = {
-      ["let"]: TokenType.operator,
-      ["fn"]: TokenType.declareFunction,
-      ["{"]: TokenType.operator,
-      ["}"]: TokenType.operator,
-      ["("]: TokenType.operator,
-      [")"]: TokenType.operator,
-      [","]: TokenType.operator,
-      ["+"]: TokenType.operator,
-      ["-"]: TokenType.operator,
-      ["*"]: TokenType.operator,
-      [":="]: TokenType.operator
-    };
-    function makeFromStringOnly(mContents) {
-      return construct(mContents, 0, 0);
-    }
-    function make(mInput, mStart, mEnd) {
-      return construct(mInput.substring(mStart, mEnd), mStart, mEnd);
-    }
-    function construct(mTokenContent, mStart, mEnd) {
-      const mType = controlSeqs[mTokenContent] ?? identifyNonKeyword(mTokenContent);
-      function content() {
-        return mTokenContent;
-      }
-      function start() {
-        return mStart;
-      }
-      function end() {
-        return mEnd;
-      }
-      function type() {
-        return mType;
-      }
-      return freeze10({ content, start, end, type });
-    }
-    return freeze10({
-      make,
-      types: TokenType,
-      kBlankToken,
-      forTesting: { makeFromStringOnly }
+    const kCharacterToCharacterClass = assign(
+      {},
+      // arrayAsCharacterSetFor(
+      //   [
+      //     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
+      //   ],
+      //   classes.numeric),
+      arrayAsCharacterSetFor(
+        [
+          "=",
+          ":",
+          ",",
+          ".",
+          "(",
+          ")",
+          "{",
+          "}"
+        ],
+        classes.operative
+      ),
+      arrayAsCharacterSetFor(
+        [
+          " ",
+          "	",
+          "\r"
+        ],
+        classes.spacious
+      ),
+      arrayAsCharacterSetFor(
+        [
+          "'"
+        ],
+        classes.literal
+      ),
+      arrayAsCharacterSetFor(["\n"], classes.newLine)
+    );
+    return freeze24({
+      classes,
+      classOfString: (character) => {
+        if (character.length !== 1) {
+          throw Error(`"${character}" is not one character`);
+        } else if (typeof character !== "string") {
+          throw Error(`must provide string only`);
+        }
+        switch (character) {
+          case "1":
+          case "2":
+          case "3":
+          case "4":
+          case "5":
+          case "6":
+          case "7":
+          case "8":
+          case "9":
+          case "0":
+            return classes.numeric;
+          default:
+            break;
+        }
+        return kCharacterToCharacterClass[character] ?? classes.alphabetic;
+      },
+      classOfNonKeyword: (tokenContent) => CharacterClass.classOfString(tokenContent[0])
     });
   })();
 
-  // src/ast_let_declaration_node.ts
-  var { freeze: freeze11 } = Helpers;
-  var AstLetDeclarationNode = freeze11({
-    make: (node) => {
-      const { executionType } = node;
-      const { letDeclaration } = AstNode.types;
-      const inst = freeze11({
-        visit: (visitor) => {
-          visitor.visitLetDeclaration(inst, node);
-        },
-        type: () => letDeclaration,
-        executionType: (types) => {
-          return executionType(types);
+  // src/tokenization/crawl_strategies.ts
+  var CrawlStrategies = (() => {
+    const { freeze: freeze24 } = Object;
+    const { classes, classOfString } = CharacterClass;
+    function crawlAlphanumeric(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        switch (classOfString(input[i])) {
+          case classes.operative:
+          case classes.spacious:
+          case classes.literal:
+          case classes.newLine:
+            return i;
+          default:
+            break;
         }
-      });
+      }
+      return length;
+    }
+    function crawlStringLiteral(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOfString(input[i]) === classes.literal) {
+          return i + 1;
+        }
+      }
+      return length;
+    }
+    function crawlOperator(input, start) {
+      if (start + 1 >= input.length) {
+        return start + 1;
+      } else if (input[start + 1] === "=" && input[start] !== "=") {
+        return start + 2;
+      }
+      return start + 1;
+    }
+    function crawlSpace(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        switch (classOfString(input[i])) {
+          case classes.alphabetic:
+          case classes.numeric:
+          case classes.operative:
+          case classes.literal:
+          case classes.newLine:
+            return i;
+          default:
+            break;
+        }
+      }
+      return length;
+    }
+    function crawlNewLines(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOfString(input[i]) !== classes.newLine) {
+          return i;
+        }
+      }
+      return length;
+    }
+    function crawlNumeric(input, start) {
+      const { length } = input;
+      for (let i = start + 1; i < length; ++i) {
+        if (classOfString(input[i]) !== classes.numeric) {
+          return i;
+        }
+      }
+      return length;
+    }
+    return freeze24({
+      [classes.alphabetic]: crawlAlphanumeric,
+      [classes.literal]: crawlStringLiteral,
+      [classes.operative]: crawlOperator,
+      [classes.numeric]: crawlNumeric,
+      [classes.spacious]: crawlSpace,
+      [classes.newLine]: crawlNewLines
+    });
+  })();
+
+  // src/tokenization/character_crawler.ts
+  var CharacterCrawler = (() => {
+    const { freeze: freeze24 } = Object;
+    const injections2 = freeze24({
+      CrawlStrategies,
+      characterClassOf: CharacterClass.classOfString,
+      characterClasses: CharacterClass.classes
+    });
+    function make(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
+      const inst = freeze24({ reachedEnd, readToken, crawl });
+      let mStart = 0;
+      let mEnd = 0;
+      let mReadToken = Token.kBlankToken;
+      function readToken() {
+        return mReadToken;
+      }
+      function reachedEnd() {
+        return mEnd === mInput.length;
+      }
+      function crawledThrough() {
+        if (mStart >= mInput.length) {
+          throw Error("Cannot crawl at end of string");
+        }
+        const charClass = characterClassOf(mInput[mEnd]);
+        if (mReadToken.content() !== "" && charClass !== characterClasses.spacious) {
+          return;
+        }
+        const crawlFn = CrawlStrategies2[charClass];
+        const next = crawlFn(mInput, mEnd);
+        if (next <= mEnd) {
+          throw Error("progression failed");
+        }
+        mEnd = next;
+        if (charClass !== characterClasses.spacious) {
+          mReadToken = Token.make(mInput, mStart, mEnd);
+        }
+        mStart = mEnd;
+        return;
+      }
+      function crawl() {
+        mReadToken = Token.kBlankToken;
+        while (mReadToken.content() === "") {
+          crawledThrough();
+        }
+        if (mStart < mInput.length) {
+          crawledThrough();
+        }
+        return inst;
+      }
       return inst;
     }
-  });
-  var AstIncompleteUnaryNode = (() => {
-    function _selectedConstructor(operatorStr) {
-      switch (operatorStr) {
-        case "let":
-          return AstLetDeclarationNode.make;
-        default:
-          break;
-      }
-      throw Error(`Token ${operatorStr} does not result in an unary operator`);
-    }
-    function makeForOperator(operatorStr) {
-      return make(_selectedConstructor(operatorStr));
-    }
-    function make(fn) {
-      return freeze11({ finish: fn });
-    }
-    return freeze11({ makeForOperator });
+    return freeze24({ make });
   })();
 
   // src/token_range.ts
-  var { freeze: freeze12 } = Helpers;
+  var { freeze: freeze10 } = Helpers;
   var TokenRange = (() => {
     function zeroSizedRange(range) {
       return range.start() === range.end();
@@ -944,7 +1028,7 @@
       }
     }
     function make(mTokens, mStart, mEnd) {
-      const inst = freeze12({
+      const inst = freeze10({
         step: () => {
           ++mStart;
           return _verifyValidRange();
@@ -972,7 +1056,145 @@
       }
       return _verifyValidRange();
     }
-    return freeze12({ make, makeStartingRange, zeroSizedRange, forEachIn });
+    return freeze10({ make, makeStartingRange, zeroSizedRange, forEachIn });
+  })();
+
+  // src/tokenization.ts
+  var Tokenization = (() => {
+    const { freeze: freeze24 } = Helpers;
+    const injections2 = freeze24({ CharacterCrawler, TokenRange });
+    const getCharacterClassToTokenTypeMap = /* @__PURE__ */ (() => {
+      function makeCharacterClassToTokenTypeMap() {
+        const { classes } = CharacterClass;
+        const { types } = Token;
+        return freeze24({
+          [classes.numeric]: () => types.integerLiteral,
+          [classes.literal]: () => types.stringLiteral,
+          [classes.spacious]: () => {
+            throw Error(`May not use whitespace as a token`);
+          },
+          [classes.newLine]: () => types.newLine
+        });
+      }
+      let sMap = void 0;
+      return () => sMap ??= makeCharacterClassToTokenTypeMap();
+    })();
+    return freeze24({
+      make: ({ CharacterCrawler: CharacterCrawler2, TokenRange: TokenRange2 } = injections2) => freeze24({
+        tokenize: (inp) => {
+          const rv = [];
+          const crawler = CharacterCrawler2.make(inp);
+          while (!crawler.reachedEnd()) {
+            const readToken = crawler.crawl().readToken();
+            rv.push(readToken);
+          }
+          return TokenRange2.makeStartingRange(rv);
+        }
+      }),
+      tokenTypeOfNonKeyword: (tokenContent, charClassClass = CharacterClass) => {
+        const charClass = charClassClass.classOfNonKeyword(tokenContent);
+        const getter = getCharacterClassToTokenTypeMap()[charClass] ?? (() => Token.types.identifier);
+        return getter();
+      }
+    });
+  })();
+
+  // src/token.ts
+  var { freeze: freeze11 } = Object;
+  var Token = (() => {
+    const types = freeze11({
+      declareFunction: Symbol(),
+      operator: Symbol(),
+      stringLiteral: Symbol(),
+      newLine: Symbol(),
+      identifier: Symbol(),
+      integerLiteral: Symbol(),
+      grouping: Symbol()
+    });
+    const kBlankToken = (() => {
+      function unimplemented(desc) {
+        return () => {
+          throw Error(`Cannot call ${desc} unimplemented`);
+        };
+      }
+      return freeze11({
+        type: unimplemented("type"),
+        // TODO: try to get rid of this hack, blank token should
+        // never be used
+        content: () => "",
+        start: unimplemented("start"),
+        end: unimplemented("end")
+      });
+    })();
+    const tokenTypeOf = (() => {
+      const kControlSeqs = freeze11({
+        ["let"]: types.operator,
+        ["fn"]: types.declareFunction,
+        ["("]: types.grouping,
+        [")"]: types.grouping,
+        [","]: types.operator,
+        ["+"]: types.operator,
+        ["-"]: types.operator,
+        ["*"]: types.operator,
+        [":="]: types.operator
+      });
+      return (tokenContent, tokenizationClass = Tokenization) => kControlSeqs[tokenContent] ?? tokenizationClass.tokenTypeOfNonKeyword(tokenContent);
+    })();
+    function makeFromStringOnly(mContents) {
+      return construct(mContents, 0, 0);
+    }
+    function construct(mTokenContent, mStart, mEnd) {
+      let mType = void 0;
+      return freeze11({
+        content: () => mTokenContent,
+        start: () => mStart,
+        end: () => mEnd,
+        type: () => mType ??= tokenTypeOf(mTokenContent)
+      });
+    }
+    return freeze11({
+      make: (mInput, mStart, mEnd) => construct(mInput.substring(mStart, mEnd), mStart, mEnd),
+      types,
+      kBlankToken,
+      forTesting: { makeFromStringOnly }
+    });
+  })();
+
+  // src/ast_let_declaration_node.ts
+  var { freeze: freeze12 } = Helpers;
+  var AstLetDeclarationNode = freeze12({
+    make: (node) => {
+      const { executionType } = node;
+      const { letDeclaration } = AstNode.types;
+      const inst = freeze12({
+        visit: (visitor) => {
+          visitor.visitLetDeclaration(inst, node);
+        },
+        type: () => letDeclaration,
+        executionType: (types) => {
+          return executionType(types);
+        }
+      });
+      return inst;
+    }
+  });
+  var AstIncompleteUnaryNode = (() => {
+    function _selectedConstructor(operatorStr) {
+      switch (operatorStr) {
+        case "let":
+          return AstLetDeclarationNode.make;
+        default:
+          break;
+      }
+      throw Error(`Token ${operatorStr} does not result in an unary operator`);
+    }
+    function makeForOperator(operatorStr) {
+      return make(_selectedConstructor(operatorStr));
+    }
+    function make(fn) {
+      return freeze12({ finish: fn });
+    }
+    return freeze12({ makeForOperator });
   })();
 
   // src/ast_build/tree_part_tuple_division.ts
@@ -1348,22 +1570,22 @@
   })();
   var IncompleteNodeCreation = (() => {
     const { error, setErrorMessage } = StandardError.make();
+    let sConstructorTable = void 0;
     function make(mOperator, mLhs) {
       function _selectedConstructor() {
+        sConstructorTable ??= freeze17({
+          ["("]: AstFunctionCallNode.make,
+          [","]: AstTupleNode.makeBinary,
+          ["\n"]: AstTupleNode.makeBinary,
+          [":="]: AstBinaryOperatorNode.make,
+          ["+"]: AstBinaryOperatorNode.make,
+          ["-"]: AstBinaryOperatorNode.make,
+          ["*"]: AstBinaryOperatorNode.make
+        });
         const tokenStr = mOperator.content();
-        switch (tokenStr) {
-          case "(":
-            return AstFunctionCallNode.make;
-          case ",":
-          case "\n":
-            return AstTupleNode.makeBinary;
-          case ":=":
-          case "+":
-          case "-":
-          case "*":
-            return AstBinaryOperatorNode.make;
-          default:
-            break;
+        const selected = sConstructorTable[tokenStr];
+        if (selected) {
+          return selected;
         }
         return setErrorMessage(`Token ${tokenStr} does not result in a binary operator`);
       }
@@ -1727,7 +1949,7 @@
     describe("single line ast", () => {
       let tokens = [];
       const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
-      fit("builds a simple function call", () => {
+      it("builds a simple function call", () => {
         tokens = [
           makeToken("\n"),
           makeToken("askString"),
@@ -1750,6 +1972,7 @@
           makeToken("puts"),
           makeToken("("),
           makeToken("a"),
+          makeToken(","),
           makeToken("b"),
           makeToken(")"),
           makeToken("\n")
@@ -2110,236 +2333,6 @@
     });
   });
 
-  // src/tokenization/character_class.ts
-  var CharacterClass = (() => {
-    const { freeze: freeze24, assign } = Object;
-    const classes = freeze24({
-      numeric: Symbol(),
-      alphabetic: Symbol(),
-      operative: Symbol(),
-      spacious: Symbol(),
-      newLine: Symbol(),
-      literal: Symbol()
-    });
-    function arrayAsCharacterSetFor(arr, characterClass) {
-      return arr.map((k) => ({ [k]: characterClass })).reduce(assign);
-    }
-    const kCharacterToCharacterClass = assign(
-      {},
-      // arrayAsCharacterSetFor(
-      //   [
-      //     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
-      //   ],
-      //   classes.numeric),
-      arrayAsCharacterSetFor(
-        [
-          "=",
-          ":",
-          ",",
-          ".",
-          "(",
-          ")",
-          "{",
-          "}"
-        ],
-        classes.operative
-      ),
-      arrayAsCharacterSetFor(
-        [
-          " ",
-          "	",
-          "\r"
-        ],
-        classes.spacious
-      ),
-      arrayAsCharacterSetFor(
-        [
-          "'"
-        ],
-        classes.literal
-      ),
-      arrayAsCharacterSetFor(["\n"], classes.newLine)
-    );
-    function classOf(character) {
-      if (character.length !== 1) {
-        throw Error(`"${character}" is not one character`);
-      }
-      switch (character) {
-        case "0":
-        case "1":
-        case "2":
-        case "3":
-        case "4":
-        case "5":
-        case "6":
-        case "7":
-        case "8":
-        case "9":
-          return classes.numeric;
-        default:
-          break;
-      }
-      return kCharacterToCharacterClass[character] ?? classes.alphabetic;
-    }
-    return freeze24({
-      classes,
-      classOf
-    });
-  })();
-
-  // src/tokenization/crawl_strategies.ts
-  var CrawlStrategies = (() => {
-    const { freeze: freeze24 } = Object;
-    const { classes, classOf } = CharacterClass;
-    function crawlAlphanumeric(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        switch (classOf(input[i])) {
-          case classes.operative:
-          case classes.spacious:
-          case classes.literal:
-          case classes.newLine:
-            return i;
-          default:
-            break;
-        }
-      }
-      return length;
-    }
-    function crawlStringLiteral(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        if (classOf(input[i]) === classes.literal) {
-          return i + 1;
-        }
-      }
-      return length;
-    }
-    function crawlOperator(input, start) {
-      if (start + 1 >= input.length) {
-        return start + 1;
-      } else if (input[start + 1] === "=" && input[start] !== "=") {
-        return start + 2;
-      }
-      return start + 1;
-    }
-    function crawlSpace(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        switch (classOf(input[i])) {
-          case classes.alphabetic:
-          case classes.numeric:
-          case classes.operative:
-          case classes.literal:
-          case classes.newLine:
-            return i;
-          default:
-            break;
-        }
-      }
-      return length;
-    }
-    function crawlNewLines(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        if (classOf(input[i]) !== classes.newLine) {
-          return i;
-        }
-      }
-      return length;
-    }
-    function crawlNumeric(input, start) {
-      const { length } = input;
-      for (let i = start + 1; i < length; ++i) {
-        if (classOf(input[i]) !== classes.numeric) {
-          return i;
-        }
-      }
-      return length;
-    }
-    return freeze24({
-      [classes.alphabetic]: crawlAlphanumeric,
-      [classes.literal]: crawlStringLiteral,
-      [classes.operative]: crawlOperator,
-      [classes.numeric]: crawlNumeric,
-      [classes.spacious]: crawlSpace,
-      [classes.newLine]: crawlNewLines
-    });
-  })();
-
-  // src/tokenization/character_crawler.ts
-  var CharacterCrawler = (() => {
-    const { freeze: freeze24 } = Object;
-    const injections2 = freeze24({
-      CrawlStrategies,
-      characterClassOf: CharacterClass.classOf,
-      characterClasses: CharacterClass.classes
-    });
-    function make(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
-      const inst = freeze24({ reachedEnd, readToken, crawl });
-      let mStart = 0;
-      let mEnd = 0;
-      let mReadToken = Token.kBlankToken;
-      function readToken() {
-        return mReadToken;
-      }
-      function reachedEnd() {
-        return mEnd === mInput.length;
-      }
-      function crawledThrough() {
-        if (mStart >= mInput.length) {
-          throw Error("Cannot crawl at end of string");
-        }
-        const charClass = characterClassOf(mInput[mEnd]);
-        if (mReadToken.content() !== "" && charClass !== characterClasses.spacious) {
-          return;
-        }
-        const crawlFn = CrawlStrategies2[charClass];
-        const next = crawlFn(mInput, mEnd);
-        if (next <= mEnd) {
-          throw Error("progression failed");
-        }
-        mEnd = next;
-        if (charClass !== characterClasses.spacious) {
-          mReadToken = Token.make(mInput, mStart, mEnd);
-        }
-        mStart = mEnd;
-        return;
-      }
-      function crawl() {
-        mReadToken = Token.kBlankToken;
-        while (mReadToken.content() === "") {
-          crawledThrough();
-        }
-        if (mStart < mInput.length) {
-          crawledThrough();
-        }
-        return inst;
-      }
-      return inst;
-    }
-    return freeze24({ make });
-  })();
-
-  // src/tokenization.ts
-  var Tokenization = (() => {
-    const { freeze: freeze24 } = Helpers;
-    const injections2 = freeze24({ CharacterCrawler, TokenRange });
-    function make({ CharacterCrawler: CharacterCrawler2, TokenRange: TokenRange2 } = injections2) {
-      function tokenize(inp) {
-        const rv = [];
-        const crawler = CharacterCrawler2.make(inp);
-        while (!crawler.reachedEnd()) {
-          const readToken = crawler.crawl().readToken();
-          rv.push(readToken);
-        }
-        return TokenRange2.makeStartingRange(rv);
-      }
-      return freeze24({ tokenize });
-    }
-    return freeze24({ make });
-  })();
-
   // src/execution_context.ts
   var { freeze: freeze21 } = Helpers;
   var ExecutionContext = (() => {
@@ -2548,11 +2541,14 @@
       const putsFunction = (str) => {
         printedStrings.push(str);
       };
-      const injections2 = { putsFunction };
+      const askStringFunction = (fn) => {
+      };
+      const injections2 = { putsFunction, askStringFunction };
       return { injections: injections2, printedStrings };
     }
     function makeWithInjections(putsFunction, context) {
-      return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction });
+      return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction, askStringFunction: (fn) => {
+      } });
     }
     describe("integration specs", () => {
       it('compiles and runs a "hello world!" program', () => {
@@ -2688,21 +2684,21 @@
   var { describeNamed: describeNamed10 } = TestHelpers;
   describeNamed10({ CharacterClass }, () => {
     describe(".classOf", () => {
-      const { classOf, classes } = CharacterClass;
+      const { classOfString, classes } = CharacterClass;
       it("numeric", () => {
-        expect(classOf("1")).toEqual(classes.numeric);
+        expect(classOfString("1")).toEqual(classes.numeric);
       });
       it("alphabetic", () => {
-        expect(classOf("q")).toEqual(classes.alphabetic);
+        expect(classOfString("q")).toEqual(classes.alphabetic);
       });
       it("operative", () => {
-        expect(classOf(",")).toEqual(classes.operative);
+        expect(classOfString(",")).toEqual(classes.operative);
       });
       it("spacious", () => {
-        expect(classOf("	")).toEqual(classes.spacious);
+        expect(classOfString("	")).toEqual(classes.spacious);
       });
       it("new line", () => {
-        expect(classOf("\n")).toEqual(classes.newLine);
+        expect(classOfString("\n")).toEqual(classes.newLine);
       });
     });
   });

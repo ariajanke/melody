@@ -3,12 +3,12 @@ export const CharacterClass = (() => {
   const { freeze, assign } = Object;
 
   const classes = freeze({
-    numeric: Symbol(),
+    numeric   : Symbol(),
     alphabetic: Symbol(),
-    operative: Symbol(),
-    spacious: Symbol(),
-    newLine: Symbol(),
-    literal: Symbol()
+    operative : Symbol(),
+    spacious  : Symbol(),
+    newLine   : Symbol(),
+    literal   : Symbol()
   });
 
   function arrayAsCharacterSetFor(arr: string[], characterClass: symbol) {
@@ -42,26 +42,28 @@ export const CharacterClass = (() => {
         classes.literal),
       arrayAsCharacterSetFor(['\n'], classes.newLine));
 
-  function classOf(character: string): symbol {
-    if (character.length !== 1) {
-      throw Error(`"${character}" is not one character`);
-    }
-    // I hate JavaScript
-    // I will NOT support switch statements!
-    // but I *have* to make an exception for this stupid language
-    switch (character) {
-    case '0': case '1': case '2': case '3': case '4': case '5': case '6':
-    case '7': case '8': case '9':
-      return classes.numeric;
-    default:
-      break;
-    }
-
-    return kCharacterToCharacterClass[character] ?? classes.alphabetic;
-  }
-
   return freeze({
     classes,
-    classOf
+
+    classOfString: (character: string): symbol => {
+      if (character.length !== 1) {
+        throw Error(`"${character}" is not one character`);
+      } else if (typeof character !== 'string') {        
+        throw Error(`must provide string only`);
+      }
+      // NOTE limitation in JavaScript
+      //      language makes no distinction between numeric/string keys
+      switch (character) {
+      case '1': case '2': case '3': case '4': case '5':
+      case '6': case '7': case '8': case '9': case '0':
+        return classes.numeric;
+      default: break;
+      }
+
+      return kCharacterToCharacterClass[character] ?? classes.alphabetic;
+    },
+
+    classOfNonKeyword: (tokenContent: string): symbol =>
+      CharacterClass.classOfString(tokenContent[0])
   });
 })();

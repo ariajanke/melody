@@ -5,26 +5,26 @@ const { describeNamed } = TestHelpers;
 
 describeNamed({ CharacterClass }, () => {
   describe('.classOf', () => {
-    const { classOf, classes } = CharacterClass;
+    const { classOfString, classes } = CharacterClass;
 
     it('numeric', () => {
-      expect(classOf('1')).toEqual(classes.numeric);
+      expect(classOfString('1')).toEqual(classes.numeric);
     });
 
     it('alphabetic', () => {
-      expect(classOf('q')).toEqual(classes.alphabetic);
+      expect(classOfString('q')).toEqual(classes.alphabetic);
     });
 
     it('operative', () => {
-      expect(classOf(',')).toEqual(classes.operative);
+      expect(classOfString(',')).toEqual(classes.operative);
     });
 
     it('spacious', () => {
-      expect(classOf('\t')).toEqual(classes.spacious);
+      expect(classOfString('\t')).toEqual(classes.spacious);
     });
 
     it('new line', () => {
-      expect(classOf('\n')).toEqual(classes.newLine);
+      expect(classOfString('\n')).toEqual(classes.newLine);
     });
   });
 });

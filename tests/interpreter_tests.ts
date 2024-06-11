@@ -10,12 +10,13 @@ describeNamed({ Interpreter }, () => {
   function makePutsFunction() {
     const printedStrings: string[] = [];
     const putsFunction = (str: string) => { printedStrings.push(str); };
-    const injections = { putsFunction };
+    const askStringFunction = (fn: (gotten: string) => void) => {};
+    const injections = { putsFunction, askStringFunction };
 
     return { injections, printedStrings };
   }
   function makeWithInjections(putsFunction: PutsFunction, context?: ExecutionContext) {
-    return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction });
+    return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction, askStringFunction: (fn: (gotten: string) => void) => {} });
   }
   describe('integration specs', () => {
     it('compiles and runs a "hello world!" program', () => {

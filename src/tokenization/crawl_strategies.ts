@@ -2,12 +2,12 @@ import { CharacterClass } from './character_class';
 
 export const CrawlStrategies = (() => {
   const { freeze } = Object;
-  const { classes, classOf } = CharacterClass;
+  const { classes, classOfString } = CharacterClass;
 
   function crawlAlphanumeric(input: string, start: number): number {
     const { length } = input;
     for (let i = start + 1; i < length; ++i) {
-      switch (classOf(input[i])) {
+      switch (classOfString(input[i])) {
       case classes.operative:
       case classes.spacious:
       case classes.literal:
@@ -22,7 +22,7 @@ export const CrawlStrategies = (() => {
   function crawlStringLiteral(input: string, start: number): number {
     const { length } = input;
     for (let i = start + 1; i < length; ++i) {
-      if (classOf(input[i]) === classes.literal) {
+      if (classOfString(input[i]) === classes.literal) {
         return i + 1; // include the close quote
       }
     }
@@ -41,7 +41,7 @@ export const CrawlStrategies = (() => {
   function crawlSpace(input: string, start: number): number {
     const { length } = input;
     for (let i = start + 1; i < length; ++i) {
-      switch (classOf(input[i])) {
+      switch (classOfString(input[i])) {
       case classes.alphabetic:
       case classes.numeric:
       case classes.operative:
@@ -57,7 +57,7 @@ export const CrawlStrategies = (() => {
   function crawlNewLines(input: string, start: number): number {
     const { length } = input;
     for (let i = start + 1; i < length; ++i) {
-      if (classOf(input[i]) !== classes.newLine) {
+      if (classOfString(input[i]) !== classes.newLine) {
         return i;
       }
     }
@@ -67,7 +67,7 @@ export const CrawlStrategies = (() => {
   function crawlNumeric(input: string, start: number): number {
     const { length } = input;
     for (let i = start + 1; i < length; ++i) {
-      if (classOf(input[i]) !== classes.numeric) {
+      if (classOfString(input[i]) !== classes.numeric) {
         return i;
       }
     }
