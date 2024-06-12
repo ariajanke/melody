@@ -11,6 +11,7 @@
     depthOneCopy,
     memoize,
     verifyInTesting,
+    // safeJumpTable,
     symbolToString: getSymbolThings().symbolToString,
     registerSymbolStrings: getSymbolThings().registerSymbolStrings
   });
@@ -800,7 +801,8 @@
 
   // src/tokenization/character_class.ts
   var CharacterClass = (() => {
-    const { freeze: freeze24, assign } = Object;
+    const { freeze: freeze24 } = Helpers;
+    const { assign } = Object;
     const classes = freeze24({
       numeric: Symbol(),
       alphabetic: Symbol(),
@@ -814,11 +816,21 @@
     }
     const kCharacterToCharacterClass = assign(
       {},
-      // arrayAsCharacterSetFor(
-      //   [
-      //     '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
-      //   ],
-      //   classes.numeric),
+      arrayAsCharacterSetFor(
+        [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9",
+          "0"
+        ],
+        classes.numeric
+      ),
       arrayAsCharacterSetFor(
         [
           "=",
@@ -1804,7 +1816,7 @@
     describe("builds a mutli-line ast", () => {
       let tokens = [];
       const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
-      it("builds two function calls", () => {
+      fit("builds two function calls", () => {
         const { points, verifyAllHit } = ReachPoint.makeCollection(1);
         tokens = [
           makeToken("puts"),

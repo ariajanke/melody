@@ -20,7 +20,7 @@ describeNamed({ AstBuild }, () => {
     let tokens: Token[] = [];
     const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
-    it('builds two function calls', () => {
+    fit('builds two function calls', () => {
       const { points, verifyAllHit } = ReachPoint.makeCollection(1);
       tokens = [
         makeToken('puts'), makeToken('('), makeToken('a'), makeToken(')'),

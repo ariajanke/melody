@@ -7,6 +7,7 @@ export const Helpers = Object.freeze({
   depthOneCopy,
   memoize,
   verifyInTesting,
+  safeOneCharJumpTable,
   symbolToString: getSymbolThings().symbolToString,
   registerSymbolStrings: getSymbolThings().registerSymbolStrings
 });
@@ -151,4 +152,25 @@ function getSymbolThings() {
   });
 
   return memoize(impl)();
+}
+
+function safeOneCharJumpTable<MappedType>
+  (obj: { [name: string]: MappedType }):
+  { [codePt: number]: MappedType }
+{
+  const verifyDefined = (v: number | undefined): number => {
+    if (typeof v === 'undefined') {
+      throw Error('string too short');
+    }
+    return v;
+  };
+
+  return Object.freeze(
+    Object.assign(
+      {},
+      ...Object.
+        entries(obj).
+        map(([name, value]: [string, MappedType]) =>
+          ({ [verifyDefined(name.codePointAt(0))]: value }))
+    ));
 }
