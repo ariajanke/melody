@@ -607,3 +607,38 @@ end
 ```
 
 Deference and Unresolved, and partial resolution are quickly becoming things
+
+### Starting language syntax
+
+```
+# general statements
+let ...
+<any valid sub-expression>
+
+# sub expressions
+1
+a
+'s'
+1 + <any valid sub-expression>
+a + <any valid sub-expression>
+'s' + <any valid sub-expression>
+(<any valid sub-expression>)
+a(<any valid sub-expression>)
+# literally blank
+```
+#### unary operators:
+- let
+
+#### binary operators
+- <call>
+- `+`
+- `:=`
+- `*`
+- `-`
+
+#### calling syntax
+```
+foo parameter
+foo 'hello', 0
+foo()
+```

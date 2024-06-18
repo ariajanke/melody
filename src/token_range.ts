@@ -1,7 +1,7 @@
 import { Token } from './token';
 import { Helpers } from './helpers';
 
-const { freeze } = Helpers;
+const { freeze, verifyInTesting } = Helpers;
 
 export interface TokenRange {
   step: () => TokenRange,
@@ -10,13 +10,12 @@ export interface TokenRange {
   tokenAt: (i: number) => Token,
   start: () => number,
   end: () => number,
-  parentContainerSize: () => number
+  isEmpty: () => boolean,
+  startToken: () => Token,
+  range: () => Readonly<{ start: number, end: number }>
 }
 
 export const TokenRange = (() => {
-  function zeroSizedRange(range: TokenRange): boolean
-    { return range.start() === range.end(); }
-
   function makeStartingRange(mTokens: Token[]) {
     return make(mTokens, 0, mTokens.length);
   }
@@ -33,23 +32,29 @@ export const TokenRange = (() => {
     (mTokens: Token[], mStart: number, mEnd: number):
     TokenRange
   {
+    const kNewLineType = Token.types.newLine;
     const inst = freeze({
       step: () => {
         ++mStart;
         return _verifyValidRange();
       },
       skipNewLine: () => {
-        if (inst.tokenAt(mStart).type() === Token.types.newLine) {
-          ++mStart;
+        if (inst.isEmpty() || mTokens[mStart].type() !== kNewLineType) {
+          return inst;
         }
-        return inst;
+        return inst.step();
       },
       clone: (start?: number, end?: number) =>
         make(mTokens, start ?? mStart, end ?? mEnd),
-      tokenAt: (i: number) => mTokens[i],
-      start: () => mStart,
-      end: () => mEnd,
-      parentContainerSize: () => mTokens.length
+      tokenAt   : (i: number) => mTokens[i],
+      start     : () => mStart,
+      end       : () => mEnd,
+      isEmpty   : () => mStart === mEnd,
+      startToken: () => mTokens[mStart],
+      range     : () => {
+        verifyInTesting();
+        return freeze({ start: mStart, end: mEnd });
+      }
     });
 
     function _verifyValidRange() {
@@ -65,5 +70,5 @@ export const TokenRange = (() => {
     return _verifyValidRange();
   }
 
-  return freeze({ make, makeStartingRange, zeroSizedRange, forEachIn });
+  return freeze({ make, makeStartingRange, forEachIn });
 })();

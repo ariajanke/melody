@@ -11,22 +11,22 @@ export interface Token {
 
 export const Token = (() => {
   const types = freeze({
-    declareFunction: Symbol(),
+    // declareFunction: Symbol(), // ???
     operator       : Symbol(),
-    stringLiteral  : Symbol(),
     newLine        : Symbol(),
+    grouping       : Symbol(),
     identifier     : Symbol(),
+    stringLiteral  : Symbol(),
     integerLiteral : Symbol(),
-    grouping       : Symbol()
   });
-  
+
   const kBlankToken: Token = (() => {
     function unimplemented<Type>(desc: string): () => Type {
       return (): Type => {
         throw Error(`Cannot call ${desc} unimplemented`);
       };
     }
-  
+
     return freeze({
       type   : unimplemented<symbol>('type'),
       // TODO: try to get rid of this hack, blank token should
@@ -40,14 +40,15 @@ export const Token = (() => {
   const tokenTypeOf = (() => {
     const kControlSeqs = freeze({
       ['let']: types.operator,
-      ['fn' ]: types.declareFunction,
+      // ['fn' ]: types.declareFunction,
       ['('  ]: types.grouping,
       [')'  ]: types.grouping,
       [','  ]: types.operator,
       ['+'  ]: types.operator,
       ['-'  ]: types.operator,
       ['*'  ]: types.operator,
-      [':=' ]: types.operator
+      [':=' ]: types.operator,
+      ['='  ]: types.operator
     });
 
     return (tokenContent: string, tokenizationClass = Tokenization) =>

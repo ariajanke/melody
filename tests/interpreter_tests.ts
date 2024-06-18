@@ -10,13 +10,13 @@ describeNamed({ Interpreter }, () => {
   function makePutsFunction() {
     const printedStrings: string[] = [];
     const putsFunction = (str: string) => { printedStrings.push(str); };
-    const askStringFunction = (fn: (gotten: string) => void) => {};
+    const askStringFunction = (_0: (gotten: string) => void) => {};
     const injections = { putsFunction, askStringFunction };
 
     return { injections, printedStrings };
   }
   function makeWithInjections(putsFunction: PutsFunction, context?: ExecutionContext) {
-    return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction, askStringFunction: (fn: (gotten: string) => void) => {} });
+    return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction, askStringFunction: (_0: (gotten: string) => void) => {} });
   }
   describe('integration specs', () => {
     it('compiles and runs a "hello world!" program', () => {
@@ -27,10 +27,6 @@ describeNamed({ Interpreter }, () => {
       expect(printedStrings).toEqual(['hello', ' world!']);
     });
 
-    // now comes the concept of a context, and variables
-    // for now, I'm going to have a variable called "greeting", which stores a
-    // string
-    // that's it
     it('compiles and runs a "hello world!" program with a variable', () => {
       const context = ExecutionContext.make();
       context.declareVariable('foo').set('hello world!');

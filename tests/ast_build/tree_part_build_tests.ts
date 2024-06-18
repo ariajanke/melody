@@ -1,165 +1,125 @@
 import {
-  LineContinuationScheme, TreePartBuild 
+  BuildStateAddition,
 } from '../../src/ast_build/tree_part_build';
 import { TestHelpers, ReachPoint } from '../test_helpers';
 import { Token } from '../../src/token';
 import { AstNode } from '../../src/ast_node';
 import { AstFringeNode } from '../../src/ast_fringe_node';
-import {
-  EmptyNodeExpansion,
-  NodeExpansion,
-  NodeExpansionVisitor
-} from '../../src/ast_build/node_expansion';
-import { AstIdentifierNode } from '../../src/ast_identifier_node';
 import { IncompleteNode } from '../../src/ast_incomplete_binary_node';
-import { AstTupleNode } from '../../src/ast_tuple_node';
-import { AstFunctionCallNode } from '../../src/ast_function_call_node';
 import { TokenRange } from '../../src/token_range';
+import { TreePartBuild } from '../../src/ast_build/tree_part_build';
 
 const { describeNamed } = TestHelpers;
-
-// general cases
-// ( \n ... )
-// ( a + b ) ...
-// a , b ...
-// a + \n b ...
-// f(...)...
-// base cases
-// a
-// ,
-// (
-// \n
-// <empty>
 
 describeNamed({ TreePartBuild }, () => {
   const makeToken = Token.forTesting.makeFromStringOnly;
 
-  const normalCont = LineContinuationScheme.normal;
   const make = (tokens: Token[]) =>
-    TreePartBuild.make(TokenRange.makeStartingRange(tokens), normalCont);
+    TreePartBuild.make(TokenRange.makeStartingRange(tokens));
   const makePtbRes = (...tokens: Token[]) =>
     TreePartBuild.
-      make(TokenRange.makeStartingRange(tokens), normalCont).
-      buildPart();
+      make(TokenRange.makeStartingRange(tokens)).
+      build();
 
-  const ptbWithVisitor =
-    (ptbRes: () => NodeExpansion | undefined,
-     fn: () => NodeExpansionVisitor) =>
-    { ptbRes()?.visit(fn()); };
-
-  function includeHasAResultExample(ptbRes: () => NodeExpansion | undefined) {
+  function includeHasAResultExample(ptbRes: () => BuildStateAddition | undefined) {
     it('returns a result', () => {
       expect(ptbRes()).toBeDefined();
+    });
+  }
+
+  const _viewParts =
+    (ptbRes: BuildStateAddition | undefined,
+     fn: (...parts: TreePartBuild[]) => void,
+     defaultBehavior: () => void): void =>
+  {
+    const mParts: TreePartBuild[] = [];
+    const inst = Object.freeze({
+      pushPart: (part: TreePartBuild) => {
+        mParts.push(part);
+        return inst;
+      },
+      pushComplete: (_0: AstNode) => {
+        defaultBehavior();
+        return inst;
+      },
+      pushIncomplete: (_0: IncompleteNode) => {
+        defaultBehavior();
+        return inst;
+      }
+    });
+    ptbRes?.pushTo(inst);
+    fn(...mParts);
+  };
+
+  const viewAll =
+    (ptbRes: BuildStateAddition | undefined,
+     fn: (parts: TreePartBuild[], nodes: AstNode[], inodes: IncompleteNode[]) => void): void =>
+  {
+    const mParts: TreePartBuild[] = [];
+    const mCompleteNodes: AstNode[] = [];
+    const mIncompleteNodes: IncompleteNode[] = [];
+    const inst = Object.freeze({
+      pushPart: (part: TreePartBuild) => {
+        mParts.push(part);
+        return inst;
+      },
+      pushComplete: (node: AstNode) => {
+        mCompleteNodes.push(node);
+        return inst;
+      },
+      pushIncomplete: (inode: IncompleteNode) => {
+        mIncompleteNodes.push(inode);
+        return inst;
+      }
+    });
+    ptbRes?.pushTo(inst);
+    fn(mParts, mCompleteNodes, mIncompleteNodes);
+  };
+
+  const viewOnlyParts =
+    (ptbRes: BuildStateAddition | undefined, fn: (...parts: TreePartBuild[]) => void): void =>
+    _viewParts(ptbRes, fn, () => {});
+
+  const allowOnlyParts =
+    (ptbRes: BuildStateAddition | undefined, fn: (...parts: TreePartBuild[]) => void): void =>
+    _viewParts(ptbRes, fn, fail);
+
+  function includeAddsOnePartExample(ptbRes: () => BuildStateAddition | undefined) {
+    it('add exactly one parts', () => {
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      allowOnlyParts(ptbRes(), (...args: TreePartBuild[]) => {
+        expect(args.length).toEqual(1);
+        hitsAtExactly(1);
+      });
+      expect(verifyHit()).toBeTruthy();
     });
   }
 
   describe('handles general case "( \\n ..."', () => {
     const args = [makeToken('('), makeToken('\n'), makeToken('a'), makeToken(')')];
     const ptbRes = () => makePtbRes(...args);
-
+    
     includeHasAResultExample(ptbRes);
+    includeAddsOnePartExample(ptbRes);
 
-    it('is composed of a left and right part only', () => {
-      let leftPartCalls = 0;
-      let rightPartCalls = 0;
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((_0: TreePartBuild) => {
-          ++leftPartCalls;
-        }).
-        visitRightPartOnly((_1: TreePartBuild) => {
-          ++rightPartCalls;
-        }).
-        finish());
-      expect(leftPartCalls).toEqual(1);
-      expect(rightPartCalls).toEqual(1);
-    });
-
-    it('makes right part with none of the tokens', () => {
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((_0: TreePartBuild) => {}).
-        visitRightPartOnly((rightPart: TreePartBuild) => {
-          const { start, end } = rightPart.range();
-          expect(start).toEqual(4);
-          expect(end).toEqual(4);
-        }).
-        finish());
-    });
-
-    it('makes left part with the remainder of the tokens, skipping new line', () => {
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((leftPart: TreePartBuild) => {
-          const { start, end } = leftPart.range();
-          expect(start).toEqual(2);
-          expect(end).toEqual(3);
-        }).
-        visitRightPartOnly((_0: TreePartBuild) => {}).
-        finish());
+    it('left part range contains a range', () => {
+      allowOnlyParts(ptbRes(), (left: TreePartBuild) => {
+        expect(left.range()).toEqual({ start: 1, end: 3 });
+      });
     });
   });
-
-
-  function includeHasLeftAndRightPointWithNoNodes
-    (ptbRes: () => NodeExpansion | undefined)
-  {
-    it('has left and right point with no nodes', () => {
-      const { points, verifyAllHit } = ReachPoint.makeCollection(2);
-      const [pt1, pt2] = points();
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((_0: TreePartBuild) => {
-          pt1.hitsAtExactly(1);
-        }).
-        visitRightPartOnly((_0: TreePartBuild) => {
-          pt2.hitsAtExactly(1);
-        }).
-        finish());
-      expect(verifyAllHit()).toBeTruthy();
-    });
-  }
 
   describe('handles grouping case "( a )"', () => {
     const args = [makeToken('('), makeToken('a'), makeToken(')')];
     const ptbRes = () => makePtbRes(...args);
 
-    includeHasLeftAndRightPointWithNoNodes(ptbRes);
+    includeHasAResultExample(ptbRes);
+    includeAddsOnePartExample(ptbRes);
 
-    it('has left and right point with no nodes', () => {
-      const { points, verifyAllHit } = ReachPoint.makeCollection(2);
-      const [pt1, pt2] = points();
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((_0: TreePartBuild) => {
-          pt1.hitsAtExactly(1);
-        }).
-        visitRightPartOnly((_0: TreePartBuild) => {
-          pt2.hitsAtExactly(1);
-        }).
-        finish());
-      expect(verifyAllHit()).toBeTruthy();
-    });
-
-    it('left part contains no tokens', () => {
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((leftPart: TreePartBuild) => {
-          expect(args[leftPart.range().start].content()).toEqual("a");
-        }).
-        visitRightPartOnly((_0: TreePartBuild) => {}).
-        finish());
-    });
-
-    it('right part contains the "a" token', () => {
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((_0: TreePartBuild) => {}).
-        visitRightPartOnly((rightPart: TreePartBuild) => {
-          const { start, end } = rightPart.range();
-          expect(start).toEqual(end);
-        }).
-        finish());
+    it('left part range contains "\\n" and "a" range', () => {
+      allowOnlyParts(ptbRes(), (left: TreePartBuild) => {
+        expect(left.range()).toEqual({ start: 1, end: 2 });
+      });
     });
   });
 
@@ -170,56 +130,15 @@ describeNamed({ TreePartBuild }, () => {
     ];
     const ptbRes = () => makePtbRes(...args);
 
-    includeHasLeftAndRightPointWithNoNodes(ptbRes);
+    includeHasAResultExample(ptbRes);
+    includeAddsOnePartExample(ptbRes);
 
-    ([
-      ['a', 0],
-      [',', 1],
-      ['b', 2]
-    ] as [string, number][]).
-      forEach(([token, position]: [string, number]) => {
-        it(`left part contains the "${token}" tokens`, () => {
-          ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-            makeOverrider(fail).
-            visitLeftPartOnly((leftPart: TreePartBuild) => {
-              const idx = leftPart.range().start + position;
-              expect(idx).toBeLessThan(args.length);
-              expect(args[idx]?.content()).toEqual(token);
-            }).
-            visitRightPartOnly((_0: TreePartBuild) => {}).
-            finish());
-        });
+    it('left part range contains a range', () => {
+      allowOnlyParts(ptbRes(), (left: TreePartBuild) => {
+        expect(left.range()).toEqual({ start: 1, end: 4 });
       });
-
-    it(`right part contains no tokens`, () => {
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftPartOnly((_0: TreePartBuild) => {}).
-        visitRightPartOnly((rightPart: TreePartBuild) => {
-          const { start, end } = rightPart.range();
-          expect(start).toEqual(end);
-        }).
-        finish());
     });
   });
-
-  function setupWithLeftPartCompletingTupleNode
-    (ptbRes: () => NodeExpansion | undefined, fn: (node: AstTupleNode) => void)
-  {
-    ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-      makeOverrider(fail).
-      visitLeftWithNode((node: IncompleteNode, _1: TreePartBuild) => {
-        const compl = node.finish(AstIdentifierNode.make('b'));
-        if (compl.type() === AstNode.types.tuple) {
-          fn(compl as AstTupleNode);
-        } else {
-          fail();
-        }
-      }).
-      visitRightPartOnly((_0: TreePartBuild) => {}).
-      finish());
-  }
-
 
   describe('handles general operator case "a, b"', () => {
     const args = [makeToken('a'), makeToken(','), makeToken('b')];
@@ -227,92 +146,21 @@ describeNamed({ TreePartBuild }, () => {
 
     includeHasAResultExample(ptbRes);
 
-    it('left part has incomplete node', () => {
-      const { points, verifyAllHit } = ReachPoint.makeCollection(2);
-      const [pt1, pt2] = points();
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftWithNode((_0: IncompleteNode, _1: TreePartBuild) =>
-          pt1.hitsAtExactly(1)).
-        visitRightPartOnly((_0: TreePartBuild) => {
-          pt2.hitsAtExactly(1);
-        }).
-        finish());
-      expect(verifyAllHit()).toBeTruthy();
-    });
-
-    it('left part incomplete node, completes into a tuple node', () => {
-      setupWithLeftPartCompletingTupleNode(ptbRes, (node: AstTupleNode) => {
-        expect(node.count()).toEqual(2);
+    it('adds build part', () => {
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      allowOnlyParts(ptbRes(), (part: TreePartBuild) => {
+        hitsAtExactly(1);
+        expect(part).toBeDefined();
       });
+      expect(verifyHit()).toBeTruthy();
     });
 
-    it('left part incomplete node, completes into a tuple node, first is an "a" identifer', () => {
-      setupWithLeftPartCompletingTupleNode(ptbRes, (node: AstTupleNode) => {
-        let first: string | undefined = undefined;
-        node.forEach((node: AstNode) => {
-          first ??= AstFringeNode.downcast(node).asString();
-        });
-        expect(first).toEqual('a');
+    it('build part with remaining token', () => {
+      allowOnlyParts(ptbRes(), (part: TreePartBuild) => {
+        expect(part.range()).toEqual({ start: 2, end: 3 });
       });
     });
   });
-
-  describe('handles case operator across new line "a, \\n b \\n ...', () => {
-    const args =
-      [
-        makeToken('a'), makeToken(','), makeToken('\n'),
-        makeToken('b'), makeToken('\n'),
-        makeToken('c')
-      ];
-    const ptbRes = () => makePtbRes(...args);
-
-    includeHasAResultExample(ptbRes);
-
-    includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
-
-    it('has left side has incomplete node, has new line adjusted range', () => {
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftWithNode((_0: IncompleteNode, part: TreePartBuild) => {
-          const { start, end } = part.range();
-          expect(start).toEqual(3);
-          expect(end).toEqual(6);
-        }).
-        visitRightPartOnly((_0: TreePartBuild) => {}).
-        finish());
-    });
-
-    it('has right side, has new line adjusted range', () => {
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftWithNode((_0: IncompleteNode, _1: TreePartBuild) => {}).
-        visitRightPartOnly((rightPart: TreePartBuild) => {
-          const { start, end } = rightPart.range();
-          expect(start).toEqual(6);
-          expect(end).toEqual(6);
-        }).
-        finish());
-    });
-  });
-
-  function includeHasLeftSideIncompleteNodeRightSidePartOnly
-    (ptbRes: () => NodeExpansion | undefined)
-  {
-    it('has left side has incomplete node, and nodeless right side', () => {
-      const { points, verifyAllHit } = ReachPoint.makeCollection(2);
-      const [pt1, pt2] = points();
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftWithNode((_0: IncompleteNode, _1: TreePartBuild) =>
-          pt1.hitsAtExactly(1)).
-        visitRightPartOnly((_0: TreePartBuild) => {
-          pt2.hitsAtExactly(1);
-        }).
-        finish());
-      expect(verifyAllHit()).toBeTruthy();
-    });
-  }
 
   describe('handles function call case "f(...)..."', () => {
     describe('a simple one parameter function call "f(\'a\')"', () => {
@@ -321,57 +169,58 @@ describeNamed({ TreePartBuild }, () => {
           makeToken('f'), makeToken('('), makeToken("'a'"), makeToken(')')
         ];
       const ptbRes = () => makePtbRes(...args);
+      const next2ndPtbRes = () => {
+        let res: BuildStateAddition | undefined = undefined;
+        allowOnlyParts(ptbRes(), (part: TreePartBuild) => {
+          res = part.build();
+        });
+        return res;
+      };
+
 
       includeHasAResultExample(ptbRes);
 
-      includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
-
-      it('has left side whose incomplete node that completes into a function', () => {
-        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-          makeOverrider(fail).
-          visitLeftWithNode((node: IncompleteNode, _1: TreePartBuild) => {
-            const completed = node.finish(AstIdentifierNode.make('c'));
-            expect(completed.type()).toEqual(AstNode.types.functionCall);
-          }).
-          visitRightPartOnly((_0: TreePartBuild) => {}).
-          finish());
+      it('pushes a new part', () => {
+        allowOnlyParts(ptbRes(), (...parts: TreePartBuild[]) => {
+          expect(parts.length).toEqual(1);
+        });
       });
 
-      it('has left side whose incomplete node that completes into the correct function', () => {
-        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-          makeOverrider(fail).
-          visitLeftWithNode((node: IncompleteNode, _1: TreePartBuild) => {
-            const completed = node.finish(AstIdentifierNode.make('c'));
-            if (completed.type() !== AstNode.types.functionCall) {
-              fail();
-              return;
-            }
-            expect((completed as AstFunctionCallNode).name).toEqual('f');
-          }).
-          visitRightPartOnly((_0: TreePartBuild) => {}).
-          finish());
+      describe('1st subsequent part', () => {
+        it('adds an incomplete node', () => {
+          viewAll(next2ndPtbRes(), (_0: TreePartBuild[], _1: AstNode[], inodes: IncompleteNode[]) => {
+            expect(inodes.length).toEqual(1);
+          });
+        });
+
+        it('pushes a new part', () => {
+          viewOnlyParts(next2ndPtbRes(), (...parts: TreePartBuild[]) => {
+            expect(parts.length).toEqual(1);
+          });
+        });
       });
 
-      it('has left side, with one token', () => {
-        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-          makeOverrider(fail).
-          visitLeftWithNode((_0: IncompleteNode, part: TreePartBuild) => {
-            const { start, end } = part.range();
-            expect(end - start).toEqual(1);
-          }).
-          visitRightPartOnly((_0: TreePartBuild) => {}).
-          finish());
-      });
+      describe('2nd subsequent part', () => {
+        it('adds exactly one build part', () => {
+          const { verifyHit, hitsAtExactly } = ReachPoint.make();
+          viewAll(next2ndPtbRes(), (parts: TreePartBuild[]) => {
+            allowOnlyParts(parts[0]?.build(), (...parts: TreePartBuild[]) => {
+              hitsAtExactly(1);
+              expect(parts.length).toEqual(1);
+            });
+          });
+          expect(verifyHit()).toBeTruthy();
+        });
 
-      it('has empty right side', () => {
-        ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-          makeOverrider(fail).
-          visitLeftWithNode((_0: IncompleteNode, _1: TreePartBuild) => {}).
-          visitRightPartOnly((rightPart: TreePartBuild) => {
-            const { start, end } = rightPart.range();
-            expect(start).toEqual(end);
-          }).
-          finish());
+        it('left build part with parameter token', () => {
+          viewAll(next2ndPtbRes(), (parts: TreePartBuild[]) => {
+            allowOnlyParts(
+              parts[0]?.build(),
+              (leftPart: TreePartBuild) => {
+                expect(leftPart.range()).toEqual({ start: 2, end: 3 });
+              });
+          });
+        });
       });
     });
   });
@@ -379,96 +228,174 @@ describeNamed({ TreePartBuild }, () => {
   describe('let declaration', () => {
     const args =
       [
-        makeToken('let'), makeToken('a'), makeToken('='), makeToken("'hello'")
+        makeToken('let'), makeToken('a'), makeToken(':='), makeToken("'hello'")
       ];
     const ptbRes = () => makePtbRes(...args);
 
     includeHasAResultExample(ptbRes);
 
-    includeHasLeftSideIncompleteNodeRightSidePartOnly(ptbRes);
-
-    it('has left side whose incomplete node that completes into a let', () => {
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitLeftWithNode((node: IncompleteNode, _1: TreePartBuild) => {
-          const completed = node.finish(AstIdentifierNode.make('c'));
-          expect(completed.type()).toEqual(AstNode.types.letDeclaration);
-        }).
-        visitRightPartOnly((_0: TreePartBuild) => {}).
-        finish());
-    });
-  });
-
-  describe('unary operator starting on a new line', () => {
-    const args =
-      [
-        makeToken('a'),
-        makeToken('\n'),
-        makeToken('let')
-      ];
-    const ptbRes = () => makePtbRes(...args);
-
-    includeHasAResultExample(ptbRes);
-
-    it('builds a node with an unprocessed right part', () => {
-      const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitRightWithPart((_0: AstNode, _1: TreePartBuild) => {
-          hitsAtExactly(1);
-        }).
-        finish());
+    it('starts with exactly one part', () => {
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      allowOnlyParts(ptbRes(), (...parts: TreePartBuild[]) => {
+        hitsAtExactly(1);
+        expect(parts.length).toEqual(1);
+      });
       expect(verifyHit()).toBeTruthy();
+    });
+
+    it('starts with part containing remainder of tokens', () => {
+      allowOnlyParts(ptbRes(), (part: TreePartBuild) => {
+        expect(part.range()).toEqual({ start: 2, end: 4 });
+      });
+    });
+
+    describe('progressing to ":="', () => {
+      it('is reachable', () => {
+        const { verifyHit, hitsAtExactly } = ReachPoint.make();
+        allowOnlyParts(ptbRes(), (part: TreePartBuild) => {
+          viewOnlyParts(part.build(), (part: TreePartBuild) => {
+            hitsAtExactly(1);
+            expect(part).toBeDefined();
+          });
+        });
+        expect(verifyHit()).toBeTruthy();
+      });
+
+      it('builds part for remaining literal', () => {
+        allowOnlyParts(ptbRes(), (part: TreePartBuild) => {
+
+          viewOnlyParts(part.build(), (part: TreePartBuild) => {
+            expect(part.range()).toEqual({ start: 3, end: 4 });
+          });
+        });
+      });
     });
   });
 
   describe('simple cases', () => {
-    it('handles a single string literal', () => {
-      const ptbRes = () => make([makeToken("'a'")]).buildPart();
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitRightNodeOnly((node: AstNode) => {
-          const str = AstFringeNode.downcast(node).asString();
-          expect(str).toEqual('a');
-        }).
-        finish());
+    function includeBuildsSingleTupleExamples
+      (ptbRes: () => BuildStateAddition | undefined)
+    {
+      it('builds no additional parts', () => {  
+        viewAll(ptbRes(), (parts: TreePartBuild[]) => {
+          expect(parts.length).toEqual(0);
+        });
+      });
+
+      it('builds a single node', () => {  
+        viewAll(ptbRes(), (_0: TreePartBuild[], nodes: AstNode[]) => {
+          expect(nodes.length).toEqual(1);
+        });
+      });
+
+      it('builds a tuple node', () => {  
+        viewAll(ptbRes(), (_0: TreePartBuild[], nodes: AstNode[]) => {
+          expect(nodes[0].type()).toEqual(AstNode.types.tuple);
+        });
+      });
+    }
+
+    function includeImmediatelyBuildsStringableToAExamples
+      (ptbRes: () => BuildStateAddition | undefined)
+    {
+      it('immediately builds one node', () => {  
+        viewAll(ptbRes(), (_0: TreePartBuild[], nodes: AstNode[]) => {
+          expect(nodes.length).toEqual(1);
+        });
+      });
+
+      it('that node is a string node', () => {  
+        viewAll(ptbRes(), (_0: TreePartBuild[], nodes: AstNode[]) => {
+          const fnode = AstFringeNode.downcast(nodes[0]);
+          expect(fnode.asString()).toEqual('a');
+        });
+      });
+    }
+
+    describe('single string literal', () => {
+      const ptbRes = () => make([makeToken("'a'")]).build();
+
+      includeImmediatelyBuildsStringableToAExamples(ptbRes);
     });
 
-    it('handles new lines followed by nothing statements', () => {
-      const res = make([makeToken('\n')]).buildPart();
-      expect(EmptyNodeExpansion.hasCreated(res)).toBeTruthy();
+    describe('new lines followed by nothing statements', () => {
+      const ptbRes = () => make([makeToken('\n')]).build();
+
+      includeBuildsSingleTupleExamples(ptbRes);
     });
 
-    it('handles empty statements', () => {
-      const res = make([]).buildPart();
-      expect(EmptyNodeExpansion.hasCreated(res)).toBeTruthy();
+    describe('empty statements', () => {
+      const ptbRes = () => make([]).build();
+
+      includeBuildsSingleTupleExamples(ptbRes);
     });
 
-    it('handles a lone token statement', () => {
+    describe('lone token followed by new line', () => {
       const args = [
         makeToken('a'),
         makeToken('\n')
       ];
-      const ptbRes = () => make(args).buildPart();
-      const { points, verifyAllHit } = ReachPoint.makeCollection(1);
-      ptbWithVisitor(ptbRes, () => NodeExpansionVisitor.
-        makeOverrider(fail).
-        visitRightWithPart((node: AstNode, _1: TreePartBuild) => {
-          const str = AstFringeNode.downcast(node).asString();
-          points()[0].hitsAtExactly(1);
-          expect(str).toEqual('a');
-        }).
-        finish());
-      verifyAllHit();
+      const ptbRes = () => make(args).build();
+
+      it('does not add additional build parts', () => {
+        viewAll(ptbRes(), (parts: TreePartBuild[]) => {
+          expect(parts.length).toEqual(0);
+        });
+      });
+
+      includeImmediatelyBuildsStringableToAExamples(ptbRes);
     });
   });
 
-  // it('handles operator continuing an expression across new line', () => {
-  //   const res = make([
-  //     makeToken('a'),
-  //     makeToken(','),
-  //     makeToken('\n'),
-  //     makeToken('b')
-  //   ]).buildPart();
-  // });
+  describe('operator continuing across a new line', () => {
+    const args = [
+      makeToken('a'),
+      makeToken(','),
+      makeToken('\n'),
+      makeToken('b')
+    ];
+    const ptbRes = () => make(args).build();
+
+    it('adds exactly one part', () => {
+      allowOnlyParts(ptbRes(), (...parts: TreePartBuild[]) => {
+        expect(parts.length).toEqual(1);
+      });
+    });
+
+    describe('subsequent build', () => {
+      it('also builds on part', () => {
+        allowOnlyParts(ptbRes(), (part: TreePartBuild | undefined) => {
+          if (!part) {
+            fail();
+            return;
+          }
+          allowOnlyParts(part.build(), (...parts: TreePartBuild[]) => {
+            expect(parts.length).toEqual(1);
+          });
+        });
+      });
+
+      describe('last subsequent build', () => {
+        it('builds a single node', () => {
+          allowOnlyParts(ptbRes(), (part: TreePartBuild | undefined) => {
+            allowOnlyParts(part?.build(), (part: TreePartBuild | undefined) => {
+              viewAll(part?.build(), (_0: TreePartBuild[], nodes: AstNode[]) => {
+                expect(nodes.length).toEqual(1);
+              });
+            });
+          });
+        });
+
+        it('that single node is a tuple', () => {
+          allowOnlyParts(ptbRes(), (part: TreePartBuild | undefined) => {
+            allowOnlyParts(part?.build(), (part: TreePartBuild | undefined) => {
+              viewAll(part?.build(), (_0: TreePartBuild[], nodes: AstNode[]) => {
+                expect(nodes[0]?.type()).toEqual(AstNode.types.tuple);
+              });
+            });
+          });
+        });
+      });
+    });
+  });
 });

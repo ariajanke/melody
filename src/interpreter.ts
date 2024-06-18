@@ -37,6 +37,7 @@ const LetVisitor = (() => {
 
 const injections = freeze({
   putsFunction: console.log,
+  // not a blocker, just need to use a stack
   askStringFunction: (resume: (gotten: string) => void) => {
     new Promise<string>((resolve: (value: string) => void) => {
       const answer = (inp: string) => resolve(inp);

@@ -1,17 +1,15 @@
 import { TestHelpers } from './test_helpers';
-import {
-  AstIncompleteBinaryNode,
-  IncompleteNodeCreation
-} from '../src/ast_incomplete_binary_node';
+import { AstIncompleteBinaryNode } from '../src/ast_incomplete_binary_node';
 import { AstNode } from '../src/ast_node';
 import { AstIdentifierNode } from '../src/ast_identifier_node';
 import { Token } from '../src/token';
+import { IncompleteBinaryNodeCreation } from '../src/ast_build/incomplete_binary_node_creation';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ AstIncompleteBinaryNode }, () => {
   const makeToken = Token.forTesting.makeFromStringOnly;
-  const makeForOperator = IncompleteNodeCreation.make;
+  const makeForOperator = IncompleteBinaryNodeCreation.make;
 
   function makeAnyNode() {
     return AstIdentifierNode.make('');
@@ -24,7 +22,7 @@ describeNamed({ AstIncompleteBinaryNode }, () => {
   }
 
   it('defers creation of a function call', () => {
-    const createdType = makeForOperatorWithAnyNodes('(')?.type();
+    const createdType = makeForOperatorWithAnyNodes('call')?.type();
     expect(createdType).toEqual(AstNode.types.functionCall);
   });
 

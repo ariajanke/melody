@@ -2,8 +2,20 @@ import { Helpers } from '../helpers';
 
 export const CharacterClass = (() => {
 
-  const { freeze, safeOneCharJumpTable } = Helpers;
-  const { assign } = Object;
+  const { freeze } = Helpers;
+
+  function safeOneCharJumpTable
+    (charsPairs: [number | undefined, symbol][]):
+    symbol[]
+  {
+    const arr: symbol[] = [];
+    charsPairs.forEach((pair: [number | undefined, symbol]) => {
+      if (pair[0])
+        arr[pair[0]] = pair[1];
+    });
+
+    return arr;
+  }
 
   const classes = freeze({
     numeric   : Symbol(),
@@ -14,36 +26,35 @@ export const CharacterClass = (() => {
     literal   : Symbol()
   });
 
-  function arrayAsCharacterSetFor(arr: string[], characterClass: symbol) {
+  function arrayAsCharacterSetFor(arr: string[], characterClass: symbol): [number | undefined, symbol][] {
     return arr.
-      map((k: string) => ({ [k]: characterClass })).
-      reduce(assign);
+      map((k: string) => ([k.codePointAt(0), characterClass]));
   }
 
-  const kCharacterToCharacterClass: { [str: string]: symbol } =
-    assign(
-      {},
-      arrayAsCharacterSetFor(
+  const kCharacterToCharacterClass: [number | undefined, symbol][] =
+    [
+      ...arrayAsCharacterSetFor(
         [
           '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
         ],
         classes.numeric),
-      arrayAsCharacterSetFor(
+      ...arrayAsCharacterSetFor(
         [
           '=', ':', ',', '.', '(', ')', '{', '}'
         ],
         classes.operative),
-      arrayAsCharacterSetFor(
+      ...arrayAsCharacterSetFor(
         [
           ' ', '\t', '\r'
         ],
         classes.spacious),
-      arrayAsCharacterSetFor(
+      ...arrayAsCharacterSetFor(
         [
           '\''
         ],
         classes.literal),
-      arrayAsCharacterSetFor(['\n'], classes.newLine));
+      ...arrayAsCharacterSetFor(['\n'], classes.newLine)
+    ];
 
   const jumpToClass = safeOneCharJumpTable(kCharacterToCharacterClass);
 
@@ -56,23 +67,14 @@ export const CharacterClass = (() => {
       } else if (typeof character !== 'string') {        
         throw Error(`must provide string only`);
       }
-      // NOTE limitation in JavaScript
-      //      language makes no distinction between numeric/string keys
-      //      switch statements are not going to be a supported or even
-      //      thought about construct in my scripting language
-      // switch (character) {
-      // case '1': case '2': case '3': case '4': case '5':
-      // case '6': case '7': case '8': case '9': case '0':
-      //   return classes.numeric;
-      // default: break;
-      // }
 
-      // return kCharacterToCharacterClass[character] ?? classes.alphabetic;
       return jumpToClass[character.codePointAt(0) as number] ??
              classes.alphabetic;
     },
 
     classOfNonKeyword: (tokenContent: string): symbol =>
-      CharacterClass.classOfString(tokenContent[0])
+      CharacterClass.classOfString(tokenContent[0]),
   });
 })();
+
+Helpers.expose({ CharacterClass });

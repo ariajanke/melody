@@ -49,7 +49,7 @@ export const Tokenization = (() => {
     tokenTypeOfNonKeyword:
       (tokenContent: string, charClassClass = CharacterClass): symbol =>
     {
-      const charClass = charClassClass.classOfNonKeyword(tokenContent)
+      const charClass = charClassClass.classOfNonKeyword(tokenContent);
       const getter =
         getCharacterClassToTokenTypeMap()[charClass] ?? 
         ((): symbol => Token.types.identifier);

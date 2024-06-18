@@ -41,7 +41,6 @@ export const AstFunctionCallNode = (() => {
     });
 
     function visit(visitor: AstNodeVisitor): void {
-      visitor.visitTuple(arguments_);
       visitor.visitFunctionCall(inst);
     }
 

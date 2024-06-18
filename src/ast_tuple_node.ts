@@ -12,7 +12,7 @@ export interface AstTupleNode extends AstNode {
 }
 
 export const AstTupleNode = (() => {
-  const { freeze } = Helpers;
+  const { freeze, memoize } = Helpers;
   const tupleType = AstNode.types.tuple;
   
   function makeWithPair(lhs: AstNode, rhs: AstNode | undefined): AstTupleNode {
@@ -27,6 +27,9 @@ export const AstTupleNode = (() => {
   }
 
   const class_ = freeze({
+    makeEmpty: (): AstTupleNode =>
+      memoize(() => class_.make([]))(),
+
     makeBinary: (_0: string, lhs: AstNode, rhs: AstNode): AstTupleNode =>
       makeWithPair(lhs, rhs),
 

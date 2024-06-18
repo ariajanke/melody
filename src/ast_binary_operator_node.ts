@@ -4,7 +4,8 @@ import { TypeResolution } from './type_resolution';
 import { AstNodeVisitor } from './ast_node_visitor';
 
 export interface AstBinaryOperatorNode extends AstNode {
-  operation: () => string
+  operation: () => string,
+  visitChildren: (visitor: AstNodeVisitor) => void
 }
 
 export const AstBinaryOperatorNode = (() => {
@@ -37,6 +38,10 @@ export const AstBinaryOperatorNode = (() => {
   
           return TypeResolution.
             makeFunctionResolution(lhsType, op, rhsType.asSingluarParameter());
+        },
+        visitChildren: (visitor: AstNodeVisitor) => {
+          lhs.visit(visitor);
+          rhs.visit(visitor);
         }
       });
       return inst;

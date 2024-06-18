@@ -16,11 +16,15 @@ const { describeNamed } = TestHelpers;
 describeNamed({ AstBuild }, () => {
   const makeToken = Token.forTesting.makeFromStringOnly;
 
+  function makeBuildAst(tokens: () => Token[]) {
+    return () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens()));
+  }
+
   describe('builds a mutli-line ast', () => {
     let tokens: Token[] = [];
-    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = makeBuildAst(() => tokens);
 
-    fit('builds two function calls', () => {
+    it('builds two function calls', () => {
       const { points, verifyAllHit } = ReachPoint.makeCollection(1);
       tokens = [
         makeToken('puts'), makeToken('('), makeToken('a'), makeToken(')'),
@@ -43,7 +47,7 @@ describeNamed({ AstBuild }, () => {
     });
 
     it('two lines, operator first, call second', () => {
-      const { points, verifyAllHit } = ReachPoint.makeCollection(1);
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
       tokens = [
         makeToken('\n'),
         makeToken('a'), makeToken(','), makeToken('b'), makeToken('\n'),
@@ -54,7 +58,7 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
-          points()[0].hitsAtExactly(1);
+          hitsAtExactly(1);
           node.arguments.forEach((node: AstNode) => {
             node.visit(visitor);
           });
@@ -62,7 +66,7 @@ describeNamed({ AstBuild }, () => {
         finish();
 
       buildAst().visit(visitor);
-      expect(verifyAllHit()).toBeTruthy();
+      expect(verifyHit()).toBeTruthy();
     });
 
     it('builds ast with arthimetic', () => {
@@ -161,38 +165,166 @@ describeNamed({ AstBuild }, () => {
     });
   });
 
-  describe('single line ast', () => {
-    let tokens: Token[] = [];
+  function includeAllNIdentifiers(astRes: () => AstNode, identifiers: string[]) {
+    it(`includes all ${identifiers.length} identifiers, in correct order`, () => { 
+      const identifiers: string[] = [];
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitIdentifier((node: AstFringeNode) => {
+          identifiers.push(node.asString());
+        }).
+        finish();
+      const rootNode = astRes();
+      rootNode.visit(visitor);
+      // order dependant
+      expect(identifiers).toEqual(identifiers);
+    });
+
+  }
+
+  describe('a + b + c', () => {
+    const tokens: Token[] = [
+      makeToken('a'), makeToken('+'), makeToken('b'), makeToken('+'),
+      makeToken('c')
+    ];
     const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
-    it('builds a simple function call', () => {
-      // IncompleteNodeLeftTreePartHandler
-      // "head" is undefined
-      tokens = [
-        makeToken('\n'),
-        makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
-      ];
-      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+    includeAllNIdentifiers(buildAst, ['a', 'b', 'c']);
+
+    it('includes two operators', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitBinaryOperation((node: AstBinaryOperatorNode) => {
+          hitsAtExactly(2);
+          node.visitChildren(visitor);
+        }).
+        finish();
+      const rootNode = buildAst();
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
+
+  describe('let a := b', () => {
+    const buildAst = makeBuildAst(() => [
+      makeToken('let'), makeToken('a'), makeToken(':='), makeToken('1')
+    ]);
+
+    includeAllNIdentifiers(buildAst, ['a', 'b']);
+
+    it('includes one ":=" operators', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitBinaryOperation((node: AstBinaryOperatorNode) => {
+          hitsAtExactly(1);
+          expect(node.operation()).toEqual(':=');
+          node.visitChildren(visitor);
+        }).
+        finish();
+      const rootNode = buildAst();
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
+
+  describe('\\naskString()', () => {
+    const buildAst = makeBuildAst(() => [
+      makeToken('\n'),
+      makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
+    ]);
+
+    it('builds single function call node', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const rootNode = buildAst();
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
           hitsAtExactly(1);
           expect(node.name).toEqual('askString');
-          expect(node.arguments.count()).toEqual(0);
         }).
         finish();
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
     });
 
-    it('build a simple function call with two arguments', () => {
+    it('function call node takes no arguments', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const rootNode = buildAst();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          hitsAtExactly(1);
+          expect(node.arguments.count()).toEqual(0);
+        }).
+        finish();
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
+
+  describe('puts(a, b)\\n', () => {
+    const tokens = [
+      makeToken('puts'), makeToken('('), makeToken('a'), makeToken(','),
+      makeToken('b'),
+      makeToken(')'), makeToken('\n')
+    ];
+    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+
+    it('creates a function node', () => {
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      const rootNode = buildAst();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((_0: AstFunctionCallNode) => {
+          hitsAtExactly(1);
+        }).
+        finish();
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+
+    it('creates a function node with name "puts"', () => {
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      const rootNode = buildAst();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          hitsAtExactly(1);
+          expect(node.name).toEqual('puts');
+        }).
+        finish();
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+
+    it('passes two arguments to puts call', () => {
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      const rootNode = buildAst();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          hitsAtExactly(1);
+          expect(node.arguments.count()).toEqual(2);
+        }).
+        finish();
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
+
+  describe('single line ast', () => {
+    let tokens: Token[] = [];
+    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+
+    it('builds a simple function call', () => {
       tokens = [
-        makeToken('puts'), makeToken('('), makeToken('a'), makeToken(','),
-        makeToken('b'),
-        makeToken(')'), makeToken('\n')
+        makeToken('\n'),
+        makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
       ];
       const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      
       const rootNode = buildAst();
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
