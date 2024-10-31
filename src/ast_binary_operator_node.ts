@@ -42,7 +42,8 @@ export const AstBinaryOperatorNode = (() => {
         visitChildren: (visitor: AstNodeVisitor) => {
           lhs.visit(visitor);
           rhs.visit(visitor);
-        }
+        },
+        asString: () => `operator ${op}`
       });
       return inst;
     }

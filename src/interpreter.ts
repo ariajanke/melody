@@ -10,6 +10,7 @@ import { AstFringeNode } from './ast_fringe_node';
 import { PersistentStack } from './persistent_stack';
 import { AstNodeVisitor, AstNodeVisitorBuilder } from './ast_node_visitor';
 import { AstBinaryOperatorNode } from './ast_binary_operator_node';
+import { AstTupleNode } from './ast_tuple_node';
 
 const { freeze } = Object;
 
@@ -37,40 +38,29 @@ const LetVisitor = (() => {
 
 const injections = freeze({
   putsFunction: console.log,
-  // not a blocker, just need to use a stack
-  askStringFunction: (resume: (gotten: string) => void) => {
-    new Promise<string>((resolve: (value: string) => void) => {
-      const answer = (inp: string) => resolve(inp);
-      Helpers.expose({ answer });
-    }).then((gotten: string) => {
-      resume(gotten);
-    });
-  }
+  // just make it random
+  askStringFunction: (): string => 'bees'
 });
 
-export interface Interpreter extends AstNodeVisitor {
-
-};
-
-// Can't use async *script here
-// if you can't do it in Melody, you can't do it here
-// (until way up on the call stack)
-
-export const Interpreter = freeze({
-  make:
-    (context: ExecutionContext = ExecutionContext.make(),
-    { putsFunction, askStringFunction } = injections):
-    Interpreter =>
+const InterpreterNodeVisitor = freeze({
+  make: (context: ExecutionContext,
+         { putsFunction, askStringFunction } = injections):
+    AstNodeVisitor =>
   {
-    const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
     const mLetVisitor = LetVisitor.make(context);
+    const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
 
     function mValueOf(node: AstNode): ContextVariable {
       const evalNode = AstEvaluatableNode.tryDowncast(node);
       if (evalNode) {
         return evalNode.evaluate(context.getVariable);
       }
+      node.visit(inst);
       return mStack.pop();
+    }
+
+    function mPushValueOf(node: AstNode): void {
+      mStack.push(mValueOf(node));
     }
 
     const kBuiltinFunctions = freeze({
@@ -81,26 +71,31 @@ export const Interpreter = freeze({
         });
       },
       askString: (_0: AstFunctionCallNode): void => {
-        askStringFunction((gotten: string) => {
-          mStack.push().set(gotten);
-        });
-      }
+        mStack.push().set(askStringFunction());
+      },
+      pass: (node: AstFunctionCallNode): void =>
+        node.arguments.forEach(mPushValueOf)
     });
 
-    const inst = AstNodeVisitorBuilder.
-      makeDefaultingToContinue().
-      visitFunctionCall((node: AstFunctionCallNode) => {
+    const inst = freeze({
+      visitFunctionCall: (node: AstFunctionCallNode) => {
         const fn = kBuiltinFunctions[node.name];
         if (!fn) {
           throw Error(`unimplemented function "${node.name}"`);
         }
+        
         fn(node);
-      }).
-      visitLetDeclaration((_0: AstLetDeclarationNode, lhs: AstNode) => {
+      },
+      visitLetDeclaration: (node: AstLetDeclarationNode, lhs: AstNode) => {
         lhs.visit(mLetVisitor);
+        
         lhs.visit(inst);
-      }).
-      visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+      },
+      visitTuple: (node: AstTupleNode) => {
+        node.forEach((node: AstNode) => node.visit(inst));
+      },
+      visitIdentifier: (_0: AstFringeNode) => {},
+      visitBinaryOperation: (node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
         // resolving value... far touch much logic lives here
         // resolve lhs's type
         // select operator function
@@ -110,6 +105,7 @@ export const Interpreter = freeze({
         // this ends up having to be executed DFS style
         // there will be places that *have to* be executed BFS style
         // context.
+        
         lhs.visit(inst);
         rhs.visit(inst);
         const op = node.operation();
@@ -133,10 +129,29 @@ export const Interpreter = freeze({
         const lhsVal = mValueOf(lhs);
         const rhsVal = mValueOf(rhs);
         builtIn(mStack, lhsVal, rhsVal);
-      }).
-      finish();
-
+      }
+    });
     return inst;
+  }
+});
+
+export interface Interpreter {
+  interpret: (node: AstNode) => void
+};
+
+export const Interpreter = freeze({
+  make:
+    (context: ExecutionContext = ExecutionContext.make(),
+    injections_ = injections):
+    Interpreter =>
+  {
+    const mVisitor = InterpreterNodeVisitor.make(context, injections_);
+    
+    function interpret(node: AstNode) {
+      node.visit(mVisitor);
+    }
+
+    return freeze({ interpret });
   },
 
   buildFor: (inp: string): AstNode => {
@@ -155,7 +170,7 @@ export const Interpreter = freeze({
       });
       return;
     }
-    root.visit(Interpreter.make());
+    Interpreter.make().interpret(root);
   }
 });
 

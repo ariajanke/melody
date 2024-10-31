@@ -10,21 +10,21 @@ describeNamed({ Interpreter }, () => {
   function makePutsFunction() {
     const printedStrings: string[] = [];
     const putsFunction = (str: string) => { printedStrings.push(str); };
-    const askStringFunction = (_0: (gotten: string) => void) => {};
+    const askStringFunction = () : string => 'baats';
     const injections = { putsFunction, askStringFunction };
 
     return { injections, printedStrings };
   }
   function makeWithInjections(putsFunction: PutsFunction, context?: ExecutionContext) {
-    return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction, askStringFunction: (_0: (gotten: string) => void) => {} });
+    return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction, askStringFunction: (): string => 'bees2' });
   }
   describe('integration specs', () => {
     it('compiles and runs a "hello world!" program', () => {
-      const programRootNode = Interpreter.buildFor("puts('hello', ' world!')");
+      const programRootNode = Interpreter.buildFor("puts('hello', 'there', ' world!')");
       const { printedStrings, injections } = makePutsFunction();
       const interpreter = makeWithInjections(injections.putsFunction);
-      programRootNode.visit(interpreter);
-      expect(printedStrings).toEqual(['hello', ' world!']);
+      interpreter.interpret(programRootNode);
+      expect(printedStrings).toEqual(['hello', 'there' ,' world!']);
     });
 
     it('compiles and runs a "hello world!" program with a variable', () => {
@@ -33,7 +33,7 @@ describeNamed({ Interpreter }, () => {
       const programRootNode = Interpreter.buildFor("puts(foo)");
       const { printedStrings, injections } = makePutsFunction();
       const interpreter = Interpreter.make(context, injections);
-      programRootNode.visit(interpreter);
+      interpreter.interpret(programRootNode);
       expect(printedStrings).toEqual(['hello world!']);
     });
 
@@ -42,7 +42,7 @@ describeNamed({ Interpreter }, () => {
       buildFor("puts('hello')\nputs('world!')");
       const { printedStrings, injections } = makePutsFunction();
       const interpreter = makeWithInjections(injections.putsFunction);
-      programRootNode.visit(interpreter);
+      interpreter.interpret(programRootNode);
       expect(printedStrings).toEqual(['hello', 'world!']);
     });
 
@@ -55,7 +55,7 @@ describeNamed({ Interpreter }, () => {
       const context = ExecutionContext.make();
       context.declareVariable('foo').set('wow');
       const intr = makeWithInjections(injections.putsFunction, context);
-      programRootNode.visit(intr);
+      intr.interpret(programRootNode);
       expect(printedStrings).toEqual(['hello world!']);
     });
 
@@ -66,7 +66,7 @@ describeNamed({ Interpreter }, () => {
       `);
       const { printedStrings, injections } = makePutsFunction();
       const intr = makeWithInjections(injections.putsFunction);
-      programRootNode.visit(intr);
+      intr.interpret(programRootNode);
       expect(printedStrings).toEqual(['hello world!']);
     });
 
@@ -78,7 +78,7 @@ describeNamed({ Interpreter }, () => {
       `);
       const { printedStrings, injections } = makePutsFunction();
       const intr = makeWithInjections(injections.putsFunction);
-      programRootNode.visit(intr);
+      intr.interpret(programRootNode);
       expect(printedStrings).toEqual(['4']);
     });
   });

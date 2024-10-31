@@ -1,19 +1,21 @@
 import { Helpers, StandardError, StandardErrorFn } from '../helpers';
 import { Token } from '../token';
 import { TokenRange } from '../token_range';
-import { StartUnaryOperatorBuild } from './start_unary_operator_build';
+import { ContinuingAfterOperatorBuild } from './continuing_after_operator_build';
 import { StartFringeBuild } from './start_fringe_build';
 import { StartGroupBuild } from './start_group_build';
 import { type AstNode } from '../ast_node';
-import { type IncompleteNode } from '../ast_incomplete_binary_node';
 import { AstTupleNode } from '../ast_tuple_node';
 
 const { freeze } = Helpers;
 
 export interface BuildSink {
   pushPart: (buildPart: TreePartBuild) => BuildSink,
-  pushComplete: (node: AstNode) => BuildSink,
-  pushIncomplete: (node: IncompleteNode) => BuildSink
+  pushGrouping: () => BuildSink,
+  popGrouping: (fn: (node: AstNode) => AstNode | undefined) => BuildSink,
+  pushToken: (token: Token, operandRelation: string) => BuildSink,
+  pushNode: (node: AstNode) => BuildSink,
+  pushNewLine: () => BuildSink
 }
 
 export interface BuildStateAddition {
@@ -65,13 +67,15 @@ export const TreePartBuild = (() => {
       },
       [kTokenTypes.operator      ]: () => {
         const start = startToken();
-        const { build, error } = StartUnaryOperatorBuild.
-          make(mTokenRange.step(), start);
+        const part = ContinuingAfterOperatorBuild.
+          make(mTokenRange.step(), start, 'unary');
+        const { build, error } = part;
         return build() ?? setErrorFn(error);
       },
       [kTokenTypes.newLine       ]: () => {
         mTokenRange.skipNewLine();
-        return inst.build();
+        return BuildStateAddition.make((sink: BuildSink) =>
+          { sink.pushNewLine().pushPart(inst); });
       }
     });
 
@@ -79,11 +83,11 @@ export const TreePartBuild = (() => {
       build: (): BuildStateAddition | undefined => {
         if (mTokenRange.isEmpty()) {
           return BuildStateAddition.make((sink: BuildSink) => {
-            sink.pushComplete(AstTupleNode.makeEmpty());
+            sink.pushNode(AstTupleNode.makeEmpty());
           });
         }
-
-        return kStartingTokenTypeToBuildAddition[startToken().type()]();
+        const type = startToken().type();
+        return kStartingTokenTypeToBuildAddition[type]();
       },
       range: mTokenRange.range,
       error

@@ -1,5 +1,4 @@
 import { AstNode } from './ast_node';
-import { AstTupleNode } from './ast_tuple_node';
 import { TreePartBuild } from './ast_build/tree_part_build';
 import { TokenRange } from './token_range';
 import { Helpers } from './helpers';
@@ -11,12 +10,12 @@ export const AstBuild = (() => {
   const class_ = freeze({
     make: (mTokens: TokenRange) => {
       const mErrors: Readonly<{ message: string }>[] = [];
-      const mBuildState = BuildState.make();
+      const mBuildState = BuildState.make(mErrors);
 
       const inst = freeze({
-        build: memoize((): AstTupleNode | undefined => {
+        build: memoize((): AstNode | undefined => {
           mBuildState.pushPart( TreePartBuild.make(mTokens) );
-
+          mBuildState.pushGrouping();
           while (mBuildState.hasRemainingParts()) {
             const part = mBuildState.popPart();
             const addition = part.build();
@@ -26,8 +25,7 @@ export const AstBuild = (() => {
             }
             addition.pushTo(mBuildState);
           }
-
-          return mBuildState.finish();
+          return mBuildState.complete();
         }),
         errors: () => mErrors
       });
@@ -36,9 +34,10 @@ export const AstBuild = (() => {
     },
 
     buildFor: (tokens: TokenRange): AstNode => {
-      const res = class_.make(tokens).build();
+      const inst = class_.make(tokens);
+      const res = inst.build();
       if (!res) {
-        throw Error('Cannot use buildFor for errorful tokens');
+        throw Error(`Failed to build AST:\n${inst.errors()[0]?.message}`);
       }
       return res;
     }

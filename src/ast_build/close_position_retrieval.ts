@@ -1,42 +1,42 @@
 
-import { Helpers } from '../helpers';
+import { Helpers, StandardErrorFn } from '../helpers';
 import { TokenRange } from '../token_range';
 import { Token } from '../token';
 import { StandardError } from '../helpers';
 
 const { freeze, memoize } = Helpers;
 
-const kCloseMapping = freeze({
-  ['(']: ')'
-});
+export interface ClosePositionRetrieval {
+  closePosition: () => number | undefined,
+  error: StandardErrorFn
+}
 
 export const ClosePositionRetrieval = (() => {
 
   return freeze({
-    make: (mTokenRange: TokenRange, mGroupOpen: Token) => {
+    make: (mTokenRange: TokenRange, mGroupOpen: Token): ClosePositionRetrieval => {
       const { error, setErrorMessage } = StandardError.make();
       const { tokenAt, start, end } = mTokenRange;
 
-      const closeMapping = () => {
-        const { content } = mGroupOpen;
-        return kCloseMapping[content()] ?? (() => {
-          throw Error(`Unhandled opening "${content()}"`);
-        });
+      const fromUntil = (idx: number, end: number): number | undefined => {
+        let openings = 1;
+        for (; idx < end; ++idx) {
+          const tok = tokenAt(idx).content();
+          if (tok === '(') {
+            ++openings;
+          } else if (tok === ')') {
+            --openings;
+            if (openings < 1)
+              { return idx; }
+          }
+        }
       };
 
       return freeze({
-        closePosition: memoize(() => {
-          const closeStr = closeMapping(); 
-          const count: number = end();
-          for (let i = start(); i < count; ++i) {
-            if (tokenAt(i).content() === closeStr) {
-              return i;
-            }
-          }
-
-          return setErrorMessage(
-            `Cannot find close position for ${mGroupOpen.content()}`);
-        }),
+        closePosition: memoize(() =>
+          fromUntil(start(), end()) ??
+            setErrorMessage(
+              `Cannot find close position for ${mGroupOpen.content()}`)),
         error
       });
     }

@@ -8,7 +8,6 @@ import { AstStringLiteralNode } from './ast_string_literal_node';
 const { freeze } = Helpers;
 
 export interface AstFringeNode extends AstEvaluatableNode {
-  asString: () => string,
   comesBeforeOperator: (operator: Token) => boolean
 }
 

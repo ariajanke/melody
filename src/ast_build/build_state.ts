@@ -1,60 +1,89 @@
-import { type BuildSink } from './tree_part_build';
 import { type TreePartBuild } from './tree_part_build';
 import { AstTupleNode } from '../ast_tuple_node';
-import { type AstNode } from '../ast_node';
-import { type IncompleteNode } from '../ast_incomplete_binary_node';
+import { AstNode } from '../ast_node';
 import { Helpers } from '../helpers';
-import { BuildStateRangeSafety } from './build_state_range_safety';
+import { OperativeStatementBuilder } from '../operative_statement_builder';
+import { Token } from '../token';
+import { OperativeStatementAstCreation } from './operative_statement_ast_creation';
 
 const { freeze } = Helpers;
 
-export interface BuildState extends BuildSink {
-  hasRemainingParts: () => boolean,
-  popPart: () => TreePartBuild,
-  finish: () => AstTupleNode
-}
-
 export const BuildState = freeze({
-  make: (): BuildState => {
-    const mCompleteNodes: AstNode[] = [];
-    const mIncompleteNodes: IncompleteNode[] = [];
+  make:
+    (mErrors: Readonly<{ message: string }>[] = []) => {
     const mBuildParts: TreePartBuild[] = [];
-    const { verifyRange, noteNodeAddition, resetSafetyCounts } =
-      BuildStateRangeSafety.make();
 
+    const mLineNodes: AstNode[] = [];
+    const mStatementBuilders = [OperativeStatementBuilder.make()];
+    const lastStatementBuilder = () =>
+      mStatementBuilders[mStatementBuilders.length - 1] ??
+      (() => { throw new Error('All group frames already popped'); }) ();
     const inst = freeze({
+      hasRemainingParts: () => mBuildParts.length > 0,
       pushPart: (buildPart: TreePartBuild) => {
         mBuildParts.push(buildPart);
-        verifyRange(buildPart.range());
         return inst;
       },
-      pushComplete: (node: AstNode) => {
-        while (mIncompleteNodes.length > 0) {
-          const last = mIncompleteNodes[mIncompleteNodes.length - 1];
-          node = last.finish(node);
-          mIncompleteNodes.length--;
+      popPart: () =>
+        mBuildParts.pop() ?? (() => { throw new Error('no parts remain'); })(),
+      pushToken: (token: Token, operandRelation: string) => {
+        lastStatementBuilder().pushToken(token, operandRelation);
+        return inst;
+      },
+      pushNode: (node: AstNode) => {
+        lastStatementBuilder().pushNode(node);
+        return inst;
+      },
+      pushGrouping: () => {
+        mStatementBuilders.push(OperativeStatementBuilder.make());
+        return inst;
+      },
+      popGrouping: (fn: (node: AstNode) => AstNode | undefined) => {
+        const lastBuilder = lastStatementBuilder();
+        mStatementBuilders.pop();
+        const visitor = OperativeStatementAstCreation.make();
+        const { rootVisitable, isEmpty, error } = lastBuilder.completion();
+        const osvNode = rootVisitable();
+        if (osvNode) {
+          osvNode.visit(visitor);
+          const node = fn( visitor.finish() );
+          if (node) {
+            inst.pushNode(node);
+          }
+        } else if (!isEmpty()) {
+          mErrors.push(error());
         }
-        mCompleteNodes.push(node);
-        noteNodeAddition();
         return inst;
       },
-      pushIncomplete: (node: IncompleteNode) => {
-        mIncompleteNodes.push(node);
-        return inst;
-      },
-      hasRemainingParts: () => mBuildParts.length > 0,
-      popPart: () => {
-        const last = mBuildParts[mBuildParts.length - 1];
-        if (!last) { 
-          throw Error(`Cannot pop build state, no parts remain`);
+      pushNewLine: () => {
+        const lastBuilder = lastStatementBuilder();
+        const { rootVisitable, isEmpty, error } = lastBuilder.completion();
+        const osv = rootVisitable();
+        mStatementBuilders.pop();
+        if (osv) {
+          const visitor = OperativeStatementAstCreation.make();
+          osv.visit(visitor);
+          mLineNodes.push(visitor.finish());
+        } else if (!isEmpty()) {
+          mErrors.push(error());
         }
-        resetSafetyCounts();
-        --mBuildParts.length;
-        return last;
+        mStatementBuilders.push(OperativeStatementBuilder.make());
+        return inst;
       },
-      finish: (): AstTupleNode =>
-        AstTupleNode.make(mCompleteNodes)
+      complete: () => {
+        const { rootVisitable, isEmpty, error } = lastStatementBuilder().completion();
+        const osv = rootVisitable();
+        if (osv) {
+          const visitor = OperativeStatementAstCreation.make();
+          osv.visit(visitor);
+          mLineNodes.push(visitor.finish());
+        } else if (!isEmpty()) {
+          mErrors.push(error());
+        }
+        return AstTupleNode.make('\n', mLineNodes);
+      }
     });
     return inst;
   }
 });
+export type BuildState = ReturnType<typeof BuildState.make>;

@@ -20,7 +20,7 @@ export const Token = (() => {
     integerLiteral : Symbol(),
   });
 
-  const kBlankToken: Token = (() => {
+  function makeSpecialToken(content_: string): Token {
     function unimplemented<Type>(desc: string): () => Type {
       return (): Type => {
         throw Error(`Cannot call ${desc} unimplemented`);
@@ -31,11 +31,14 @@ export const Token = (() => {
       type   : unimplemented<symbol>('type'),
       // TODO: try to get rid of this hack, blank token should
       // never be used
-      content: () => '',
+      content: () => content_,
       start  : unimplemented<number>('start'),
       end    : unimplemented<number>('end'  )
     });
-  })();
+  };
+
+  const kBlankToken: Token = makeSpecialToken('');
+  const kCallToken : Token = makeSpecialToken('call');
 
   const tokenTypeOf = (() => {
     const kControlSeqs = freeze({
@@ -77,6 +80,7 @@ export const Token = (() => {
       construct(mInput.substring(mStart, mEnd), mStart, mEnd),
     types,
     kBlankToken,
+    kCallToken,
     forTesting: { makeFromStringOnly }
   });
 })();

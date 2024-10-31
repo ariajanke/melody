@@ -318,24 +318,160 @@ describeNamed({ AstBuild }, () => {
     let tokens: Token[] = [];
     const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
-    it('builds a simple function call', () => {
-      tokens = [
-        makeToken('\n'),
-        makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
-      ];
+    const exactlyOneFunctionCallNamed = (fnname: string) => {
       const { verifyHit, hitsAtExactly } = ReachPoint.make();
-      
       const rootNode = buildAst();
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
           hitsAtExactly(1);
-          expect(node.name).toEqual('askString');
+          expect(node.name).toEqual(fnname);
           expect(node.arguments.count()).toEqual(0);
         }).
         finish();
       rootNode.visit(visitor);
+      return verifyHit();
+    };
+
+    it('builds a simple function call', () => {
+      tokens = [
+        makeToken('\n'),
+        makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
+      ];
+      expect(exactlyOneFunctionCallNamed('askString')).toBeTruthy();
+    });
+
+    // trys to "let a := ()"
+    it('"let a := askString()"', () => {
+      tokens = [
+        makeToken('let'), makeToken('a'), makeToken(':='),
+        makeToken('askString'), makeToken('('), makeToken(')')
+      ];
+
+      expect(exactlyOneFunctionCallNamed('askString')).toBeTruthy();
+    });
+
+    it('"puts(askString())"', () => {
+      tokens = [
+        makeToken('puts'), makeToken('('),
+        makeToken('askString'), makeToken('('), makeToken(')'),
+        makeToken(')')
+      ];
+
+      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+      const rootNode = buildAst();
+      const fnnames: string[] = [];
+      const kExpectArgumentCount = Object.freeze({
+        askString: 0,
+        puts: 1
+      });
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          hitsAtExactly(2);
+          fnnames.push(node.name);
+          expect(node.arguments.count()).
+            toEqual(kExpectArgumentCount[node.name]);
+          node.arguments.forEach((node: AstNode) => node.visit(visitor));
+        }).
+        finish();
+      rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
+      expect(fnnames.sort()).toEqual(['askString', 'puts']);
+    });
+
+    it('puts(2 + 3, 5 + 9)', () => {
+      tokens = [
+        makeToken('puts'), makeToken('('),
+        makeToken('2'), makeToken('+'), makeToken('3'), makeToken(','),
+        makeToken('5'), makeToken('+'), makeToken('9'),
+        makeToken(')')
+      ];
+
+      const { verifyAllHit, points } = ReachPoint.makeCollection(3);
+      const [pt1, pt2, pt3] = points();
+      const { binaryOperator } = AstNode.types;
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitBinaryOperation((node: AstBinaryOperatorNode) => {
+          pt2.hitsAtExactly(2);
+          expect(node.operation()).toEqual('+');
+        }).
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          expect(node.name).toEqual('puts');
+          pt3.hitsAtExactly(1);
+          node.arguments.forEach((node: AstNode) => {
+            expect(node.type()).toEqual(binaryOperator);
+            pt1.hitsAtExactly(2);
+            node.visit(visitor);
+          });
+        }).
+        finish();
+      buildAst().visit(visitor);
+      expect(verifyAllHit()).toBeTruthy();
+    });
+
+    it('puts(askString(), askString())', () => {
+      // more sees puts(askString()), askString()
+      // 0.) tpb -> frg -> st frg
+      // 1.) cont af frg -> grp
+      // 2.) st grp
+      // 3.) tpb -> frg -> st frg
+      // 4.) con af frg -> grp
+      // 5.) st grp
+      // 6.) tpb
+      // 7.) con af frg
+      // 8.) con af op
+      // 9.) con af frg
+      // 10.) st grp
+      // 11.) tpb
+      // FINISH
+      tokens = [
+        makeToken('puts'), makeToken('('),
+        makeToken('askString'), makeToken('('), makeToken(')'), makeToken(','),
+        makeToken('askString'), makeToken('('), makeToken(')'),
+        makeToken(')')
+      ];
+      const { verifyAllHit, points } = ReachPoint.makeCollection(2);
+      const [pt1, pt2] = points();
+
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          expect(node.name).toEqual('puts');
+          pt1.hitsAtExactly(1);
+          node.arguments.forEach((node: AstNode) => {
+            const { functionCall } = AstNode.types;
+            expect(node.type()).toEqual(functionCall);
+            if (node.type() === functionCall) {
+              pt2.hitsAtExactly(2);
+              expect((node as AstFunctionCallNode).name).toEqual('askString');
+            }
+          });
+        }).
+        finish();
+      buildAst().visit(visitor);
+      expect(verifyAllHit()).toBeTruthy();
+    });
+
+    it(`puts(('hello'))`, () => {
+      tokens = [
+        makeToken('puts'), makeToken('('), makeToken('('),
+        makeToken(`'hello'`), makeToken(')'), makeToken(')')
+      ];
+
+      const pt1 = ReachPoint.make();
+      const visitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitFunctionCall((node: AstFunctionCallNode) => {
+          expect(node.name).toEqual('puts');
+          pt1.hitsAtExactly(1);
+          node.arguments.forEach((node: AstNode) => {
+          });
+        }).
+        finish();
+      buildAst().visit(visitor);
+      expect(pt1.verifyHit()).toBeTruthy();
     });
   });
 });

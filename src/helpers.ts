@@ -17,7 +17,8 @@ export type StandardErrorFn = (() => StandardErrorMessage);
 export interface StandardError {
   setErrorFn: (fn: StandardErrorFn) => undefined,
   setErrorMessage: (message: string) => undefined,
-  error: () => StandardErrorMessage
+  error: () => StandardErrorMessage,
+  sharedErrorInstance: () => StandardError
 };
 
 export const StandardError = (() => {
@@ -26,6 +27,7 @@ export const StandardError = (() => {
   function make(): StandardError {
     let mErrorFn: StandardErrorFn = (): StandardErrorMessage =>
       { throw Error('No error set, this method should not be called'); };
+    let mInst: StandardError | undefined = undefined;
 
     function setErrorFn(fn: StandardErrorFn): undefined
       { mErrorFn = fn; }
@@ -36,7 +38,10 @@ export const StandardError = (() => {
     function error(): StandardErrorMessage
       { return mErrorFn(); }
 
-    return freeze({ setErrorFn, setErrorMessage, error });
+    const sharedErrorInstance = (): StandardError =>
+      mInst ??= freeze({ setErrorFn, setErrorMessage, error, sharedErrorInstance });
+
+    return sharedErrorInstance();
   }
 
   return freeze({ make });

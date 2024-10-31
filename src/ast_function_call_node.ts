@@ -17,7 +17,7 @@ export const AstFunctionCallNode = (() => {
       if (rhs.type() === nodeTypes.tuple) {
         return rhs as AstTupleNode;
       }
-      return AstTupleNode.makeUnary(rhs);
+      return AstTupleNode.make(',', [rhs]);
     })();
 
     const name: string = (() => {
@@ -32,6 +32,7 @@ export const AstFunctionCallNode = (() => {
 
     const inst: AstFunctionCallNode = Object.freeze({
       name,
+      asString: () => `${name}(...)`,
       arguments: arguments_,
       visit,
       type: () => nodeTypes.functionCall,

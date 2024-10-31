@@ -20,10 +20,10 @@ export const PersistentStack = (() => {
       throw Error('Stack is empty');
     }
 
-    function push(): Type {
+    function push(member?: Type): Type {
       const { length } = mMembers;
       if (mPosition + 1 === length) {
-        mMembers.push(mDefaultMake());
+        mMembers.push(member ?? mDefaultMake());
       }
       ++mPosition;
       return mMembers[mPosition];
