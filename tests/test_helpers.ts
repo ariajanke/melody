@@ -32,7 +32,7 @@ export const ReachPoint = (() => {
 
   function construct(mSet: number[], mIdx: number): ReachPoint {
     let mRequiredHits = 1;
-    let mName = `Point ${mIdx}`;
+    let mName = `Point ${mIdx + 1}`;
 
     return Object.freeze({
       hitsAtExactly: (times: number, name?: string) => {

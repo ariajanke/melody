@@ -14,7 +14,8 @@ export interface TypeLookUpTable {
 export interface AstNode {
   visit: (visitor: AstNodeVisitor) => void,
   type: () => symbol,
-  executionType: (types: TypeLookUpTable) => TypeResolution
+  executionType: (types: TypeLookUpTable) => TypeResolution,
+  asString: () => string
 }
 
 export const AstNode = (() => {

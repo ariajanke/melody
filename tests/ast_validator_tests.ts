@@ -12,7 +12,7 @@ const { describeNamed } = TestHelpers;
 
 describeNamed({ AstValidator }, () => {
   function validateAsTuple(node: AstNode, validator: AstValidator) {
-    const topTupleNode = AstTupleNode.make([node]);
+    const topTupleNode = AstTupleNode.make(',', [node]);
     return validator.validate(topTupleNode);
   }
 
