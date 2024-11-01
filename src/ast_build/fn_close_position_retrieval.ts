@@ -8,7 +8,7 @@ import { TokenRange } from '../token_range';
 
 const { freeze, memoize } = Helpers;
 
-const FnClosePositionRetrieval = freeze({
+export const FnClosePositionRetrieval = freeze({
   make: (mTokenRange: TokenRange, _mGroupOpen: Token) => {
     const { error } = StandardError.make();
     const { start, end } = mTokenRange;
@@ -28,8 +28,9 @@ const FnClosePositionRetrieval = freeze({
     return freeze({
       closePosition() {
         for (let i = start(); i < end(); ++i) {
-          
+          ;
         }
+        return end();
       },
       error
     })
