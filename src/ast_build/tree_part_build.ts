@@ -76,6 +76,10 @@ export const TreePartBuild = (() => {
         mTokenRange.skipNewLine();
         return BuildStateAddition.make((sink: BuildSink) =>
           { sink.pushNewLine().pushPart(inst); });
+      },
+      [kTokenTypes.functionDefinition]: (): BuildStateAddition => {
+        throw new Error('not supported yet');
+        // return BuildStateAddition.make((sink: BuildSink) => {});
       }
     });
 

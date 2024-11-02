@@ -19,7 +19,9 @@ export const ObjectType = (() => {
     string : Symbol()
   });
 
-  const kUidBuiltinStrategy = freeze({
+  const kUidBuiltinStrategy:
+    { [name: string]: symbol }
+    = freeze({
     Integer: kBuiltInTypeUids.integer,
     String : kBuiltInTypeUids.string ,
   });

@@ -26,12 +26,45 @@ const CloseGroupPart = freeze({
     })
 });
 
+const passBuildSink = (sink: BuildSink) => sink;
+
+export const GroupBuildSplit = freeze({
+  make:
+    (mClosePosition: number,
+     mTokenRange: TokenRange,
+     mOnNewGroupingFn: (sink: BuildSink) => BuildSink = passBuildSink) =>
+  {
+    const { start, end, clone } = mTokenRange;
+
+    const leftPartRange = () => clone(start(), mClosePosition);
+
+    const rightPartStart = () =>
+      Math.min(mClosePosition + 1, end());
+
+    const rightPartRange = () => clone(rightPartStart(), end());
+
+    return freeze({
+      build: memoize((): BuildStateAddition => {
+        // NOTE empty creates an empty tuple node
+        const leftPart  = TreePartBuild .make(leftPartRange ());
+        const rightPart = CloseGroupPart.make(rightPartRange());
+        return BuildStateAddition.make((sink: BuildSink) => {
+          // NOTE order dependant
+          mOnNewGroupingFn(sink.pushGrouping()).
+            pushPart(rightPart).
+            pushPart(leftPart);
+        });
+      })
+    });
+  }
+});
+
 export const StartGroupBuild = freeze({
-  passBuildSink: (sink: BuildSink) => sink,
+  passBuildSink,
   // assumption: token range starts one after the group open token
   make: (mTokenRange: TokenRange,
          mGroupOpen: Token,
-         mOnNewGroupingFn: (sink: BuildSink) => BuildSink = StartGroupBuild.passBuildSink):
+         mOnNewGroupingFn: (sink: BuildSink) => BuildSink = passBuildSink):
          TreePartBuild =>
   {
     if (mGroupOpen.type() !== Token.types.grouping) {
@@ -41,32 +74,34 @@ export const StartGroupBuild = freeze({
     const {
       error, closePosition
     } = ClosePositionRetrieval.make(mTokenRange.clone(), mGroupOpen);
-    const { start, end } = mTokenRange;
+    // const { start, end } = mTokenRange;
 
-    const leftPartRange = () =>
-      mTokenRange.clone(start(), closePosition() as number);
+    // const leftPartRange = () =>
+    //   mTokenRange.clone(start(), closePosition() as number);
 
-    const rightPartStart = () =>
-      Math.min(closePosition() as number + 1, end());
+    // const rightPartStart = () =>
+    //   Math.min(closePosition() as number + 1, end());
 
-    const rightPartRange = memoize(() =>
-      mTokenRange.clone(rightPartStart(), end()));
-
-    const makePart = TreePartBuild.make;
+    // const rightPartRange = memoize(() =>
+    //   mTokenRange.clone(rightPartStart(), end()));
 
     return freeze({
       build: (): BuildStateAddition | undefined => {
-        if (!closePosition()) return;
+        return (closePosition() &&
+        GroupBuildSplit.
+          make(closePosition() as number, mTokenRange, mOnNewGroupingFn).
+          build()) as BuildStateAddition | undefined;
+        // if (!closePosition()) return;
 
-        // NOTE empty creates an empty tuple node
-        const leftPart  = makePart(leftPartRange());
-        const rightPart = CloseGroupPart.make(rightPartRange());
-        return BuildStateAddition.make((sink: BuildSink) => {
-          // NOTE order dependant
-          mOnNewGroupingFn(sink.pushGrouping()).
-            pushPart(rightPart).
-            pushPart(leftPart);
-        });
+        // // NOTE empty creates an empty tuple node
+        // const leftPart  = TreePartBuild.make(leftPartRange());
+        // const rightPart = CloseGroupPart.make(rightPartRange());
+        // return BuildStateAddition.make((sink: BuildSink) => {
+        //   // NOTE order dependant
+        //   mOnNewGroupingFn(sink.pushGrouping()).
+        //     pushPart(rightPart).
+        //     pushPart(leftPart);
+        // });
       },
       error,
       range: mTokenRange.range

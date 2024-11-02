@@ -15,18 +15,33 @@ describeNamed({ FnClosePositionRetrieval }, () => {
     return FnClosePositionRetrieval.make(range.step(), open);
   };
   describe('"fn" in isolation', () => {
-    make('fn');
+    const { closePosition } = make('fn');
+
+    it('is the correct position', () =>
+      expect(closePosition()).toEqual(1));
   });
   describe('fn x\ny', () => {
-    make('fn', 'x', '\n', 'y');
+    const { closePosition } = make('fn', 'x', '\n', 'y');
+
+    it('is the correct position', () =>
+      expect(closePosition()).toEqual(2));
   });
   describe('fn fn x\ny', () => {
-    make('fn', 'fn', 'x', '\n', 'y');
+    const { closePosition } = make('fn', 'fn', 'x', '\n', 'y');
+
+    it('is the correct position', () =>
+      expect(closePosition()).toEqual(3));
   });
   describe('fn\n  x\n  y', () => {
-    make('fn', '\n', 'x', '\n', 'y');
+    const { closePosition } = make('fn', '\n', 'x', '\n', 'y');
+
+    it('is the correct position', () =>
+      expect(closePosition()).toEqual(5));
   });
   describe('fn\n  x\n~\ny', () => {
-    make('fn', '\n', 'x', '\n', '~', '\n', 'y');
+    const { closePosition } = make('fn', '\n', 'x', '\n', '~', '\n', 'y');
+
+    it('is the correct position', () =>
+      expect(closePosition()).toEqual(4));
   });
 });

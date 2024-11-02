@@ -1,4 +1,5 @@
-const kDebugMode: boolean = globalThis['debug_mode'] ?? false;
+const globalThis_ = (globalThis as unknown as { [name: string]: boolean | object } );
+const kDebugMode: boolean = globalThis_['debug_mode'] as boolean ?? false;
 
 export const Helpers = Object.freeze({
   expose,
@@ -110,9 +111,9 @@ function depthOneCopy<Type>
   return copy;
 }
 
-function expose(braceEnclosedVar: object): void {
+function expose(braceEnclosedVar: { [name: string]: object }): void {
   const setToWindow = (k: string) => {
-    globalThis[k] = braceEnclosedVar[k];
+    globalThis_[k] = braceEnclosedVar[k];
   };
   return Object.keys(braceEnclosedVar).forEach(setToWindow);
 }

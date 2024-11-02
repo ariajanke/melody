@@ -63,19 +63,21 @@ const InterpreterNodeVisitor = freeze({
       mStack.push(mValueOf(node));
     }
 
-    const kBuiltinFunctions = freeze({
-      puts: (node: AstFunctionCallNode): void => {
-        node.arguments.forEach((node: AstNode) => {
-          const cv = mValueOf(node);
-          putsFunction(cv.asString());
-        });
-      },
-      askString: (_0: AstFunctionCallNode): void => {
-        mStack.push().set(askStringFunction());
-      },
-      pass: (node: AstFunctionCallNode): void =>
-        node.arguments.forEach(mPushValueOf)
-    });
+    const kBuiltinFunctions:
+      { [name: string]: (node: AstFunctionCallNode) => void } =
+      freeze({
+        puts: (node: AstFunctionCallNode): void => {
+          node.arguments.forEach((node: AstNode) => {
+            const cv = mValueOf(node);
+            putsFunction(cv.asString());
+          });
+        },
+        askString: (_0: AstFunctionCallNode): void => {
+          mStack.push().set(askStringFunction());
+        },
+        pass: (node: AstFunctionCallNode): void =>
+          node.arguments.forEach(mPushValueOf)
+      });
 
     const inst = freeze({
       visitFunctionCall: (node: AstFunctionCallNode) => {

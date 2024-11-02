@@ -20,7 +20,7 @@ export const TokenRange = (() => {
     return make(mTokens, 0, mTokens.length);
   }
 
-  function forEachIn(tokenRange, fn: (token: string) => void) {
+  function forEachIn(tokenRange: TokenRange, fn: (token: string) => void) {
     const { start, end } = tokenRange;
     const rangeEnd = end();
     for (let i = start(); i < rangeEnd; ++i) {
