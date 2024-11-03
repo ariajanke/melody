@@ -17,7 +17,7 @@
     registerSymbolStrings: getSymbolThings().registerSymbolStrings
   });
   var StandardError = (() => {
-    const { freeze: freeze35 } = Helpers;
+    const { freeze: freeze36 } = Helpers;
     function make3() {
       let mErrorFn = () => {
         throw Error("No error set, this method should not be called");
@@ -27,15 +27,15 @@
         mErrorFn = fn;
       }
       function setErrorMessage(message) {
-        mErrorFn = () => freeze35({ message });
+        mErrorFn = () => freeze36({ message });
       }
       function error() {
         return mErrorFn();
       }
-      const sharedErrorInstance = () => mInst ??= freeze35({ setErrorFn, setErrorMessage, error, sharedErrorInstance });
+      const sharedErrorInstance = () => mInst ??= freeze36({ setErrorFn, setErrorMessage, error, sharedErrorInstance });
       return sharedErrorInstance();
     }
-    return freeze35({ make: make3 });
+    return freeze36({ make: make3 });
   })();
   expose({ Helpers });
   var TypeCheckable = (() => {
@@ -568,11 +568,11 @@
 
   // src/ast_binary_operator_node.ts
   var AstBinaryOperatorNode = (() => {
-    const { freeze: freeze35 } = Helpers;
+    const { freeze: freeze36 } = Helpers;
     const binaryOperatorType = AstNode.types.binaryOperator;
-    return freeze35({
+    return freeze36({
       make: (op, lhs, rhs) => {
-        const inst = freeze35({
+        const inst = freeze36({
           operation: () => op,
           visit: (visitor) => visitor.visitBinaryOperation(inst, lhs, rhs),
           type: () => binaryOperatorType,
@@ -602,7 +602,7 @@
 
   // src/tokenization/character_class.ts
   var CharacterClass = (() => {
-    const { freeze: freeze35 } = Helpers;
+    const { freeze: freeze36 } = Helpers;
     function safeOneCharJumpTable(charsPairs) {
       const arr = [];
       charsPairs.forEach((pair) => {
@@ -611,7 +611,7 @@
       });
       return arr;
     }
-    const classes = freeze35({
+    const classes = freeze36({
       numeric: Symbol(),
       alphabetic: Symbol(),
       operative: Symbol(),
@@ -668,7 +668,7 @@
       ...arrayAsCharacterSetFor(["\n"], classes.newLine)
     ];
     const jumpToClass = safeOneCharJumpTable(kCharacterToCharacterClass);
-    return freeze35({
+    return freeze36({
       classes,
       classOfString: (character) => {
         if (character.length !== 1) {
@@ -685,7 +685,7 @@
 
   // src/tokenization/crawl_strategies.ts
   var CrawlStrategies = (() => {
-    const { freeze: freeze35 } = Object;
+    const { freeze: freeze36 } = Object;
     const { classes, classOfString } = CharacterClass;
     function crawlAlphanumeric(input, start) {
       const { length } = input;
@@ -753,7 +753,7 @@
       }
       return length;
     }
-    return freeze35({
+    return freeze36({
       [classes.alphabetic]: crawlAlphanumeric,
       [classes.literal]: crawlStringLiteral,
       [classes.operative]: crawlOperator,
@@ -765,14 +765,14 @@
 
   // src/tokenization/character_crawler.ts
   var CharacterCrawler = (() => {
-    const { freeze: freeze35 } = Object;
-    const injections2 = freeze35({
+    const { freeze: freeze36 } = Object;
+    const injections2 = freeze36({
       CrawlStrategies,
       characterClassOf: CharacterClass.classOfString,
       characterClasses: CharacterClass.classes
     });
     function make3(mInput, { CrawlStrategies: CrawlStrategies2, characterClassOf, characterClasses } = injections2) {
-      const inst = freeze35({ reachedEnd, readToken, crawl });
+      const inst = freeze36({ reachedEnd, readToken, crawl });
       let mStart = 0;
       let mEnd = 0;
       let mReadToken = Token.kBlankToken;
@@ -814,7 +814,7 @@
       }
       return inst;
     }
-    return freeze35({ make: make3 });
+    return freeze36({ make: make3 });
   })();
 
   // src/token_range.ts
@@ -870,13 +870,13 @@
 
   // src/tokenization.ts
   var Tokenization = (() => {
-    const { freeze: freeze35 } = Helpers;
-    const injections2 = freeze35({ CharacterCrawler, TokenRange });
+    const { freeze: freeze36 } = Helpers;
+    const injections2 = freeze36({ CharacterCrawler, TokenRange });
     const getCharacterClassToTokenTypeMap = /* @__PURE__ */ (() => {
       function makeCharacterClassToTokenTypeMap() {
         const { classes } = CharacterClass;
         const { types } = Token;
-        return freeze35({
+        return freeze36({
           [classes.numeric]: () => types.integerLiteral,
           [classes.literal]: () => types.stringLiteral,
           [classes.spacious]: () => {
@@ -888,8 +888,8 @@
       let sMap = void 0;
       return () => sMap ??= makeCharacterClassToTokenTypeMap();
     })();
-    return freeze35({
-      make: ({ CharacterCrawler: CharacterCrawler2, TokenRange: TokenRange2 } = injections2) => freeze35({
+    return freeze36({
+      make: ({ CharacterCrawler: CharacterCrawler2, TokenRange: TokenRange2 } = injections2) => freeze36({
         tokenize: (inp) => {
           const rv = [];
           const crawler = CharacterCrawler2.make(inp);
@@ -1343,11 +1343,11 @@
   var CloseGroupPart = freeze17({
     make: (mTokenRange) => freeze17({
       build: () => BuildStateAddition.make((sink) => {
-        sink.popGrouping((node) => {
+        sink.popStatement((node) => {
           if (mTokenRange.isEmpty()) {
             return node;
           }
-          sink.pushPart(ContinuingAfterFringeBuild.make(mTokenRange, node));
+          sink.pushPart(ContinuingAfterSingleValueBuild.make(mTokenRange, node));
           return void 0;
         });
       }),
@@ -1369,7 +1369,7 @@
           const leftPart = TreePartBuild.make(leftPartRange());
           const rightPart = CloseGroupPart.make(rightPartRange());
           return BuildStateAddition.make((sink) => {
-            mOnNewGroupingFn(sink.pushGrouping()).pushPart(rightPart).pushPart(leftPart);
+            mOnNewGroupingFn(sink.pushStatement()).pushPart(rightPart).pushPart(leftPart);
           });
         })
       });
@@ -1396,10 +1396,10 @@
     }
   });
 
-  // src/ast_build/continuing_after_fringe_build.ts
+  // src/ast_build/continuing_after_single_value_build.ts
   var { freeze: freeze18 } = Helpers;
   var kTokenTypes = Token.types;
-  var ContinuingAfterFringeBuild = freeze18({
+  var ContinuingAfterSingleValueBuild = freeze18({
     make: (mTokenRange, mCompleteNode) => {
       const { error, setErrorMessage } = StandardError.make();
       const { startToken } = mTokenRange;
@@ -1453,20 +1453,20 @@
 
   // src/ast_build/continuing_after_operator_build.ts
   var ContinuingAfterOperatorBuild = (() => {
-    const { freeze: freeze35 } = Helpers;
+    const { freeze: freeze36 } = Helpers;
     const kTokenTypes2 = Token.types;
-    return freeze35({
+    return freeze36({
       make: (mTokenRange, mPrevOperatorToken, mOperandRelation) => {
         const { error, setErrorMessage } = StandardError.make();
         const { startToken } = mTokenRange;
         const handlePeekAheadFringe = () => {
           const start = startToken();
-          const nextPart = ContinuingAfterFringeBuild.make(mTokenRange.step(), AstFringeNode.makeForToken(start));
+          const nextPart = ContinuingAfterSingleValueBuild.make(mTokenRange.step(), AstFringeNode.makeForToken(start));
           return BuildStateAddition.make((sink) => {
             sink.pushToken(mPrevOperatorToken, mOperandRelation).pushPart(nextPart);
           });
         };
-        const kPeakAheadStrategies = freeze35({
+        const kPeakAheadStrategies = freeze36({
           [kTokenTypes2.identifier]: handlePeekAheadFringe,
           [kTokenTypes2.integerLiteral]: handlePeekAheadFringe,
           [kTokenTypes2.stringLiteral]: handlePeekAheadFringe,
@@ -1493,7 +1493,7 @@
             });
           }
         });
-        const inst = freeze35({
+        const inst = freeze36({
           error,
           build: () => {
             if (mTokenRange.isEmpty()) {
@@ -1532,7 +1532,7 @@
               return buildFringeWithRangeAsNewPart();
             }
             const node = AstFringeNode.makeForToken(mFringeToken);
-            const { build, error: error2 } = ContinuingAfterFringeBuild.make(mTokenRange, node);
+            const { build, error: error2 } = ContinuingAfterSingleValueBuild.make(mTokenRange, node);
             return build() ?? setErrorFn(error2);
           },
           error
@@ -1543,7 +1543,7 @@
 
   // src/ast_tuple_node.ts
   var AstTupleNode = (() => {
-    const { freeze: freeze35, memoize: memoize15 } = Helpers;
+    const { freeze: freeze36, memoize: memoize15 } = Helpers;
     const tupleType = AstNode.types.tuple;
     function makeWithPair(sep, lhs, rhs) {
       const mSubExpressions = [lhs];
@@ -1553,14 +1553,14 @@
       }
       return inst;
     }
-    const class_5 = freeze35({
+    const class_5 = freeze36({
       makeEmpty: () => memoize15(() => class_5.make(",", []))(),
       makeBinary: (seperator, lhs, rhs) => makeWithPair(seperator, lhs, rhs),
       make: (mSeperator, mSubExpressions) => {
         if (mSubExpressions.length === 1 && mSubExpressions[0].type() === tupleType) {
           return mSubExpressions[0];
         }
-        const inst = freeze35({
+        const inst = freeze36({
           forEach: (fn) => mSubExpressions.forEach((node) => fn(node)),
           count: () => mSubExpressions.length,
           visit: (visitor) => visitor.visitTuple(inst),
@@ -2050,25 +2050,17 @@
     }
   });
 
-  // src/ast_build/build_state.ts
+  // src/ast_build/block_builder.ts
   var { freeze: freeze30 } = Helpers;
-  var BuildState = freeze30({
+  var BlockBuilder = freeze30({
     make: (mErrors = []) => {
-      const mBuildParts = [];
       const mLineNodes = [];
       const mStatementBuilders = [OperativeStatementBuilder.make()];
-      const lastStatementBuilder = () => mStatementBuilders[mStatementBuilders.length - 1] ?? (() => {
+      const throwAlreadyPopped = () => {
         throw new Error("All group frames already popped");
-      })();
+      };
+      const lastStatementBuilder = () => mStatementBuilders[mStatementBuilders.length - 1] ?? throwAlreadyPopped();
       const inst = freeze30({
-        hasRemainingParts: () => mBuildParts.length > 0,
-        pushPart: (buildPart) => {
-          mBuildParts.push(buildPart);
-          return inst;
-        },
-        popPart: () => mBuildParts.pop() ?? (() => {
-          throw new Error("no parts remain");
-        })(),
         pushToken: (token, operandRelation) => {
           lastStatementBuilder().pushToken(token, operandRelation);
           return inst;
@@ -2077,17 +2069,16 @@
           lastStatementBuilder().pushNode(node);
           return inst;
         },
-        pushGrouping: () => {
+        pushStatement: () => {
           mStatementBuilders.push(OperativeStatementBuilder.make());
           return inst;
         },
-        popGrouping: (fn) => {
-          const lastBuilder = lastStatementBuilder();
-          mStatementBuilders.pop();
-          const visitor = OperativeStatementAstCreation.make();
+        popStatement: (fn) => {
+          const lastBuilder = mStatementBuilders.pop() ?? throwAlreadyPopped();
           const { rootVisitable, isEmpty, error } = lastBuilder.completion();
           const osvNode = rootVisitable();
           if (osvNode) {
+            const visitor = OperativeStatementAstCreation.make();
             osvNode.visit(visitor);
             const node = fn(visitor.finish());
             if (node) {
@@ -2098,31 +2089,12 @@
           }
           return inst;
         },
-        pushNewLine: () => {
-          const lastBuilder = lastStatementBuilder();
-          const { rootVisitable, isEmpty, error } = lastBuilder.completion();
-          const osv = rootVisitable();
-          mStatementBuilders.pop();
-          if (osv) {
-            const visitor = OperativeStatementAstCreation.make();
-            osv.visit(visitor);
-            mLineNodes.push(visitor.finish());
-          } else if (!isEmpty()) {
-            mErrors.push(error());
-          }
-          mStatementBuilders.push(OperativeStatementBuilder.make());
-          return inst;
-        },
+        pushNewLine: () => inst.popStatement((node) => {
+          mLineNodes.push(node);
+          return void 0;
+        }).pushStatement(),
         complete: () => {
-          const { rootVisitable, isEmpty, error } = lastStatementBuilder().completion();
-          const osv = rootVisitable();
-          if (osv) {
-            const visitor = OperativeStatementAstCreation.make();
-            osv.visit(visitor);
-            mLineNodes.push(visitor.finish());
-          } else if (!isEmpty()) {
-            mErrors.push(error());
-          }
+          inst.pushNewLine();
           return AstTupleNode.make("\n", mLineNodes);
         }
       });
@@ -2130,17 +2102,58 @@
     }
   });
 
+  // src/ast_build/build_state.ts
+  var { freeze: freeze31 } = Helpers;
+  var BuildState = freeze31({
+    make: (mErrors = []) => {
+      const mBuildParts = [];
+      const mBlockBuilder = BlockBuilder.make(mErrors);
+      const inst = freeze31({
+        hasRemainingParts: () => mBuildParts.length > 0,
+        pushPart: (buildPart) => {
+          mBuildParts.push(buildPart);
+          return inst;
+        },
+        popPart: () => mBuildParts.pop() ?? (() => {
+          throw new Error("no parts remain");
+        })(),
+        pushToken: (token, operandRelation) => {
+          mBlockBuilder.pushToken(token, operandRelation);
+          return inst;
+        },
+        pushNode: (node) => {
+          mBlockBuilder.pushNode(node);
+          return inst;
+        },
+        pushStatement: () => {
+          mBlockBuilder.pushStatement();
+          return inst;
+        },
+        popStatement: (fn) => {
+          mBlockBuilder.popStatement(fn);
+          return inst;
+        },
+        pushNewLine: () => {
+          mBlockBuilder.pushNewLine();
+          return inst;
+        },
+        complete: () => mBlockBuilder.complete()
+      });
+      return inst;
+    }
+  });
+
   // src/ast_build.ts
   var AstBuild = (() => {
-    const { freeze: freeze35, memoize: memoize15 } = Helpers;
-    const class_5 = freeze35({
+    const { freeze: freeze36, memoize: memoize15 } = Helpers;
+    const class_5 = freeze36({
       make: (mTokens) => {
         const mErrors = [];
         const mBuildState = BuildState.make(mErrors);
-        const inst = freeze35({
+        const inst = freeze36({
           build: memoize15(() => {
             mBuildState.pushPart(TreePartBuild.make(mTokens));
-            mBuildState.pushGrouping();
+            mBuildState.pushStatement();
             while (mBuildState.hasRemainingParts()) {
               const part = mBuildState.popPart();
               const addition = part.build();
@@ -2593,22 +2606,22 @@ ${inst.errors()[0]?.message}`);
     const make3 = (tokens) => TreePartBuild.make(TokenRange.makeStartingRange(tokens.map(Token.forTesting.makeFromStringOnly)));
     const makeBuildSink = ({
       pushPart,
-      pushGrouping,
-      popGrouping,
+      pushStatement,
+      popStatement,
       pushToken,
       pushNode,
       pushNewLine
     }) => {
       pushPart ??= (_0) => inst;
-      pushGrouping ??= () => inst;
-      popGrouping ??= (_fn) => inst;
+      pushStatement ??= () => inst;
+      popStatement ??= (_fn) => inst;
       pushToken ??= (_token, _operandRelation) => inst;
       pushNode ??= (_node) => inst;
       pushNewLine ??= () => inst;
       const inst = Object.freeze({
         pushPart,
-        pushGrouping,
-        popGrouping,
+        pushStatement,
+        popStatement,
         pushToken,
         pushNode,
         pushNewLine
@@ -2664,7 +2677,7 @@ ${inst.errors()[0]?.message}`);
         it("pushes a new grouping", () => {
           const { hitsAtExactly, verifyHit } = ReachPoint.make();
           const sink = makeBuildSink({
-            pushGrouping() {
+            pushStatement() {
               hitsAtExactly(1);
               return sink;
             }
@@ -2713,7 +2726,7 @@ ${inst.errors()[0]?.message}`);
   });
 
   // src/execution_context.ts
-  var { freeze: freeze31 } = Helpers;
+  var { freeze: freeze32 } = Helpers;
   var ExecutionContext = (() => {
     function make3() {
       const mAvailableVariables = {};
@@ -2746,20 +2759,20 @@ ${inst.errors()[0]?.message}`);
       function lookUpIdentifierType(identifierName) {
         const gotten = mAvailableVariables[identifierName];
         if (gotten) {
-          return freeze31({
+          return freeze32({
             resolve: gotten.type,
             error: () => StandardError.make().error()
           });
         } else {
           const { error, setErrorMessage } = StandardError.make();
           setErrorMessage(`Undeclared variable "${identifierName}"`);
-          return freeze31({
+          return freeze32({
             resolve: () => void 0,
             error
           });
         }
       }
-      return freeze31({
+      return freeze32({
         lookUpIdentifierType,
         lookUpStringLiteralType: () => string_resolution,
         lookUpIntegerLiteralType: () => integer_resolution,
@@ -2769,12 +2782,12 @@ ${inst.errors()[0]?.message}`);
         getVariable
       });
     }
-    return freeze31({ make: make3 });
+    return freeze32({ make: make3 });
   })();
 
   // src/persistent_stack.ts
   var PersistentStack = (() => {
-    const { freeze: freeze35 } = Helpers;
+    const { freeze: freeze36 } = Helpers;
     function make3(mDefaultMake) {
       const mMembers = [];
       let mPosition = -1;
@@ -2800,13 +2813,13 @@ ${inst.errors()[0]?.message}`);
       function isEmpty() {
         return mPosition === -1;
       }
-      return freeze35({ push, pop, isEmpty });
+      return freeze36({ push, pop, isEmpty });
     }
-    return freeze35({ make: make3 });
+    return freeze36({ make: make3 });
   })();
 
   // src/interpreter.ts
-  var { freeze: freeze32 } = Object;
+  var { freeze: freeze33 } = Object;
   var LetVisitor = (() => {
     function make3(context) {
       const inst = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((node, lhs, rhs) => {
@@ -2820,14 +2833,14 @@ ${inst.errors()[0]?.message}`);
       }).finish();
       return inst;
     }
-    return freeze32({ make: make3 });
+    return freeze33({ make: make3 });
   })();
-  var injections = freeze32({
+  var injections = freeze33({
     putsFunction: console.log,
     // just make it random
     askStringFunction: () => "bees"
   });
-  var InterpreterNodeVisitor = freeze32({
+  var InterpreterNodeVisitor = freeze33({
     make: (context, { putsFunction, askStringFunction } = injections) => {
       const mLetVisitor = LetVisitor.make(context);
       const mStack = PersistentStack.make(ContextVariable.make);
@@ -2842,7 +2855,7 @@ ${inst.errors()[0]?.message}`);
       function mPushValueOf(node) {
         mStack.push(mValueOf(node));
       }
-      const kBuiltinFunctions = freeze32({
+      const kBuiltinFunctions = freeze33({
         puts: (node) => {
           node.arguments.forEach((node2) => {
             const cv = mValueOf(node2);
@@ -2854,7 +2867,7 @@ ${inst.errors()[0]?.message}`);
         },
         pass: (node) => node.arguments.forEach(mPushValueOf)
       });
-      const inst = freeze32({
+      const inst = freeze33({
         visitFunctionCall: (node) => {
           const fn = kBuiltinFunctions[node.name];
           if (!fn) {
@@ -2899,13 +2912,13 @@ ${inst.errors()[0]?.message}`);
       return inst;
     }
   });
-  var Interpreter = freeze32({
+  var Interpreter = freeze33({
     make: (context = ExecutionContext.make(), injections_ = injections) => {
       const mVisitor = InterpreterNodeVisitor.make(context, injections_);
       function interpret(node) {
         node.visit(mVisitor);
       }
-      return freeze32({ interpret });
+      return freeze33({ interpret });
     },
     buildFor: (inp) => {
       const tokenRange = Tokenization.make().tokenize(inp);
@@ -3204,11 +3217,11 @@ ${inst.errors()[0]?.message}`);
   });
 
   // src/ast_validator.ts
-  var { freeze: freeze33, memoize: memoize13 } = Helpers;
-  var ErrorsCollector = freeze33({
+  var { freeze: freeze34, memoize: memoize13 } = Helpers;
+  var ErrorsCollector = freeze34({
     make: () => {
       const mErrors = [];
-      return freeze33({
+      return freeze34({
         pushMessage: (message) => {
           mErrors.push({ message });
         },
@@ -3216,7 +3229,7 @@ ${inst.errors()[0]?.message}`);
       });
     }
   });
-  var AstLetBinaryOperatorValidatorVisitor = freeze33({
+  var AstLetBinaryOperatorValidatorVisitor = freeze34({
     make: (mContext, mGeneralValidator, mErrorsCollector) => {
       const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitBinaryOperation((node, lhs, rhs) => {
         if (node.operation() !== ":=") {
@@ -3244,13 +3257,13 @@ ${inst.errors()[0]?.message}`);
         }
         mErrorsCollector.pushMessage(typeRes.error().message);
       }).finish();
-      return freeze33({
+      return freeze34({
         ...visitor,
         errors: mErrorsCollector.errors
       });
     }
   });
-  var AstGeneralValidator = freeze33({
+  var AstGeneralValidator = freeze34({
     make: (mContext, mErrorsCollector, mGetMemoizedLetValidator) => {
       const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitFunctionCall((_0) => {
         throw Error("unimplemented");
@@ -3273,13 +3286,13 @@ ${inst.errors()[0]?.message}`);
       }).visitTuple((node) => node.forEach((node2) => {
         node2.visit(visitor);
       })).finish();
-      return freeze33({
+      return freeze34({
         ...visitor,
         errors: mErrorsCollector.errors
       });
     }
   });
-  var AstLetsValidatorVisitor = freeze33({
+  var AstLetsValidatorVisitor = freeze34({
     make: (mBinaryOperatorVisitor, mErrorsCollector) => {
       const visitor = AstNodeVisitorBuilder.makeDefaultingToStop().visitLetDeclaration((_0, node) => {
         if (node.type() !== AstNode.types.binaryOperator) {
@@ -3288,13 +3301,13 @@ ${inst.errors()[0]?.message}`);
         }
         node.visit(mBinaryOperatorVisitor);
       }).finish();
-      return freeze33({
+      return freeze34({
         ...visitor,
         errors: mErrorsCollector.errors
       });
     }
   });
-  var AstValidator = freeze33({
+  var AstValidator = freeze34({
     make: (mContext = ExecutionContext.make(), mErrorsCollector = ErrorsCollector.make()) => {
       const mGeneralValidator = AstGeneralValidator.make(
         mContext,
@@ -3304,7 +3317,7 @@ ${inst.errors()[0]?.message}`);
           return AstLetsValidatorVisitor.make(binLetVal, mErrorsCollector);
         })
       );
-      return freeze33({
+      return freeze34({
         validate: (node) => {
           node.visit(mGeneralValidator);
           return mErrorsCollector.errors();
@@ -3539,8 +3552,8 @@ ${inst.errors()[0]?.message}`);
   });
 
   // src/ast_build/fn_close_position_retrieval.ts
-  var { freeze: freeze34, memoize: memoize14 } = Helpers;
-  var class_4 = freeze34({
+  var { freeze: freeze35, memoize: memoize14 } = Helpers;
+  var class_4 = freeze35({
     closePositionOf: (mTokenRange, mGroupOpen) => class_4.make(mTokenRange, mGroupOpen).closePosition(),
     make: (mTokenRange, mGroupOpen) => {
       if (mGroupOpen.content() !== "fn") {
@@ -3576,7 +3589,7 @@ ${inst.errors()[0]?.message}`);
         return void 0;
       };
       const knownClosePosition = () => preNewLineNonFn() ? newLineAt() : fallbackClosePosition();
-      return freeze34({
+      return freeze35({
         closePosition: memoize14(() => knownClosePosition() ?? end())
       });
     }

@@ -9,8 +9,7 @@ import { AstNode } from '../ast_node';
 const { freeze } = Helpers;
 const kTokenTypes = Token.types;
 
-// ContinuingAfterSingleValueBuild
-export const ContinuingAfterFringeBuild = freeze({
+export const ContinuingAfterSingleValueBuild = freeze({
   make: (mTokenRange: TokenRange, mCompleteNode: AstNode): TreePartBuild => {
     const { error, setErrorMessage } = StandardError.make();
     const { startToken } = mTokenRange;

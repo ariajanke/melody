@@ -15,30 +15,30 @@ describeNamed({ TreePartBuild }, () => {
   const makeBuildSink =
     ({
       pushPart,
-      pushGrouping,
-      popGrouping,
+      pushStatement,
+      popStatement,
       pushToken,
       pushNode,
       pushNewLine
     }:
     {
       pushPart?: ((buildPart: TreePartBuild) => BuildSink) | undefined,
-      pushGrouping?: () => BuildSink,
-      popGrouping?: (fn: (node: AstNode) => AstNode | undefined) => BuildSink,
+      pushStatement?: () => BuildSink,
+      popStatement?: (fn: (node: AstNode) => AstNode | undefined) => BuildSink,
       pushToken?: (token: Token, operandRelation: string) => BuildSink,
       pushNode?: (node: AstNode) => BuildSink,
       pushNewLine?: () => BuildSink
     }): BuildSink => {
       pushPart ??= (_0: TreePartBuild) => inst;
-      pushGrouping ??= () => inst;
-      popGrouping ??= (_fn: (node: AstNode) => AstNode | undefined) => inst;
+      pushStatement ??= () => inst;
+      popStatement ??= (_fn: (node: AstNode) => AstNode | undefined) => inst;
       pushToken ??= (_token: Token, _operandRelation: string) => inst;
       pushNode ??= (_node: AstNode) => inst;
       pushNewLine ??= () => inst;
       const inst = Object.freeze({
         pushPart,
-        pushGrouping,
-        popGrouping,
+        pushStatement,
+        popStatement,
         pushToken,
         pushNode,
         pushNewLine
@@ -103,7 +103,7 @@ describeNamed({ TreePartBuild }, () => {
       it('pushes a new grouping', () => {
         const { hitsAtExactly, verifyHit } = ReachPoint.make();
         const sink = makeBuildSink({
-          pushGrouping() {
+          pushStatement() {
             hitsAtExactly(1);
             return sink;
           },

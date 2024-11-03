@@ -3,7 +3,7 @@ import { Token } from '../token';
 import { TokenRange } from '../token_range';
 import { BuildSink, BuildStateAddition, type TreePartBuild } from './tree_part_build';
 import { AstFringeNode } from '../ast_fringe_node';
-import { ContinuingAfterFringeBuild } from './continuing_after_fringe_build';
+import { ContinuingAfterSingleValueBuild } from './continuing_after_single_value_build';
 import { StartGroupBuild } from './start_group_build';
 
 export const ContinuingAfterOperatorBuild = (() => {
@@ -18,7 +18,7 @@ export const ContinuingAfterOperatorBuild = (() => {
 
       const handlePeekAheadFringe = () => {
         const start = startToken();
-        const nextPart = ContinuingAfterFringeBuild.
+        const nextPart = ContinuingAfterSingleValueBuild.
           make(mTokenRange.step(), AstFringeNode.makeForToken(start));
         return BuildStateAddition.make((sink: BuildSink) => {
           sink.pushToken(mPrevOperatorToken, mOperandRelation).pushPart(nextPart);

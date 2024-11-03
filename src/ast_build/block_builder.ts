@@ -1,0 +1,63 @@
+import { AstTupleNode } from '../ast_tuple_node';
+import { Helpers } from '../helpers';
+import { OperativeStatementBuilder } from '../operative_statement_builder';
+import { OperativeStatementAstCreation } from './operative_statement_ast_creation';
+import { AstNode } from '../ast_node';
+import { Token } from '../token';
+
+const { freeze } = Helpers;
+
+export const BlockBuilder = freeze({
+  make: (mErrors: Readonly<{ message: string }>[] = []) => {
+    const mLineNodes: AstNode[] = [];
+    const mStatementBuilders = [OperativeStatementBuilder.make()];
+    const throwAlreadyPopped = () =>
+      { throw new Error('All group frames already popped'); };
+    const lastStatementBuilder = () =>
+      mStatementBuilders[mStatementBuilders.length - 1] ??
+      throwAlreadyPopped();
+    const inst = freeze({
+      pushToken: (token: Token, operandRelation: string) => {
+        lastStatementBuilder().pushToken(token, operandRelation);
+        return inst;
+      },
+      pushNode: (node: AstNode) => {
+        lastStatementBuilder().pushNode(node);
+        return inst;
+      },
+      pushStatement: () => {
+        mStatementBuilders.push(OperativeStatementBuilder.make());
+        return inst;
+      },
+      popStatement: (fn: (node: AstNode) => AstNode | undefined) => {
+        const lastBuilder = mStatementBuilders.pop() ?? throwAlreadyPopped();
+        const { rootVisitable, isEmpty, error } = lastBuilder.completion();
+        const osvNode = rootVisitable();
+        if (osvNode) {
+          const visitor = OperativeStatementAstCreation.make();
+          osvNode.visit(visitor);
+          const node = fn( visitor.finish() );
+          if (node) {
+            inst.pushNode(node);
+          }
+        } else if (!isEmpty()) {
+          mErrors.push(error());
+        }
+        return inst;
+      },
+      pushNewLine: () =>
+        inst.
+          popStatement((node: AstNode) => {
+            mLineNodes.push( node );
+            return undefined;
+          }).
+          pushStatement(),
+      complete: () => {
+        inst.pushNewLine();
+        return AstTupleNode.make('\n', mLineNodes);
+      }
+    });
+    return inst;
+  }
+});
+export type BlockBuilder = ReturnType<typeof BlockBuilder.make>;

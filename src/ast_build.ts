@@ -15,7 +15,7 @@ export const AstBuild = (() => {
       const inst = freeze({
         build: memoize((): AstNode | undefined => {
           mBuildState.pushPart( TreePartBuild.make(mTokens) );
-          mBuildState.pushGrouping();
+          mBuildState.pushStatement();
           while (mBuildState.hasRemainingParts()) {
             const part = mBuildState.popPart();
             const addition = part.build();

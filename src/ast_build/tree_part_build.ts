@@ -11,8 +11,8 @@ const { freeze } = Helpers;
 
 export interface BuildSink {
   pushPart: (buildPart: TreePartBuild) => BuildSink,
-  pushGrouping: () => BuildSink,
-  popGrouping: (fn: (node: AstNode) => AstNode | undefined) => BuildSink,
+  pushStatement: () => BuildSink,
+  popStatement: (fn: (node: AstNode) => AstNode | undefined) => BuildSink,
   pushToken: (token: Token, operandRelation: string) => BuildSink,
   pushNode: (node: AstNode) => BuildSink,
   pushNewLine: () => BuildSink
