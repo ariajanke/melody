@@ -4,7 +4,7 @@ import { TypeLookUpTable } from './ast_node';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { TypeResolution } from './type_resolution';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export interface ExecutionContext extends TypeLookUpTable {
   declareVariable: (name: string) => ContextVariable,
@@ -25,6 +25,8 @@ export const ExecutionContext = (() => {
         TypeResolution.makeFixedForType(Integer)
       ];
     })();
+
+    
 
     function declareVariable(name: string): ContextVariable {
       if (mAvailableVariables[name]) {
@@ -66,6 +68,9 @@ export const ExecutionContext = (() => {
       }
     }
 
+    const lookUpFunctionType: () => TypeResolution = memoize(() =>
+      TypeResolution.makeFixedForType( ObjectLookUpTable.getBuiltinTypes().Function ));
+
     return freeze({
       lookUpIdentifierType,
       lookUpStringLiteralType: () => string_resolution,
@@ -73,7 +78,8 @@ export const ExecutionContext = (() => {
       declareVariable,
       getValueOfVariable,
       setVariable,
-      getVariable
+      getVariable,
+      lookUpFunctionType
     });
   }
 

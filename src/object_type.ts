@@ -15,15 +15,19 @@ export const ObjectType = (() => {
   const { memoize } = Helpers;
 
   const kBuiltInTypeUids = freeze({
-    integer: Symbol(),
-    string : Symbol()
+    integer   : Symbol(),
+    string    : Symbol(),
+    function_ : Symbol()
   });
 
   const kUidBuiltinStrategy:
-    { [name: string]: symbol }
-    = freeze({
-    Integer: kBuiltInTypeUids.integer,
-    String : kBuiltInTypeUids.string ,
+    { [name: string]: symbol } =
+  freeze({
+    Integer : kBuiltInTypeUids.integer,
+    String  : kBuiltInTypeUids.string ,
+    // The *only* type of function that exist right now, is the "a block to
+    // jump to" function. And that's it, for now.
+    Function: kBuiltInTypeUids.function_
   });
 
   function makeUidFor(name: string) {

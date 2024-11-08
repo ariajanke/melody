@@ -5,6 +5,7 @@ import { type AstLetDeclarationNode } from './ast_let_declaration_node';
 import { type AstNode } from './ast_node';
 import { type AstTupleNode } from './ast_tuple_node';
 import { type AstBinaryOperatorNode } from './ast_binary_operator_node';
+import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 
 const { freeze } = Helpers;
 
@@ -14,7 +15,8 @@ export interface AstNodeVisitor {
     (node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => void,
   visitLetDeclaration: (node: AstLetDeclarationNode, rhs: AstNode) => void,
   visitIdentifier: (node: AstFringeNode) => void,
-  visitTuple: (node: AstTupleNode) => void
+  visitTuple: (node: AstTupleNode) => void,
+  visitFunctionDefinition: (node: AstFunctionDefinitionNode, lineNodes: AstNode[]) => void
 }
 
 interface ReseatableAstNodeVisitor extends AstNodeVisitor {
@@ -38,6 +40,9 @@ export const AstNodeVisitorBuilder = (() => {
       visitTuple: (tuple: AstTupleNode) => {
         tuple.forEach((node: AstNode) => node.visit(mCurrentInst));
       },
+      visitFunctionDefinition: (_0: AstFunctionDefinitionNode, nodes: AstNode[]) => {
+        nodes.forEach((node: AstNode) => node.visit(mCurrentInst));
+      },
       setInstanceReference: (inst: AstNodeVisitor) => {
         mCurrentInst = inst;
         return inst;
@@ -54,6 +59,7 @@ export const AstNodeVisitorBuilder = (() => {
       visitLetDeclaration: (_0: AstLetDeclarationNode, _1: AstNode): void => {},
       visitIdentifier: (_0: AstFringeNode) => {},
       visitTuple: (_0: AstTupleNode) => {},
+      visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) => {},
       setInstanceReference: (passedInst: AstNodeVisitor) =>
         passedInst
     });
@@ -71,6 +77,7 @@ export const AstNodeVisitorBuilder = (() => {
       let mVisitLetDeclaration = mImplementations.visitLetDeclaration;
       let mVisitIdentifier = mImplementations.visitIdentifier;
       let mVisitTuple = mImplementations.visitTuple;
+      let mVisitFunctionDefinition = mImplementations.visitFunctionDefinition;
       const inst = freeze({
         visitBinaryOperation: (fn: AstNodeVisitor['visitBinaryOperation']) => {
           mVisitBinaryOperation = fn;
@@ -92,13 +99,18 @@ export const AstNodeVisitorBuilder = (() => {
           mVisitTuple = fn;
           return inst;
         },
+        visitFunctionDefinition: (fn: AstNodeVisitor['visitFunctionDefinition']) => {
+          mVisitFunctionDefinition = fn;
+          return inst;
+        },
         finish: (): AstNodeVisitor => {
           const inst = freeze({
             visitBinaryOperation: mVisitBinaryOperation,
             visitFunctionCall: mVisitFunctionCall,
             visitLetDeclaration: mVisitLetDeclaration,
             visitIdentifier: mVisitIdentifier,
-            visitTuple: mVisitTuple
+            visitTuple: mVisitTuple,
+            visitFunctionDefinition: mVisitFunctionDefinition
           });
           return mImplementations.setInstanceReference(inst);
         }

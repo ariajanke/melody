@@ -3,6 +3,8 @@ import { ObjectType } from './object_type';
 import { IncompleteFunctionType } from './function_type';
 import { ContextVariable } from './context_variable';
 import { PersistentStack } from './persistent_stack';
+import { Token } from './token';
+import { AstNode } from './ast_node';
 
 const { freeze, memoize } = Helpers;
 
@@ -13,8 +15,9 @@ export interface ObjectLookUpTable {
 
 export const ObjectLookUpTable = (() => {
   const getBuiltinTypes = memoize(() => {
-    const integer_ = ObjectType.make('Integer');
-    const string_  = ObjectType.make('String' );
+    const integer_  = ObjectType.make('Integer');
+    const string_   = ObjectType.make('String' );
+    const function_ = ObjectType.make('Function');
 
     const add = IncompleteFunctionType.
       make().
@@ -90,6 +93,20 @@ export const ObjectLookUpTable = (() => {
         }).
       finish();
 
+    // there should not be a rhs?
+    const callFn = IncompleteFunctionType.
+      make().
+      setName(Token.kCallToken.content()).
+      setArguments([]).
+      setBuiltin((stack: PersistentStack<ContextVariable>,
+                  lhs: ContextVariable,
+                  rhs: ContextVariable) =>
+        {
+          // the only rhs supported = an empty tuple
+          ;
+        }).
+      finish();
+
     return freeze({
       Integer: integer_.
         setLookUp({
@@ -103,6 +120,8 @@ export const ObjectLookUpTable = (() => {
         setLookUp({
           [':=']: assignStr
         }),
+      Function: function_.
+        setLookUp({ [Token.kCallToken.content()]: callFn }),
       Unresolved: ObjectType.make('Unresolved')
     });
   });

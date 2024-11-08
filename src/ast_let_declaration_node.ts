@@ -9,6 +9,7 @@ export interface AstLetDeclarationNode extends AstNode {};
 
 export const AstLetDeclarationNode = freeze({
   make: (node: AstNode): AstNode => {
+    // node here ends up being the names
     const { executionType } = node;
     const { letDeclaration } = AstNode.types;
 

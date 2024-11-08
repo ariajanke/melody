@@ -8,7 +8,8 @@ const { freeze } = Helpers;
 export interface TypeLookUpTable {
   lookUpIdentifierType: (identifierName: string) => TypeResolution,
   lookUpStringLiteralType: () => TypeResolution,
-  lookUpIntegerLiteralType: () => TypeResolution
+  lookUpIntegerLiteralType: () => TypeResolution,
+  lookUpFunctionType: () => TypeResolution
 }
 
 export interface AstNode {
@@ -46,7 +47,8 @@ export const AstNode = (() => {
         identifier    : Symbol(),
         letDeclaration: Symbol(),
         binaryOperator: Symbol(),
-        integerLiteral: Symbol()
+        integerLiteral: Symbol(),
+        functionDefinition: Symbol()
       }
     });
   

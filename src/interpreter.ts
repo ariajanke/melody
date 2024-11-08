@@ -11,8 +11,17 @@ import { PersistentStack } from './persistent_stack';
 import { AstNodeVisitor, AstNodeVisitorBuilder } from './ast_node_visitor';
 import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { AstTupleNode } from './ast_tuple_node';
+import { ObjectType } from './object_type';
+import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 
 const { freeze } = Object;
+
+const NamingVisitor = freeze({
+  make(context: ExecutionContext): AstNodeVisitor {
+    let mNameDictionary: { [name: string]: ObjectType } = {};
+    return AstNodeVisitorBuilder.makeDefaultingToContinue().finish();
+  }
+});
 
 const LetVisitor = (() => {
   function make(context: ExecutionContext): AstNodeVisitor {
@@ -76,7 +85,9 @@ const InterpreterNodeVisitor = freeze({
           mStack.push().set(askStringFunction());
         },
         pass: (node: AstFunctionCallNode): void =>
-          node.arguments.forEach(mPushValueOf)
+          node.arguments.forEach(mPushValueOf),
+        evaluate: (node: AstFunctionCallNode): void =>
+          node.arguments.forEach(mValueOf)
       });
 
     const inst = freeze({
@@ -93,9 +104,11 @@ const InterpreterNodeVisitor = freeze({
         
         lhs.visit(inst);
       },
+      // see a tuple node, just visit it, which in turn evaluate it?
       visitTuple: (node: AstTupleNode) => {
         node.forEach((node: AstNode) => node.visit(inst));
       },
+      visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) => {},
       visitIdentifier: (_0: AstFringeNode) => {},
       visitBinaryOperation: (node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
         // resolving value... far touch much logic lives here

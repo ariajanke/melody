@@ -1,4 +1,4 @@
-import { type TreePartBuild } from './tree_part_build';
+import { type BuildSink, type TreePartBuild } from './tree_part_build';
 import { AstNode } from '../ast_node';
 import { Helpers } from '../helpers';
 import { Token } from '../token';
@@ -11,38 +11,58 @@ export const BuildState = freeze({
     (mErrors: Readonly<{ message: string }>[] = []) =>
   {
     const mBuildParts: TreePartBuild[] = [];
-    const mBlockBuilder = BlockBuilder.make(mErrors);
+    const mBlockBuilders: BlockBuilder[] = [BlockBuilder.make(mErrors)];
+    const throwNoRemainingBuilders = () =>
+      { throw new Error('no remaining block builders'); };
+    const lastBlockBuilder = () =>
+      mBlockBuilders[mBlockBuilders.length - 1] ??
+      throwNoRemainingBuilders();
+    const pushBlock = (): BuildState => {
+      mBlockBuilders.push(BlockBuilder.make(mErrors));
+      return inst;
+    };
+    const popBlock = (fn: (node: AstNode) => AstNode | undefined) => {
+      const lastBuilder = mBlockBuilders.pop() ?? throwNoRemainingBuilders();
+      const node = fn( lastBuilder.complete() );
+      if (node) {
+        inst.pushNode(node);
+      }
+      return inst;
+    };
     const inst = freeze({
       hasRemainingParts: () => mBuildParts.length > 0,
-      pushPart: (buildPart: TreePartBuild) => {
-        mBuildParts.push(buildPart);
-        return inst;
-      },
+      pushPart: (buildPart: TreePartBuild): BuildState =>
+        (mBuildParts.push(buildPart) && inst) as BuildState,
       popPart: () =>
         mBuildParts.pop() ?? (() => { throw new Error('no parts remain'); })(),
-      pushToken: (token: Token, operandRelation: string) => {
-        mBlockBuilder.pushToken(token, operandRelation);
-        return inst;
-      },
-      pushNode: (node: AstNode) => {
-        mBlockBuilder.pushNode(node);
-        return inst;
-      },
-      pushStatement: () => {
-        mBlockBuilder.pushStatement();
-        return inst;
-      },
-      popStatement: (fn: (node: AstNode) => AstNode | undefined) => {
-        mBlockBuilder.popStatement(fn);
-        return inst;
-      },
-      pushNewLine: () => {
-        mBlockBuilder.pushNewLine();
-        return inst;
-      },
-      complete: () => mBlockBuilder.complete()
+      pushToken: (token: Token, operandRelation: string) =>
+        lastBlockBuilder().pushToken(token, operandRelation) && inst,
+      pushNode: (node: AstNode) =>
+        lastBlockBuilder().pushNode(node) && inst,
+      pushStatement: () =>
+        lastBlockBuilder().pushStatement() && inst,
+      popStatement: (fn: (node: AstNode) => AstNode | undefined) =>
+        lastBlockBuilder().popStatement(fn) && inst,
+      pushNewLine: () =>
+        lastBlockBuilder().pushNewLine() && inst,
+      pushBlock,
+      popBlock,
+      complete: () => lastBlockBuilder().complete()
     });
-    return inst;
+    return inst satisfies BuildSink;
   }
 });
-export type BuildState = ReturnType<typeof BuildState.make>;
+
+export interface BuildState {
+  hasRemainingParts: () => boolean,
+  pushPart: (buildPart: TreePartBuild) => BuildState,
+  popPart: () => TreePartBuild,
+  pushToken: (token: Token, operandRelation: string) => BuildState,
+  pushNode: (node: AstNode) => BuildState,
+  pushStatement: () => BuildState,
+  popStatement: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
+  pushNewLine: () => BuildState,
+  pushBlock: () => BuildState,
+  popBlock: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
+  complete: () => AstNode
+};

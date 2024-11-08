@@ -5,6 +5,7 @@ import { BuildSink, BuildStateAddition, type TreePartBuild } from './tree_part_b
 import { AstFringeNode } from '../ast_fringe_node';
 import { ContinuingAfterSingleValueBuild } from './continuing_after_single_value_build';
 import { StartGroupBuild } from './start_group_build';
+import { StartFunctionDefinitionBuild } from './start_function_definition_build';
 
 export const ContinuingAfterOperatorBuild = (() => {
   const { freeze } = Helpers;
@@ -13,7 +14,7 @@ export const ContinuingAfterOperatorBuild = (() => {
     make: (mTokenRange: TokenRange, mPrevOperatorToken: Token, mOperandRelation: string):
       TreePartBuild =>
     {
-      const { error, setErrorMessage } = StandardError.make();
+      const { error, setErrorMessage, setErrorFn } = StandardError.make();
       const { startToken } = mTokenRange;
 
       const handlePeekAheadFringe = () => {
@@ -54,6 +55,13 @@ export const ContinuingAfterOperatorBuild = (() => {
           return BuildStateAddition.make((sink: BuildSink) => {
             sink.pushToken(mPrevOperatorToken, mOperandRelation).pushPart(tpb);
           });
+        },
+        // repeat of tpb
+        [kTokenTypes.functionDefinition]: () => {
+          const start = startToken();
+          const { build, error } =
+            StartFunctionDefinitionBuild.make(mTokenRange.step(), start);
+          return build() ?? setErrorFn(error);
         }
       });
 

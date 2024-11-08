@@ -1,9 +1,9 @@
-import { AstTupleNode } from '../ast_tuple_node';
 import { Helpers } from '../helpers';
 import { OperativeStatementBuilder } from '../operative_statement_builder';
 import { OperativeStatementAstCreation } from './operative_statement_ast_creation';
 import { AstNode } from '../ast_node';
 import { Token } from '../token';
+import { AstFunctionDefinitionNode } from '../ast_function_definition_node';
 
 const { freeze } = Helpers;
 
@@ -54,7 +54,7 @@ export const BlockBuilder = freeze({
           pushStatement(),
       complete: () => {
         inst.pushNewLine();
-        return AstTupleNode.make('\n', mLineNodes);
+        return AstFunctionDefinitionNode.make(mLineNodes);
       }
     });
     return inst;

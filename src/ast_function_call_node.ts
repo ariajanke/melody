@@ -12,12 +12,12 @@ export interface AstFunctionCallNode extends AstNode {
 export const AstFunctionCallNode = (() => {
   const nodeTypes = AstNode.types;
 
-  function make(_0: string, lhs: AstNode, rhs: AstNode) {
+  function make(_0: string, lhs: AstNode, rhsArgs: AstNode) {
     const arguments_: AstTupleNode = (() => {
-      if (rhs.type() === nodeTypes.tuple) {
-        return rhs as AstTupleNode;
+      if (rhsArgs.type() === nodeTypes.tuple) {
+        return rhsArgs as AstTupleNode;
       }
-      return AstTupleNode.make(',', [rhs]);
+      return AstTupleNode.make(',', [rhsArgs]);
     })();
 
     const name: string = (() => {
@@ -34,16 +34,15 @@ export const AstFunctionCallNode = (() => {
       name,
       asString: () => `${name}(...)`,
       arguments: arguments_,
-      visit,
+      visit: (visitor: AstNodeVisitor): void => {
+        lhs.visit(visitor);
+        visitor.visitFunctionCall(inst);
+      },
       type: () => nodeTypes.functionCall,
       executionType: (_0: TypeLookUpTable): TypeResolution => {
         throw Error('executionType is not implemented for function call nodes');
       }
     });
-
-    function visit(visitor: AstNodeVisitor): void {
-      visitor.visitFunctionCall(inst);
-    }
 
     return inst;
   }

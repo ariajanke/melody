@@ -28,7 +28,7 @@ const CloseGroupPart = freeze({
 
 const passBuildSink = (sink: BuildSink) => sink;
 
-export const GroupBuildSplit = freeze({
+const GroupBuildSplit = freeze({
   make:
     (mClosePosition: number,
      mTokenRange: TokenRange,

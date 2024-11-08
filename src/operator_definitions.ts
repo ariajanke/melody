@@ -52,8 +52,8 @@ export const OperatorDefinitions = freeze({
       return sFullListing =
         // listed in increasing precedence order
         [
-          { representation: ','  , operandRelation: binary },
           { representation: 'let', operandRelation: unary  },
+          { representation: ','  , operandRelation: binary },
           { representation: '='  , operandRelation: binary },
           { representation: ':=' , operandRelation: binary },
           { representation: '+'  , operandRelation: binary },
