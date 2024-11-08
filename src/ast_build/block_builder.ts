@@ -52,8 +52,15 @@ export const BlockBuilder = freeze({
             return undefined;
           }).
           pushStatement(),
+      statementCount: () => mStatementBuilders.length,
       complete: () => {
-        inst.pushNewLine();
+        inst.popStatement((node: AstNode) => {
+          mLineNodes.push(node);
+          return undefined;
+        });
+        if (mStatementBuilders.length !== 0) {
+          throw new Error(`there are still statement builders left`);
+        }
         return AstFunctionDefinitionNode.make(mLineNodes);
       }
     });

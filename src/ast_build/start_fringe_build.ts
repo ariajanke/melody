@@ -36,8 +36,10 @@ export const StartFringeBuild = (() => {
           const { build, error } = ContinuingAfterSingleValueBuild.make(mTokenRange, node);
           return build() ?? setErrorFn(error);
         },
-        error
-      });
+        error,
+        range: mTokenRange.range,
+        asString: () => `SF ${mTokenRange.asString()}`
+      }) satisfies TreePartBuild;
     }
   });
 })();

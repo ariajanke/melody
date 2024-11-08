@@ -22,7 +22,8 @@ const CloseGroupPart = freeze({
           });
         }),
       error: (): StandardErrorMessage => { throw new Error('should not ever fail') },
-      range: mTokenRange.range
+      range: mTokenRange.range,
+      asString: () => `CGP ${mTokenRange.asString()}`
     })
 });
 
@@ -83,7 +84,8 @@ export const StartGroupBuild = freeze({
           build()) as BuildStateAddition | undefined;
       },
       error,
-      range: mTokenRange.range
+      range: mTokenRange.range,
+      asString: () => `SGB ${mTokenRange.asString()}`
     });
   }
 });

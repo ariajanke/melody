@@ -3,12 +3,15 @@ import { AstNode } from '../ast_node';
 import { Helpers } from '../helpers';
 import { Token } from '../token';
 import { BlockBuilder } from './block_builder';
+import { TokenRange } from '../token_range';
 
 const { freeze } = Helpers;
 
 export const BuildState = freeze({
   make:
-    (mErrors: Readonly<{ message: string }>[] = []) =>
+    (mErrors: Readonly<{ message: string }>[] = [],
+     mTokens: TokenRange = TokenRange.make([], 0, 0)
+    ) =>
   {
     const mBuildParts: TreePartBuild[] = [];
     const mBlockBuilders: BlockBuilder[] = [BlockBuilder.make(mErrors)];
@@ -33,8 +36,10 @@ export const BuildState = freeze({
       hasRemainingParts: () => mBuildParts.length > 0,
       pushPart: (buildPart: TreePartBuild): BuildState =>
         (mBuildParts.push(buildPart) && inst) as BuildState,
-      popPart: () =>
-        mBuildParts.pop() ?? (() => { throw new Error('no parts remain'); })(),
+      popPart: () => {
+        console.log(inst.asString());
+        return mBuildParts.pop() ?? (() => { throw new Error('no parts remain'); })();
+      },
       pushToken: (token: Token, operandRelation: string) =>
         lastBlockBuilder().pushToken(token, operandRelation) && inst,
       pushNode: (node: AstNode) =>
@@ -47,7 +52,14 @@ export const BuildState = freeze({
         lastBlockBuilder().pushNewLine() && inst,
       pushBlock,
       popBlock,
-      complete: () => lastBlockBuilder().complete()
+      complete: () => lastBlockBuilder().complete(),
+      asString: () => {
+        let s = `(Blocks ${mBlockBuilders.length}, Statements ${lastBlockBuilder().statementCount()})`;
+        mBuildParts.forEach((part: TreePartBuild) => {
+          s = `${s} {${part.asString().replace('\n', '\\n')}}`;
+        });
+        return s;
+      }
     });
     return inst satisfies BuildSink;
   }

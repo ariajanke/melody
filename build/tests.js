@@ -608,6 +608,13 @@
         range: () => {
           verifyInTesting2();
           return freeze4({ start: mStart, end: mEnd });
+        },
+        asString: () => {
+          let s = "";
+          for (let i = mStart; i < mEnd; ++i) {
+            s = `${s}, ${mTokens[i].content()}`;
+          }
+          return s;
         }
       });
       function _verifyValidRange() {
@@ -1387,7 +1394,8 @@
       error: () => {
         throw new Error("should not ever fail");
       },
-      range: mTokenRange.range
+      range: mTokenRange.range,
+      asString: () => `CGP ${mTokenRange.asString()}`
     })
   });
   var passBuildSink = (sink) => sink;
@@ -1424,7 +1432,8 @@
           return closePosition() && GroupBuildSplit.make(closePosition(), mTokenRange, mOnNewGroupingFn).build();
         },
         error,
-        range: mTokenRange.range
+        range: mTokenRange.range,
+        asString: () => `SGB ${mTokenRange.asString()}`
       });
     }
   });
@@ -1478,7 +1487,8 @@
           return kNextTokenStrategies[byType]();
         },
         error,
-        range: mTokenRange.range
+        range: mTokenRange.range,
+        asString: () => `CASV ${mTokenRange.asString()}`
       });
       return inst;
     }
@@ -1543,7 +1553,8 @@
           });
         },
         error: StandardError.make().error,
-        range: mTokenRange.range
+        range: mTokenRange.range,
+        asString: () => `CFnD ${mTokenRange.asString()}`
       });
     }
   });
@@ -1563,7 +1574,8 @@
             });
           }),
           error: StandardError.make().error,
-          range: mTokenRange.range
+          range: mTokenRange.range,
+          asString: () => `SFnD ${mTokenRange.asString()}`
         });
       }
     });
@@ -1626,7 +1638,8 @@
             const type = startToken().type();
             return kPeakAheadStrategies[type]();
           },
-          range: mTokenRange.range
+          range: mTokenRange.range,
+          asString: () => `CAO ${mTokenRange.asString()}`
         });
         return inst;
       }
@@ -1659,7 +1672,9 @@
             const { build, error: error2 } = ContinuingAfterSingleValueBuild.make(mTokenRange, node);
             return build() ?? setErrorFn(error2);
           },
-          error
+          error,
+          range: mTokenRange.range,
+          asString: () => `SF ${mTokenRange.asString()}`
         });
       }
     });
@@ -1775,6 +1790,7 @@
           return kStartingTokenTypeToBuildAddition[type]();
         },
         range: mTokenRange.range,
+        asString: () => `TPB ${mTokenRange.asString()}`,
         error
       });
       return inst;
@@ -2237,8 +2253,15 @@
           mLineNodes.push(node);
           return void 0;
         }).pushStatement(),
+        statementCount: () => mStatementBuilders.length,
         complete: () => {
-          inst.pushNewLine();
+          inst.popStatement((node) => {
+            mLineNodes.push(node);
+            return void 0;
+          });
+          if (mStatementBuilders.length !== 0) {
+            throw new Error(`there are still statement builders left`);
+          }
           return AstFunctionDefinitionNode.make(mLineNodes);
         }
       });
@@ -2249,7 +2272,7 @@
   // src/ast_build/build_state.ts
   var { freeze: freeze34 } = Helpers;
   var BuildState = freeze34({
-    make: (mErrors = []) => {
+    make: (mErrors = [], mTokens = TokenRange.make([], 0, 0)) => {
       const mBuildParts = [];
       const mBlockBuilders = [BlockBuilder.make(mErrors)];
       const throwNoRemainingBuilders = () => {
@@ -2271,9 +2294,12 @@
       const inst = freeze34({
         hasRemainingParts: () => mBuildParts.length > 0,
         pushPart: (buildPart) => mBuildParts.push(buildPart) && inst,
-        popPart: () => mBuildParts.pop() ?? (() => {
-          throw new Error("no parts remain");
-        })(),
+        popPart: () => {
+          console.log(inst.asString());
+          return mBuildParts.pop() ?? (() => {
+            throw new Error("no parts remain");
+          })();
+        },
         pushToken: (token, operandRelation) => lastBlockBuilder().pushToken(token, operandRelation) && inst,
         pushNode: (node) => lastBlockBuilder().pushNode(node) && inst,
         pushStatement: () => lastBlockBuilder().pushStatement() && inst,
@@ -2281,7 +2307,14 @@
         pushNewLine: () => lastBlockBuilder().pushNewLine() && inst,
         pushBlock,
         popBlock,
-        complete: () => lastBlockBuilder().complete()
+        complete: () => lastBlockBuilder().complete(),
+        asString: () => {
+          let s = `(Blocks ${mBlockBuilders.length}, Statements ${lastBlockBuilder().statementCount()})`;
+          mBuildParts.forEach((part) => {
+            s = `${s} {${part.asString().replace("\n", "\\n")}}`;
+          });
+          return s;
+        }
       });
       return inst;
     }
@@ -2293,11 +2326,11 @@
     const class_5 = freeze38({
       make: (mTokens) => {
         const mErrors = [];
-        const mBuildState = BuildState.make(mErrors);
+        const mBuildState = BuildState.make(mErrors, mTokens.clone());
         const inst = freeze38({
           build: memoize18(() => {
             mBuildState.pushPart(TreePartBuild.make(mTokens));
-            mBuildState.pushStatement();
+            console.log(`init ${mBuildState.asString()}`);
             while (mBuildState.hasRemainingParts()) {
               const part = mBuildState.popPart();
               const addition = part.build();
@@ -2307,6 +2340,7 @@
               }
               addition.pushTo(mBuildState);
             }
+            console.log(`on complete ${mBuildState.asString()}`);
             return mBuildState.complete();
           }),
           errors: () => mErrors
@@ -2602,18 +2636,22 @@ ${inst.errors()[0]?.message}`);
     });
     describe("with function blocks", () => {
       const tokens = [
+        // 0 ,  1 , 2   , 3   , 4
         "let",
         "a",
         ":=",
         "fn",
         "\n",
+        // 5  , 6  , 7        , 8  , 9
         "puts",
         "(",
         `'hello'`,
         ")",
         "\n",
+        //10, 11
         "~",
         "\n",
+        // 12, 13, 14, 15
         "queue",
         "(",
         "a",

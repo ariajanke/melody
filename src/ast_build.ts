@@ -10,12 +10,12 @@ export const AstBuild = (() => {
   const class_ = freeze({
     make: (mTokens: TokenRange) => {
       const mErrors: Readonly<{ message: string }>[] = [];
-      const mBuildState = BuildState.make(mErrors);
+      const mBuildState = BuildState.make(mErrors, mTokens.clone());
 
       const inst = freeze({
         build: memoize((): AstNode | undefined => {
           mBuildState.pushPart( TreePartBuild.make(mTokens) );
-          mBuildState.pushStatement();
+          console.log(`init ${mBuildState.asString()}`);
           while (mBuildState.hasRemainingParts()) {
             const part = mBuildState.popPart();
             const addition = part.build();
@@ -25,6 +25,7 @@ export const AstBuild = (() => {
             }
             addition.pushTo(mBuildState);
           }
+          console.log(`on complete ${mBuildState.asString()}`);
           return mBuildState.complete();
         }),
         errors: () => mErrors

@@ -74,7 +74,8 @@ export const ContinuingAfterOperatorBuild = (() => {
           const type = startToken().type();
           return kPeakAheadStrategies[type]();
         },
-        range: mTokenRange.range
+        range: mTokenRange.range,
+        asString: () => `CAO ${mTokenRange.asString()}`
       });
       return inst;
     }

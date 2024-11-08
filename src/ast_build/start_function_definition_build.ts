@@ -13,15 +13,16 @@ const CloseFunctionDefinitionBuild = freeze({
     return freeze({
       build: () => {
         return BuildStateAddition.make((sink: BuildSink) => {
-          sink.popBlock( (node: AstNode) => {
+          sink.popBlock((node: AstNode) => {
             sink.pushPart(ContinuingAfterSingleValueBuild.make(mTokenRange, node));
             return undefined;
-          } );
+          });
         })
       },
       error: StandardError.make().error,
-      range: mTokenRange.range
-    })
+      range: mTokenRange.range,
+      asString: () => `CFnD ${mTokenRange.asString()}`
+    }) satisfies TreePartBuild;
   }
 });
 
@@ -44,7 +45,8 @@ export const StartFunctionDefinitionBuild = (() => {
           });
         }),
         error: StandardError.make().error,
-        range: mTokenRange.range
+        range: mTokenRange.range,
+        asString: () => `SFnD ${mTokenRange.asString()}`
       })
     }
   })

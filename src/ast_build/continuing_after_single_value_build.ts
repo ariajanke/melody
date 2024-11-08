@@ -68,7 +68,8 @@ export const ContinuingAfterSingleValueBuild = freeze({
         return kNextTokenStrategies[byType]();
       },
       error,
-      range: mTokenRange.range
+      range: mTokenRange.range,
+      asString: () => `CASV ${mTokenRange.asString()}`
     });
     return inst;
   }

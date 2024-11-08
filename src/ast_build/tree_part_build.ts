@@ -39,7 +39,8 @@ export const BuildStateAddition = (() => {
 export interface TreePartBuild {
   build: () => BuildStateAddition | undefined,
   error: StandardErrorFn,
-  range: () => ({ start: number, end: number })
+  range: () => ({ start: number, end: number }),
+  asString: () => string
 }
 
 export const TreePartBuild = (() => {
@@ -99,6 +100,7 @@ export const TreePartBuild = (() => {
         return kStartingTokenTypeToBuildAddition[type]();
       },
       range: mTokenRange.range,
+      asString: () => `TPB ${mTokenRange.asString()}`,
       error
     });
 

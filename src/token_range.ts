@@ -12,7 +12,8 @@ export interface TokenRange {
   end: () => number,
   isEmpty: () => boolean,
   startToken: () => Token,
-  range: () => Readonly<{ start: number, end: number }>
+  range: () => Readonly<{ start: number, end: number }>,
+  asString: () => string
 }
 
 export const TokenRange = (() => {
@@ -54,6 +55,13 @@ export const TokenRange = (() => {
       range     : () => {
         verifyInTesting();
         return freeze({ start: mStart, end: mEnd });
+      },
+      asString: () => {
+        let s = '';
+        for (let i = mStart; i < mEnd; ++i) {
+          s = `${s}, ${mTokens[i].content()}`;
+        }
+        return s;
       }
     });
 
