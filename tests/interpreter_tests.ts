@@ -81,5 +81,21 @@ describeNamed({ Interpreter }, () => {
       intr.interpret(programRootNode);
       expect(printedStrings).toEqual(['4']);
     });
+
+    it('compiles and runs a program with simple functions', () => {
+      const rootNode = Interpreter.buildFor(`
+        let a := fn
+          puts('world')
+        ~
+        let b := fn puts('hello')
+        
+        b()
+        a()
+      `);
+      const { printedStrings, injections } = makePutsFunction();
+      const intr = makeWithInjections(injections.putsFunction);
+      intr.interpret(rootNode);
+      expect(printedStrings).toEqual(['hello', 'world']);
+    });
   });
 });

@@ -27,4 +27,10 @@ describeNamed({ CharacterCrawler }, () => {
     const token = crawler.crawl().crawl().readToken().content();
     expect(token).toEqual('(');
   });
+
+  it('crawls through a compact operative statement', () => {
+    const crawler = CharacterCrawler.make('a*b');
+    const opString = crawler.crawl().crawl().readToken().content();
+    expect(opString).toEqual('*');
+  });
 });

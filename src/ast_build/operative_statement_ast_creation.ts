@@ -22,22 +22,22 @@ export const OperativeStatementAstCreation = freeze({
     const mNodeStack: AstNode[] = [];
     const popOrThrow = () => {
       return mNodeStack.pop() ?? (() => { throw new Error('nodes depleted'); })();
-    }
+    };
     const binaryOperator = (token: Token) => {
       const first = popOrThrow();
       mNodeStack.push(AstBinaryOperatorNode.make(token.content(), popOrThrow(), first));
     };
     const tupleOperator = (token: Token) => {
-      const first = popOrThrow()
+      const first = popOrThrow();
       const second = popOrThrow();
 
       if (second.type() === AstNode.types.tuple) {
         (second as AstTupleNode).append(first);
         return mNodeStack.push(second);
       }
-      mNodeStack.push(AstTupleNode.makeBinary(token.content(), second, first))
+      mNodeStack.push(AstTupleNode.makeBinary(token.content(), second, first));
     };
-    const letOperator = (_token: Token) => {
+    const letOperator = (_0: Token) => {
       mNodeStack.push(AstLetDeclarationNode.make(popOrThrow()));
     };
     const functionCall = (token: Token) => {
@@ -56,7 +56,7 @@ export const OperativeStatementAstCreation = freeze({
     const inst = freeze({
       visitToken   : (token: Token) => {
         const opFactory = mOperatorFactories[token.content()];
-        if (!!opFactory) {
+        if (opFactory) {
           return opFactory(token);
         }
         mNodeStack.push(AstFringeNode.makeForToken(token));
@@ -65,12 +65,12 @@ export const OperativeStatementAstCreation = freeze({
         { mNodeStack.push(node); },
       visitLinks:
         (low: OperativeStatementVisitable,
-         visitorFn: (visitor: OperativeStatementVisitor) => void,
+         node: OperativeStatementVisitable,
          high: OperativeStatementVisitable) =>
       {
         low.visit(inst);
         high.visit(inst);
-        visitorFn(inst);
+        node.visit(inst);
       },
       finish: (): AstNode => {
         const node = popOrThrow();
@@ -82,4 +82,4 @@ export const OperativeStatementAstCreation = freeze({
     });
     return inst;
   }
-})
+});

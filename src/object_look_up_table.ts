@@ -13,8 +13,9 @@ export interface ObjectLookUpTable {
 
 export const ObjectLookUpTable = (() => {
   const getBuiltinTypes = memoize(() => {
-    const integer_ = ObjectType.make('Integer');
-    const string_  = ObjectType.make('String' );
+    const integer_  = ObjectType.make('Integer');
+    const string_   = ObjectType.make('String' );
+    const function_ = ObjectType.make('Function');
 
     const add = IncompleteFunctionType.
       make().
@@ -90,6 +91,20 @@ export const ObjectLookUpTable = (() => {
         }).
       finish();
 
+    const assignFn = IncompleteFunctionType.
+      make().
+      setName(':=').
+      setArguments(function_.asSingluarParameter()).
+      setReturns  ([ function_ ]).
+      setBuiltin((stack: PersistentStack<ContextVariable>,
+                  lhs: ContextVariable,
+                  rhs: ContextVariable) =>
+      {
+        rhs.copyTo(lhs);
+        lhs.copyTo( stack.push() );
+      }).
+      finish();
+
     return freeze({
       Integer: integer_.
         setLookUp({
@@ -102,6 +117,10 @@ export const ObjectLookUpTable = (() => {
       String: string_.
         setLookUp({
           [':=']: assignStr
+        }),
+      Function: function_.
+        setLookUp({
+          [':=']: assignFn
         }),
       Unresolved: ObjectType.make('Unresolved')
     });

@@ -1,4 +1,4 @@
-import { Helpers, StandardError } from '../helpers';
+import { Helpers } from '../helpers';
 import {
   type OperativeStatementVisitable,
   type OperativeStatementVisitor
@@ -6,6 +6,14 @@ import {
 import { OrganizationNodeSlot } from './organization_node_slot';
 import { OrganizationNodeTypeInfo } from './organization_node_type_info';
 import { type VisitableNodeDatum } from './visitable_node_datum';
+
+interface LinkedInstances {
+  low : PrecedenceOrganizationNode | undefined,
+  high: PrecedenceOrganizationNode | undefined
+};
+
+type Instance = PrecedenceOrganizationNode;
+type NodeTypeInfo = OrganizationNodeTypeInfo;
 
 export interface NodeValidationVisitor {
   validate: (low : PrecedenceOrganizationNode | undefined,
@@ -23,14 +31,6 @@ export interface PrecedenceOrganizationNode extends OperativeStatementVisitable 
   asString: () => string
 };
 
-interface LinkedInstances {
-  low : PrecedenceOrganizationNode | undefined,
-  high: PrecedenceOrganizationNode | undefined
-};
-
-type Instance = PrecedenceOrganizationNode;
-type NodeTypeInfo = OrganizationNodeTypeInfo;
-
 const { freeze, memoize } = Helpers;
 
 const nullLink: LinkedInstances = freeze({ low: undefined, high: undefined });
@@ -39,7 +39,7 @@ const presentSlot = (lhs: OrganizationNodeSlot | undefined, rhs: OrganizationNod
   lhs?.isPresent() ? lhs: rhs;
 
 const nullVisitableInstance: OperativeStatementVisitable = freeze({
-  visit: (_: OperativeStatementVisitor) => {},
+  visit: (_0: OperativeStatementVisitor) => {},
   uniqueIdentifier: memoize(Symbol),
 });
 
@@ -64,7 +64,7 @@ const make =
     visit: (visitor: OperativeStatementVisitor) =>
       visitor.
         visitLinks(mLinks.low ?? nullVisitableInstance,
-                   mVisitable.visit,
+                   mVisitable,
                    mLinks.high ?? nullVisitableInstance ),
     lowSlot: () => mLow,
     highSlot: () => mHigh,
@@ -86,7 +86,7 @@ const make =
   return inst;
 };
 
-const class_ = freeze({
+export const PrecedenceOrganizationNode = freeze({
   workCollection: (collection: PrecedenceOrganizationNode[]):
     PrecedenceOrganizationNode | undefined =>
   {
@@ -99,5 +99,3 @@ const class_ = freeze({
     nullVisitableInstance.uniqueIdentifier() === vnd.uniqueIdentifier(),
   make
 });
-
-export const PrecedenceOrganizationNode = class_;

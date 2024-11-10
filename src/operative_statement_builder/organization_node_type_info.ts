@@ -35,7 +35,7 @@ const make = (mMakeLow: MakeNodeFn,
       mPrecedence - index
   });
   return inst;
-}
+};
 
 const {
   fallBackInstance,
@@ -43,7 +43,10 @@ const {
   makeIntermediateNodeForUnary
 } = NodeTypeInfoInstance.makeFunctions(make);
 
-const someMap = memoize(() => freeze({
+const someMap:
+  () => { [name: string]: (token: Token, index: number) => PrecedenceOrganizationNode }
+  =
+memoize(() => freeze({
   [OperatorDefinitions.operandRelationships.binary]: makeIntermediateNodeForBinary,
   [OperatorDefinitions.operandRelationships.unary ]: makeIntermediateNodeForUnary ,
   [OperatorDefinitions.operandRelationships.fringe]: (token: Token, index: number) =>

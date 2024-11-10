@@ -16,3 +16,4 @@ import './tests/tokenization/crawl_strategies_tests';
 import './tests/ast_validator_tests';
 import './tests/ast_build/close_position_retrieval_tests';
 import './tests/operative_statement_builder_tests';
+import './tests/ast_build/fn_close_position_retrieval_tests';

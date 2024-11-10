@@ -1,89 +1,78 @@
-import { type TreePartBuild } from './tree_part_build';
-import { AstTupleNode } from '../ast_tuple_node';
+import { type BuildSink, type TreePartBuild } from './tree_part_build';
 import { AstNode } from '../ast_node';
 import { Helpers } from '../helpers';
-import { OperativeStatementBuilder } from '../operative_statement_builder';
 import { Token } from '../token';
-import { OperativeStatementAstCreation } from './operative_statement_ast_creation';
+import { BlockBuilder } from './block_builder';
+import { AstFunctionDefinitionNode } from '../ast_function_definition_node';
 
 const { freeze } = Helpers;
 
+export interface BuildState {
+  hasRemainingParts: () => boolean,
+  pushPart: (buildPart: TreePartBuild) => BuildState,
+  popPart: () => TreePartBuild,
+  pushToken: (token: Token, operandRelation: string) => BuildState,
+  pushNode: (node: AstNode) => BuildState,
+  pushStatement: () => BuildState,
+  popStatement: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
+  pushNewLine: () => BuildState,
+  pushBlock: () => BuildState,
+  popBlock: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
+  complete: () => AstFunctionDefinitionNode,
+  asString: () => string
+};
+
 export const BuildState = freeze({
   make:
-    (mErrors: Readonly<{ message: string }>[] = []) => {
+    (mErrors: Readonly<{ message: string }>[] = []) =>
+  {
     const mBuildParts: TreePartBuild[] = [];
-
-    const mLineNodes: AstNode[] = [];
-    const mStatementBuilders = [OperativeStatementBuilder.make()];
-    const lastStatementBuilder = () =>
-      mStatementBuilders[mStatementBuilders.length - 1] ??
-      (() => { throw new Error('All group frames already popped'); }) ();
+    const mBlockBuilders: BlockBuilder[] = [BlockBuilder.make(mErrors)];
+    const throwNoRemainingBuilders = () =>
+      { throw new Error('no remaining block builders'); };
+    const lastBlockBuilder = () =>
+      mBlockBuilders[mBlockBuilders.length - 1] ??
+      throwNoRemainingBuilders();
+    const pushBlock = (): BuildState => {
+      mBlockBuilders.push(BlockBuilder.make(mErrors));
+      return inst;
+    };
+    const popBlock = (fn: (node: AstNode) => AstNode | undefined) => {
+      const lastBuilder = mBlockBuilders.pop() ?? throwNoRemainingBuilders();
+      const node = fn( lastBuilder.complete() );
+      if (node) {
+        inst.pushNode(node);
+      }
+      return inst;
+    };
     const inst = freeze({
       hasRemainingParts: () => mBuildParts.length > 0,
-      pushPart: (buildPart: TreePartBuild) => {
-        mBuildParts.push(buildPart);
-        return inst;
+      pushPart: (buildPart: TreePartBuild): BuildState =>
+        (mBuildParts.push(buildPart) && inst) as BuildState,
+      popPart: () => {
+        return mBuildParts.pop() ?? (() => { throw new Error('no parts remain'); })();
       },
-      popPart: () =>
-        mBuildParts.pop() ?? (() => { throw new Error('no parts remain'); })(),
-      pushToken: (token: Token, operandRelation: string) => {
-        lastStatementBuilder().pushToken(token, operandRelation);
-        return inst;
-      },
-      pushNode: (node: AstNode) => {
-        lastStatementBuilder().pushNode(node);
-        return inst;
-      },
-      pushGrouping: () => {
-        mStatementBuilders.push(OperativeStatementBuilder.make());
-        return inst;
-      },
-      popGrouping: (fn: (node: AstNode) => AstNode | undefined) => {
-        const lastBuilder = lastStatementBuilder();
-        mStatementBuilders.pop();
-        const visitor = OperativeStatementAstCreation.make();
-        const { rootVisitable, isEmpty, error } = lastBuilder.completion();
-        const osvNode = rootVisitable();
-        if (osvNode) {
-          osvNode.visit(visitor);
-          const node = fn( visitor.finish() );
-          if (node) {
-            inst.pushNode(node);
-          }
-        } else if (!isEmpty()) {
-          mErrors.push(error());
-        }
-        return inst;
-      },
-      pushNewLine: () => {
-        const lastBuilder = lastStatementBuilder();
-        const { rootVisitable, isEmpty, error } = lastBuilder.completion();
-        const osv = rootVisitable();
-        mStatementBuilders.pop();
-        if (osv) {
-          const visitor = OperativeStatementAstCreation.make();
-          osv.visit(visitor);
-          mLineNodes.push(visitor.finish());
-        } else if (!isEmpty()) {
-          mErrors.push(error());
-        }
-        mStatementBuilders.push(OperativeStatementBuilder.make());
-        return inst;
-      },
-      complete: () => {
-        const { rootVisitable, isEmpty, error } = lastStatementBuilder().completion();
-        const osv = rootVisitable();
-        if (osv) {
-          const visitor = OperativeStatementAstCreation.make();
-          osv.visit(visitor);
-          mLineNodes.push(visitor.finish());
-        } else if (!isEmpty()) {
-          mErrors.push(error());
-        }
-        return AstTupleNode.make('\n', mLineNodes);
+      pushToken: (token: Token, operandRelation: string) =>
+        lastBlockBuilder().pushToken(token, operandRelation) && inst,
+      pushNode: (node: AstNode) =>
+        lastBlockBuilder().pushNode(node) && inst,
+      pushStatement: () =>
+        lastBlockBuilder().pushStatement() && inst,
+      popStatement: (fn: (node: AstNode) => AstNode | undefined) =>
+        lastBlockBuilder().popStatement(fn) && inst,
+      pushNewLine: () =>
+        lastBlockBuilder().pushNewLine() && inst,
+      pushBlock,
+      popBlock,
+      complete: () => lastBlockBuilder().complete(),
+      asString: () => {
+        let s = `(Blocks ${mBlockBuilders.length}, Statements ${lastBlockBuilder().statementCount()})`;
+        mBuildParts.forEach((part: TreePartBuild) => {
+          s = `${s} {${part.asString()}}`;
+        });
+        return s;
       }
     });
-    return inst;
+    return inst satisfies BuildSink;
   }
 });
-export type BuildState = ReturnType<typeof BuildState.make>;

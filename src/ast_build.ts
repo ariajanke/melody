@@ -1,22 +1,32 @@
-import { AstNode } from './ast_node';
 import { TreePartBuild } from './ast_build/tree_part_build';
 import { TokenRange } from './token_range';
 import { Helpers } from './helpers';
 import { BuildState } from './ast_build/build_state';
+import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 
 export const AstBuild = (() => {
   const { freeze, memoize } = Helpers;
 
+  let sPrintOutTpbs = false;
+
   const class_ = freeze({
+    setPrintOutsEnabled: (b: boolean) => {
+      sPrintOutTpbs = b;
+    },
     make: (mTokens: TokenRange) => {
       const mErrors: Readonly<{ message: string }>[] = [];
       const mBuildState = BuildState.make(mErrors);
 
       const inst = freeze({
-        build: memoize((): AstNode | undefined => {
+        build: memoize((): AstFunctionDefinitionNode | undefined => {
           mBuildState.pushPart( TreePartBuild.make(mTokens) );
-          mBuildState.pushGrouping();
+          if (sPrintOutTpbs) {
+            console.log(`init ${mBuildState.asString()}`);
+          }
           while (mBuildState.hasRemainingParts()) {
+            if (sPrintOutTpbs) {
+              console.log(mBuildState.asString());
+            }
             const part = mBuildState.popPart();
             const addition = part.build();
             if (!addition) {
@@ -24,6 +34,9 @@ export const AstBuild = (() => {
               return;
             }
             addition.pushTo(mBuildState);
+          }
+          if (sPrintOutTpbs) {
+            console.log(`on complete ${mBuildState.asString()}`);
           }
           return mBuildState.complete();
         }),
@@ -33,7 +46,7 @@ export const AstBuild = (() => {
       return inst;
     },
 
-    buildFor: (tokens: TokenRange): AstNode => {
+    buildFor: (tokens: TokenRange): AstFunctionDefinitionNode => {
       const inst = class_.make(tokens);
       const res = inst.build();
       if (!res) {

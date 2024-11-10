@@ -9,8 +9,7 @@ import { AstNode } from '../ast_node';
 const { freeze } = Helpers;
 const kTokenTypes = Token.types;
 
-// ContinuingAfterSingleValueBuild
-export const ContinuingAfterFringeBuild = freeze({
+export const ContinuingAfterSingleValueBuild = freeze({
   make: (mTokenRange: TokenRange, mCompleteNode: AstNode): TreePartBuild => {
     const { error, setErrorMessage } = StandardError.make();
     const { startToken } = mTokenRange;
@@ -30,7 +29,6 @@ export const ContinuingAfterFringeBuild = freeze({
     };
 
     const handleOperator = () => {
-      // TODO do operator precedence check here?
       const evStartToken = startToken();
       const nextRange = mTokenRange.step();
       const nextPart = ContinuingAfterOperatorBuild.
@@ -69,7 +67,8 @@ export const ContinuingAfterFringeBuild = freeze({
         return kNextTokenStrategies[byType]();
       },
       error,
-      range: mTokenRange.range
+      range: mTokenRange.range,
+      asString: () => `CASV ${mTokenRange.asString()}`
     });
     return inst;
   }

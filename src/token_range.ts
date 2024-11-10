@@ -12,7 +12,8 @@ export interface TokenRange {
   end: () => number,
   isEmpty: () => boolean,
   startToken: () => Token,
-  range: () => Readonly<{ start: number, end: number }>
+  range: () => Readonly<{ start: number, end: number }>,
+  asString: () => string
 }
 
 export const TokenRange = (() => {
@@ -20,7 +21,7 @@ export const TokenRange = (() => {
     return make(mTokens, 0, mTokens.length);
   }
 
-  function forEachIn(tokenRange, fn: (token: string) => void) {
+  function forEachIn(tokenRange: TokenRange, fn: (token: string) => void) {
     const { start, end } = tokenRange;
     const rangeEnd = end();
     for (let i = start(); i < rangeEnd; ++i) {
@@ -54,15 +55,22 @@ export const TokenRange = (() => {
       range     : () => {
         verifyInTesting();
         return freeze({ start: mStart, end: mEnd });
+      },
+      asString: () => {
+        let s = '';
+        for (let i = mStart; i < mEnd; ++i) {
+          s = `${s}, ${mTokens[i].content().replace('\n', '\\n')}`;
+        }
+        return s;
       }
     });
 
     function _verifyValidRange() {
       const { length } = mTokens;
       if (mStart > mEnd) {
-        throw Error(`Range start ${mStart} must be less than or equal to end ${mEnd}`);
+        throw new Error(`Range start ${mStart} must be less than or equal to end ${mEnd}`);
       } else if (length < mEnd) {
-        throw Error(`Range end ${mEnd} cannot exceed token count ${length}`);
+        throw new Error(`Range end ${mEnd} cannot exceed token count ${length}`);
       }
       return inst;
     }

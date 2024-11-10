@@ -11,13 +11,13 @@ export interface Token {
 
 export const Token = (() => {
   const types = freeze({
-    // declareFunction: Symbol(), // ???
-    operator       : Symbol(),
-    newLine        : Symbol(),
-    grouping       : Symbol(),
-    identifier     : Symbol(),
-    stringLiteral  : Symbol(),
-    integerLiteral : Symbol(),
+    functionDefinition: Symbol(),
+    operator          : Symbol(),
+    newLine           : Symbol(),
+    grouping          : Symbol(),
+    identifier        : Symbol(),
+    stringLiteral     : Symbol(),
+    integerLiteral    : Symbol(),
   });
 
   function makeSpecialToken(content_: string): Token {
@@ -41,9 +41,9 @@ export const Token = (() => {
   const kCallToken : Token = makeSpecialToken('call');
 
   const tokenTypeOf = (() => {
-    const kControlSeqs = freeze({
+    const kControlSeqs: { [sequence: string]: symbol } = freeze({
       ['let']: types.operator,
-      // ['fn' ]: types.declareFunction,
+      ['fn' ]: types.functionDefinition,
       ['('  ]: types.grouping,
       [')'  ]: types.grouping,
       [','  ]: types.operator,

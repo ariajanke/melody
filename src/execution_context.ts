@@ -4,13 +4,14 @@ import { TypeLookUpTable } from './ast_node';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { TypeResolution } from './type_resolution';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export interface ExecutionContext extends TypeLookUpTable {
   declareVariable: (name: string) => ContextVariable,
   getValueOfVariable: (name: string) => string | undefined,
   setVariable: (name: string, value: string) => void,
-  getVariable: (name: string) => ContextVariable
+  getVariable: (name: string) => ContextVariable,
+  tryGetVariable: (name: string) => ContextVariable | undefined
 }
 
 export const ExecutionContext = (() => {
@@ -37,8 +38,11 @@ export const ExecutionContext = (() => {
       getVariable(name).set(value);
     }
 
+    function tryGetVariable(name: string): ContextVariable | undefined
+      { return mAvailableVariables[name]; }
+
     function getVariable(name: string): ContextVariable {
-      const gotten = mAvailableVariables[name];
+      const gotten = tryGetVariable(name);
       if (!gotten) {
         throw Error(`Undeclared variable "${name}"`);
       }
@@ -66,6 +70,9 @@ export const ExecutionContext = (() => {
       }
     }
 
+    const lookUpFunctionType: () => TypeResolution = memoize(() =>
+      TypeResolution.makeFixedForType( ObjectLookUpTable.getBuiltinTypes().Function ));
+
     return freeze({
       lookUpIdentifierType,
       lookUpStringLiteralType: () => string_resolution,
@@ -73,7 +80,9 @@ export const ExecutionContext = (() => {
       declareVariable,
       getValueOfVariable,
       setVariable,
-      getVariable
+      getVariable,
+      lookUpFunctionType,
+      tryGetVariable
     });
   }
 

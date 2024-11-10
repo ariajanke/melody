@@ -6,16 +6,19 @@ import { StartFringeBuild } from './start_fringe_build';
 import { StartGroupBuild } from './start_group_build';
 import { type AstNode } from '../ast_node';
 import { AstTupleNode } from '../ast_tuple_node';
+import { StartFunctionDefinitionBuild } from './start_function_definition_build';
 
 const { freeze } = Helpers;
 
 export interface BuildSink {
   pushPart: (buildPart: TreePartBuild) => BuildSink,
-  pushGrouping: () => BuildSink,
-  popGrouping: (fn: (node: AstNode) => AstNode | undefined) => BuildSink,
+  pushStatement: () => BuildSink,
+  popStatement: (fn: (node: AstNode) => AstNode | undefined) => BuildSink,
   pushToken: (token: Token, operandRelation: string) => BuildSink,
   pushNode: (node: AstNode) => BuildSink,
-  pushNewLine: () => BuildSink
+  pushNewLine: () => BuildSink,
+  pushBlock: () => BuildSink,
+  popBlock: (fn: (node: AstNode) => AstNode | undefined) => BuildSink
 }
 
 export interface BuildStateAddition {
@@ -36,7 +39,8 @@ export const BuildStateAddition = (() => {
 export interface TreePartBuild {
   build: () => BuildStateAddition | undefined,
   error: StandardErrorFn,
-  range: () => ({ start: number, end: number })
+  range: () => ({ start: number, end: number }),
+  asString: () => string
 }
 
 export const TreePartBuild = (() => {
@@ -76,6 +80,12 @@ export const TreePartBuild = (() => {
         mTokenRange.skipNewLine();
         return BuildStateAddition.make((sink: BuildSink) =>
           { sink.pushNewLine().pushPart(inst); });
+      },
+      [kTokenTypes.functionDefinition]: () => {
+        const start = startToken();
+        const { build, error } =
+          StartFunctionDefinitionBuild.make(mTokenRange.step(), start);
+        return build() ?? setErrorFn(error);
       }
     });
 
@@ -90,6 +100,7 @@ export const TreePartBuild = (() => {
         return kStartingTokenTypeToBuildAddition[type]();
       },
       range: mTokenRange.range,
+      asString: () => `TPB ${mTokenRange.asString()}`,
       error
     });
 
