@@ -13,25 +13,32 @@ export interface ContextVariable {
   copyTo: (cv: ContextVariable) => void,
   asString: () => string,
   asNumber: () => number,
+  asNode  : () => AstFunctionDefinitionNode,
   setType: (objType: ObjectType) => ContextVariable
 }
 
 export const ContextVariable = (() => {
   const cannotConvertToNumber =(_0: StorableValue): number =>
     { throw new Error('not a number'); };
+  const cannotConvertToNode = (_0: StorableValue): AstFunctionDefinitionNode =>
+    { throw new Error('not a node'); };
   const kStringAccessors = freeze({
     asString_: (s: StorableValue): string => s as string,
-    asNumber: cannotConvertToNumber
+    asNumber: cannotConvertToNumber,
+    asNode  : cannotConvertToNode
   });
 
   const kNumericAccessors = freeze({
     asString_: (s: StorableValue): string => `${s}`,
-    asNumber: (s: StorableValue): number => s as number
+    asNumber: (s: StorableValue): number => s as number,
+    asNode  : cannotConvertToNode
   });
 
   const kFunctionAccessors = freeze({
     asString_: (_0: StorableValue): string => '<function>',
-    asNumber : cannotConvertToNumber
+    asNumber : cannotConvertToNumber,
+    asNode   : (sv: StorableValue): AstFunctionDefinitionNode =>
+      sv as AstFunctionDefinitionNode
   });
 
   const kUninitializedAccessors = (() => {
@@ -40,7 +47,8 @@ export const ContextVariable = (() => {
     };
     return freeze({
       asString_: kNotInitializedError<string>,
-      asNumber : kNotInitializedError<number>
+      asNumber : kNotInitializedError<number>,
+      asNode   : kNotInitializedError<AstFunctionDefinitionNode>
     });
   })();
 
@@ -55,11 +63,12 @@ export const ContextVariable = (() => {
   function make(mValue?: StorableValue): ContextVariable {
     const { getBuiltinTypes } = ObjectLookUpTable;
     const kBuiltinTypes = getBuiltinTypes();
-    const inst = freeze({ set, asString, asNumber, type, copyTo, setType });
+    const inst = freeze({ set, asString, asNumber, type, copyTo, setType, asNode });
 
     let mType = kBuiltinTypes.Unresolved;
     let mAsString = kUninitializedAccessors.asString_;
-    let mAsNumber = kUninitializedAccessors.asNumber;
+    let mAsNumber = kUninitializedAccessors.asNumber ;
+    let mAsNode   = kUninitializedAccessors.asNode   ;
 
     function set(v: StorableValue): ContextVariable {
       const accessors = (() => {
@@ -78,7 +87,8 @@ export const ContextVariable = (() => {
       })();
       mValue = v;
       mAsString = accessors.asString_;
-      mAsNumber = accessors.asNumber;
+      mAsNumber = accessors.asNumber ;
+      mAsNode   = accessors.asNode   ;
       return inst;
     }
 
@@ -111,6 +121,9 @@ export const ContextVariable = (() => {
 
     function asNumber(): number
       { return mAsNumber(mValue as StorableValue); }
+
+    function asNode(): AstFunctionDefinitionNode
+      { return mAsNode(mValue as StorableValue); }
 
     function type(): ObjectType { return mType; }
 

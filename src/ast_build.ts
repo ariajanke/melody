@@ -1,8 +1,8 @@
-import { AstNode } from './ast_node';
 import { TreePartBuild } from './ast_build/tree_part_build';
 import { TokenRange } from './token_range';
 import { Helpers } from './helpers';
 import { BuildState } from './ast_build/build_state';
+import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 
 export const AstBuild = (() => {
   const { freeze, memoize } = Helpers;
@@ -13,7 +13,7 @@ export const AstBuild = (() => {
       const mBuildState = BuildState.make(mErrors, mTokens.clone());
 
       const inst = freeze({
-        build: memoize((): AstNode | undefined => {
+        build: memoize((): AstFunctionDefinitionNode | undefined => {
           mBuildState.pushPart( TreePartBuild.make(mTokens) );
           console.log(`init ${mBuildState.asString()}`);
           while (mBuildState.hasRemainingParts()) {
@@ -34,7 +34,7 @@ export const AstBuild = (() => {
       return inst;
     },
 
-    buildFor: (tokens: TokenRange): AstNode => {
+    buildFor: (tokens: TokenRange): AstFunctionDefinitionNode => {
       const inst = class_.make(tokens);
       const res = inst.build();
       if (!res) {

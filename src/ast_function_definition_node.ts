@@ -3,7 +3,7 @@ import { AstNode, TypeLookUpTable } from './ast_node';
 import { TypeResolution } from './type_resolution';
 import { AstNodeVisitor } from './ast_node_visitor';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
 
 export const AstFunctionDefinitionNode = freeze({
   nodeType: () => AstNode.types.functionDefinition,
@@ -12,10 +12,10 @@ export const AstFunctionDefinitionNode = freeze({
       visit: (visitor: AstNodeVisitor) =>
         visitor.visitFunctionDefinition(inst, mSubExpressions),
       type: AstFunctionDefinitionNode.nodeType,
-      executionType: (_0: TypeLookUpTable): TypeResolution =>
-        { throw new Error('unimplemented'); },
+      executionType: (typeTable: TypeLookUpTable): TypeResolution =>
+        typeTable.lookUpFunctionType(),
       count: () => mSubExpressions.length,
-      asString: () => ``
+      asString: () => `<fn def>`
     });
     return inst satisfies AstNode;
   }

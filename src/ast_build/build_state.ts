@@ -4,6 +4,7 @@ import { Helpers } from '../helpers';
 import { Token } from '../token';
 import { BlockBuilder } from './block_builder';
 import { TokenRange } from '../token_range';
+import { AstFunctionDefinitionNode } from '../ast_function_definition_node';
 
 const { freeze } = Helpers;
 
@@ -76,5 +77,5 @@ export interface BuildState {
   pushNewLine: () => BuildState,
   pushBlock: () => BuildState,
   popBlock: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
-  complete: () => AstNode
+  complete: () => AstFunctionDefinitionNode
 };

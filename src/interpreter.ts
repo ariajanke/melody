@@ -53,13 +53,15 @@ const injections = freeze({
 
 const InterpreterNodeVisitor = freeze({
   make: (context: ExecutionContext,
-         { putsFunction, askStringFunction } = injections):
-    AstNodeVisitor =>
+         { putsFunction, askStringFunction } = injections) =>
   {
     const mLetVisitor = LetVisitor.make(context);
     const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
 
     function mValueOf(node: AstNode): ContextVariable {
+      if (node.type() === AstNode.types.functionDefinition) {
+        return ContextVariable.make(node as AstFunctionDefinitionNode);
+      }
       const evalNode = AstEvaluatableNode.tryDowncast(node);
       if (evalNode) {
         return evalNode.evaluate(context.getVariable);
@@ -86,12 +88,23 @@ const InterpreterNodeVisitor = freeze({
         },
         pass: (node: AstFunctionCallNode): void =>
           node.arguments.forEach(mPushValueOf),
-        evaluate: (node: AstFunctionCallNode): void =>
-          node.arguments.forEach(mValueOf)
+        evaluate: (node: AstFunctionCallNode): void => {
+          node.arguments.forEach((node: AstNode) => {
+            if (!AstFringeNode.hasCreated(node))
+              { return; }
+            const fnode = AstFringeNode.downcast(node);
+            const cvar = fnode.evaluate(context.getVariable);
+            inst.callFunctionDefinition(cvar.asNode());
+          });
+        }
       });
 
     const inst = freeze({
       visitFunctionCall: (node: AstFunctionCallNode) => {
+        const cvar = context.tryGetVariable(node.name);
+        if (cvar) {
+          return inst.callFunctionDefinition(cvar.asNode())
+        }
         const fn = kBuiltinFunctions[node.name];
         if (!fn) {
           throw Error(`unimplemented function "${node.name}"`);
@@ -99,7 +112,7 @@ const InterpreterNodeVisitor = freeze({
         
         fn(node);
       },
-      visitLetDeclaration: (node: AstLetDeclarationNode, lhs: AstNode) => {
+      visitLetDeclaration: (_node: AstLetDeclarationNode, lhs: AstNode) => {
         lhs.visit(mLetVisitor);
         
         lhs.visit(inst);
@@ -108,7 +121,8 @@ const InterpreterNodeVisitor = freeze({
       visitTuple: (node: AstTupleNode) => {
         node.forEach((node: AstNode) => node.visit(inst));
       },
-      visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) => {},
+      visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) => {
+      },
       visitIdentifier: (_0: AstFringeNode) => {},
       visitBinaryOperation: (node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
         // resolving value... far touch much logic lives here
@@ -144,7 +158,19 @@ const InterpreterNodeVisitor = freeze({
         const lhsVal = mValueOf(lhs);
         const rhsVal = mValueOf(rhs);
         builtIn(mStack, lhsVal, rhsVal);
-      }
+      },
+      callFunctionDefinition: (() => {
+        const topVisitor = AstNodeVisitorBuilder.
+          makeDefaultingToStop().
+          visitFunctionDefinition((_0: AstFunctionDefinitionNode, lineNodes: AstNode[]) => {
+            lineNodes.forEach((node: AstNode) => {
+              node.visit(inst);
+            });
+          }).
+          finish();
+        return (node: AstFunctionDefinitionNode) =>
+          node.visit(topVisitor);
+      })()
     });
     return inst;
   }
@@ -163,7 +189,19 @@ export const Interpreter = freeze({
     const mVisitor = InterpreterNodeVisitor.make(context, injections_);
     
     function interpret(node: AstNode) {
-      node.visit(mVisitor);
+      if (node.type() !== AstNode.types.functionDefinition) { 
+        throw new Error('node must be a function defintion');
+      }
+      mVisitor.callFunctionDefinition(node as AstFunctionDefinitionNode);
+      // const topVisitor = AstNodeVisitorBuilder.
+      //   makeDefaultingToStop().
+      //   visitFunctionDefinition((_0: AstFunctionDefinitionNode, lineNodes: AstNode[]) => {
+      //     lineNodes.forEach((node: AstNode) => {
+      //       node.visit(mVisitor);
+      //     });
+      //   }).
+      //   finish();
+      // node.visit(topVisitor);
     }
 
     return freeze({ interpret });

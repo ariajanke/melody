@@ -59,9 +59,15 @@ export const ContinuingAfterOperatorBuild = (() => {
         // repeat of tpb
         [kTokenTypes.functionDefinition]: () => {
           const start = startToken();
-          const { build, error } =
-            StartFunctionDefinitionBuild.make(mTokenRange.step(), start);
-          return build() ?? setErrorFn(error);
+          // const { build, error } =
+          //   StartFunctionDefinitionBuild.make(mTokenRange.step(), start);
+          // was missing operator
+          // return build() ?? setErrorFn(error);
+
+          const nextPart = StartFunctionDefinitionBuild.make(mTokenRange.step(), start);
+          return BuildStateAddition.make((sink: BuildSink) => {
+            sink.pushToken(mPrevOperatorToken, mOperandRelation).pushPart(nextPart);
+          });
         }
       });
 

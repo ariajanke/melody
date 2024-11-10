@@ -93,6 +93,20 @@ export const ObjectLookUpTable = (() => {
         }).
       finish();
 
+    const assignFn = IncompleteFunctionType.
+      make().
+      setName(':=').
+      setArguments(function_.asSingluarParameter()).
+      setReturns  ([ function_ ]).
+      setBuiltin((stack: PersistentStack<ContextVariable>,
+                  lhs: ContextVariable,
+                  rhs: ContextVariable) =>
+      {
+        rhs.copyTo(lhs);
+        lhs.copyTo( stack.push() );
+      }).
+      finish();
+
     // there should not be a rhs?
     const callFn = IncompleteFunctionType.
       make().
@@ -121,7 +135,10 @@ export const ObjectLookUpTable = (() => {
           [':=']: assignStr
         }),
       Function: function_.
-        setLookUp({ [Token.kCallToken.content()]: callFn }),
+        setLookUp({
+          [Token.kCallToken.content()]: callFn,
+          [':=']: assignFn
+        }),
       Unresolved: ObjectType.make('Unresolved')
     });
   });

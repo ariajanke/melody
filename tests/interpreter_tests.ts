@@ -83,14 +83,14 @@ describeNamed({ Interpreter }, () => {
     });
 
     it('compiles and runs a program with simple functions', () => {
-      // let a := fn
-      //     puts('world')
-      //   ~
       const rootNode = Interpreter.buildFor(`
+        let a := fn
+          puts('world')
+        ~
         let b := fn puts('hello')
         
-        evaluate(b)
-      `);//
+        evaluate(b, a)
+      `);
       const { printedStrings, injections } = makePutsFunction();
       const intr = makeWithInjections(injections.putsFunction);
       intr.interpret(rootNode);

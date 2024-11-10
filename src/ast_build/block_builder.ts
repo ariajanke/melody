@@ -58,6 +58,11 @@ export const BlockBuilder = freeze({
           mLineNodes.push(node);
           return undefined;
         });
+        let s = 'lines<';
+        mLineNodes.forEach((node: AstNode) => {
+          s = `${s} ${node.asString()}, `
+        });
+        console.log(`${s}>`);
         if (mStatementBuilders.length !== 0) {
           throw new Error(`there are still statement builders left`);
         }

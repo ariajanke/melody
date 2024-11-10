@@ -353,11 +353,19 @@ describeNamed({ AstBuild }, () => {
     it('has a correctly named let declaration', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const rootNode = buildAst();
+      let inLet = false;
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitLetDeclaration((_0: AstLetDeclarationNode, decNode: AstNode) => {
+          inLet = true;
+          decNode.visit(visitor);
+          inLet = false;
+        }).
+        visitBinaryOperation((_0: AstBinaryOperatorNode, lhs: AstNode, _2: AstNode) => {
+          if (!inLet) { return; }
+
           hitsAtExactly(1);
-          expect(decNode.asString()).toEqual('a');
+          expect(lhs.asString()).toEqual('a');
         }).
         finish();
       rootNode.visit(visitor);
@@ -377,19 +385,65 @@ describeNamed({ AstBuild }, () => {
       expect(verifyHit()).toBeTruthy();
     });
 
-    fit('queue call is outside the function definition', () => {
+    it('queue call is outside the function definition', () => {
       let insideDef = false;
       const rootNode = buildAst();
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      let s = '';
+      let depth = 0;
+      const pvisitor = AstNodeVisitorBuilder.
+        makeDefaultingToContinue().
+        visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+          s = `${s}${depth} bo: ${node.asString()}, ${lhs.asString()}, ${rhs.asString()}\n`;
+          ++depth;
+          lhs.visit(pvisitor);
+          rhs.visit(pvisitor);
+          --depth;
+        }).
+        visitFunctionCall((node: AstFunctionCallNode): void => {
+          s = `${s}${depth} fn call: ${node.asString()}\n`;
+          ++depth;
+          node.arguments.forEach((node: AstNode) => {
+            node.visit(pvisitor);
+          });
+          --depth;
+        }).
+        visitLetDeclaration((node: AstLetDeclarationNode, node1: AstNode): void => {
+          s = `${s}${depth} let: ${node.asString()}\n`;
+          ++depth;
+          node1.visit(pvisitor);
+          --depth;
+        }).
+        visitIdentifier((node: AstFringeNode) => {
+          s = `${s}${depth} id: ${node.asString()}\n`;
+        }).
+        visitTuple((node: AstTupleNode) => {
+          s = `${s}${depth} tuple: ${node.asString()}\n`;
+          ++depth;
+          node.forEach((node: AstNode) => {
+            node.visit(pvisitor);
+          });
+          --depth;
+        }).
+        visitFunctionDefinition((fdef: AstFunctionDefinitionNode, lines: AstNode[]) => {
+          s = `${s}${depth} fn def: ${fdef.asString()}\n`;
+          ++depth;
+          lines.forEach((node: AstNode) => {
+            node.visit(pvisitor);
+          });
+          --depth;
+        }).
+        finish();
+      depth = 0;
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionDefinition((_0: AstFunctionDefinitionNode, lineNodes: AstNode[]) => {
-          insideDef = true;
+          ++depth;
           lineNodes.forEach((node: AstNode) => node.visit(visitor));
-          insideDef = false;
+          --depth;
         }).
         visitIdentifier((node: AstFringeNode) => {
-          if (insideDef) {
+          if (depth > 1) {
             expect(node.asString()).not.toEqual('queue');
           } else if (node.asString() === 'queue') {
             hitsAtExactly(1);
@@ -397,6 +451,8 @@ describeNamed({ AstBuild }, () => {
         }).
         finish();
       rootNode.visit(visitor);
+      rootNode.visit(pvisitor);
+      console.log(s);
       expect(verifyHit()).toBeTruthy();
     });
   });

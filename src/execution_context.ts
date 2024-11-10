@@ -10,7 +10,8 @@ export interface ExecutionContext extends TypeLookUpTable {
   declareVariable: (name: string) => ContextVariable,
   getValueOfVariable: (name: string) => string | undefined,
   setVariable: (name: string, value: string) => void,
-  getVariable: (name: string) => ContextVariable
+  getVariable: (name: string) => ContextVariable,
+  tryGetVariable: (name: string) => ContextVariable | undefined
 }
 
 export const ExecutionContext = (() => {
@@ -26,8 +27,6 @@ export const ExecutionContext = (() => {
       ];
     })();
 
-    
-
     function declareVariable(name: string): ContextVariable {
       if (mAvailableVariables[name]) {
         throw Error(`name "${name}" already taken`);
@@ -39,8 +38,11 @@ export const ExecutionContext = (() => {
       getVariable(name).set(value);
     }
 
+    function tryGetVariable(name: string): ContextVariable | undefined
+      { return mAvailableVariables[name]; }
+
     function getVariable(name: string): ContextVariable {
-      const gotten = mAvailableVariables[name];
+      const gotten = tryGetVariable(name);
       if (!gotten) {
         throw Error(`Undeclared variable "${name}"`);
       }
@@ -79,7 +81,8 @@ export const ExecutionContext = (() => {
       getValueOfVariable,
       setVariable,
       getVariable,
-      lookUpFunctionType
+      lookUpFunctionType,
+      tryGetVariable
     });
   }
 
