@@ -2745,50 +2745,7 @@ ${inst.errors()[0]?.message}`);
       it("queue call is outside the function definition", () => {
         const rootNode = buildAst();
         const { hitsAtExactly, verifyHit } = ReachPoint.make();
-        let s = "";
         let depth = 0;
-        const pvisitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitBinaryOperation((node, lhs, rhs) => {
-          s = `${s}${depth} bo: ${node.asString()}, ${lhs.asString()}, ${rhs.asString()}
-`;
-          ++depth;
-          lhs.visit(pvisitor);
-          rhs.visit(pvisitor);
-          --depth;
-        }).visitFunctionCall((node) => {
-          s = `${s}${depth} fn call: ${node.asString()}
-`;
-          ++depth;
-          node.arguments.forEach((node2) => {
-            node2.visit(pvisitor);
-          });
-          --depth;
-        }).visitLetDeclaration((node, node1) => {
-          s = `${s}${depth} let: ${node.asString()}
-`;
-          ++depth;
-          node1.visit(pvisitor);
-          --depth;
-        }).visitIdentifier((node) => {
-          s = `${s}${depth} id: ${node.asString()}
-`;
-        }).visitTuple((node) => {
-          s = `${s}${depth} tuple: ${node.asString()}
-`;
-          ++depth;
-          node.forEach((node2) => {
-            node2.visit(pvisitor);
-          });
-          --depth;
-        }).visitFunctionDefinition((fdef, lines) => {
-          s = `${s}${depth} fn def: ${fdef.asString()}
-`;
-          ++depth;
-          lines.forEach((node) => {
-            node.visit(pvisitor);
-          });
-          --depth;
-        }).finish();
-        depth = 0;
         const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitFunctionDefinition((_0, lineNodes) => {
           ++depth;
           lineNodes.forEach((node) => node.visit(visitor));

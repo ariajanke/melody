@@ -79,9 +79,9 @@ export const StartGroupBuild = freeze({
     return freeze({
       build: (): BuildStateAddition | undefined => {
         return (closePosition() &&
-        GroupBuildSplit.
-          make(closePosition() as number, mTokenRange, mOnNewGroupingFn).
-          build()) as BuildStateAddition | undefined;
+                  GroupBuildSplit.
+                    make(closePosition() as number, mTokenRange, mOnNewGroupingFn).
+                    build()) as BuildStateAddition | undefined;
       },
       error,
       range: mTokenRange.range,

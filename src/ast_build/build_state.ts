@@ -7,6 +7,21 @@ import { AstFunctionDefinitionNode } from '../ast_function_definition_node';
 
 const { freeze } = Helpers;
 
+export interface BuildState {
+  hasRemainingParts: () => boolean,
+  pushPart: (buildPart: TreePartBuild) => BuildState,
+  popPart: () => TreePartBuild,
+  pushToken: (token: Token, operandRelation: string) => BuildState,
+  pushNode: (node: AstNode) => BuildState,
+  pushStatement: () => BuildState,
+  popStatement: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
+  pushNewLine: () => BuildState,
+  pushBlock: () => BuildState,
+  popBlock: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
+  complete: () => AstFunctionDefinitionNode,
+  asString: () => string
+};
+
 export const BuildState = freeze({
   make:
     (mErrors: Readonly<{ message: string }>[] = []) =>
@@ -61,18 +76,3 @@ export const BuildState = freeze({
     return inst satisfies BuildSink;
   }
 });
-
-export interface BuildState {
-  hasRemainingParts: () => boolean,
-  pushPart: (buildPart: TreePartBuild) => BuildState,
-  popPart: () => TreePartBuild,
-  pushToken: (token: Token, operandRelation: string) => BuildState,
-  pushNode: (node: AstNode) => BuildState,
-  pushStatement: () => BuildState,
-  popStatement: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
-  pushNewLine: () => BuildState,
-  pushBlock: () => BuildState,
-  popBlock: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
-  complete: () => AstFunctionDefinitionNode,
-  asString: () => string
-};

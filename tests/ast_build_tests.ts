@@ -6,7 +6,6 @@ import { AstFunctionCallNode } from '../src/ast_function_call_node';
 import { AstIntegerLiteralNode } from '../src/ast_integer_literal_node';
 import { AstLetDeclarationNode } from '../src/ast_let_declaration_node';
 import { AstFringeNode } from '../src/ast_fringe_node';
-import { AstTupleNode } from '../src/ast_tuple_node';
 import { TokenRange } from '../src/token_range';
 import { AstNodeVisitorBuilder } from '../src/ast_node_visitor';
 import { AstBinaryOperatorNode } from '../src/ast_binary_operator_node';
@@ -380,52 +379,7 @@ describeNamed({ AstBuild }, () => {
     it('queue call is outside the function definition', () => {
       const rootNode = buildAst();
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      let s = '';
       let depth = 0;
-      const pvisitor = AstNodeVisitorBuilder.
-        makeDefaultingToContinue().
-        visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-          s = `${s}${depth} bo: ${node.asString()}, ${lhs.asString()}, ${rhs.asString()}\n`;
-          ++depth;
-          lhs.visit(pvisitor);
-          rhs.visit(pvisitor);
-          --depth;
-        }).
-        visitFunctionCall((node: AstFunctionCallNode): void => {
-          s = `${s}${depth} fn call: ${node.asString()}\n`;
-          ++depth;
-          node.arguments.forEach((node: AstNode) => {
-            node.visit(pvisitor);
-          });
-          --depth;
-        }).
-        visitLetDeclaration((node: AstLetDeclarationNode, node1: AstNode): void => {
-          s = `${s}${depth} let: ${node.asString()}\n`;
-          ++depth;
-          node1.visit(pvisitor);
-          --depth;
-        }).
-        visitIdentifier((node: AstFringeNode) => {
-          s = `${s}${depth} id: ${node.asString()}\n`;
-        }).
-        visitTuple((node: AstTupleNode) => {
-          s = `${s}${depth} tuple: ${node.asString()}\n`;
-          ++depth;
-          node.forEach((node: AstNode) => {
-            node.visit(pvisitor);
-          });
-          --depth;
-        }).
-        visitFunctionDefinition((fdef: AstFunctionDefinitionNode, lines: AstNode[]) => {
-          s = `${s}${depth} fn def: ${fdef.asString()}\n`;
-          ++depth;
-          lines.forEach((node: AstNode) => {
-            node.visit(pvisitor);
-          });
-          --depth;
-        }).
-        finish();
-      depth = 0;
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionDefinition((_0: AstFunctionDefinitionNode, lineNodes: AstNode[]) => {
@@ -442,8 +396,6 @@ describeNamed({ AstBuild }, () => {
         }).
         finish();
       rootNode.visit(visitor);
-      // rootNode.visit(pvisitor);
-      // console.log(s);
       expect(verifyHit()).toBeTruthy();
     });
   });

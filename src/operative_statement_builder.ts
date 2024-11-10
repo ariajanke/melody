@@ -17,7 +17,7 @@ export interface OperativeStatementVisitor {
   visitNode    : (node: AstNode) => void,
   visitLinks:
     (low: OperativeStatementVisitable,
-     visitable: OperativeStatementVisitable, //visitorFn: (visitor: OperativeStatementVisitor) => void,
+     visitable: OperativeStatementVisitable,
      high: OperativeStatementVisitable) => void
 };
 
