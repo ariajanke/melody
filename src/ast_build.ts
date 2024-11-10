@@ -7,16 +7,26 @@ import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 export const AstBuild = (() => {
   const { freeze, memoize } = Helpers;
 
+  let sPrintOutTpbs = false;
+
   const class_ = freeze({
+    setPrintOutsEnabled: (b: boolean) => {
+      sPrintOutTpbs = b;
+    },
     make: (mTokens: TokenRange) => {
       const mErrors: Readonly<{ message: string }>[] = [];
-      const mBuildState = BuildState.make(mErrors, mTokens.clone());
+      const mBuildState = BuildState.make(mErrors);
 
       const inst = freeze({
         build: memoize((): AstFunctionDefinitionNode | undefined => {
           mBuildState.pushPart( TreePartBuild.make(mTokens) );
-          console.log(`init ${mBuildState.asString()}`);
+          if (sPrintOutTpbs) {
+            console.log(`init ${mBuildState.asString()}`);
+          }
           while (mBuildState.hasRemainingParts()) {
+            if (sPrintOutTpbs) {
+              console.log(mBuildState.asString());
+            }
             const part = mBuildState.popPart();
             const addition = part.build();
             if (!addition) {
@@ -25,7 +35,9 @@ export const AstBuild = (() => {
             }
             addition.pushTo(mBuildState);
           }
-          console.log(`on complete ${mBuildState.asString()}`);
+          if (sPrintOutTpbs) {
+            console.log(`on complete ${mBuildState.asString()}`);
+          }
           return mBuildState.complete();
         }),
         errors: () => mErrors

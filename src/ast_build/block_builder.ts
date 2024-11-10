@@ -7,7 +7,12 @@ import { AstFunctionDefinitionNode } from '../ast_function_definition_node';
 
 const { freeze } = Helpers;
 
+let sPrintOutCompletions = false;
+
 export const BlockBuilder = freeze({
+  setPrintOutCompletionsEnabled: (b: boolean) => {
+    sPrintOutCompletions = b;
+  },
   make: (mErrors: Readonly<{ message: string }>[] = []) => {
     const mLineNodes: AstNode[] = [];
     const mStatementBuilders = [OperativeStatementBuilder.make()];
@@ -16,6 +21,13 @@ export const BlockBuilder = freeze({
     const lastStatementBuilder = () =>
       mStatementBuilders[mStatementBuilders.length - 1] ??
       throwAlreadyPopped();
+    const lineNodesAsString = () => {
+      let s = 'lines<';
+      mLineNodes.forEach((node: AstNode) => {
+        s = `${s} ${node.asString()}, `
+      });
+      return `${s}>`;
+    };
     const inst = freeze({
       pushToken: (token: Token, operandRelation: string) => {
         lastStatementBuilder().pushToken(token, operandRelation);
@@ -58,11 +70,9 @@ export const BlockBuilder = freeze({
           mLineNodes.push(node);
           return undefined;
         });
-        let s = 'lines<';
-        mLineNodes.forEach((node: AstNode) => {
-          s = `${s} ${node.asString()}, `
-        });
-        console.log(`${s}>`);
+        if (sPrintOutCompletions) {
+          console.log(lineNodesAsString());
+        }
         if (mStatementBuilders.length !== 0) {
           throw new Error(`there are still statement builders left`);
         }

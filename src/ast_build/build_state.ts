@@ -3,16 +3,13 @@ import { AstNode } from '../ast_node';
 import { Helpers } from '../helpers';
 import { Token } from '../token';
 import { BlockBuilder } from './block_builder';
-import { TokenRange } from '../token_range';
 import { AstFunctionDefinitionNode } from '../ast_function_definition_node';
 
 const { freeze } = Helpers;
 
 export const BuildState = freeze({
   make:
-    (mErrors: Readonly<{ message: string }>[] = [],
-     mTokens: TokenRange = TokenRange.make([], 0, 0)
-    ) =>
+    (mErrors: Readonly<{ message: string }>[] = []) =>
   {
     const mBuildParts: TreePartBuild[] = [];
     const mBlockBuilders: BlockBuilder[] = [BlockBuilder.make(mErrors)];
@@ -38,7 +35,6 @@ export const BuildState = freeze({
       pushPart: (buildPart: TreePartBuild): BuildState =>
         (mBuildParts.push(buildPart) && inst) as BuildState,
       popPart: () => {
-        console.log(inst.asString());
         return mBuildParts.pop() ?? (() => { throw new Error('no parts remain'); })();
       },
       pushToken: (token: Token, operandRelation: string) =>
@@ -57,7 +53,7 @@ export const BuildState = freeze({
       asString: () => {
         let s = `(Blocks ${mBlockBuilders.length}, Statements ${lastBlockBuilder().statementCount()})`;
         mBuildParts.forEach((part: TreePartBuild) => {
-          s = `${s} {${part.asString().replace('\n', '\\n')}}`;
+          s = `${s} {${part.asString()}}`;
         });
         return s;
       }
@@ -77,5 +73,6 @@ export interface BuildState {
   pushNewLine: () => BuildState,
   pushBlock: () => BuildState,
   popBlock: (fn: (node: AstNode) => AstNode | undefined) => BuildState,
-  complete: () => AstFunctionDefinitionNode
+  complete: () => AstFunctionDefinitionNode,
+  asString: () => string
 };

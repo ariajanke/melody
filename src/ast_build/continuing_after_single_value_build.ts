@@ -29,7 +29,6 @@ export const ContinuingAfterSingleValueBuild = freeze({
     };
 
     const handleOperator = () => {
-      // TODO do operator precedence check here?
       const evStartToken = startToken();
       const nextRange = mTokenRange.step();
       const nextPart = ContinuingAfterOperatorBuild.

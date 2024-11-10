@@ -7,6 +7,14 @@ import { OrganizationNodeSlot } from './organization_node_slot';
 import { OrganizationNodeTypeInfo } from './organization_node_type_info';
 import { type VisitableNodeDatum } from './visitable_node_datum';
 
+interface LinkedInstances {
+  low : PrecedenceOrganizationNode | undefined,
+  high: PrecedenceOrganizationNode | undefined
+};
+
+type Instance = PrecedenceOrganizationNode;
+type NodeTypeInfo = OrganizationNodeTypeInfo;
+
 export interface NodeValidationVisitor {
   validate: (low : PrecedenceOrganizationNode | undefined,
              datum: VisitableNodeDatum,
@@ -22,14 +30,6 @@ export interface PrecedenceOrganizationNode extends OperativeStatementVisitable 
     (otherInstances: PrecedenceOrganizationNode[]) => PrecedenceOrganizationNode,
   asString: () => string
 };
-
-interface LinkedInstances {
-  low : PrecedenceOrganizationNode | undefined,
-  high: PrecedenceOrganizationNode | undefined
-};
-
-type Instance = PrecedenceOrganizationNode;
-type NodeTypeInfo = OrganizationNodeTypeInfo;
 
 const { freeze, memoize } = Helpers;
 
@@ -86,7 +86,7 @@ const make =
   return inst;
 };
 
-const class_ = freeze({
+export const PrecedenceOrganizationNode = freeze({
   workCollection: (collection: PrecedenceOrganizationNode[]):
     PrecedenceOrganizationNode | undefined =>
   {
@@ -99,5 +99,3 @@ const class_ = freeze({
     nullVisitableInstance.uniqueIdentifier() === vnd.uniqueIdentifier(),
   make
 });
-
-export const PrecedenceOrganizationNode = class_;

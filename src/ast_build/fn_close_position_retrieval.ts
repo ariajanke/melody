@@ -1,7 +1,3 @@
-// fn -> new line -> close at star
-// fn -> some expression -> close at new line
-// fn -> some expression -> EoI -> error
-// must be able to handle nested cases
 import { Helpers } from '../helpers';
 import { Token } from '../token';
 import { TokenRange } from '../token_range';

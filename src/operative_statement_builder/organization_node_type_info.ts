@@ -35,7 +35,7 @@ const make = (mMakeLow: MakeNodeFn,
       mPrecedence - index
   });
   return inst;
-}
+};
 
 const {
   fallBackInstance,

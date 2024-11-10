@@ -89,7 +89,8 @@ describeNamed({ Interpreter }, () => {
         ~
         let b := fn puts('hello')
         
-        evaluate(b, a)
+        b()
+        a()
       `);
       const { printedStrings, injections } = makePutsFunction();
       const intr = makeWithInjections(injections.putsFunction);

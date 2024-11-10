@@ -7,39 +7,37 @@ import { ContinuingAfterSingleValueBuild } from './continuing_after_single_value
 
 const { freeze } = Helpers;
 
-export const StartFringeBuild = (() => {
-  return freeze({
-    make: (mFringeToken: Token,
-           mTokenRange: TokenRange) =>
-    {
-      const { error, setErrorFn } = StandardError.make();
-      
-      function fringeNode() {
-        return AstFringeNode.makeForToken(mFringeToken);
-      }
-
-      function buildFringeWithRangeAsNewPart() {
-        return BuildStateAddition.make((sink: BuildSink) => {
-          sink.pushNode(fringeNode());
-          if (!mTokenRange.isEmpty()) {
-            sink.pushPart(TreePartBuild.make(mTokenRange));
-          }
-        });
-      }
-
-      return freeze({
-        build: (): BuildStateAddition | undefined => {
-          if (mTokenRange.isEmpty()) {
-            return buildFringeWithRangeAsNewPart();
-          }
-          const node = AstFringeNode.makeForToken(mFringeToken);
-          const { build, error } = ContinuingAfterSingleValueBuild.make(mTokenRange, node);
-          return build() ?? setErrorFn(error);
-        },
-        error,
-        range: mTokenRange.range,
-        asString: () => `SF ${mTokenRange.asString()}`
-      }) satisfies TreePartBuild;
+export const StartFringeBuild = freeze({
+  make: (mFringeToken: Token,
+          mTokenRange: TokenRange) =>
+  {
+    const { error, setErrorFn } = StandardError.make();
+    
+    function fringeNode() {
+      return AstFringeNode.makeForToken(mFringeToken);
     }
-  });
-})();
+
+    function buildFringeWithRangeAsNewPart() {
+      return BuildStateAddition.make((sink: BuildSink) => {
+        sink.pushNode(fringeNode());
+        if (!mTokenRange.isEmpty()) {
+          sink.pushPart(TreePartBuild.make(mTokenRange));
+        }
+      });
+    }
+
+    return freeze({
+      build: (): BuildStateAddition | undefined => {
+        if (mTokenRange.isEmpty()) {
+          return buildFringeWithRangeAsNewPart();
+        }
+        const node = AstFringeNode.makeForToken(mFringeToken);
+        const { build, error } = ContinuingAfterSingleValueBuild.make(mTokenRange, node);
+        return build() ?? setErrorFn(error);
+      },
+      error,
+      range: mTokenRange.range,
+      asString: () => `SF ${mTokenRange.asString()}`
+    }) satisfies TreePartBuild;
+  }
+});

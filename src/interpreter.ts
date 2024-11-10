@@ -11,17 +11,9 @@ import { PersistentStack } from './persistent_stack';
 import { AstNodeVisitor, AstNodeVisitorBuilder } from './ast_node_visitor';
 import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { AstTupleNode } from './ast_tuple_node';
-import { ObjectType } from './object_type';
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 
 const { freeze } = Object;
-
-const NamingVisitor = freeze({
-  make(context: ExecutionContext): AstNodeVisitor {
-    let mNameDictionary: { [name: string]: ObjectType } = {};
-    return AstNodeVisitorBuilder.makeDefaultingToContinue().finish();
-  }
-});
 
 const LetVisitor = (() => {
   function make(context: ExecutionContext): AstNodeVisitor {
@@ -87,16 +79,7 @@ const InterpreterNodeVisitor = freeze({
           mStack.push().set(askStringFunction());
         },
         pass: (node: AstFunctionCallNode): void =>
-          node.arguments.forEach(mPushValueOf),
-        evaluate: (node: AstFunctionCallNode): void => {
-          node.arguments.forEach((node: AstNode) => {
-            if (!AstFringeNode.hasCreated(node))
-              { return; }
-            const fnode = AstFringeNode.downcast(node);
-            const cvar = fnode.evaluate(context.getVariable);
-            inst.callFunctionDefinition(cvar.asNode());
-          });
-        }
+          node.arguments.forEach(mPushValueOf)
       });
 
     const inst = freeze({
@@ -193,15 +176,6 @@ export const Interpreter = freeze({
         throw new Error('node must be a function defintion');
       }
       mVisitor.callFunctionDefinition(node as AstFunctionDefinitionNode);
-      // const topVisitor = AstNodeVisitorBuilder.
-      //   makeDefaultingToStop().
-      //   visitFunctionDefinition((_0: AstFunctionDefinitionNode, lineNodes: AstNode[]) => {
-      //     lineNodes.forEach((node: AstNode) => {
-      //       node.visit(mVisitor);
-      //     });
-      //   }).
-      //   finish();
-      // node.visit(topVisitor);
     }
 
     return freeze({ interpret });

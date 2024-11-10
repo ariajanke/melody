@@ -315,17 +315,11 @@ describeNamed({ AstBuild }, () => {
     });
   });
 
-  // something need to be re-thought of before I proceed with function blocks
-  // likely let statements
   describe('with function blocks', () => {
     const tokens = [
-      // 0 ,  1 , 2   , 3   , 4
       'let', 'a', ':=', 'fn', '\n',
-      // 5  , 6  , 7        , 8  , 9
       'puts', '(', `'hello'`, ')', '\n',
-      //10, 11
       '~', '\n',
-      // 12, 13, 14, 15
       'queue', '(', 'a', ')'
     ].map(makeToken);
     const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
@@ -386,7 +380,6 @@ describeNamed({ AstBuild }, () => {
     });
 
     it('queue call is outside the function definition', () => {
-      let insideDef = false;
       const rootNode = buildAst();
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       let s = '';
@@ -451,8 +444,8 @@ describeNamed({ AstBuild }, () => {
         }).
         finish();
       rootNode.visit(visitor);
-      rootNode.visit(pvisitor);
-      console.log(s);
+      // rootNode.visit(pvisitor);
+      // console.log(s);
       expect(verifyHit()).toBeTruthy();
     });
   });

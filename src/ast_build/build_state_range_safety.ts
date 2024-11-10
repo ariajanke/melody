@@ -22,8 +22,7 @@ export const BuildStateRangeSafety = freeze({
       } else if (mSizeSinceLastPop < mLastRange) {
         return;
       }
-      // debugger;
-      // throw Error('build state range not decreasing, probable infinite loop caught');
+      throw new Error('build state range not decreasing, probable infinite loop caught');
     };
 
     return freeze({

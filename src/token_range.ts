@@ -59,7 +59,7 @@ export const TokenRange = (() => {
       asString: () => {
         let s = '';
         for (let i = mStart; i < mEnd; ++i) {
-          s = `${s}, ${mTokens[i].content()}`;
+          s = `${s}, ${mTokens[i].content().replace('\n', '\\n')}`;
         }
         return s;
       }
@@ -68,9 +68,9 @@ export const TokenRange = (() => {
     function _verifyValidRange() {
       const { length } = mTokens;
       if (mStart > mEnd) {
-        throw Error(`Range start ${mStart} must be less than or equal to end ${mEnd}`);
+        throw new Error(`Range start ${mStart} must be less than or equal to end ${mEnd}`);
       } else if (length < mEnd) {
-        throw Error(`Range end ${mEnd} cannot exceed token count ${length}`);
+        throw new Error(`Range end ${mEnd} cannot exceed token count ${length}`);
       }
       return inst;
     }

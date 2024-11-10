@@ -26,28 +26,26 @@ const CloseFunctionDefinitionBuild = freeze({
   }
 });
 
-export const StartFunctionDefinitionBuild = (() => {
-  return freeze({
-    make: (mTokenRange: TokenRange, mFnToken: Token): TreePartBuild => {
-      const { closePosition } = FnClosePositionRetrieval.
-        make(mTokenRange, mFnToken);
-      const { start, end, clone } = mTokenRange;
+export const StartFunctionDefinitionBuild = freeze({
+  make: (mTokenRange: TokenRange, mFnToken: Token): TreePartBuild => {
+    const { closePosition } = FnClosePositionRetrieval.
+      make(mTokenRange, mFnToken);
+    const { start, end, clone } = mTokenRange;
 
-      const inBlockRange = () => clone(start(), closePosition());
-      const afterBlockRange = () => clone(closePosition() + 1, end());
-      
-      return freeze({
-        build: memoize((): BuildStateAddition | undefined => {
-          const afterPart = CloseFunctionDefinitionBuild.make(afterBlockRange());
-          const inBlockPart = TreePartBuild.make(inBlockRange());
-          return BuildStateAddition.make((sink: BuildSink) => {
-            sink.pushBlock().pushPart(afterPart).pushPart(inBlockPart);
-          });
-        }),
-        error: StandardError.make().error,
-        range: mTokenRange.range,
-        asString: () => `SFnD ${mTokenRange.asString()}`
-      })
-    }
-  })
-})();
+    const inBlockRange = () => clone(start(), closePosition());
+    const afterBlockRange = () => clone(closePosition() + 1, end());
+    
+    return freeze({
+      build: memoize((): BuildStateAddition | undefined => {
+        const afterPart = CloseFunctionDefinitionBuild.make(afterBlockRange());
+        const inBlockPart = TreePartBuild.make(inBlockRange());
+        return BuildStateAddition.make((sink: BuildSink) => {
+          sink.pushBlock().pushPart(afterPart).pushPart(inBlockPart);
+        });
+      }),
+      error: StandardError.make().error,
+      range: mTokenRange.range,
+      asString: () => `SFnD ${mTokenRange.asString()}`
+    })
+  }
+});

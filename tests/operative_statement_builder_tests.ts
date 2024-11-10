@@ -113,4 +113,10 @@ describeNamed({ OperativeStatementBuilder }, () => {
     expect(rootVisitable()).toBeUndefined();
     expect(error().message).toEqual('Something messed up around +');
   });
+
+  it('let a 3', () => {
+    const { rootVisitable, error } = makeCompletion(makeTokens('let', 'a', '3'));
+    expect(rootVisitable()).toBeUndefined();
+    expect(error().message).toEqual('Something messed up around +');
+  })
 });

@@ -20,7 +20,7 @@ type NodeTypeInfoConstructor =
 
 const { memoize, freeze } = Helpers;
 
-export const NodeTypeInfoInstance = (() => freeze({
+export const NodeTypeInfoInstance = freeze({
   makeFunctions: (constructor: NodeTypeInfoConstructor) => {
     const instancesOnBinaryOperators =
       memoize(() => makeInstancesOnOperatorListing(OperatorDefinitions.binaryListing));
@@ -85,4 +85,4 @@ export const NodeTypeInfoInstance = (() => freeze({
       fallBackInstance
     });
   }
-}))();
+});
