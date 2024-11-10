@@ -18,10 +18,11 @@
   });
   var StandardError = (() => {
     const { freeze: freeze38 } = Helpers;
+    const kErrorNotSetFn = () => {
+      throw new Error("No error set, this method should not be called");
+    };
     function make3() {
-      let mErrorFn = () => {
-        throw Error("No error set, this method should not be called");
-      };
+      let mErrorFn = kErrorNotSetFn;
       let mInst = void 0;
       function setErrorFn(fn) {
         mErrorFn = fn;
@@ -32,7 +33,16 @@
       function error() {
         return mErrorFn();
       }
-      const sharedErrorInstance = () => mInst ??= freeze38({ setErrorFn, setErrorMessage, error, sharedErrorInstance });
+      function hasErrorSet() {
+        return mErrorFn !== kErrorNotSetFn;
+      }
+      const sharedErrorInstance = () => mInst ??= freeze38({
+        setErrorFn,
+        setErrorMessage,
+        error,
+        sharedErrorInstance,
+        hasErrorSet
+      });
       return sharedErrorInstance();
     }
     return freeze38({ make: make3 });
@@ -684,7 +694,10 @@
           "(",
           ")",
           "{",
-          "}"
+          "}",
+          "*",
+          "+",
+          "*"
         ],
         classes.operative
       ),
@@ -1598,7 +1611,7 @@
     const kTokenTypes2 = Token.types;
     return freeze38({
       make: (mTokenRange, mPrevOperatorToken, mOperandRelation) => {
-        const { error, setErrorMessage, setErrorFn } = StandardError.make();
+        const { error, setErrorMessage } = StandardError.make();
         const { startToken } = mTokenRange;
         const handlePeekAheadFringe = () => {
           const start = startToken();
@@ -1813,7 +1826,7 @@
   var nullLink = freeze23({ low: void 0, high: void 0 });
   var presentSlot = (lhs, rhs) => lhs?.isPresent() ? lhs : rhs;
   var nullVisitableInstance = freeze23({
-    visit: (_) => {
+    visit: (_0) => {
     },
     uniqueIdentifier: memoize9(Symbol)
   });
@@ -1829,7 +1842,7 @@
       compareToInfo: (nodeInfo) => -nodeInfo.compare(mNodeInfo),
       visit: (visitor) => visitor.visitLinks(
         mLinks.low ?? nullVisitableInstance,
-        mVisitable.visit,
+        mVisitable,
         mLinks.high ?? nullVisitableInstance
       ),
       lowSlot: () => mLow,
@@ -1995,39 +2008,38 @@
   var { freeze: freeze28, memoize: memoize13 } = Helpers;
   var OperativeStatementCompletion = (() => {
     const make3 = (mNodes) => {
-      const { error, setErrorMessage } = StandardError.make();
+      const { error, setErrorMessage, hasErrorSet } = StandardError.make();
       const { isNullVisitable } = PrecedenceOrganizationNode;
       const mCounts = {};
       const isValidVisitable = (vst) => {
         if (!isNullVisitable(vst)) {
-          const id = vst.uniqueIdentifier();
-          mCounts[id] = (mCounts[id] ?? 0) + 1;
-          return mCounts[id] === 1;
+          return mCounts[vst.uniqueIdentifier()] === 1;
         }
         return true;
       };
-      const checkSide = (vst, visitorFn) => {
-        if (!isValidVisitable(vst)) {
-          visitorFn(mInternalVisitor);
-          mErrorSet = true;
-          return setErrorMessage(`Something messed up around ${mSetString}`);
-        }
+      const markVisitable = (vst) => {
+        const id = vst.uniqueIdentifier();
+        mCounts[id] = (mCounts[id] ?? 0) + 1;
       };
-      let mSetString = "";
-      let mErrorSet = false;
+      const verifyAllVisited = () => {
+        mNodes.forEach((pon) => {
+          if (!isValidVisitable(pon)) {
+            setErrorMessage(`Expression malformed around "${pon.asString()}"`);
+          }
+        });
+      };
       const mInternalVisitor = freeze28({
-        visitToken: (token) => {
-          mSetString = token.content();
+        visitToken: (_0) => {
         },
-        visitNode: (node) => {
-          mSetString = node.asString();
+        visitNode: (_0) => {
         },
-        visitLinks: (low, visitorFn, high) => {
-          if (mErrorSet) {
+        visitLinks: (low, node, high) => {
+          markVisitable(node);
+          if (hasErrorSet()) {
             return;
           }
-          checkSide(low, visitorFn);
-          checkSide(high, visitorFn);
+          low.visit(mInternalVisitor);
+          high.visit(mInternalVisitor);
         }
       });
       const inst = freeze28({
@@ -2037,10 +2049,15 @@
           }
           const pon = PrecedenceOrganizationNode.workCollection(mNodes);
           if (!pon) {
+            setErrorMessage("working operative statement collection failed");
             return void 0;
           }
           pon.visit(mInternalVisitor);
-          if (mErrorSet) {
+          if (hasErrorSet()) {
+            return void 0;
+          }
+          verifyAllVisited();
+          if (hasErrorSet()) {
             return void 0;
           }
           return pon;
@@ -2157,7 +2174,7 @@
         }
         mNodeStack.push(AstTupleNode.makeBinary(token.content(), second, first));
       };
-      const letOperator = (_token) => {
+      const letOperator = (_0) => {
         mNodeStack.push(AstLetDeclarationNode.make(popOrThrow()));
       };
       const functionCall = (token) => {
@@ -2176,7 +2193,7 @@
       const inst = freeze31({
         visitToken: (token) => {
           const opFactory = mOperatorFactories[token.content()];
-          if (!!opFactory) {
+          if (opFactory) {
             return opFactory(token);
           }
           mNodeStack.push(AstFringeNode.makeForToken(token));
@@ -2184,10 +2201,10 @@
         visitNode: (node) => {
           mNodeStack.push(node);
         },
-        visitLinks: (low, visitorFn, high) => {
+        visitLinks: (low, node, high) => {
           low.visit(inst);
           high.visit(inst);
-          visitorFn(inst);
+          node.visit(inst);
         },
         finish: () => {
           const node = popOrThrow();
@@ -2537,7 +2554,7 @@ ${inst.errors()[0]?.message}`);
           makeToken("a")
         ];
         const rootNode = buildAst();
-        if (rootNode.type() !== AstNode.types.tuple) {
+        if (rootNode.type() !== AstNode.types.functionDefinition) {
           return fail();
         }
         expect(rootNode.count()).toEqual(3);
@@ -2689,7 +2706,6 @@ ${inst.errors()[0]?.message}`);
         let aCount = 0;
         const rootNode = buildAst();
         const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitLetDeclaration((_0, node) => {
-          debugger;
           node.visit(visitor);
         }).visitIdentifier((node) => {
           if (node.asString() === "a") {
@@ -2923,8 +2939,6 @@ ${inst.errors()[0]?.message}`);
         const visitor = AstNodeVisitorBuilder.makeDefaultingToContinue().visitFunctionCall((node) => {
           expect(node.name).toEqual("puts");
           pt1.hitsAtExactly(1);
-          node.arguments.forEach((node2) => {
-          });
         }).finish();
         buildAst().visit(visitor);
         expect(pt1.verifyHit()).toBeTruthy();
@@ -2946,9 +2960,9 @@ ${inst.errors()[0]?.message}`);
     }) => {
       pushPart ??= (_0) => inst;
       pushStatement ??= () => inst;
-      popStatement ??= (_fn) => inst;
-      pushToken ??= (_token, _operandRelation) => inst;
-      pushNode ??= (_node) => inst;
+      popStatement ??= (_0) => inst;
+      pushToken ??= (_0, _1) => inst;
+      pushNode ??= (_0) => inst;
       pushNewLine ??= () => inst;
       const inst = Object.freeze({
         pushPart,
@@ -3826,11 +3840,11 @@ ${inst.errors()[0]?.message}`);
         visitToken: (token) => {
           mStackedArr.push(token.content());
         },
-        visitNode: (_node) => {
+        visitNode: (_0) => {
           throw new Error("should not directly add nodes for this test");
         },
-        visitLinks: (low, visitDatum, high) => {
-          visitDatum(inst);
+        visitLinks: (low, node, high) => {
+          node.visit(inst);
           low.visit(inst);
           high.visit(inst);
         }
@@ -3891,7 +3905,7 @@ ${inst.errors()[0]?.message}`);
       expect(stackedArr).toEqual(["let", ":=", "a", "b"]);
     });
     it("let a := b + c * d", () => {
-      const res = workCollection(makeTokens(
+      const { rootVisitable } = makeCompletion(makeTokens(
         "let",
         "a",
         ":=",
@@ -3902,18 +3916,18 @@ ${inst.errors()[0]?.message}`);
         "d"
       ));
       const stackedArr = [];
-      res?.visit(makeVisitor(stackedArr));
+      rootVisitable()?.visit(makeVisitor(stackedArr));
       expect(stackedArr).toEqual(["let", ":=", "a", "+", "b", "*", "c", "d"]);
     });
     it("a + + a", () => {
       const { rootVisitable, error } = makeCompletion(makeTokens("a", "+", "+", "a"));
       expect(rootVisitable()).toBeUndefined();
-      expect(error().message).toEqual("Something messed up around +");
+      expect(error().message).toEqual('Expression malformed around "+"');
     });
     it("let a 3", () => {
       const { rootVisitable, error } = makeCompletion(makeTokens("let", "a", "3"));
       expect(rootVisitable()).toBeUndefined();
-      expect(error().message).toEqual("Something messed up around +");
+      expect(error().message).toEqual('Expression malformed around "3"');
     });
   });
 

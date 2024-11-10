@@ -7,7 +7,7 @@ import {
 import { type Token } from '../token';
 import { type OrganizationNodeTypeInfo } from './organization_node_type_info';
 import { OrganizationNodeSlot } from './organization_node_slot';
-import { type PrecedenceOrganizationNode } from './precedence_organization_node'
+import { type PrecedenceOrganizationNode } from './precedence_organization_node';
 import { VisitableNodeDatum } from './visitable_node_datum';
 
 type NodeTypeInfo = OrganizationNodeTypeInfo;

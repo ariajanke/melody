@@ -17,7 +17,7 @@ const CloseFunctionDefinitionBuild = freeze({
             sink.pushPart(ContinuingAfterSingleValueBuild.make(mTokenRange, node));
             return undefined;
           });
-        })
+        });
       },
       error: StandardError.make().error,
       range: mTokenRange.range,
@@ -46,6 +46,6 @@ export const StartFunctionDefinitionBuild = freeze({
       error: StandardError.make().error,
       range: mTokenRange.range,
       asString: () => `SFnD ${mTokenRange.asString()}`
-    })
+    });
   }
 });

@@ -82,7 +82,7 @@ export const OperatorDefinitions = freeze({
         map((def: OperatorDefinition) => ({ [def.representation] : true }));
       sRepresentations = Object.assign({}, ...repArray);
       return fn(str);
-    }
+    };
     return fn;
   })(),
   unaryListing : makeListingFunction(operandRelationships.unary ),

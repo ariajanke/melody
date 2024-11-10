@@ -24,7 +24,7 @@ export const BlockBuilder = freeze({
     const lineNodesAsString = () => {
       let s = 'lines<';
       mLineNodes.forEach((node: AstNode) => {
-        s = `${s} ${node.asString()}, `
+        s = `${s} ${node.asString()}, `;
       });
       return `${s}>`;
     };

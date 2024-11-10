@@ -10,7 +10,7 @@ const { describeNamed } = TestHelpers;
 describeNamed({ FnClosePositionRetrieval }, () => {
   const make = (...tokenStrings: string[]) => {
     const { makeFromStringOnly } = Token.forTesting;
-    const range = TokenRange.makeStartingRange(tokenStrings.map(makeFromStringOnly))
+    const range = TokenRange.makeStartingRange(tokenStrings.map(makeFromStringOnly));
     const open = range.startToken();
     return FnClosePositionRetrieval.make(range.step(), open);
   };

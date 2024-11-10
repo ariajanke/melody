@@ -32,16 +32,16 @@ describeNamed({ OperativeStatementBuilder }, () => {
       visitToken   : (token: Token) => {
         mStackedArr.push(token.content());
       },
-      visitNode    : (_node: AstNode) => {
+      visitNode    : (_0: AstNode) => {
         throw new Error('should not directly add nodes for this test');
       },
       visitLinks:
         (low: OperativeStatementVisitable,
-         visitDatum: (visitor: OperativeStatementVisitor) => void,
+         node: OperativeStatementVisitable,
          high: OperativeStatementVisitable) =>
       {
-        visitDatum(inst);
-        low.visit(inst);
+        node.visit(inst);
+        low .visit(inst);
         high.visit(inst);
       }
     });
@@ -99,11 +99,11 @@ describeNamed({ OperativeStatementBuilder }, () => {
   });
 
   it('let a := b + c * d', () => {
-    const res = workCollection(makeTokens(
+    const { rootVisitable } = makeCompletion(makeTokens(
       'let', 'a', ':=', 'b', '+', 'c', '*', 'd'
     ));
     const stackedArr: string[] = [];
-    res?.visit(makeVisitor(stackedArr));
+    rootVisitable()?.visit(makeVisitor(stackedArr));
     expect(stackedArr).
       toEqual(['let', ':=', 'a', '+', 'b', '*', 'c', 'd']);
   });
@@ -111,12 +111,12 @@ describeNamed({ OperativeStatementBuilder }, () => {
   it('a + + a', () => {
     const { rootVisitable, error } = makeCompletion(makeTokens('a', '+', '+', 'a'));
     expect(rootVisitable()).toBeUndefined();
-    expect(error().message).toEqual('Something messed up around +');
+    expect(error().message).toEqual('Expression malformed around "+"');
   });
 
   it('let a 3', () => {
     const { rootVisitable, error } = makeCompletion(makeTokens('let', 'a', '3'));
     expect(rootVisitable()).toBeUndefined();
-    expect(error().message).toEqual('Something messed up around +');
-  })
+    expect(error().message).toEqual('Expression malformed around "3"');
+  });
 });

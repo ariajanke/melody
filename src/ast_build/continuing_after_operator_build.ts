@@ -14,7 +14,7 @@ export const ContinuingAfterOperatorBuild = (() => {
     make: (mTokenRange: TokenRange, mPrevOperatorToken: Token, mOperandRelation: string):
       TreePartBuild =>
     {
-      const { error, setErrorMessage, setErrorFn } = StandardError.make();
+      const { error, setErrorMessage } = StandardError.make();
       const { startToken } = mTokenRange;
 
       const handlePeekAheadFringe = () => {

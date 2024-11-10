@@ -159,10 +159,10 @@ describeNamed({ AstBuild }, () => {
         makeToken('a')
       ];
       const rootNode = buildAst();
-      if (rootNode.type() !== AstNode.types.tuple) {
+      if (rootNode.type() !== AstNode.types.functionDefinition) {
         return fail();
       }
-      expect((rootNode as AstTupleNode).count()).toEqual(3);
+      expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(3);
     });
   });
 
@@ -330,8 +330,6 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitLetDeclaration((_0: AstLetDeclarationNode, node: AstNode) => {
-          debugger;
-          
           node.visit(visitor);
         }).
         visitIdentifier((node: AstFringeNode) => {
@@ -602,8 +600,6 @@ describeNamed({ AstBuild }, () => {
         visitFunctionCall((node: AstFunctionCallNode) => {
           expect(node.name).toEqual('puts');
           pt1.hitsAtExactly(1);
-          node.arguments.forEach((node: AstNode) => {
-          });
         }).
         finish();
       buildAst().visit(visitor);

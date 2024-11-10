@@ -40,7 +40,7 @@ export const CharacterClass = (() => {
         classes.numeric),
       ...arrayAsCharacterSetFor(
         [
-          '=', ':', ',', '.', '(', ')', '{', '}'
+          '=', ':', ',', '.', '(', ')', '{', '}', '*', '+', '*'
         ],
         classes.operative),
       ...arrayAsCharacterSetFor(

@@ -1,9 +1,6 @@
 import { PrecedenceOrganizationNode } from './operative_statement_builder/precedence_organization_node';
 import { StandardError, Helpers } from './helpers';
-import {
-  type OperativeStatementVisitable,
-  type OperativeStatementVisitor
-} from './operative_statement_builder';
+import { type OperativeStatementVisitable } from './operative_statement_builder';
 import { Token } from './token';
 import { AstNode } from './ast_node';
 
@@ -13,42 +10,42 @@ export const OperativeStatementCompletion = (() => {
   const make =
     (mNodes: PrecedenceOrganizationNode[]) =>
   {
-    const { error, setErrorMessage } = StandardError.make();
+    const { error, setErrorMessage, hasErrorSet } = StandardError.make();
     const { isNullVisitable } = PrecedenceOrganizationNode;
     const mCounts: { [uid: symbol]: number } = {};
     const isValidVisitable = (vst: OperativeStatementVisitable) => {
       if (!isNullVisitable(vst)) {
-        const id = vst.uniqueIdentifier();
-        mCounts[id] = (mCounts[id] ?? 0) + 1;
-        return mCounts[id] === 1;
+        return mCounts[vst.uniqueIdentifier()] === 1;
       }
       return true;
     };
-    const checkSide = (vst: OperativeStatementVisitable,
-                       visitorFn: (visitor: OperativeStatementVisitor) => void) =>
-    {
-      if (!isValidVisitable(vst)) {
-        visitorFn(mInternalVisitor);
-        mErrorSet = true;
-        return setErrorMessage(`Something messed up around ${mSetString}`);
-      }
+    const markVisitable = (vst: OperativeStatementVisitable) => {
+      const id = vst.uniqueIdentifier();
+      mCounts[id] = (mCounts[id] ?? 0) + 1;
     };
-    let mSetString = '';
-    let mErrorSet = false
+    const verifyAllVisited = (): void => {
+      // can't reduce on a different type, my language will be different
+      // ffs microsoft
+      mNodes.forEach((pon: PrecedenceOrganizationNode) => {
+        if (!isValidVisitable(pon)) {
+          setErrorMessage(`Expression malformed around "${pon.asString()}"`);
+          // and I can't short circut using forEach (I'm trying to avoid fors)
+        }
+      });
+    };
     const mInternalVisitor = freeze({
-      visitToken   : (token: Token) =>
-        { mSetString = token.content(); },
-      visitNode    : (node: AstNode) =>
-        { mSetString = node.asString(); },
+      visitToken   : (_0: Token) => {},
+      visitNode    : (_0 : AstNode) => {},
       visitLinks:
-        (low: OperativeStatementVisitable,
-         visitorFn: (visitor: OperativeStatementVisitor) => void,
+        (low : OperativeStatementVisitable,
+         node: OperativeStatementVisitable,
          high: OperativeStatementVisitable) =>
       {
-        if (mErrorSet)
+        markVisitable(node);
+        if (hasErrorSet())
           { return; }
-        checkSide(low , visitorFn);
-        checkSide(high, visitorFn);
+        low .visit(mInternalVisitor);
+        high.visit(mInternalVisitor);
       }
     });
 
@@ -57,10 +54,15 @@ export const OperativeStatementCompletion = (() => {
         if (inst.isEmpty())
           { return undefined; }
         const pon = PrecedenceOrganizationNode.workCollection(mNodes);
-        if (!pon)
-          { return undefined; }
+        if (!pon) {
+          setErrorMessage('working operative statement collection failed');
+          return undefined;
+        }
         pon.visit(mInternalVisitor);
-        if (mErrorSet)
+        if (hasErrorSet())
+          { return undefined; }
+        verifyAllVisited();
+        if (hasErrorSet())
           { return undefined; }
         return pon;
       }),

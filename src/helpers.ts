@@ -19,15 +19,18 @@ export interface StandardError {
   setErrorFn: (fn: StandardErrorFn) => undefined,
   setErrorMessage: (message: string) => undefined,
   error: () => StandardErrorMessage,
-  sharedErrorInstance: () => StandardError
+  sharedErrorInstance: () => StandardError,
+  hasErrorSet(): boolean
 };
 
 export const StandardError = (() => {
   const { freeze } = Helpers;
 
+  const kErrorNotSetFn: StandardErrorFn = (): StandardErrorMessage =>
+    { throw new Error('No error set, this method should not be called'); };
+
   function make(): StandardError {
-    let mErrorFn: StandardErrorFn = (): StandardErrorMessage =>
-      { throw Error('No error set, this method should not be called'); };
+    let mErrorFn = kErrorNotSetFn;
     let mInst: StandardError | undefined = undefined;
 
     function setErrorFn(fn: StandardErrorFn): undefined
@@ -39,8 +42,13 @@ export const StandardError = (() => {
     function error(): StandardErrorMessage
       { return mErrorFn(); }
 
+    function hasErrorSet(): boolean
+      { return mErrorFn !== kErrorNotSetFn; }
+
     const sharedErrorInstance = (): StandardError =>
-      mInst ??= freeze({ setErrorFn, setErrorMessage, error, sharedErrorInstance });
+      mInst ??= freeze({
+          setErrorFn, setErrorMessage, error, sharedErrorInstance, hasErrorSet
+        });
 
     return sharedErrorInstance();
   }

@@ -1,4 +1,4 @@
-import { Helpers, StandardError } from '../helpers';
+import { Helpers } from '../helpers';
 import {
   type OperativeStatementVisitable,
   type OperativeStatementVisitor
@@ -39,7 +39,7 @@ const presentSlot = (lhs: OrganizationNodeSlot | undefined, rhs: OrganizationNod
   lhs?.isPresent() ? lhs: rhs;
 
 const nullVisitableInstance: OperativeStatementVisitable = freeze({
-  visit: (_: OperativeStatementVisitor) => {},
+  visit: (_0: OperativeStatementVisitor) => {},
   uniqueIdentifier: memoize(Symbol),
 });
 
@@ -64,7 +64,7 @@ const make =
     visit: (visitor: OperativeStatementVisitor) =>
       visitor.
         visitLinks(mLinks.low ?? nullVisitableInstance,
-                   mVisitable.visit,
+                   mVisitable,
                    mLinks.high ?? nullVisitableInstance ),
     lowSlot: () => mLow,
     highSlot: () => mHigh,

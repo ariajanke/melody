@@ -101,7 +101,7 @@ export const ContextVariable = (() => {
         mType = kBuiltinTypes.String;
         break;
       case kBuiltinTypes.Function.uid:
-        mType = kBuiltinTypes.Function
+        mType = kBuiltinTypes.Function;
         break;
       default:
         throw Error(`Cannot set to type "${objType.name()}"`);

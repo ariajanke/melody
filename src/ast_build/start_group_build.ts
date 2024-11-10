@@ -21,7 +21,7 @@ const CloseGroupPart = freeze({
             return undefined;
           });
         }),
-      error: (): StandardErrorMessage => { throw new Error('should not ever fail') },
+      error: (): StandardErrorMessage => { throw new Error('should not ever fail'); },
       range: mTokenRange.range,
       asString: () => `CGP ${mTokenRange.asString()}`
     })

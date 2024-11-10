@@ -86,7 +86,7 @@ const InterpreterNodeVisitor = freeze({
       visitFunctionCall: (node: AstFunctionCallNode) => {
         const cvar = context.tryGetVariable(node.name);
         if (cvar) {
-          return inst.callFunctionDefinition(cvar.asNode())
+          return inst.callFunctionDefinition(cvar.asNode());
         }
         const fn = kBuiltinFunctions[node.name];
         if (!fn) {
