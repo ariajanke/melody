@@ -5,7 +5,8 @@ import { Helpers } from './helpers';
 export interface PersistentStack<Type> {
   push: () => Type,
   pop: () => Type,
-  isEmpty: () => boolean
+  isEmpty: () => boolean,
+  count: () => number
 }
 
 export const PersistentStack = (() => {
@@ -17,13 +18,15 @@ export const PersistentStack = (() => {
 
     function _verifyNotEmpty() {
       if (!isEmpty()) return;
-      throw Error('Stack is empty');
+      throw new Error('Stack is empty');
     }
 
     function push(member?: Type): Type {
       const { length } = mMembers;
       if (mPosition + 1 === length) {
         mMembers.push(member ?? mDefaultMake());
+      } else {
+        mMembers[mPosition + 1] = member ?? mDefaultMake();
       }
       ++mPosition;
       return mMembers[mPosition];
@@ -40,7 +43,7 @@ export const PersistentStack = (() => {
       return mPosition === -1;
     }
 
-    return freeze({ push, pop, isEmpty });
+    return freeze({ push, pop, isEmpty, count: () => mMembers.length });
   }
 
   return freeze({ make });

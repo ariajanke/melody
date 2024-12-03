@@ -3,9 +3,9 @@ import { type AstFringeNode } from './ast_fringe_node';
 import { Helpers } from './helpers';
 import { ContextVariable } from './context_variable';
 import { type Token } from './token';
-import { type TypeLookUpTable } from './ast_node';
-import { type TypeResolution } from './type_resolution';
+import { type ContextualLookUpTable } from './ast_node';
 import { type AstNodeVisitor } from './ast_node_visitor';
+import { type ObjectTypeResolution } from './object_type_resolution';
 
 const { freeze, memoize } = Helpers;
 
@@ -21,17 +21,19 @@ export const AstStringLiteralNode = (() => {
     })();
     const mGetAsContextVar = memoize(() => ContextVariable.make(mValue));
 
-    return freeze({
+    const inst = freeze({
       comesBeforeOperator: (operator: Token): boolean =>
         operator.content() === ',',
-      executionType: (types: TypeLookUpTable): TypeResolution =>
-        types.lookUpStringLiteralType(),
+      executionType: (types: ContextualLookUpTable): ObjectTypeResolution =>
+        types.lookUpByName('String'),
       evaluate: (_0: (name: string) => ContextVariable): ContextVariable =>
         mGetAsContextVar(),
       type: () => kStringLiteral,
       asString: () => mValue,
-      visit: (_0: AstNodeVisitor) => {}
+      visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
+        visitor.visitFringe(inst)
     });
+    return inst;
   }
 
   return freeze({ make });

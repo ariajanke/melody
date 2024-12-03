@@ -56,6 +56,38 @@ export const StandardError = (() => {
   return freeze({ make });
 })();
 
+export const FinishingMemoization = (() => {
+  const kUninitializedGuard = (): void => {
+    throw new Error('No method was defined with "memoizedFinish"');
+  };
+  const kFinishAlreadyCalledGuard = (): void => {
+    throw new Error('Finisher method already called');
+  };
+  return Helpers.freeze({
+    make() {
+      let mMemoizationGuard = kUninitializedGuard;
+      return Helpers.freeze({
+        beforeFinish<T extends unknown[], Rt>(fn: (...args: T) => Rt) {
+          return (...args: T): Rt => {
+            mMemoizationGuard();
+            return fn(...args);
+          };
+        },
+        memoizedFinish<ReturnType>(fn: () => ReturnType) {
+          mMemoizationGuard = () => {};
+          let mGetter = () => {
+            const res = fn();
+            mGetter = () => res;
+            mMemoizationGuard = kFinishAlreadyCalledGuard;
+            return res;
+          };
+          return mGetter;
+        }
+      });
+    }
+  });
+})();
+
 expose({ Helpers });
 
 export interface TypeCheckable {

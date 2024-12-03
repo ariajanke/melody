@@ -1,10 +1,11 @@
 import { TestHelpers } from './test_helpers';
 import { Interpreter } from '../src/interpreter';
 import { ExecutionContext } from '../src/execution_context';
+import { AstStringLiteralNode } from '../src/ast_string_literal_node';
+import { ObjectType } from '../src/object_type';
+import { AstTupleNode } from '../src/ast_tuple_node';
 
 const { describeNamed } = TestHelpers;
-
-type PutsFunction = typeof console.log;
 
 describeNamed({ Interpreter }, () => {
   function makePutsFunction() {
@@ -15,8 +16,11 @@ describeNamed({ Interpreter }, () => {
 
     return { injections, printedStrings };
   }
-  function makeWithInjections(putsFunction: PutsFunction, context?: ExecutionContext) {
-    return Interpreter.make(context ?? ExecutionContext.make(), { putsFunction, askStringFunction: (): string => 'bees2' });
+  function makeWithInjections(putsFunction: (s: string) => void, context?: ExecutionContext) {
+    const defaultInjections = { putsFunction, askStringFunction: (): string => 'bees2' };
+    const contextType = ExecutionContext.makeContextTypeWithInjections( defaultInjections );
+    context ??= ExecutionContext.make( contextType );
+    return Interpreter.make(context ?? ExecutionContext.make());
   }
   describe('integration specs', () => {
     it('compiles and runs a "hello world!" program', () => {
@@ -28,11 +32,18 @@ describeNamed({ Interpreter }, () => {
     });
 
     it('compiles and runs a "hello world!" program with a variable', () => {
-      const context = ExecutionContext.make();
-      context.declareVariable('foo').set('hello world!');
       const programRootNode = Interpreter.buildFor("puts(foo)");
       const { printedStrings, injections } = makePutsFunction();
-      const interpreter = Interpreter.make(context, injections);
+      const contextType = ExecutionContext.makeContextTypeWithInjections( injections );
+      const context = ExecutionContext.make( contextType );
+      const fooNode = AstStringLiteralNode.make('foo');
+      context.declareVariable({
+        name: 'foo',
+        type: context.executionTypeOf(fooNode).resolve() as ObjectType,
+        operator: ':=',
+        node: AstTupleNode.make(',', [fooNode])
+      }).set('hello world!');
+      const interpreter = Interpreter.make(context);
       interpreter.interpret(programRootNode);
       expect(printedStrings).toEqual(['hello world!']);
     });
@@ -52,8 +63,16 @@ describeNamed({ Interpreter }, () => {
         puts(foo)
       `);
       const { printedStrings, injections } = makePutsFunction();
-      const context = ExecutionContext.make();
-      context.declareVariable('foo').set('wow');
+      const contextType = ExecutionContext.makeContextTypeWithInjections( injections );
+      const context = ExecutionContext.make(contextType);
+      const fooNode = AstStringLiteralNode.make('foo');
+      context.
+        declareVariable({
+          name: 'foo',
+          type: context.executionTypeOf(fooNode).resolve() as ObjectType,
+          operator: ':=',
+          node: AstTupleNode.make(',', [fooNode])}).
+        set('wow');
       const intr = makeWithInjections(injections.putsFunction, context);
       intr.interpret(programRootNode);
       expect(printedStrings).toEqual(['hello world!']);

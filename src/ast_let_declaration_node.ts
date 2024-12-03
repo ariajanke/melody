@@ -1,7 +1,7 @@
-import { AstNode, type TypeLookUpTable } from './ast_node';
+import { AstNode, type ContextualLookUpTable } from './ast_node';
 import { Helpers } from './helpers';
 import { AstNodeVisitor } from './ast_node_visitor';
-import { type TypeResolution } from './type_resolution';
+import { type ObjectTypeResolution } from './object_type_resolution';
 
 const { freeze } = Helpers;
 
@@ -13,11 +13,10 @@ export const AstLetDeclarationNode = freeze({
     const { letDeclaration } = AstNode.types;
 
     const inst = freeze({
-      visit: (visitor: AstNodeVisitor) => {
-        visitor.visitLetDeclaration(inst, node);
-      },
+      visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
+        visitor.visitLetDeclaration(inst, node),
       type: () => letDeclaration,
-      executionType: (types: TypeLookUpTable): TypeResolution => {
+      executionType: (types: ContextualLookUpTable): ObjectTypeResolution => {
         // I need to "dress up" the type look up table
         // so that I can give lhs identifier node permission to not yet exist
         return executionType(types);

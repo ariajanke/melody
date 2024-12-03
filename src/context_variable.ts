@@ -60,7 +60,9 @@ export const ContextVariable = (() => {
 
   registerSymbolStrings('ContextVariable', kTypes);
 
-  function make(mValue?: StorableValue): ContextVariable {
+  function make
+    (mValue?: StorableValue): ContextVariable
+  {
     const { getBuiltinTypes } = ObjectLookUpTable;
     const kBuiltinTypes = getBuiltinTypes();
     const inst = freeze({ set, asString, asNumber, type, copyTo, setType, asNode });

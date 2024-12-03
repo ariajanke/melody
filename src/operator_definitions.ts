@@ -54,6 +54,7 @@ export const OperatorDefinitions = freeze({
         [
           { representation: 'let', operandRelation: unary  },
           { representation: ','  , operandRelation: binary },
+          { representation: 'is' , operandRelation: binary },
           { representation: '='  , operandRelation: binary },
           { representation: ':=' , operandRelation: binary },
           { representation: '+'  , operandRelation: binary },

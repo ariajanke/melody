@@ -5,3 +5,4 @@ import './src/symbolification';
 import './src/tokenization';
 import './src/ast_assignment_node';
 import './src/type_system';
+import './src/wasm_compilation';

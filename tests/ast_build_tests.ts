@@ -8,8 +8,9 @@ import { AstLetDeclarationNode } from '../src/ast_let_declaration_node';
 import { AstFringeNode } from '../src/ast_fringe_node';
 import { TokenRange } from '../src/token_range';
 import { AstNodeVisitorBuilder } from '../src/ast_node_visitor';
-import { AstBinaryOperatorNode } from '../src/ast_binary_operator_node';
+// import { AstBinaryOperatorNode } from '../src/ast_binary_operator_node';
 import { AstFunctionDefinitionNode } from '../src/ast_function_definition_node';
+import { AstTupleNode } from '../src/ast_tuple_node';
 
 const { describeNamed } = TestHelpers;
 
@@ -77,12 +78,21 @@ describeNamed({ AstBuild }, () => {
       let vop = '';
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+        visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
           const { valueOf } = AstIntegerLiteralNode;
-          vop = node.operation();
-          expect(valueOf(lhs)).toEqual(2);
-          expect(valueOf(rhs)).toEqual(2);
+          vop = node.name; //node.operation();
+          expect(valueOf(rec)).toEqual(2);
+          expect(fArgs.count()).toEqual(1);
+          fArgs.forEach((node: AstNode) => {
+            expect(valueOf(node)).toEqual(2);
+          });
         }).
+        // visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+        //   const { valueOf } = AstIntegerLiteralNode;
+        //   vop = node.operation();
+        //   expect(valueOf(lhs)).toEqual(2);
+        //   expect(valueOf(rhs)).toEqual(2);
+        // }).
         finish();
 
       buildAst().visit(visitor);
@@ -98,12 +108,20 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-          foundOperators.push(node.operation());
+        visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
+          foundOperators.push(node.name);
           pt1.hitsAtExactly(1);
-          lhs.visit(visitor);
-          rhs.visit(visitor);
+          rec.visit(visitor);
+          fArgs.forEach((node: AstNode) => {
+            node.visit(visitor);
+          });
         }).
+        // visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+        //   foundOperators.push(node.operation());
+        //   pt1.hitsAtExactly(1);
+        //   lhs.visit(visitor);
+        //   rhs.visit(visitor);
+        // }).
         visitLetDeclaration((_0: AstLetDeclarationNode, rhs: AstNode) => {
           pt2.hitsAtExactly(1);
           rhs.visit(visitor);
@@ -126,11 +144,16 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-          foundOperators.push(node.operation());
-          lhs.visit(visitor);
-          rhs.visit(visitor);
+        visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
+          foundOperators.push(node.name);
+          rec.visit(visitor);
+          fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
+        // visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
+        //   foundOperators.push(node.operation());
+        //   lhs.visit(visitor);
+        //   rhs.visit(visitor);
+        // }).
         finish();
       buildAst().visit(visitor);
       expect(foundOperators).toEqual([':=', '+']);
@@ -195,10 +218,15 @@ describeNamed({ AstBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((node: AstBinaryOperatorNode) => {
+        visitFunctionCall((_0: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
           hitsAtExactly(2);
-          node.visitChildren(visitor);
+          rec.visit(visitor);
+          fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
+        // visitBinaryOperation((node: AstBinaryOperatorNode) => {
+        //   hitsAtExactly(2);
+        //   node.visitChildren(visitor);
+        // }).
         finish();
       const rootNode = buildAst();
       rootNode.visit(visitor);
@@ -217,11 +245,18 @@ describeNamed({ AstBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((node: AstBinaryOperatorNode) => {
+        visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
           hitsAtExactly(1);
-          expect(node.operation()).toEqual(':=');
-          node.visitChildren(visitor);
+          expect(node.name).toEqual(':=');
+          // node.visitChildren(visitor);
+          rec.visit(visitor);
+          fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
+        // visitBinaryOperation((node: AstBinaryOperatorNode) => {
+        //   hitsAtExactly(1);
+        //   expect(node.operation()).toEqual(':=');
+        //   node.visitChildren(visitor);
+        // }).
         finish();
       const rootNode = buildAst();
       rootNode.visit(visitor);
@@ -352,11 +387,11 @@ describeNamed({ AstBuild }, () => {
           decNode.visit(visitor);
           inLet = false;
         }).
-        visitBinaryOperation((_0: AstBinaryOperatorNode, lhs: AstNode, _2: AstNode) => {
+        visitFunctionCall((_0: AstFunctionCallNode, rec: AstNode, _1: AstTupleNode) => {
           if (!inLet) { return; }
 
           hitsAtExactly(1);
-          expect(lhs.asString()).toEqual('a');
+          expect(rec.asString()).toEqual('a');
         }).
         finish();
       rootNode.visit(visitor);
@@ -379,23 +414,24 @@ describeNamed({ AstBuild }, () => {
     it('queue call is outside the function definition', () => {
       const rootNode = buildAst();
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      let depth = 0;
+      const functionCalls: string[] = [];
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionDefinition((_0: AstFunctionDefinitionNode, lineNodes: AstNode[]) => {
-          ++depth;
           lineNodes.forEach((node: AstNode) => node.visit(visitor));
-          --depth;
         }).
         visitIdentifier((node: AstFringeNode) => {
-          if (depth > 1) {
-            expect(node.asString()).not.toEqual('queue');
-          } else if (node.asString() === 'queue') {
-            hitsAtExactly(1);
-          }
+          expect(node.asString()).toEqual('a');
+          hitsAtExactly(2);
+        }).
+        visitFunctionCall((node: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode): void => {
+          functionCalls.push(node.name);
+          receiver.visit(visitor);
+          fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
         finish();
       rootNode.visit(visitor);
+      expect(functionCalls).toEqual([':=', 'puts', 'queue']);
       expect(verifyHit()).toBeTruthy();
     });
   });
@@ -404,19 +440,19 @@ describeNamed({ AstBuild }, () => {
     let tokens: Token[] = [];
     const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
-    const exactlyOneFunctionCallNamed = (fnname: string) => {
-      const { verifyHit, hitsAtExactly } = ReachPoint.make();
+    const expectFunctionsCalledInOrder = (...names: string[]) => {
+      const gottenNames: string[] = [];
       const rootNode = buildAst();
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitFunctionCall((node: AstFunctionCallNode) => {
-          hitsAtExactly(1);
-          expect(node.name).toEqual(fnname);
-          expect(node.arguments.count()).toEqual(0);
+        visitFunctionCall((node: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode) => {
+          gottenNames.push(node.name);
+          receiver.visit(visitor);
+          fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
         finish();
       rootNode.visit(visitor);
-      return verifyHit();
+      expect(gottenNames).toEqual(names);
     };
 
     it('builds a simple function call', () => {
@@ -424,17 +460,16 @@ describeNamed({ AstBuild }, () => {
         makeToken('\n'),
         makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
       ];
-      expect(exactlyOneFunctionCallNamed('askString')).toBeTruthy();
+      expectFunctionsCalledInOrder('askString');
     });
 
-    // trys to "let a := ()"
     it('"let a := askString()"', () => {
       tokens = [
         makeToken('let'), makeToken('a'), makeToken(':='),
         makeToken('askString'), makeToken('('), makeToken(')')
       ];
 
-      expect(exactlyOneFunctionCallNamed('askString')).toBeTruthy();
+      expectFunctionsCalledInOrder(':=', 'askString');
     });
 
     it('"puts(askString())"', () => {
@@ -476,19 +511,22 @@ describeNamed({ AstBuild }, () => {
 
       const { verifyAllHit, points } = ReachPoint.makeCollection(3);
       const [pt1, pt2, pt3] = points();
-      const { binaryOperator } = AstNode.types;
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
-        visitBinaryOperation((node: AstBinaryOperatorNode) => {
-          pt2.hitsAtExactly(2);
-          expect(node.operation()).toEqual('+');
-        }).
-        visitFunctionCall((node: AstFunctionCallNode) => {
-          expect(node.name).toEqual('puts');
-          pt3.hitsAtExactly(1);
-          node.arguments.forEach((node: AstNode) => {
-            expect(node.type()).toEqual(binaryOperator);
-            pt1.hitsAtExactly(2);
+        visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
+          if (rec.type() === AstFunctionCallNode.currentContextReceiver().type()) {
+            expect(node.name).toEqual('puts');
+            pt3.hitsAtExactly(1);
+          } else {
+            expect(node.name).toEqual('+');
+            pt2.hitsAtExactly(2);
+            expect(rec.type()).toEqual(AstNode.types.integerLiteral);
+            fArgs.forEach((node: AstNode) => {
+              expect(node.type()).toEqual(AstNode.types.integerLiteral); //binaryOperator);
+              pt1.hitsAtExactly(2);
+            });
+          }
+          fArgs.forEach((node: AstNode) => {
             node.visit(visitor);
           });
         }).

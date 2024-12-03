@@ -1,6 +1,5 @@
 import { Helpers } from './helpers';
 import { type ContextVariable } from './context_variable';
-import { type ObjectType } from './object_type';
 import { type PersistentStack } from './persistent_stack';
 
 const { freeze } = Helpers;
@@ -11,50 +10,44 @@ export const ParameterFit = freeze({
   isInterface: Symbol()
 });
 
-export interface Parameter {
-  fitType: symbol,
-  interfaceType: undefined,
-  objectType: symbol
-}
-
-export type BuiltInBinaryFunction =
-  (stack: PersistentStack<ContextVariable>,
-   lhs: ContextVariable,
-   rhs: ContextVariable) => void;
+export type BuiltInFunction = (stack: PersistentStack<ContextVariable>) => void;
 
 interface FunctionTypeBase {
-  arguments_: () => Readonly<Parameter[]>,
-  returns: () => Readonly<ObjectType[]>,
-  uid: () => symbol,
+  arguments_: () => Readonly<symbol[]>,
+  builtIn: () => BuiltInFunction | undefined,
   isComplete: () => boolean,
   name: () => string,
-  builtIn: () => BuiltInBinaryFunction | undefined
-}
+  pushReceiverStrategy: (fn: () => void) => void,
+  returns: () => Readonly<symbol[]>,
+  uid: () => symbol,
+};
 
 export interface FunctionType extends FunctionTypeBase {
-  satisfactionDegree: (fn: FunctionType) => number | undefined,
-  satisfactionDegreeOfArguments: (args: Readonly<Parameter[]>) =>
-    number | undefined
-  // assume function type for now
-}
+  
+};
 
 export interface IncompleteFunctionType extends FunctionTypeBase {
   setName: (name: string) => IncompleteFunctionType,
-  setArguments: (args: Readonly<Parameter[]>) => IncompleteFunctionType,
-  setReturns: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
-  setBuiltin: (fn: BuiltInBinaryFunction) => IncompleteFunctionType,
+  setArguments: (args: Readonly<symbol[]>) => IncompleteFunctionType,
+  setReturns: (args: Readonly<symbol[]>) => IncompleteFunctionType,
+  setBuiltin: (fn: BuiltInFunction) => IncompleteFunctionType,
+  noReceiver: () => IncompleteFunctionType,
   finish: () => FunctionType
 };
 
 export const IncompleteFunctionType = (() => {
   const reservedAnonymouseName = '<anonymous>';
-
+  const pushReceiver = 
+    (fn: () => void) =>
+    { fn(); };
+  const pushNothing = (_0: () => void) => {};
   function make(): IncompleteFunctionType {
     const mUid = Symbol();
-    const mArguments_: Parameter[] = [];
-    const mReturns   : ObjectType[] = [];
-    let mBuiltin: BuiltInBinaryFunction | undefined = undefined;
+    const mArguments_: symbol[] = [];
+    const mReturns   : symbol[] = [];
+    let mBuiltin: BuiltInFunction | undefined = undefined;
     let mName = reservedAnonymouseName;
+    let mPushReceiverStrategy = pushReceiver;
 
     const inst = freeze({
       arguments_,
@@ -67,13 +60,21 @@ export const IncompleteFunctionType = (() => {
       name,
       finish,
       setBuiltin,
-      builtIn: () => mBuiltin
+      builtIn: () => mBuiltin,
+      noReceiver,
+      pushReceiverStrategy(fn: () => void)
+        { mPushReceiverStrategy(fn); }
     });
 
-    function arguments_(): Readonly<Parameter[]>
+    function noReceiver(): IncompleteFunctionType {
+      mPushReceiverStrategy = pushNothing;
+      return inst;
+    }
+
+    function arguments_(): Readonly<symbol[]>
       { return mArguments_; }
 
-    function returns(): Readonly<ObjectType[]>
+    function returns(): Readonly<symbol[]>
       { return mReturns; }
 
     function uid(): symbol { return mUid; }
@@ -88,13 +89,13 @@ export const IncompleteFunctionType = (() => {
       return inst;
     }
 
-    function setArguments(args: Readonly<Parameter[]>): IncompleteFunctionType {
+    function setArguments(args: Readonly<symbol[]>): IncompleteFunctionType {
       mArguments_.length = 0;
       mArguments_.push(...args);
       return inst;
     }
 
-    function setReturns(rets: Readonly<ObjectType[]>): IncompleteFunctionType {
+    function setReturns(rets: Readonly<symbol[]>): IncompleteFunctionType {
       mReturns.length = 0;
       mReturns.push(...rets);
       return inst;
@@ -106,7 +107,7 @@ export const IncompleteFunctionType = (() => {
       return FunctionType.make(inst);
     }
 
-    function setBuiltin(fn: BuiltInBinaryFunction): IncompleteFunctionType {
+    function setBuiltin(fn: BuiltInFunction): IncompleteFunctionType {
       mBuiltin = fn;
       return inst;
     }
@@ -117,72 +118,30 @@ export const IncompleteFunctionType = (() => {
 })();
 
 export const FunctionType = (() => {
-  function satisfactionDegreeOfParam
-    (lhs: Parameter, rhs: Parameter): number | undefined
-  {
-    if (lhs.fitType === ParameterFit.isType &&
-        rhs.fitType === ParameterFit.isType &&
-        lhs.objectType === rhs.objectType)
-    {
-      return 0;
-    }
-  }
-
-  function satisfactionDegreeOfReturns
-    (lhs: Readonly<ObjectType[]>, rhs: Readonly<ObjectType[]>): number | undefined
-  {
-    const length = Math.min(lhs.length, rhs.length);
-    for (let i = 0; i < length; ++i) {
-      if (lhs[i].uid !== rhs[i].uid) {
-        return undefined;
-      }
-    }
-    return 0;
-  }
 
   function make(base: FunctionTypeBase): FunctionType {
-    const { arguments_, returns, uid, name, builtIn } = base;
+    const {
+      arguments_, 
+      returns,
+      uid,
+      name,
+      builtIn,
+      pushReceiverStrategy
+    } = base;
 
     const inst = freeze({
-      // 0 meaning 1-1 match
-      // undefined for does not match at all
-      satisfactionDegree: (fn: FunctionType): number | undefined => {
-        if (fn.arguments_().length !== arguments_().length ||
-            fn.returns   ().length !== returns   ().length)
-        { return undefined; }
-        const argDeg = inst.satisfactionDegreeOfArguments(fn.arguments_());
-        if (argDeg !== 0) return;
-        const rtDeg = satisfactionDegreeOfReturns(fn.returns(), returns());
-        if (rtDeg !== 0) return;
-        return argDeg + rtDeg;
-      },
-      satisfactionDegreeOfArguments: (rhs: Readonly<Parameter[]>):
-        number | undefined =>
-        {
-          const lhs = arguments_();
-          const length = Math.min(lhs.length, rhs.length);
-          let degree = 0;
-          for (let i = 0; i < length; ++i) {
-            const lhsP = lhs[i];
-            const rhsP = rhs[i];
-            const deg = satisfactionDegreeOfParam( lhsP, rhsP );
-            if (deg !== 0) return;
-            degree += deg;
-          }
-          return degree;
-        },
       arguments_,
       returns,
       uid,
       name,
       isComplete: () => true,
-      builtIn
+      builtIn,
+      pushReceiverStrategy
     });
     return inst;
   }
 
   return freeze({
-    make,
-    satisfactionDegreeOfParam
+    make
   });
 })();

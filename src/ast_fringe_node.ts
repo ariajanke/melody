@@ -45,7 +45,7 @@ export const AstFringeNode = (() => {
       case tokenTypes.integerLiteral:
         return AstIntegerLiteralNode;
       default:
-        throw Error('cannot build stringable node from token');
+        throw new Error('cannot build stringable node from token');
       }
     })().make(token.content());
   }

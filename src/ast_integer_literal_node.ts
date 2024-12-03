@@ -1,10 +1,11 @@
-import { AstNode, TypeLookUpTable } from './ast_node';
+import { AstNode } from './ast_node';
 import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
 import { AstFringeNode } from './ast_fringe_node';
 import { Token } from './token';
-import { TypeResolution } from './type_resolution';
 import { AstNodeVisitor } from './ast_node_visitor';
+import { type ContextualLookUpTable } from './ast_node';
+import { type ObjectTypeResolution } from './object_type_resolution';
 
 const { freeze, memoize } = Helpers;
 
@@ -28,11 +29,12 @@ export const AstIntegerLiteralNode = (() => {
 
   function construct(mValue: number): AstFringeNode {
     const eval_ = memoize(() => ContextVariable.make(mValue));
-    return freeze({
-      visit: (_0: AstNodeVisitor) => {},
+    const inst = freeze({
+      visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
+        visitor.visitFringe(inst),
       type: (): symbol => kIntType,
-      executionType: (types: TypeLookUpTable): TypeResolution =>
-        types.lookUpIntegerLiteralType(),
+      executionType: (types: ContextualLookUpTable): ObjectTypeResolution =>
+        types.lookUpByName('Integer'),
       evaluate: (_0: (name: string) => ContextVariable): ContextVariable =>
         eval_(),
       asString: (): string => `${mValue}`,
@@ -45,6 +47,7 @@ export const AstIntegerLiteralNode = (() => {
       },
       value: () => mValue
     });
+    return inst;
   }
 
   return freeze({ make, valueOf });

@@ -1,21 +1,21 @@
 import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
-import { type TypeResolution } from './type_resolution';
 import { type AstNodeVisitor } from './ast_node_visitor';
+import { type ObjectLookUpTable } from './object_look_up_table';
+import { type ObjectTypeResolution } from './object_type_resolution';
 
 const { freeze } = Helpers;
 
-export interface TypeLookUpTable {
-  lookUpIdentifierType: (identifierName: string) => TypeResolution,
-  lookUpStringLiteralType: () => TypeResolution,
-  lookUpIntegerLiteralType: () => TypeResolution,
-  lookUpFunctionType: () => TypeResolution
+export interface ContextualLookUpTable extends ObjectLookUpTable {
+  lookUpIdentifierType: (identifierName: string) => ObjectTypeResolution,
+  lookUpContextType: () => ObjectTypeResolution
 }
 
 export interface AstNode {
-  visit: (visitor: AstNodeVisitor) => void,
+  visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>) =>
+    AccumulationType,
   type: () => symbol,
-  executionType: (types: TypeLookUpTable) => TypeResolution,
+  executionType: (types: ContextualLookUpTable) => ObjectTypeResolution,
   asString: () => string
 }
 
