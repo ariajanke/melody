@@ -1,14 +1,16 @@
 import { Helpers } from './helpers';
-import { FunctionType, Parameter, ParameterFit } from './function_type';
+import { FunctionType } from './function_type';
+import { FunctionLookUpTable, IncompleteFunctionLookUpTable } from './function_look_up_table';
 
 const { freeze } = Helpers;
 
 export interface ObjectType {
   name: () => string,
-  lookUp: (operation: string) => FunctionType,
+  lookUp: (operation: string) => FunctionLookUpTable | undefined,
   uid: symbol,
   setLookUp: (lookupTable: { [name: string]: FunctionType }) => ObjectType,
-  asSingluarParameter: () => Readonly<Parameter[]>
+  decomposeAsArguments: () => Readonly<symbol[]>,
+  setLookUpTable: (lookupTable: { [name: string]: FunctionLookUpTable }) => ObjectType
 }
 
 export const ObjectType = (() => {
@@ -34,37 +36,65 @@ export const ObjectType = (() => {
     return kUidBuiltinStrategy[name] ?? Symbol();
   }
 
+  function makeForTuple(uids: Readonly<symbol[]>, name: string): ObjectType {
+    name ??= '<anonymous>';
+    const inst = freeze({
+      lookUp: memoize(() => IncompleteFunctionLookUpTable.make().finish()),
+      name: () => name,
+      uid: makeUidFor(name),
+      setLookUp(_0: { [name: string]: FunctionType }): ObjectType {
+        throw new Error('Dont call me');
+      },
+      decomposeAsArguments: () => uids,
+      setLookUpTable(_0: { [name: string]: FunctionLookUpTable }) {
+        throw new Error('Dont call me');
+      }
+    });
+    return inst;
+  }
+
   function make
     (name?: string): ObjectType
   {
     name ??= '<anonymous>';
-    let mLookupTable: { [name: string]: FunctionType } = {};
+    const mLookupTable: { [name: string]: FunctionLookUpTable } = {};
     const inst = freeze({
-      lookUp, name: () => name,
+      lookUp,
+      name: () => name,
       uid: makeUidFor(name),
       setLookUp,
-      asSingluarParameter: memoize(asSingluarParameter)
+      decomposeAsArguments: memoize((): Readonly<symbol[]> => [inst.uid]),
+      setLookUpTable
     });
 
     function setLookUp(lookupTable: { [name: string]: FunctionType }) {
-      mLookupTable = lookupTable;
+      Object.keys(lookupTable).forEach((name: string) => {
+        mLookupTable[name] = IncompleteFunctionLookUpTable.
+          make().
+          push(lookupTable[name]).
+          finish();
+      });
+      
       return inst;
     }
 
-    function lookUp(operation: string): FunctionType {
-      return mLookupTable[operation];
+    function setLookUpTable(lookupTable: { [name: string]: FunctionLookUpTable }) {
+      Object.keys(lookupTable).forEach((name: string) => {
+        mLookupTable[name] = lookupTable[name];
+      });
+      return inst;
     }
 
-    function asSingluarParameter(): Readonly<Parameter[]> {
-      return [{
-        fitType: ParameterFit.isType,
-        interfaceType: undefined,
-        objectType: inst.uid
-      }];
+    function lookUp(operation: string): FunctionLookUpTable | undefined {
+      return mLookupTable[operation];
     }
 
     return inst;
   }
 
-  return freeze({ make, builtInTypeUids: kBuiltInTypeUids });
+  return freeze({
+    make,
+    builtInTypeUids: kBuiltInTypeUids,
+    makeForTuple
+  });
 })();

@@ -3,13 +3,13 @@ import { Token } from '../token';
 import { AstNode } from '../ast_node';
 import { AstTupleNode } from '../ast_tuple_node';
 import { AstLetDeclarationNode } from '../ast_let_declaration_node';
-import { AstBinaryOperatorNode } from '../ast_binary_operator_node';
 import { AstFunctionCallNode } from '../ast_function_call_node';
 import { AstFringeNode } from '../ast_fringe_node'; 
 import {
   type OperativeStatementVisitable,
   type OperativeStatementVisitor
 } from '../operative_statement_builder';
+import { AstIdentifierNode } from '../ast_identifier_node';
 
 const { freeze } = Helpers;
 
@@ -19,13 +19,20 @@ export interface OperativeStatementAstCreation extends OperativeStatementVisitor
 
 export const OperativeStatementAstCreation = freeze({
   make: (): OperativeStatementAstCreation => {
+    const makeFringeForOperator = (() => {
+      const sOperatorFringes: { [name: string]: AstFringeNode } = {};
+      return (operator: string) =>
+        sOperatorFringes[operator] ??= AstIdentifierNode.make(operator);
+    })();
     const mNodeStack: AstNode[] = [];
     const popOrThrow = () => {
       return mNodeStack.pop() ?? (() => { throw new Error('nodes depleted'); })();
     };
     const binaryOperator = (token: Token) => {
       const first = popOrThrow();
-      mNodeStack.push(AstBinaryOperatorNode.make(token.content(), popOrThrow(), first));
+      const opCall = makeFringeForOperator(token.content());
+      const fcall = AstFunctionCallNode.make(popOrThrow(), opCall, first);
+      mNodeStack.push(fcall);
     };
     const tupleOperator = (token: Token) => {
       const first = popOrThrow();
@@ -40,9 +47,14 @@ export const OperativeStatementAstCreation = freeze({
     const letOperator = (_0: Token) => {
       mNodeStack.push(AstLetDeclarationNode.make(popOrThrow()));
     };
-    const functionCall = (token: Token) => {
-      const first = popOrThrow();
-      mNodeStack.push(AstFunctionCallNode.make(token.content(), popOrThrow(), first));
+    const functionCall = (_0: Token) => {
+      const argsNode = popOrThrow();
+      const nameNode = AstFringeNode.downcast(popOrThrow());
+      const callNode = AstFunctionCallNode.
+        make(AstFunctionCallNode.currentContextReceiver(),
+             nameNode,
+             argsNode);
+      mNodeStack.push(callNode);
     };
     const mOperatorFactories = {
       ['+'  ]: binaryOperator,

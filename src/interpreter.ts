@@ -9,45 +9,50 @@ import { ExecutionContext } from './execution_context';
 import { AstFringeNode } from './ast_fringe_node';
 import { PersistentStack } from './persistent_stack';
 import { AstNodeVisitor, AstNodeVisitorBuilder } from './ast_node_visitor';
-import { AstBinaryOperatorNode } from './ast_binary_operator_node';
 import { AstTupleNode } from './ast_tuple_node';
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
+import { LetNameElement } from './let_names_collection';
+import { LetNamesCollector } from './let_names_collector';
+import { NamingExpressionVisitor } from './naming_expression_visitor';
 
-const { freeze } = Object;
+const { freeze } = Helpers;
 
 const LetVisitor = (() => {
-  function make(context: ExecutionContext): AstNodeVisitor {
-    const inst = 
-      AstNodeVisitorBuilder.
-      makeDefaultingToStop().
-      visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode): void => {
-        const lhsName = AstFringeNode.downcast(lhs).asString();
-        const rhsRes = rhs.executionType(context);
-        const rhsType = rhsRes.resolve();
-        if (!rhsType) {
-          throw Error(`Cannot figure out type of function call "${node.operation()}"`);
+  function make(): AstNodeVisitor<LetNamesCollector> {
+    const inst = freeze({
+      visitFunctionCall(callNode: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode) {
+        // receiver('s name) is being named by fArgs
+        const res = receiver.visit(NamingExpressionVisitor.make());
+        if (!res.names()) {
+          throw new Error(res.error().message);
         }
-        context.declareVariable(lhsName).setType(rhsType);
-        // STOP HERE
-      }).
-      finish();
+        const names = [...res.names() as Readonly<string[]>];
+        return LetNamesCollector.make(names, callNode.name, fArgs);
+      },
+      visitLetDeclaration: (_0: AstLetDeclarationNode, _1: AstNode) =>
+        LetNamesCollector.makeErroneous('no nested lets allowed'),
+      visitIdentifier: (_0: AstFringeNode) =>
+        LetNamesCollector.makeErroneous('missing operator "=" or ":="'),
+      visitTuple: (_0: AstTupleNode) => LetNamesCollector.
+        makeErroneous('nott supported'), // maybe for function param tuples?
+      visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) =>
+        LetNamesCollector.makeErroneous('fn def doesn\'t make sense here'),
+      visitFringe: (_0: AstFringeNode) =>
+        LetNamesCollector.makeErroneous('cannot use literal as a name')
+    });
     return inst;
   }
 
   return freeze({ make });
 })();
 
-const injections = freeze({
-  putsFunction: console.log,
-  // just make it random
-  askStringFunction: (): string => 'bees'
-});
+// on type discovery
+// at some point, it is assumed that all types can be figured out
+// for now we assume the code is *always* at that point
 
 const InterpreterNodeVisitor = freeze({
-  make: (context: ExecutionContext,
-         { putsFunction, askStringFunction } = injections) =>
-  {
-    const mLetVisitor = LetVisitor.make(context);
+  make: (context: ExecutionContext) => {
+    const mLetVisitor = LetVisitor.make();
     const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
 
     function mValueOf(node: AstNode): ContextVariable {
@@ -66,37 +71,41 @@ const InterpreterNodeVisitor = freeze({
       mStack.push(mValueOf(node));
     }
 
-    const kBuiltinFunctions:
-      { [name: string]: (node: AstFunctionCallNode) => void } =
-      freeze({
-        puts: (node: AstFunctionCallNode): void => {
-          node.arguments.forEach((node: AstNode) => {
-            const cv = mValueOf(node);
-            putsFunction(cv.asString());
-          });
-        },
-        askString: (_0: AstFunctionCallNode): void => {
-          mStack.push().set(askStringFunction());
-        },
-        pass: (node: AstFunctionCallNode): void =>
-          node.arguments.forEach(mPushValueOf)
-      });
-
     const inst = freeze({
-      visitFunctionCall: (node: AstFunctionCallNode) => {
-        const cvar = context.tryGetVariable(node.name);
-        if (cvar) {
-          return inst.callFunctionDefinition(cvar.asNode());
+      visitFringe: (_0: AstFringeNode) => {},
+      visitFunctionCall: (node: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode) => {
+        const { resolve, error } = context.functionTypeOf(node);
+        const func = resolve();
+        if (!func) {
+          const res = context.executionTypeOf(receiver);
+          const fvar = context.onContextTypeFor(res.resolve(), () =>
+            context.tryGetVariable(node.name));
+          if (fvar) {
+            inst.callFunctionDefinition( fvar.asNode() );
+            return;
+          }
+          throw new Error(error().message);
         }
-        const fn = kBuiltinFunctions[node.name];
-        if (!fn) {
-          throw Error(`unimplemented function "${node.name}"`);
+        func.pushReceiverStrategy(() => { mPushValueOf(receiver); });
+        fArgs.forEach(mPushValueOf);
+        const impl = func.builtIn();
+        if (!impl) {
+          throw new Error(`Unimplementedd "${node.name}" function`);
         }
-        
-        fn(node);
+        impl(mStack);
       },
       visitLetDeclaration: (_node: AstLetDeclarationNode, lhs: AstNode) => {
-        lhs.visit(mLetVisitor);
+        const collector = lhs.visit(mLetVisitor);
+        const collection = collector.setType(context).finish();
+        collection.elements()?.forEach((element: LetNameElement) => {
+          if (!element.node) { 
+            throw new Error('???');
+          }
+          context.declareVariable(element);
+        });
+        if (!collection.elements()) {
+          throw new Error(collection.error().message);
+        }
         
         lhs.visit(inst);
       },
@@ -107,41 +116,6 @@ const InterpreterNodeVisitor = freeze({
       visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) => {
       },
       visitIdentifier: (_0: AstFringeNode) => {},
-      visitBinaryOperation: (node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-        // resolving value... far touch much logic lives here
-        // resolve lhs's type
-        // select operator function
-        // raise if rhs's resolved type is incompatible
-        // how does this work in the general recursive case?
-        //
-        // this ends up having to be executed DFS style
-        // there will be places that *have to* be executed BFS style
-        // context.
-        
-        lhs.visit(inst);
-        rhs.visit(inst);
-        const op = node.operation();
-        const func = lhs.executionType(context).resolve()?.lookUp(op);
-        if (!func) {
-          throw Error(`Cannot look up function "${op}"`);
-        }
-
-        const rhsAsParam = rhs.executionType(context).resolve()?.asSingluarParameter();
-        if (!rhsAsParam) {
-          throw Error(`Cannot look up rhs type`);
-        }
-        const deg = func.satisfactionDegreeOfArguments(rhsAsParam);
-        if (typeof deg === 'undefined') {
-          throw Error('');
-        }
-        const builtIn = func.builtIn();
-        if (typeof builtIn === 'undefined') {
-          throw Error('');
-        }
-        const lhsVal = mValueOf(lhs);
-        const rhsVal = mValueOf(rhs);
-        builtIn(mStack, lhsVal, rhsVal);
-      },
       callFunctionDefinition: (() => {
         const topVisitor = AstNodeVisitorBuilder.
           makeDefaultingToStop().
@@ -155,7 +129,7 @@ const InterpreterNodeVisitor = freeze({
           node.visit(topVisitor);
       })()
     });
-    return inst;
+    return inst satisfies AstNodeVisitor;
   }
 });
 
@@ -165,11 +139,10 @@ export interface Interpreter {
 
 export const Interpreter = freeze({
   make:
-    (context: ExecutionContext = ExecutionContext.make(),
-    injections_ = injections):
+    (context: ExecutionContext = ExecutionContext.make()):
     Interpreter =>
   {
-    const mVisitor = InterpreterNodeVisitor.make(context, injections_);
+    const mVisitor = InterpreterNodeVisitor.make(context);
     
     function interpret(node: AstNode) {
       if (node.type() !== AstNode.types.functionDefinition) { 

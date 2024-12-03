@@ -1,12 +1,11 @@
 import { Helpers } from './helpers';
-import { AstNode } from './ast_node';
+import { AstNode, ContextualLookUpTable } from './ast_node';
 import { type AstFringeNode } from './ast_fringe_node';
 import { type Token } from './token';
-import { type TypeResolution } from './type_resolution';
 import { type ContextVariable } from './context_variable';
-import { type TypeLookUpTable } from './ast_node';
 import { type AstNodeVisitor } from './ast_node_visitor';
 import { OperatorDefinitions } from './operator_definitions';
+import { type ObjectTypeResolution } from './object_type_resolution';
 
 const { freeze } = Helpers;
 
@@ -18,13 +17,13 @@ export const AstIdentifierNode = (() => {
     const inst = freeze({
       comesBeforeOperator: (operator: Token): boolean =>
         isAnOperator(operator.content()),
-      executionType: (types: TypeLookUpTable): TypeResolution =>
+      executionType: (types: ContextualLookUpTable): ObjectTypeResolution =>
         types.lookUpIdentifierType(value),
       evaluate: (getter: (name: string) => ContextVariable): ContextVariable =>
         getter(value),
       type: () => kIndentifier,
       asString: () => value,
-      visit: (visitor: AstNodeVisitor): void =>
+      visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
         visitor.visitIdentifier(inst)
     });
     return inst;

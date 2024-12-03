@@ -1,8 +1,9 @@
 import { AstNode } from './ast_node';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { Helpers } from './helpers';
-import { type TypeResolution } from './type_resolution';
-import { type TypeLookUpTable } from './ast_node';
+import { type ContextualLookUpTable } from './ast_node';
+import { type ObjectTypeResolution } from './object_type_resolution';
+import { NodesExecutionTypeResolution } from './nodes_execution_type_resolution';
 
 export interface AstTupleNode extends AstNode {
   count: () => number,
@@ -10,7 +11,8 @@ export interface AstTupleNode extends AstNode {
   /// @returns undefined if "consumed"
   consume: (node: AstNode) => AstNode | undefined,
   seperatorEquals: (other: string) => boolean,
-  append: (node: AstNode) => void
+  append: (node: AstNode) => void,
+  map: <Type>(fn: (node: AstNode) => Type) => Type[]
 }
 
 export const AstTupleNode = (() => {
@@ -45,7 +47,7 @@ export const AstTupleNode = (() => {
         
         count: (): number => mSubExpressions.length,
 
-        visit: (visitor: AstNodeVisitor): void =>
+        visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
           visitor.visitTuple(inst),
 
         append: (node: AstNode) =>
@@ -67,11 +69,13 @@ export const AstTupleNode = (() => {
 
         seperatorEquals: (other: string) => mSeperator === other,
 
-        executionType: (_0: TypeLookUpTable): TypeResolution => {
-          throw Error(`AstTupleNode does not implement executionType`);
-        },
+        executionType: (lookUp: ContextualLookUpTable): ObjectTypeResolution =>
+          NodesExecutionTypeResolution.make(lookUp, mSubExpressions),
 
-        asString: () => `(...${mSubExpressions.length} items)`
+        asString: () => `(...${mSubExpressions.length} items)`,
+
+        map: <Type>(fn: (node: AstNode) => Type): Type[] =>
+          mSubExpressions.map(fn)
       });
 
       return inst;

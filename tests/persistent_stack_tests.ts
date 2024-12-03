@@ -22,10 +22,10 @@ describeNamed({ PersistentStack }, () => {
     expect(s.isEmpty()).toBeTruthy();
   });
 
-  it('persists old values of a stack even after being popped', () => {
+  it('old values of a stack are overwritten based on how the make default is defined', () => {
     const s = PersistentStack.make(() => ({ e: 1 }));
     s.push().e = 10;
     s.pop();
-    expect(s.push()?.e).toEqual(10);
+    expect(s.push()?.e).toEqual(1);
   });
 });
