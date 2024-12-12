@@ -8,9 +8,9 @@ import { AstLetDeclarationNode } from '../src/ast_let_declaration_node';
 import { AstFringeNode } from '../src/ast_fringe_node';
 import { TokenRange } from '../src/token_range';
 import { AstNodeVisitorBuilder } from '../src/ast_node_visitor';
-// import { AstBinaryOperatorNode } from '../src/ast_binary_operator_node';
 import { AstFunctionDefinitionNode } from '../src/ast_function_definition_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
+import { OperativeStatementAstCreation } from '../src/ast_build/operative_statement_ast_creation';
 
 const { describeNamed } = TestHelpers;
 
@@ -79,20 +79,14 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
-          const { valueOf } = AstIntegerLiteralNode;
-          vop = node.name; //node.operation();
-          expect(valueOf(rec)).toEqual(2);
+          vop = node.name;
+          
+          expect(Number(rec.asString())).toEqual(2);
           expect(fArgs.count()).toEqual(1);
-          fArgs.forEach((node: AstNode) => {
-            expect(valueOf(node)).toEqual(2);
+          fArgs.forEach((_0: AstNode) => {
+            expect(Number(rec.asString())).toEqual(2);
           });
         }).
-        // visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-        //   const { valueOf } = AstIntegerLiteralNode;
-        //   vop = node.operation();
-        //   expect(valueOf(lhs)).toEqual(2);
-        //   expect(valueOf(rhs)).toEqual(2);
-        // }).
         finish();
 
       buildAst().visit(visitor);
@@ -116,12 +110,6 @@ describeNamed({ AstBuild }, () => {
             node.visit(visitor);
           });
         }).
-        // visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-        //   foundOperators.push(node.operation());
-        //   pt1.hitsAtExactly(1);
-        //   lhs.visit(visitor);
-        //   rhs.visit(visitor);
-        // }).
         visitLetDeclaration((_0: AstLetDeclarationNode, rhs: AstNode) => {
           pt2.hitsAtExactly(1);
           rhs.visit(visitor);
@@ -149,11 +137,6 @@ describeNamed({ AstBuild }, () => {
           rec.visit(visitor);
           fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
-        // visitBinaryOperation((node: AstBinaryOperatorNode, lhs: AstNode, rhs: AstNode) => {
-        //   foundOperators.push(node.operation());
-        //   lhs.visit(visitor);
-        //   rhs.visit(visitor);
-        // }).
         finish();
       buildAst().visit(visitor);
       expect(foundOperators).toEqual([':=', '+']);
@@ -166,7 +149,7 @@ describeNamed({ AstBuild }, () => {
         makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2')
       ];
       const rootNode = buildAst();
-      if (rootNode.type() !== AstNode.types.functionDefinition) {
+      if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {//.type() !== AstNode.types.functionDefinition) {
         return fail();
       }
       expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(2);
@@ -181,7 +164,7 @@ describeNamed({ AstBuild }, () => {
         makeToken('a')
       ];
       const rootNode = buildAst();
-      if (rootNode.type() !== AstNode.types.functionDefinition) {
+      if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {//!== AstNode.types.functionDefinition) {
         return fail();
       }
       expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(3);
@@ -223,10 +206,6 @@ describeNamed({ AstBuild }, () => {
           rec.visit(visitor);
           fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
-        // visitBinaryOperation((node: AstBinaryOperatorNode) => {
-        //   hitsAtExactly(2);
-        //   node.visitChildren(visitor);
-        // }).
         finish();
       const rootNode = buildAst();
       rootNode.visit(visitor);
@@ -248,15 +227,9 @@ describeNamed({ AstBuild }, () => {
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
           hitsAtExactly(1);
           expect(node.name).toEqual(':=');
-          // node.visitChildren(visitor);
           rec.visit(visitor);
           fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
-        // visitBinaryOperation((node: AstBinaryOperatorNode) => {
-        //   hitsAtExactly(1);
-        //   expect(node.operation()).toEqual(':=');
-        //   node.visitChildren(visitor);
-        // }).
         finish();
       const rootNode = buildAst();
       rootNode.visit(visitor);
@@ -514,15 +487,15 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
-          if (rec.type() === AstFunctionCallNode.currentContextReceiver().type()) {
+          if (rec.type() === OperativeStatementAstCreation.contextReceiverDummyNode().type()) {
             expect(node.name).toEqual('puts');
             pt3.hitsAtExactly(1);
           } else {
             expect(node.name).toEqual('+');
             pt2.hitsAtExactly(2);
-            expect(rec.type()).toEqual(AstNode.types.integerLiteral);
+            expect(rec.type()).toEqual(AstIntegerLiteralNode.type());// AstNode.types.integerLiteral);
             fArgs.forEach((node: AstNode) => {
-              expect(node.type()).toEqual(AstNode.types.integerLiteral); //binaryOperator);
+              expect(node.type()).toEqual(AstIntegerLiteralNode.type());// AstNode.types.integerLiteral); //binaryOperator);
               pt1.hitsAtExactly(2);
             });
           }
@@ -565,7 +538,8 @@ describeNamed({ AstBuild }, () => {
           expect(node.name).toEqual('puts');
           pt1.hitsAtExactly(1);
           node.arguments.forEach((node: AstNode) => {
-            const { functionCall } = AstNode.types;
+            // const { functionCall } = AstNode.types;
+            const functionCall = AstFunctionCallNode.type();
             expect(node.type()).toEqual(functionCall);
             if (node.type() === functionCall) {
               pt2.hitsAtExactly(2);

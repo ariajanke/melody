@@ -1,33 +1,47 @@
 import { Helpers } from './helpers';
-import { AstNode, ContextualLookUpTable } from './ast_node';
-import { type AstFringeNode } from './ast_fringe_node';
-import { type Token } from './token';
-import { type ContextVariable } from './context_variable';
+import { AstNode } from './ast_node';
 import { type AstNodeVisitor } from './ast_node_visitor';
-import { OperatorDefinitions } from './operator_definitions';
-import { type ObjectTypeResolution } from './object_type_resolution';
+import { ObjectTypeResolution } from './object_type_resolution';
+import { ObjectLookUpTable } from './object_look_up_table';
+import { AstFringeNode } from './ast_fringe_node';
+import { ContextType } from './context_type';
 
 const { freeze } = Helpers;
 
-export const AstIdentifierNode = (() => {
-  const kIndentifier = AstNode.types.identifier;
-  const { isAnOperator } = OperatorDefinitions;
+export interface AstIdentifierNode extends AstFringeNode {
+  contextMethodName: () => string
+};
 
-  function make(value: string): AstFringeNode {
+export const AstIdentifierNode = (() => {
+  const { hasCreated, type } = AstNode.makeTypeClassMethods();
+  
+  function make(value: string): AstIdentifierNode {
     const inst = freeze({
-      comesBeforeOperator: (operator: Token): boolean =>
-        isAnOperator(operator.content()),
-      executionType: (types: ContextualLookUpTable): ObjectTypeResolution =>
-        types.lookUpIdentifierType(value),
-      evaluate: (getter: (name: string) => ContextVariable): ContextVariable =>
-        getter(value),
-      type: () => kIndentifier,
+      executionType: (oTable: ObjectLookUpTable): ObjectTypeResolution => {
+        const ctxTypeRes = oTable.lookUpByName(ContextType.typeName());
+        const ctxType = ctxTypeRes.resolve();
+        if (!ctxType) {
+          return ctxTypeRes;
+        }
+        const funcType = ctxType.
+          lookUp(inst.contextMethodName())?.
+          byParameters([]);
+        if (!funcType) {
+          return ObjectTypeResolution.
+            makeForError(`"${value}" is not declared`);
+        }
+        return ObjectTypeResolution.
+          makeFixedForType(oTable.lookUpTuple(funcType.returns()));
+        // return types.lookUpIdentifierType(value);
+      },
+      type,
       asString: () => value,
       visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
-        visitor.visitIdentifier(inst)
+        visitor.visitIdentifier(inst),
+      contextMethodName: () => `.${value}`
     });
     return inst;
   }
 
-  return freeze({ make });
+  return freeze({ make, type, hasCreated });
 })();

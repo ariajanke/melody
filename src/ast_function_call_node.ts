@@ -1,15 +1,17 @@
-import { AstNode, ContextualLookUpTable } from './ast_node';
+import { AstNode } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
 import { AstFringeNode } from './ast_fringe_node';
 import { type AstNodeVisitor } from './ast_node_visitor';
 import { ObjectTypeResolution } from './object_type_resolution';
 import { Helpers, StandardError, StandardErrorMessage } from './helpers';
-import { Token } from './token';
-import { ContextVariable } from './context_variable';
 import { ObjectType } from './object_type';
 import { FunctionType } from './function_type';
+import { FunctionLookUpTable } from './function_look_up_table';
+import { ObjectLookUpTable } from './object_look_up_table';
+import { AstIdentifierNode } from './ast_identifier_node';
+import { AstStringLiteralNode } from './ast_string_literal_node';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
 
 export interface FunctionTypeResolution {
   resolve: () => FunctionType | undefined,
@@ -19,32 +21,19 @@ export interface FunctionTypeResolution {
 export interface AstFunctionCallNode extends AstNode {
   name: string,
   arguments: AstTupleNode
-  functionType: (lookUpTable: ContextualLookUpTable) => FunctionTypeResolution
+  functionTypeBy: (lookUpTable: FunctionLookUpTable, parameterType: ObjectType) => FunctionTypeResolution
 };
 
 export const AstFunctionCallNode = (() => {
-  const nodeTypes = AstNode.types;
-
-  const currentContextReceiver = memoize((): AstFringeNode => {
-    const inst = freeze({
-      visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
-        visitor.visitFringe(inst),
-      type: memoize(Symbol),
-      executionType: (types: ContextualLookUpTable) => types.lookUpContextType(),
-      asString: () => '<context>',
-      evaluate: (_0: (name: string) => ContextVariable) =>
-        memoize(ContextVariable.make)(),
-      comesBeforeOperator: (_0: Token) => false
-    });
-    return inst;
-  });
+  const { type, hasCreated } = AstNode.makeTypeClassMethods();
 
   // equally import, is *what* is receiving the call
   // askInteger() the current context
   // 1 + 2 one receives a "+" call
-  function make(mReceiver: AstNode, mName: AstFringeNode, mArgNode: AstNode) {
+  function make(mReceiver: AstNode, mName: AstFringeNode, mArgNode: AstNode): AstFunctionCallNode
+  {
     const mArguments: AstTupleNode = (() => {
-      if (mArgNode.type() === nodeTypes.tuple) {
+      if (AstTupleNode.hasCreated( mArgNode )) {
         return mArgNode as AstTupleNode;
       }
       return AstTupleNode.make(',', [mArgNode]);
@@ -53,12 +42,42 @@ export const AstFunctionCallNode = (() => {
     const name: string = (() => {
       // switch on type... nice
       switch (mName.type()) {
-      case nodeTypes.identifier:
-      case nodeTypes.stringLiteral:
+      case AstIdentifierNode.type():
+      case AstStringLiteralNode.type():
         return (mName as AstFringeNode).asString();
       default: throw new Error('unhandled');
       }
     })();
+
+    function functionType(objTable: ObjectLookUpTable):
+      FunctionTypeResolution
+    {
+      const res = mReceiver.executionType(objTable);
+      const recType = res.resolve();
+      if (!recType) {
+        return freeze({
+          resolve: (): FunctionType | undefined => undefined,
+          error: res.error
+        });
+      }
+      
+      const res2 = mArgNode.executionType(objTable);
+      const argsType = res2.resolve();
+      if (!argsType){
+        return freeze({
+          resolve: (): FunctionType | undefined => undefined,
+          error: res2.error
+        });
+      }
+      const funcLookUp = recType.lookUp(name);
+      if (!funcLookUp) {
+        return freeze({
+          resolve: (): FunctionType | undefined => undefined,
+          error: () => freeze({ message: `Function "${name}" is undefined` })
+        });
+      }
+      return inst.functionTypeBy(funcLookUp, argsType);
+    }
 
     const inst: AstFunctionCallNode = freeze({
       name,
@@ -66,33 +85,9 @@ export const AstFunctionCallNode = (() => {
       arguments: mArguments,
       visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
         visitor.visitFunctionCall(inst, mReceiver, mArguments),
-      type: () => nodeTypes.functionCall,
-      functionType: (lookUpTable: ContextualLookUpTable): FunctionTypeResolution => {
-        const res = mReceiver.executionType(lookUpTable);
-        const recType = res.resolve();
-        if (!recType) {
-          return freeze({
-            resolve: (): FunctionType | undefined => undefined,
-            error: res.error
-          });
-        }
-        
-        const res2 = mArgNode.executionType(lookUpTable);
-        const argsType = res2.resolve();
-        if (!argsType){
-          return freeze({
-            resolve: (): FunctionType | undefined => undefined,
-            error: res2.error
-          });
-        }
-        const funcLookUp = recType.lookUp(name);
-        if (!funcLookUp) {
-          return freeze({
-            resolve: (): FunctionType | undefined => undefined,
-            error: () => freeze({ message: `Function "${name}" is undefined` })
-          });
-        }
-        const func = funcLookUp.byArguments(argsType.decomposeAsArguments());
+      type,
+      functionTypeBy(lookUpTable: FunctionLookUpTable, parameterType: ObjectType): FunctionTypeResolution {
+        const func = lookUpTable.byParameters(parameterType.decomposeAsParameters());
         const err = StandardError.make();
         return freeze({
           resolve: () => {
@@ -105,8 +100,8 @@ export const AstFunctionCallNode = (() => {
           error: err.error
         });
       },
-      executionType: (lookUpTable: ContextualLookUpTable): ObjectTypeResolution => {
-        const res = inst.functionType(lookUpTable);
+      executionType: (objTbl: ObjectLookUpTable): ObjectTypeResolution => {
+        const res = functionType(objTbl);
         const func = res.resolve();
         if (!func) {
           return freeze({
@@ -116,8 +111,8 @@ export const AstFunctionCallNode = (() => {
         }
 
         const { error, setErrorFn, hasErrorSet } = StandardError.make();
-        const objTypes = func.returns().map((uid: symbol) => {
-          const { resolve, error } = lookUpTable.lookUpByType(uid);
+        const objTypes = func.returns().map((objType: ObjectType) => {
+          const { resolve, error } = objTbl.lookUpByType(objType);
           const res = resolve();
           if (res)
             { return res; }
@@ -132,12 +127,12 @@ export const AstFunctionCallNode = (() => {
         }
 
         return ObjectTypeResolution.
-          makeFixedForType(lookUpTable.lookUpTuple(objTypes as ObjectType[]));
+          makeFixedForType(objTbl.lookUpTuple(objTypes as ObjectType[]));
       }
     });
 
     return inst;
   }
 
-  return freeze({ make, currentContextReceiver });
+  return freeze({ make, hasCreated, type });
 })();

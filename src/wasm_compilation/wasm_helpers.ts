@@ -17,6 +17,30 @@ export const SimpleCounter = freeze({
 
 export type SimpleCounter = ReturnType<typeof SimpleCounter.make>;
 
+export const TypesAware = (() => {
+  const getRepresentations = memoize(() => {
+    const { i32, func } = class_.wasmTypes();
+    return freeze({
+      [func()]: 0x60,
+      [i32 ()]: 0x7F
+    });
+  });
+
+  const class_ = freeze({
+    wasmTypes: memoize(() => freeze({
+      i32 : memoize(Symbol), //0x7F,
+      func: memoize(Symbol)  //0x60
+    })),
+    asCodeArray: (fns: SymFunc[]) =>
+      [...WasmHelpers.encodeVaruint32(fns.length), ...fns.map(class_.asCode)],
+    asCode: (fn: SymFunc) =>
+      getRepresentations()[fn()] ?? (() => {
+        throw new Error('Symbol function did not map to valid WASM byte code');
+      })()
+  });
+  return class_;
+})();
+
 export const WasmHelpers = freeze({
   makeCounter() {
     let n = 0;

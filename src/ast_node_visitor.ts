@@ -1,10 +1,11 @@
 import { Helpers } from './helpers';
-import { type AstFringeNode } from './ast_fringe_node';
 import { type AstFunctionCallNode } from './ast_function_call_node';
 import { type AstLetDeclarationNode } from './ast_let_declaration_node';
 import { type AstNode } from './ast_node';
 import { type AstTupleNode } from './ast_tuple_node';
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
+import { AstIdentifierNode } from './ast_identifier_node';
+import { AstLiteralNode } from './ast_fringe_node';
 
 const { freeze } = Helpers;
 
@@ -14,11 +15,11 @@ export interface AstNodeVisitor<AccumulationType = void> {
     AccumulationType,
   visitLetDeclaration: (node: AstLetDeclarationNode, rhs: AstNode) =>
     AccumulationType,
-  visitIdentifier: (node: AstFringeNode) => AccumulationType,
+  visitIdentifier: (node: AstIdentifierNode) => AccumulationType,
   visitTuple: (node: AstTupleNode) => AccumulationType,
   visitFunctionDefinition: (node: AstFunctionDefinitionNode, lineNodes: AstNode[]) =>
     AccumulationType,
-  visitFringe: (node: AstFringeNode) => AccumulationType
+  visitLiteral: (node: AstLiteralNode) => AccumulationType
 }
 
 interface ReseatableAstNodeVisitor extends AstNodeVisitor {
@@ -28,7 +29,7 @@ interface ReseatableAstNodeVisitor extends AstNodeVisitor {
 export const AstNodeVisitorBuilder = (() => {
   function makeContinuingImplementations(): ReseatableAstNodeVisitor {
     let mCurrentInst: AstNodeVisitor | ReseatableAstNodeVisitor = freeze({
-      visitFringe: (_0: AstFringeNode): void => {},
+      visitLiteral: (_0: AstLiteralNode): void => {},
       visitFunctionCall: (_0: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode): void => {
         receiver.visit(mCurrentInst);
         fArgs.forEach((node: AstNode) => node.visit(mCurrentInst));
@@ -36,7 +37,7 @@ export const AstNodeVisitorBuilder = (() => {
       visitLetDeclaration: (_0: AstLetDeclarationNode, rhs: AstNode): void => {
         rhs.visit(mCurrentInst);
       },
-      visitIdentifier: (_0: AstFringeNode) => {},
+      visitIdentifier: (_0: AstIdentifierNode) => {},
       visitTuple: (tuple: AstTupleNode) => {
         tuple.forEach((node: AstNode) => node.visit(mCurrentInst));
       },
@@ -53,11 +54,11 @@ export const AstNodeVisitorBuilder = (() => {
 
   const kStoppingImplementations = ((): ReseatableAstNodeVisitor => {
     const inst = freeze({
-      visitFringe: (_0: AstFringeNode): void => {},
+      visitLiteral: (_0: AstLiteralNode): void => {},
       visitFunctionCall: (_0: AstFunctionCallNode, _1: AstNode, _2: AstTupleNode): void =>
         {},
       visitLetDeclaration: (_0: AstLetDeclarationNode, _1: AstNode): void => {},
-      visitIdentifier: (_0: AstFringeNode) => {},
+      visitIdentifier: (_0: AstIdentifierNode) => {},
       visitTuple: (_0: AstTupleNode) => {},
       visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) => {},
       setInstanceReference: (passedInst: AstNodeVisitor) =>
@@ -77,10 +78,10 @@ export const AstNodeVisitorBuilder = (() => {
       let mVisitIdentifier = mImplementations.visitIdentifier;
       let mVisitTuple = mImplementations.visitTuple;
       let mVisitFunctionDefinition = mImplementations.visitFunctionDefinition;
-      let mVisitFringe = mImplementations.visitFringe;
+      let mVisitLiteral = mImplementations.visitLiteral;
       const inst = freeze({
-        visitFringe: (fn: AstNodeVisitor['visitFringe']) => {
-          mVisitFringe = fn;
+        visitFringe: (fn: AstNodeVisitor['visitLiteral']) => {
+          mVisitLiteral = fn;
           return inst;
         },
         visitFunctionCall: (fn: AstNodeVisitor['visitFunctionCall']) => {
@@ -110,7 +111,7 @@ export const AstNodeVisitorBuilder = (() => {
             visitIdentifier: mVisitIdentifier,
             visitTuple: mVisitTuple,
             visitFunctionDefinition: mVisitFunctionDefinition,
-            visitFringe: mVisitFringe
+            visitLiteral: mVisitLiteral
           });
           return mImplementations.setInstanceReference(inst);
         }

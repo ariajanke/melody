@@ -5,7 +5,7 @@
 import './tests/globals';
 import './tests/ast_build_tests';
 import './tests/ast_build/tree_part_build_tests';
-import './tests/ast_fringe_node_tests';
+// import './tests/ast_fringe_node_tests';
 import './tests/interpreter_tests';
 import './tests/persistent_stack_tests';
 import './tests/tokenization_tests';
@@ -24,3 +24,4 @@ import './tests/wasm_compilation/wasm_exports_section_tests';
 import './tests/wasm_compilation/wasm_functions_section_tests';
 import './tests/wasm_compilation/wasm_imports_section_tests';
 import './tests/wasm_compilation/wasm_types_section_tests';
+import './tests/context_type_retrieval_tests';

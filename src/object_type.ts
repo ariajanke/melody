@@ -4,48 +4,35 @@ import { FunctionLookUpTable, IncompleteFunctionLookUpTable } from './function_l
 
 const { freeze } = Helpers;
 
+// export interface ObjectTypeWritable {
+//   setLookUp: (lookupTable: { [name: string]: FunctionType }) => ObjectType,
+//   setLookUpTable: (lookupTable: { [name: string]: FunctionLookUpTable }) => ObjectType
+// }
+
 export interface ObjectType {
   name: () => string,
   lookUp: (operation: string) => FunctionLookUpTable | undefined,
-  uid: symbol,
+  uid: () => symbol,
+  decomposeAsParameters: () => Readonly<ObjectType[]>,
+  // not going to attempt to remove this yet, but one day object types
+  // will be immutable
   setLookUp: (lookupTable: { [name: string]: FunctionType }) => ObjectType,
-  decomposeAsArguments: () => Readonly<symbol[]>,
   setLookUpTable: (lookupTable: { [name: string]: FunctionLookUpTable }) => ObjectType
 }
 
 export const ObjectType = (() => {
   const { memoize } = Helpers;
 
-  const kBuiltInTypeUids = freeze({
-    integer   : Symbol(),
-    string    : Symbol(),
-    function_ : Symbol()
-  });
-
-  const kUidBuiltinStrategy:
-    { [name: string]: symbol } =
-  freeze({
-    Integer : kBuiltInTypeUids.integer,
-    String  : kBuiltInTypeUids.string ,
-    // The *only* type of function that exist right now, is the "a block to
-    // jump to" function. And that's it, for now.
-    Function: kBuiltInTypeUids.function_
-  });
-
-  function makeUidFor(name: string) {
-    return kUidBuiltinStrategy[name] ?? Symbol();
-  }
-
-  function makeForTuple(uids: Readonly<symbol[]>, name: string): ObjectType {
+  function makeForTuple(types: Readonly<ObjectType[]>, name: string): ObjectType {
     name ??= '<anonymous>';
-    const inst = freeze({
+    const inst: ObjectType = freeze({
       lookUp: memoize(() => IncompleteFunctionLookUpTable.make().finish()),
       name: () => name,
-      uid: makeUidFor(name),
+      uid: memoize(Symbol),
       setLookUp(_0: { [name: string]: FunctionType }): ObjectType {
         throw new Error('Dont call me');
       },
-      decomposeAsArguments: () => uids,
+      decomposeAsParameters: () => types,
       setLookUpTable(_0: { [name: string]: FunctionLookUpTable }) {
         throw new Error('Dont call me');
       }
@@ -58,12 +45,13 @@ export const ObjectType = (() => {
   {
     name ??= '<anonymous>';
     const mLookupTable: { [name: string]: FunctionLookUpTable } = {};
-    const inst = freeze({
+    const inst: ObjectType = freeze({
       lookUp,
       name: () => name,
-      uid: makeUidFor(name),
+      uid: memoize(Symbol),
       setLookUp,
-      decomposeAsArguments: memoize((): Readonly<symbol[]> => [inst.uid]),
+      decomposeAsArguments: memoize((): Readonly<symbol[]> => [inst.uid()]),
+      decomposeAsParameters: memoize(() => [inst]),
       setLookUpTable
     });
 
@@ -94,7 +82,7 @@ export const ObjectType = (() => {
 
   return freeze({
     make,
-    builtInTypeUids: kBuiltInTypeUids,
-    makeForTuple
+    makeForTuple,
+    wildCardFunctionName: () => '$' // NOTE: it'll appear in code as $$
   });
 })();
