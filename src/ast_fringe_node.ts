@@ -1,24 +1,26 @@
-import { AstNode, AstEvaluatableNode } from './ast_node';
-import { Token } from './token';
-import { Helpers } from './helpers';
-import { AstIntegerLiteralNode } from './ast_integer_literal_node';
 import { AstIdentifierNode } from './ast_identifier_node';
+import { AstIntegerLiteralNode } from './ast_integer_literal_node';
+import { AstNode } from './ast_node';
 import { AstStringLiteralNode } from './ast_string_literal_node';
+import { Helpers } from './helpers';
+import { ContextVariable } from './context_variable';
+import { Token } from './token';
 
 const { freeze } = Helpers;
 
-export interface AstFringeNode extends AstEvaluatableNode {
-  comesBeforeOperator: (operator: Token) => boolean
+export interface AstFringeNode extends AstNode {}
+
+export interface AstLiteralNode extends AstFringeNode {
+  value: () => ContextVariable
 }
 
 export const AstFringeNode = (() => {
   const tokenTypes = Token.types;
-  const nodeTypes = AstNode.types;
 
   function _downcast(node: AstNode): AstFringeNode | undefined {
     switch (node.type()) {
-    case nodeTypes.identifier:
-    case nodeTypes.stringLiteral:
+    case AstIdentifierNode.type():
+    case AstStringLiteralNode.type():
       return node  as unknown as AstFringeNode;
     default: break;
     }

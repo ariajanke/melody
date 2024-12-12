@@ -1,167 +1,47 @@
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
-import { IncompleteFunctionType } from './function_type';
+import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
 import { ContextVariable } from './context_variable';
 import { PersistentStack } from './persistent_stack';
 import { ObjectTypeResolution } from './object_type_resolution';
 import { StandardErrorMessage } from './helpers';
+import { IntegerType } from './integer_type';
+import { StringType } from './string_type';
+import { ContextType } from './context_type';
 
 const { freeze, memoize } = Helpers;
 
 export interface ObjectLookUpTable {
   addBuiltinTypes: () => ObjectLookUpTable,
-  lookUpByType: (typeUid: symbol) => ObjectTypeResolution,
+  addType: (obj: ObjectType) => ObjectLookUpTable,
+  // usefulness???
+  lookUpByType: (type: ObjectType) => ObjectTypeResolution,
   lookUpByName: (name: string) => ObjectTypeResolution,
-  lookUpTuple: (objectTypes: ObjectType[]) => ObjectType
+  lookUpTuple: (objectTypes: Readonly<ObjectType[]>) => ObjectType
 }
-
-const makeContextType = (string_: ObjectType) => {
-  const objType = ObjectType.make('Context');
-
-  const askString = IncompleteFunctionType.
-    make().
-    noReceiver().
-    setName('askString').
-    setArguments([]).
-    setReturns([ string_.uid ]).
-    setBuiltin((stack: PersistentStack<ContextVariable>) => {
-      stack.push().set('bees');
-    }).
-    finish();
-
-  const puts = IncompleteFunctionType.
-    make().
-    noReceiver().
-    setName('puts').
-    setArguments(string_.decomposeAsArguments()).
-    setReturns([]).
-    setBuiltin((stack: PersistentStack<ContextVariable>) => {
-      console.log(stack.pop().asString());
-    }).
-    finish();
-  return objType.setLookUp({
-    puts,
-    askString
-  });
-};
 
 export const ObjectLookUpTable = (() => {
   const getBuiltinTypes = memoize(() => {
-    const integer_  = ObjectType.make('Integer' );
-    const string_   = ObjectType.make('String'  );
     const function_ = ObjectType.make('Function');
-    const context   = makeContextType(string_);
-
-    const add = IncompleteFunctionType.
-      make().
-      setName('+').
-      setArguments(integer_.decomposeAsArguments()).
-      setReturns  ([ integer_.uid ]).
-      setBuiltin((stack: PersistentStack<ContextVariable>) =>
-        {
-          const lhs = stack.pop();
-          const rhs = stack.pop();
-          
-          stack.push().set(rhs.asNumber() + lhs.asNumber());
-        }).
-      finish();
-
-    const sub = IncompleteFunctionType.
-      make().
-      setName('-').
-      setArguments(integer_.decomposeAsArguments()).
-      setReturns  ([ integer_.uid ]).
-      setBuiltin((stack: PersistentStack<ContextVariable>) =>
-        {
-          const lhs = stack.pop();
-          const rhs = stack.pop();
-          
-          stack.push().set(rhs.asNumber() - lhs.asNumber());
-        }).
-      finish();
-
-    const mul = IncompleteFunctionType.
-      make().
-      setName('*').
-      setArguments(integer_.decomposeAsArguments()).
-      setReturns  ([ integer_.uid ]).
-      setBuiltin((stack: PersistentStack<ContextVariable>) =>
-        {
-          const lhs = stack.pop();
-          const rhs = stack.pop();
-          stack.push().set(rhs.asNumber()*lhs.asNumber());
-        }).
-      finish();
-
-    const assign = IncompleteFunctionType.
-      make().
-      setName(':=').
-      setArguments(integer_.decomposeAsArguments()).
-      setReturns  ([ integer_.uid ]).
-      setBuiltin((stack: PersistentStack<ContextVariable>) =>
-        {
-          const lhs = stack.pop();
-          const rhs = stack.pop();
-          lhs.copyTo(rhs);
-          rhs.copyTo( stack.push() );
-        }).
-      finish();
-
-    const toS = IncompleteFunctionType.
-      make().
-      setName('toString').
-      setArguments([]).
-      setReturns  ([ string_.uid ]).
-      finish();
-
-    const assignStr = IncompleteFunctionType.
-      make().
-      setName(':=').
-      setArguments(string_.decomposeAsArguments()).
-      setReturns  ([ string_.uid ]).
-      setBuiltin((stack: PersistentStack<ContextVariable>) =>
-        {
-          const lhs = stack.pop();
-          const rhs = stack.pop();
-          
-          lhs.copyTo(rhs);
-          rhs.copyTo( stack.push() );
-        }).
-      finish();
+    const { noReceiver } = CallHandlingStrategies;
 
     const assignFn = IncompleteFunctionType.
       make().
+      setCallStrategy( noReceiver ).
       setName(':=').
-      setArguments(function_.decomposeAsArguments()).
-      setReturns  ([ function_.uid ]).
-      setBuiltin((stack: PersistentStack<ContextVariable>) =>
-      {
-        const lhs = stack.pop();
-        const rhs = stack.pop();
-        
-        lhs.copyTo(rhs);
-        rhs.copyTo( stack.push() );
-      }).
+      setParameters(function_.decomposeAsParameters()).
+      setReturns  ([ function_ ]).
+      setBuiltin((_0: PersistentStack<ContextVariable>) => {}).
       finish();
 
     return freeze({
-      Integer: integer_.
-        setLookUp({
-          ['*' ]: mul,
-          ['+' ]: add,
-          ['-' ]: sub,
-          [':=']: assign,
-          ['toString']: toS
-        }),
-      String: string_.
-        setLookUp({
-          [':=']: assignStr
-        }),
+      Integer: IntegerType.instance(),
+      String: StringType.instance(),
+      Context: ContextType.make(),
       Function: function_.
         setLookUp({
           [':=']: assignFn
         }),
-      Context: context,
       Unresolved: ObjectType.make('Unresolved')
     });
   });
@@ -171,16 +51,8 @@ export const ObjectLookUpTable = (() => {
     const mLookUpByName: { [name: string]: ObjectTypeResolution | undefined } = {};
 
     function addBuiltinTypes(): ObjectLookUpTable {
-      [
-        getBuiltinTypes().Integer,
-        getBuiltinTypes().String ,
-        getBuiltinTypes().Function
-      ].
-      forEach((objType: ObjectType) => {
-        const res = ObjectTypeResolution.makeFixedForType(objType);
-        mLookUpByName[objType.name()] = res;
-        mLookUpByUid [objType.uid   ] = res;
-      });
+      const { Integer, String, Function } = getBuiltinTypes();
+      [ Integer, String , Function ].forEach(addType);
       return inst;
     }
 
@@ -190,9 +62,11 @@ export const ObjectLookUpTable = (() => {
         [uid: symbol]: TupleLookUpTableEntry | undefined
       };
 
-      const mTable: TupleLookUpTableEntry = { object: ObjectType.make('Tuple()') };
+      const mTable: TupleLookUpTableEntry = {
+        object: ObjectType.makeForTuple([], 'Tuple()')
+      };
   
-      return (types: ObjectType[]): ObjectType => {
+      return (types: Readonly<ObjectType[]>): ObjectType => {
         if (types.length === 1) {
           return types[0];
         }
@@ -200,9 +74,9 @@ export const ObjectLookUpTable = (() => {
         let seekingOn = mTable;
         let tupleName = 'Tuple(';
         types.forEach((type: ObjectType) => {
-          const uids = () => types.map((type: ObjectType) => type.uid);
           tupleName += type.name();
-          seekingOn = seekingOn[type.uid] ??= { object: ObjectType.makeForTuple(uids(), `${tupleName})`) };
+          seekingOn = seekingOn[type.uid()] ??=
+            { object: ObjectType.makeForTuple(types, `${tupleName})`) };
           tupleName += ', ';
         });
         return seekingOn.object;
@@ -221,8 +95,8 @@ export const ObjectLookUpTable = (() => {
       });
     }
 
-    function lookUpByType(typeUid: symbol): ObjectTypeResolution {
-      const res = mLookUpByUid[typeUid];
+    function lookUpByType(type: ObjectType): ObjectTypeResolution {
+      const res = mLookUpByUid[type.uid()];
       if (res)
         { return res; }
       return freeze({
@@ -232,11 +106,20 @@ export const ObjectLookUpTable = (() => {
         }))
       });
     }
+
+    function addType(objType: ObjectType): ObjectLookUpTable {
+      const res = ObjectTypeResolution.makeFixedForType(objType);
+      mLookUpByName[objType.name()] = res;
+      mLookUpByUid [objType.uid() ] = res;
+      return inst;
+    }
+
     const inst = freeze({
       addBuiltinTypes,
       lookUpByType,
       lookUpByName,
-      lookUpTuple
+      lookUpTuple,
+      addType
     });
     return inst;
   }

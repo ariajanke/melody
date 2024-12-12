@@ -1,18 +1,18 @@
 import { AstNode } from './ast_node';
-import { type AstFringeNode } from './ast_fringe_node';
+import { AstLiteralNode } from './ast_fringe_node';
 import { Helpers } from './helpers';
 import { ContextVariable } from './context_variable';
 import { type Token } from './token';
-import { type ContextualLookUpTable } from './ast_node';
 import { type AstNodeVisitor } from './ast_node_visitor';
 import { type ObjectTypeResolution } from './object_type_resolution';
+import { ObjectLookUpTable } from './object_look_up_table';
 
 const { freeze, memoize } = Helpers;
 
 export const AstStringLiteralNode = (() => {
-  const kStringLiteral = AstNode.types.stringLiteral;
+  const { type, hasCreated } = AstNode.makeTypeClassMethods();
 
-  function make(mValue: string): AstFringeNode {
+  function make(mValue: string): AstLiteralNode {
     mValue = (() => {
       if (mValue.length <= 2) {
         throw Error('not a valid string');
@@ -24,17 +24,18 @@ export const AstStringLiteralNode = (() => {
     const inst = freeze({
       comesBeforeOperator: (operator: Token): boolean =>
         operator.content() === ',',
-      executionType: (types: ContextualLookUpTable): ObjectTypeResolution =>
+      executionType: (types: ObjectLookUpTable): ObjectTypeResolution =>
         types.lookUpByName('String'),
       evaluate: (_0: (name: string) => ContextVariable): ContextVariable =>
         mGetAsContextVar(),
-      type: () => kStringLiteral,
+      type,
       asString: () => mValue,
       visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
-        visitor.visitFringe(inst)
+        visitor.visitLiteral(inst),
+      value: mGetAsContextVar
     });
     return inst;
   }
 
-  return freeze({ make });
+  return freeze({ make, type, hasCreated });
 })();

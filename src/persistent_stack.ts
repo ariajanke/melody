@@ -6,7 +6,8 @@ export interface PersistentStack<Type> {
   push: () => Type,
   pop: () => Type,
   isEmpty: () => boolean,
-  count: () => number
+  count: () => number,
+  top: () => Type
 }
 
 export const PersistentStack = (() => {
@@ -39,11 +40,16 @@ export const PersistentStack = (() => {
       return rv;
     }
 
+    function top(): Type {
+      _verifyNotEmpty();
+      return mMembers[mPosition];
+    }
+
     function isEmpty() {
       return mPosition === -1;
     }
 
-    return freeze({ push, pop, isEmpty, count: () => mMembers.length });
+    return freeze({ push, pop, top, isEmpty, count: () => mMembers.length });
   }
 
   return freeze({ make });

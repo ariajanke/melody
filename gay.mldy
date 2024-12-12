@@ -389,3 +389,100 @@ table myadder
 
 let a = ask(Integer)
 puts(a)
+
+[a, b, c].each:(s is Passable)
+  (s and t).then:
+    do_something
+  ~
+~
+
+let foo = fn (x is Integer) x + x
+
+
+(i >= 0 and i < 10) fn
+
+~else_if(i > 100) fn
+
+~else fn
+
+~
+
+fn magnitude(v is Vector)
+  Math.sqrt v.x*v.x, v.y*v.y
+~
+
+let $.a = fn (x is Optional(Integer))
+  x.map: (x is Integer) __store(__k, x): or __load(__k, Integer)
+~
+__store(__k, 42)
+__k := __k + 4
+# is the same as...
+let a := 42
+
+# what if ":" was a more compact "(fn"?
+# then what about ")."? perhaps another ":" as a preface?
+# That would make nesting impossible...
+# Not necessarily, preface vs suffix...
+(i >= 0 and i < 10).then:
+
+:else_if(i > 100):
+
+:else:
+
+~
+
+# How do we implement the "Class" type?
+# Integer, String, (and ErrorType) are one such instances
+let x = Integer + Integer
+
+# but this describes *just* the Integer instance
+# perhaps "Type" is an interface
+# "meta" functions
+# how to know when something is evaluatable?
+definitions
+  $+ = fn(rhs is Type)
+    (rhs = Integer).then(fn Integer).else(fn ErrorType)
+  ~
+  $/ = fn(rhs is Type)
+    (rhs = Integer).then(fn Rational).else(fn ErrorType)
+  ~
+~
+# which will perhaps mean that "ErrorType" will have to implement everything... but how?
+# Perhaps that'll be "$??"
+
+let a_x := 3
+let a = fn # preserve with original b_x and b_x references and c_x variables
+  let b_x := 3 + a_x
+  let b = fn   # preserve moving up, including the reference (offset)
+    let c_x := 3 + b_x
+    fn () (c_x := c_x + 1) + b_x
+  ~
+  (b(), b(), b())
+~
+
+let a := 3
+let $.a = fn (x is Optional(Integer))
+  x.sink(fn (x is Integer) __store(0, x)) or __load(0, Integer)
+~
+# into two implementations:
+fn (x is Integer)
+  __store(0, x)
+  x
+~
+fn
+  __load(0, Integer)
+~
+
+table
+  $.right = fn (r is Optional(Integer))
+    r or (width := r - left)
+  ~
+~
+
+(a + b) := 5
+
+
+(a, b) := (8, 9)
+
+$.a(8)
+$.b(9)

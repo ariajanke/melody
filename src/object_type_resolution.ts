@@ -14,5 +14,10 @@ export const ObjectTypeResolution = freeze({
     freeze({
       resolve: () => object,
       error: () => StandardError.make().error()
+    }),
+  makeForError: (message: string): ObjectTypeResolution =>
+    freeze({
+      resolve: () => undefined,
+      error: () => freeze({ message })
     })
 });

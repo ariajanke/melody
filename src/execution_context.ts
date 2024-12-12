@@ -1,159 +1,95 @@
-import { Helpers, StandardError } from './helpers';
+import { Helpers } from './helpers';
 import { ContextVariable } from './context_variable';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { ObjectType } from './object_type';
-import { IncompleteFunctionType } from './function_type';
-import { type PersistentStack } from './persistent_stack';
+import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
 import { ObjectTypeResolution } from './object_type_resolution';
-import { ContextualLookUpTable, type AstNode } from './ast_node';
-import { AstFunctionCallNode, type FunctionTypeResolution } from './ast_function_call_node';
-import { PutsFunctionLookUpTable } from './function_look_up_table';
+import { type AstNode } from './ast_node';
+import { FunctionLookUpTable } from './function_look_up_table';
 import { type LetNameElement } from './let_names_collection';
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
+import { VariableDeclarationFunctionTable } from './variable_declaration_function_table';
+import { MemoryArray } from './memory_array';
+import { ContextType } from './context_type';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
+const { noReceiver } = CallHandlingStrategies;
 
 export interface ExecutionContext {
-  declareVariable: (element: LetNameElement) => ContextVariable,
-  getValueOfVariable: (name: string) => string | undefined,
-  setVariable: (name: string, value: string) => void,
-  getVariable: (name: string) => ContextVariable,
-  tryGetVariable: (name: string) => ContextVariable | undefined,
-  functionTypeOf: (node: AstFunctionCallNode) => FunctionTypeResolution
-  executionTypeOf: (node: AstNode) => ObjectTypeResolution,
-  onContextTypeFor: <Type>(objType: ObjectType | undefined, fn: () => Type) => Type | undefined
+  declareVariable: (element: LetNameElement) => ObjectType
+  executionTypeOf: (node: AstNode) => ObjectTypeResolution
+  functionLookUpFor: (name: string) => FunctionLookUpTable | undefined
+  lookUpOnContextType: (operation: string) => FunctionLookUpTable
+  onContextTypeFor:
+    <Type>(objType: ObjectType | undefined, fn: () => Type) => Type | undefined
 }
 
 export const ExecutionContext = (() => {
-  const makeDefaultContextType =
-    memoize(() => ObjectLookUpTable.getBuiltinTypes().Context);
-  const makeContextTypeWithInjections =
-    ({ putsFunction, askStringFunction }:
-     { putsFunction: (s: string) => void, askStringFunction: () => string }) =>
-  {
-    const objType = ObjectType.make('Context');
-    const string_ = ObjectLookUpTable.getBuiltinTypes().String;
 
-    const askString = IncompleteFunctionType.
-      make().
-      noReceiver().
-      setName('askString').
-      setArguments([]).
-      setReturns([ string_.uid ]).
-      setBuiltin((stack: PersistentStack<ContextVariable>) => {
-        stack.push().set(askStringFunction());
-      }).
-      finish();
+  function make(mContextType: ObjectType = ContextType.make()): ExecutionContext {
+    const counter = (() => {
+      let i = 1 + MemoryArray.stackPointerLocation();
+      return () => i++;
+    })();
 
-    const puts = PutsFunctionLookUpTable.make(putsFunction);
-
-    return objType.
-      setLookUp({ askString }).
-      setLookUpTable({ puts });
-  };
-
-  function make(mContextType: ObjectType = makeDefaultContextType()): ExecutionContext {
-    // I'm not sure about other types
-    
-    const mAvailableVariables: { [name: string]: ContextVariable } = {};
-
-    function setVariable(name: string, value: string): void {
-      getVariable(name).set(value);
-    }
-
-    function tryGetVariable(name: string): ContextVariable | undefined
-      { return mAvailableVariables[name]; }
-
-    function getVariable(name: string): ContextVariable {
-      const gotten = tryGetVariable(name);
-      if (!gotten) {
-        throw Error(`Undeclared variable "${name}"`);
-      }
-      return gotten;
-    }
-
-    function getValueOfVariable(name: string): string | undefined {
-      return getVariable(name).asString();
-    }
-
-    function lookUpIdentifierType(identifierName: string): ObjectTypeResolution {
-      const gotten = mAvailableVariables[identifierName];
-      if (gotten) {
-        return freeze({
-          resolve: gotten.type,
-          error: () => StandardError.make().error()
-        });
-      } else {
-        const { error, setErrorMessage } = StandardError.make();
-        setErrorMessage(`Undeclared variable "${identifierName}"`);
-        return freeze({
-          resolve: () => undefined,
-          error
-        });
-      }
-    }
-
-    function declareVariable(element: LetNameElement): ContextVariable {
+    function declareVariable(element: LetNameElement): ObjectType {
       const { name, type } = element;
-      if (mAvailableVariables[name]) {
-        throw Error(`name "${name}" already taken`);
-      }
-      const asDefs = element.node.map<AstFunctionDefinitionNode | undefined>((node: AstNode) => {
-        if (node.type() === AstFunctionDefinitionNode.nodeType()) {
-          return node as AstFunctionDefinitionNode;
-        }
-        return undefined;
-      });
+      const asDefs: (AstFunctionDefinitionNode | undefined)[] =
+        element.node.map<AstFunctionDefinitionNode | undefined>((node: AstNode) => {
+          if (AstFunctionDefinitionNode.hasCreated( node )) {
+            return node as AstFunctionDefinitionNode;
+          }
+          return undefined;
+        }) as (AstFunctionDefinitionNode | undefined)[];
       if (type.name() === 'Function' && asDefs[0]) {
         const func = IncompleteFunctionType.
           make().
-          noReceiver().
+          setCallStrategy(noReceiver).
           setName(name).
-          setArguments([]).
+          setParameters([]).
           setReturns([]).
-          setBuiltin((stack: PersistentStack<ContextVariable>) => {
-            stack.push().set(asDefs[0] as AstFunctionDefinitionNode);
-          }).
+          setAstNode(asDefs[0] as AstFunctionDefinitionNode).
           finish();
         mContextType.setLookUp({ [name]: func });
       }
-      return (mAvailableVariables[name] = ContextVariable.make().setType(element.type));
+      
+      const cvar = ContextVariable.make().setType(element.type);
+      // cvar is set later by it's := or = operator
+      const lookUp = VariableDeclarationFunctionTable.
+        make( cvar, element.operator, counter() );
+      mContextType.setLookUpTable({ [`.${name}`]: lookUp });
+      return type;
     }
 
-    function onContextTypeFor<Type>(
-      objType: ObjectType | undefined,
-      fn: () => Type): Type | undefined
-    {
-      if (objType?.uid === mContextType.uid) {
-        return fn();
-      }
-      return undefined;
+    const mObjectTable = ObjectLookUpTable.
+      make().
+      addBuiltinTypes().
+      addType(mContextType);
+
+    function lookUpOnContextType(operation: string): FunctionLookUpTable {
+      return mContextType.lookUp(operation) ?? (() => {
+        throw new Error(`Undeclared "${operation}"`);
+      })();
     }
-
-    const mLookUpTable: ContextualLookUpTable = freeze({
-      ...ObjectLookUpTable.make().addBuiltinTypes(),
-      lookUpIdentifierType,
-      lookUpContextType: () => contextResolution,
-    });
-
-    const lookUpFunctionType: () => ObjectTypeResolution = memoize(() =>
-      ObjectTypeResolution.makeFixedForType( ObjectLookUpTable.getBuiltinTypes().Function ));
-
-    const contextResolution = ObjectTypeResolution.makeFixedForType(mContextType);
 
     const inst = freeze({
-      executionTypeOf: (node: AstNode) => node.executionType(mLookUpTable),
       declareVariable,
-      getValueOfVariable,
-      setVariable,
-      getVariable,
-      lookUpFunctionType,
-      tryGetVariable,
-      functionTypeOf: (node: AstFunctionCallNode) => node.functionType( mLookUpTable ),
-      onContextTypeFor
+      executionTypeOf: (node: AstNode) => node.executionType(mObjectTable),
+      functionLookUpFor: (name: string): FunctionLookUpTable | undefined =>
+        mContextType.lookUp(`.${name}`),
+      lookUpOnContextType,
+      onContextTypeFor<Type>(
+        objType: ObjectType | undefined, fn: () => Type):
+        Type | undefined
+      {
+        if (objType?.uid === mContextType.uid) {
+          return fn();
+        }
+        return undefined;
+      },
     });
     return inst;
   }
 
-  return freeze({ make, makeContextTypeWithInjections });
+  return freeze({ make });
 })();

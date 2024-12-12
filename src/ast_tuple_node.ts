@@ -1,9 +1,9 @@
 import { AstNode } from './ast_node';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { Helpers } from './helpers';
-import { type ContextualLookUpTable } from './ast_node';
 import { type ObjectTypeResolution } from './object_type_resolution';
 import { NodesExecutionTypeResolution } from './nodes_execution_type_resolution';
+import { ObjectLookUpTable } from './object_look_up_table';
 
 export interface AstTupleNode extends AstNode {
   count: () => number,
@@ -17,7 +17,7 @@ export interface AstTupleNode extends AstNode {
 
 export const AstTupleNode = (() => {
   const { freeze, memoize } = Helpers;
-  const tupleType = AstNode.types.tuple;
+  const { type, hasCreated } = AstNode.makeTypeClassMethods();
   
   function makeWithPair(sep: string, lhs: AstNode, rhs: AstNode | undefined): AstTupleNode {
     // NOTE: work around by taking advantage of how things are referenced in
@@ -31,6 +31,8 @@ export const AstTupleNode = (() => {
   }
 
   const class_ = freeze({
+    type,
+    hasCreated,
     makeEmpty: (): AstTupleNode =>
       memoize(() => class_.make(',', []))(),
 
@@ -38,7 +40,7 @@ export const AstTupleNode = (() => {
       makeWithPair(seperator, lhs, rhs),
 
     make: (mSeperator: string, mSubExpressions: AstNode[]): AstTupleNode => {
-      if (mSubExpressions.length === 1 && mSubExpressions[0].type() === tupleType) {
+      if (mSubExpressions.length === 1 && hasCreated(mSubExpressions[0])) {
         return mSubExpressions[0] as AstTupleNode;
       }
       const inst = freeze({
@@ -53,10 +55,10 @@ export const AstTupleNode = (() => {
         append: (node: AstNode) =>
           { mSubExpressions.push(node); },
         
-        type: (): symbol => tupleType,
+        type,
         
         consume: (node: AstNode): AstNode | undefined => {
-          if (node.type() !== tupleType)
+          if (!hasCreated(node))
             { return node; }
           const asTuple = (node as AstTupleNode);
           if (!asTuple.seperatorEquals(mSeperator))
@@ -69,8 +71,8 @@ export const AstTupleNode = (() => {
 
         seperatorEquals: (other: string) => mSeperator === other,
 
-        executionType: (lookUp: ContextualLookUpTable): ObjectTypeResolution =>
-          NodesExecutionTypeResolution.make(lookUp, mSubExpressions),
+        executionType: (typesTable: ObjectLookUpTable): ObjectTypeResolution =>
+          NodesExecutionTypeResolution.make(typesTable, mSubExpressions),
 
         asString: () => `(...${mSubExpressions.length} items)`,
 

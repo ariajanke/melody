@@ -1,27 +1,14 @@
 import { Helpers } from '../helpers';
-import { type SymFunc, WasmHelpers } from './wasm_helpers';
+import { type SymFunc, TypesAware, WasmHelpers } from './wasm_helpers';
 import { TypeSignatureTracker } from './type_signature_tracker';
 
-const { freeze, memoize, expose } = Helpers;
+const { freeze, expose } = Helpers;
 
 export const WasmTypesSection = (() => {
-  const getRepresentations = memoize(() => {
-    const { i32, func } = class_.wasmTypes();
-    return freeze({
-      [func()]: 0x60,
-      [i32 ()]: 0x7F
-    });
-  });
-  
-  const lookUp = (keyFn: SymFunc) =>
-    getRepresentations()[keyFn()] ??
-    (() => { throw new Error('must use wasmTypes defined symbols'); })();
-  
+  const { wasmTypes, asCode, asCodeArray } = TypesAware;
+
   const class_ = freeze({
-    wasmTypes: memoize(() => freeze({
-      i32 : memoize(Symbol), //0x7F,
-      func: memoize(Symbol)  //0x60
-    })),
+    wasmTypes,
     make(mCode: number[] = [],
          mTypeCount = 0,
          mTypeSignatureTracker = TypeSignatureTracker.make())
@@ -41,11 +28,9 @@ export const WasmTypesSection = (() => {
           }
           if (mTypeSignatureTracker.indexFor(arguments_, returns) === undefined) {
             mCode.
-              push(lookUp(func),
-                  ...encodeVaruint32(arguments_.length),
-                  ...arguments_.map((fn: SymFunc) => lookUp(fn)),
-                  ...encodeVaruint32(returns.length),
-                  ...returns.map((fn: SymFunc) => lookUp(fn)));
+              push(asCode(func),
+                  ...asCodeArray(arguments_),
+                  ...asCodeArray(returns));
             mTypeSignatureTracker.makeIndexFor(arguments_, returns);
             ++mTypeCount;
           }

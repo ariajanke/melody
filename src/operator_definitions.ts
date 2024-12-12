@@ -50,7 +50,6 @@ export const OperatorDefinitions = freeze({
       const { binary, unary } = OperatorDefinitions.operandRelationships;
       const call = Token.kCallToken.content();
       return sFullListing =
-        // listed in increasing precedence order
         [
           { representation: 'let', operandRelation: unary  },
           { representation: ','  , operandRelation: binary },

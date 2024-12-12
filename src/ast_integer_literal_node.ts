@@ -1,54 +1,45 @@
 import { AstNode } from './ast_node';
 import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
-import { AstFringeNode } from './ast_fringe_node';
+import { AstLiteralNode } from './ast_fringe_node';
 import { Token } from './token';
 import { AstNodeVisitor } from './ast_node_visitor';
-import { type ContextualLookUpTable } from './ast_node';
 import { type ObjectTypeResolution } from './object_type_resolution';
+import { ObjectLookUpTable } from './object_look_up_table';
 
 const { freeze, memoize } = Helpers;
 
-interface AstIntegerLiteralNode extends AstFringeNode {
-  value: () => number
-}
+interface AstIntegerLiteralNode extends AstLiteralNode {}
 
 export const AstIntegerLiteralNode = (() => {
-  const kIntType = AstNode.types.integerLiteral;
+  const { hasCreated, type } = AstNode.makeTypeClassMethods();
 
-  function valueOf(node: AstNode): number {
-    if (node.type() !== kIntType) {
-      throw Error('Node is not an integer literal');
-    }
-    return (node as AstIntegerLiteralNode).value();
-  }
-
-  function make(value: string): AstFringeNode {
+  function make(value: string): AstLiteralNode {
     return construct(Number.parseInt(value));
   }
 
-  function construct(mValue: number): AstFringeNode {
+  function construct(mValue: number): AstLiteralNode {
     const eval_ = memoize(() => ContextVariable.make(mValue));
     const inst = freeze({
       visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
-        visitor.visitFringe(inst),
-      type: (): symbol => kIntType,
-      executionType: (types: ContextualLookUpTable): ObjectTypeResolution =>
+        visitor.visitLiteral(inst),
+      type,
+      executionType: (types: ObjectLookUpTable): ObjectTypeResolution =>
         types.lookUpByName('Integer'),
       evaluate: (_0: (name: string) => ContextVariable): ContextVariable =>
         eval_(),
       asString: (): string => `${mValue}`,
+      value: memoize(() => ContextVariable.make(mValue)),
       comesBeforeOperator: (operator: Token): boolean => {
         switch (operator.content()) {
         case ',': case '+': case '-': case '*':
           return true;
         default: return false;
         }
-      },
-      value: () => mValue
+      }
     });
     return inst;
   }
 
-  return freeze({ make, valueOf });
+  return freeze({ make, type, hasCreated });
 })();

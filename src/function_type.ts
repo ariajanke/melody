@@ -1,142 +1,176 @@
 import { Helpers } from './helpers';
 import { type ContextVariable } from './context_variable';
 import { type PersistentStack } from './persistent_stack';
+import { type AstFunctionDefinitionNode } from './ast_function_definition_node';
+import { MemoryArray } from './memory_array';
+import { type ObjectType } from './object_type';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
-export const ParameterFit = freeze({
-  isLike: Symbol(),
-  isType: Symbol(),
-  isInterface: Symbol()
-});
+export interface CallHandlingStrategies {
+  chooseReceiver: (fn: () => void) => CallHandlingStrategies
+};
 
-export type BuiltInFunction = (stack: PersistentStack<ContextVariable>) => void;
+const uninitializedCallStrategies = memoize((): CallHandlingStrategies => freeze({
+  chooseReceiver(_0: () => void) { throw new Error('call handling not set'); },
+}));
 
-interface FunctionTypeBase {
-  arguments_: () => Readonly<symbol[]>,
-  builtIn: () => BuiltInFunction | undefined,
-  isComplete: () => boolean,
+export const CallHandlingStrategies = (() => {
+  return freeze({
+    withReceiver: memoize((): CallHandlingStrategies => {
+      const inst = freeze({
+        chooseReceiver(fn: () => void) {
+          fn();
+          return inst;
+        }
+      });
+      return inst;
+    }),
+    noReceiver: memoize((): CallHandlingStrategies => {
+      const inst = freeze({
+        chooseReceiver(_0: () => void) { return inst; },
+      });
+      return inst;
+    })
+  });
+})();
+
+export type BuiltInFunction =
+  (stack: PersistentStack<ContextVariable>,
+   memory: MemoryArray) => void;
+
+export interface FunctionType {
+  parameters: () => Readonly<ObjectType[]>,
+  onBuiltIn: (fn: (bif: BuiltInFunction) => void) => FunctionType,
+  onNodeImplementation: (fn: (node: AstFunctionDefinitionNode) => void) => FunctionType,
   name: () => string,
-  pushReceiverStrategy: (fn: () => void) => void,
-  returns: () => Readonly<symbol[]>,
+  returns: () => Readonly<ObjectType[]>,
   uid: () => symbol,
+  // have to know for instance, how to handle the lhs identifier
+  // can't let this get tangled up with the intepreter (dependancy wise)
+  // have the intepreter/compiler/whatever provide a table of strategies
+  // let this function type choose which strategy is appropriate
+  withCallStrategy: () => CallHandlingStrategies
 };
 
-export interface FunctionType extends FunctionTypeBase {
-  
-};
-
-export interface IncompleteFunctionType extends FunctionTypeBase {
+export interface IncompleteFunctionType {
   setName: (name: string) => IncompleteFunctionType,
-  setArguments: (args: Readonly<symbol[]>) => IncompleteFunctionType,
-  setReturns: (args: Readonly<symbol[]>) => IncompleteFunctionType,
+  setParameters: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
+  setReturns: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
   setBuiltin: (fn: BuiltInFunction) => IncompleteFunctionType,
-  noReceiver: () => IncompleteFunctionType,
+  setAstNode: (node: AstFunctionDefinitionNode) => IncompleteFunctionType,
+  setCallStrategy: (fn: () => CallHandlingStrategies) => IncompleteFunctionType,
   finish: () => FunctionType
 };
 
+type FunctionInitialization = {
+  parameters  : ObjectType[],
+  returns     : ObjectType[],
+  builtin     : BuiltInFunction | undefined,
+  nodeImplementation: AstFunctionDefinitionNode | undefined,
+  name        : string,
+  callStrategy: CallHandlingStrategies
+};
+
 export const IncompleteFunctionType = (() => {
-  const reservedAnonymouseName = '<anonymous>';
-  const pushReceiver = 
-    (fn: () => void) =>
-    { fn(); };
-  const pushNothing = (_0: () => void) => {};
+  const reservedAnonymousName = '<anonymous>';
   function make(): IncompleteFunctionType {
-    const mUid = Symbol();
-    const mArguments_: symbol[] = [];
-    const mReturns   : symbol[] = [];
-    let mBuiltin: BuiltInFunction | undefined = undefined;
-    let mName = reservedAnonymouseName;
-    let mPushReceiverStrategy = pushReceiver;
+    const m: FunctionInitialization = {
+      parameters  : [],
+      returns     : [],
+      builtin     : undefined,
+      nodeImplementation: undefined,
+      name        : reservedAnonymousName,
+      callStrategy: uninitializedCallStrategies()
+    };
 
     const inst = freeze({
-      arguments_,
-      returns,
-      uid,
-      isComplete,
-      setName,
-      setArguments,
-      setReturns,
-      name,
-      finish,
-      setBuiltin,
-      builtIn: () => mBuiltin,
-      noReceiver,
-      pushReceiverStrategy(fn: () => void)
-        { mPushReceiverStrategy(fn); }
+      setName(name: string): IncompleteFunctionType {
+        if (name === reservedAnonymousName) {
+          throw Error(`Cannot name function "${name}"`);
+        }
+        m.name = name;
+        return inst;
+      },
+      setParameters(args: Readonly<ObjectType[]>): IncompleteFunctionType {
+        m.parameters.length = 0;
+        m.parameters.push(...args);
+        return inst;
+      },
+      setReturns(rets: Readonly<ObjectType[]>): IncompleteFunctionType {
+        m.returns.length = 0;
+        m.returns.push(...rets);
+        return inst;
+      },
+      setAstNode(node: AstFunctionDefinitionNode): IncompleteFunctionType {
+        m.builtin = undefined;
+        m.nodeImplementation = node;
+        return inst;
+      },
+      setCallStrategy(fn: () => CallHandlingStrategies): IncompleteFunctionType {
+        m.callStrategy = fn();
+        return inst;
+      },
+      finish(): FunctionType {
+        if (m.nodeImplementation === undefined &&
+            m.builtin            === undefined)
+        {
+          throw new Error('Cannot complete function without an implementation');
+        }
+        // throws if "uninitialized"
+        m.callStrategy.chooseReceiver(() => {});
+        return FunctionType.make(m);
+      },
+      setBuiltin(fn: BuiltInFunction): IncompleteFunctionType {
+        m.builtin = fn;
+        m.nodeImplementation = undefined;
+        return inst;
+      },
     });
 
-    function noReceiver(): IncompleteFunctionType {
-      mPushReceiverStrategy = pushNothing;
-      return inst;
-    }
-
-    function arguments_(): Readonly<symbol[]>
-      { return mArguments_; }
-
-    function returns(): Readonly<symbol[]>
-      { return mReturns; }
-
-    function uid(): symbol { return mUid; }
-
-    function isComplete(): boolean { return false; }
-
-    function setName(name: string): IncompleteFunctionType {
-      if (name === reservedAnonymouseName) {
-        throw Error(`Cannot name function "${name}"`);
-      }
-      mName = name;
-      return inst;
-    }
-
-    function setArguments(args: Readonly<symbol[]>): IncompleteFunctionType {
-      mArguments_.length = 0;
-      mArguments_.push(...args);
-      return inst;
-    }
-
-    function setReturns(rets: Readonly<symbol[]>): IncompleteFunctionType {
-      mReturns.length = 0;
-      mReturns.push(...rets);
-      return inst;
-    }
-
-    function name() { return mName; }
-
-    function finish() {
-      return FunctionType.make(inst);
-    }
-
-    function setBuiltin(fn: BuiltInFunction): IncompleteFunctionType {
-      mBuiltin = fn;
-      return inst;
-    }
     return inst;
   }
 
-  return freeze({ make, reservedAnonymouseName });
+  return freeze({ make, reservedAnonymousName });
 })();
 
 export const FunctionType = (() => {
-
-  function make(base: FunctionTypeBase): FunctionType {
+  function make(m: FunctionInitialization): FunctionType {
+    const parameters: Readonly<ObjectType[]> = m.parameters;
+    const returns   : Readonly<ObjectType[]> = m.returns;
+    let onBuiltIn = (_0: (bif: BuiltInFunction) => void): FunctionType =>
+      inst;
+    let onNodeImplementation = (_0: (node: AstFunctionDefinitionNode) => void): FunctionType =>
+      inst;
     const {
-      arguments_, 
-      returns,
-      uid,
+      builtin,
+      nodeImplementation,
       name,
-      builtIn,
-      pushReceiverStrategy
-    } = base;
+      callStrategy
+    } = m;
+    if (builtin && !nodeImplementation) {
+      onBuiltIn = (fn: (bif: BuiltInFunction) => void): FunctionType => {
+        fn(builtin);
+        return inst;
+      };
+    } else if (nodeImplementation && !builtin) {
+      onNodeImplementation =
+        (fn: (node: AstFunctionDefinitionNode) => void): FunctionType => {
+          fn(nodeImplementation as AstFunctionDefinitionNode);
+          return inst;
+        };
+    } else {
+      throw new Error('implementation was not set');
+    }
 
     const inst = freeze({
-      arguments_,
-      returns,
-      uid,
-      name,
-      isComplete: () => true,
-      builtIn,
-      pushReceiverStrategy
+      parameters: () => parameters,
+      returns: () => returns,
+      uid: memoize(Symbol),
+      name: () => name,
+      withCallStrategy: () => callStrategy,
+      onNodeImplementation,
+      onBuiltIn
     });
     return inst;
   }

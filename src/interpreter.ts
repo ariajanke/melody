@@ -1,12 +1,11 @@
 import { AstBuild } from './ast_build';
-import { AstNode, AstEvaluatableNode } from './ast_node';
+import { AstNode } from './ast_node';
 import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { Helpers } from './helpers';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
-import { AstFringeNode } from './ast_fringe_node';
 import { PersistentStack } from './persistent_stack';
 import { AstNodeVisitor, AstNodeVisitorBuilder } from './ast_node_visitor';
 import { AstTupleNode } from './ast_tuple_node';
@@ -14,10 +13,16 @@ import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { LetNameElement } from './let_names_collection';
 import { LetNamesCollector } from './let_names_collector';
 import { NamingExpressionVisitor } from './naming_expression_visitor';
+import { BuiltInFunction, FunctionType } from './function_type';
+import { AstIdentifierNode } from './ast_identifier_node';
+import { AstLiteralNode } from './ast_fringe_node';
+import { MemoryArray } from './memory_array';
+import { ContextType, StringPool } from './context_type';
+import { FunctionTypeRetrieval } from './function_type_retrieval';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
-const LetVisitor = (() => {
+export const LetVisitor = (() => {
   function make(): AstNodeVisitor<LetNamesCollector> {
     const inst = freeze({
       visitFunctionCall(callNode: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode) {
@@ -31,13 +36,13 @@ const LetVisitor = (() => {
       },
       visitLetDeclaration: (_0: AstLetDeclarationNode, _1: AstNode) =>
         LetNamesCollector.makeErroneous('no nested lets allowed'),
-      visitIdentifier: (_0: AstFringeNode) =>
+      visitIdentifier: (_0: AstIdentifierNode) =>
         LetNamesCollector.makeErroneous('missing operator "=" or ":="'),
       visitTuple: (_0: AstTupleNode) => LetNamesCollector.
         makeErroneous('nott supported'), // maybe for function param tuples?
       visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) =>
         LetNamesCollector.makeErroneous('fn def doesn\'t make sense here'),
-      visitFringe: (_0: AstFringeNode) =>
+      visitLiteral: (_0: AstLiteralNode) =>
         LetNamesCollector.makeErroneous('cannot use literal as a name')
     });
     return inst;
@@ -46,61 +51,49 @@ const LetVisitor = (() => {
   return freeze({ make });
 })();
 
-// on type discovery
-// at some point, it is assumed that all types can be figured out
-// for now we assume the code is *always* at that point
-
 const InterpreterNodeVisitor = freeze({
-  make: (context: ExecutionContext) => {
+  make: (context: ExecutionContext, injections = Interpreter.defaultInjections()) => {
     const mLetVisitor = LetVisitor.make();
-    const mStack = PersistentStack.make<ContextVariable>(ContextVariable.make);
+    const mStack = injections.makeStack();
+    const mMemory = injections.makeMemory();
+    const mFunctionRetrieval = FunctionTypeRetrieval.make();
+    const { stackPointerLocation } = MemoryArray;
+    mMemory.load(stackPointerLocation()).set(stackPointerLocation() + 1);
 
-    function mValueOf(node: AstNode): ContextVariable {
-      if (node.type() === AstNode.types.functionDefinition) {
-        return ContextVariable.make(node as AstFunctionDefinitionNode);
-      }
-      const evalNode = AstEvaluatableNode.tryDowncast(node);
-      if (evalNode) {
-        return evalNode.evaluate(context.getVariable);
-      }
-      node.visit(inst);
-      return mStack.pop();
-    }
-
-    function mPushValueOf(node: AstNode): void {
-      mStack.push(mValueOf(node));
+    function runFunction(funcType: FunctionType) {
+      funcType.
+        onBuiltIn((impl: BuiltInFunction) => {
+          impl(mStack, mMemory);
+        }).
+        onNodeImplementation((node: AstFunctionDefinitionNode) => {
+          inst.callFunctionDefinition(node);
+        });
     }
 
     const inst = freeze({
-      visitFringe: (_0: AstFringeNode) => {},
+      visitLiteral(node: AstLiteralNode) {
+        node.value().copyTo( mStack.push() );
+      },
       visitFunctionCall: (node: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode) => {
-        const { resolve, error } = context.functionTypeOf(node);
-        const func = resolve();
+        const func = mFunctionRetrieval.
+          reset(node, receiver, fArgs, context).
+          retrievedType();
         if (!func) {
-          const res = context.executionTypeOf(receiver);
-          const fvar = context.onContextTypeFor(res.resolve(), () =>
-            context.tryGetVariable(node.name));
-          if (fvar) {
-            inst.callFunctionDefinition( fvar.asNode() );
-            return;
-          }
-          throw new Error(error().message);
+          throw new Error(mFunctionRetrieval.error().message);
         }
-        func.pushReceiverStrategy(() => { mPushValueOf(receiver); });
-        fArgs.forEach(mPushValueOf);
-        const impl = func.builtIn();
-        if (!impl) {
-          throw new Error(`Unimplementedd "${node.name}" function`);
-        }
-        impl(mStack);
+
+        func.withCallStrategy().chooseReceiver(() => {
+          receiver.visit(inst);
+        });
+
+        fArgs.forEach((node: AstNode) => node.visit(inst));
+        // <- receiver things here (get/set cvar)
+        runFunction(func);
       },
       visitLetDeclaration: (_node: AstLetDeclarationNode, lhs: AstNode) => {
         const collector = lhs.visit(mLetVisitor);
         const collection = collector.setType(context).finish();
         collection.elements()?.forEach((element: LetNameElement) => {
-          if (!element.node) { 
-            throw new Error('???');
-          }
           context.declareVariable(element);
         });
         if (!collection.elements()) {
@@ -113,9 +106,20 @@ const InterpreterNodeVisitor = freeze({
       visitTuple: (node: AstTupleNode) => {
         node.forEach((node: AstNode) => node.visit(inst));
       },
-      visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) => {
+      visitFunctionDefinition(fnDefNode: AstFunctionDefinitionNode, _1: AstNode[]) {
+        mStack.push().set(fnDefNode);
       },
-      visitIdentifier: (_0: AstFringeNode) => {},
+      visitIdentifier(node: AstIdentifierNode) {
+        // still get here with let definitions
+        // so still need a "noReceiver", until an alternative solution is found
+        const func = context.
+          lookUpOnContextType(node.contextMethodName()).
+          byParameters([]) ??
+          (() => {
+            throw new Error(`Cannot look up reader method for "${node.asString()}"`);
+          })();
+        runFunction(func);
+      },
       callFunctionDefinition: (() => {
         const topVisitor = AstNodeVisitorBuilder.
           makeDefaultingToStop().
@@ -137,17 +141,29 @@ export interface Interpreter {
   interpret: (node: AstNode) => void
 };
 
+
 export const Interpreter = freeze({
-  make:
-    (context: ExecutionContext = ExecutionContext.make()):
+  defaultInjections: memoize(() => freeze({
+    makeMemory: MemoryArray.make,
+    makeStack : () => PersistentStack.make<ContextVariable>(ContextVariable.make),
+    makeContext: (getStringPool: () => StringPool) =>
+      ExecutionContext.make(ContextType.make({
+        ...ContextType.defaultInjections(), getStringPool
+      }))
+  })),
+  make: (injections = Interpreter.defaultInjections()):
     Interpreter =>
   {
-    const mVisitor = InterpreterNodeVisitor.make(context);
+    
     
     function interpret(node: AstNode) {
-      if (node.type() !== AstNode.types.functionDefinition) { 
+      if (!AstFunctionDefinitionNode.hasCreated( node )) {
         throw new Error('node must be a function defintion');
       }
+      
+      const context = injections.makeContext(() => StringPool.make(node));
+      const mVisitor = InterpreterNodeVisitor.make(context, injections);
+      
       mVisitor.callFunctionDefinition(node as AstFunctionDefinitionNode);
     }
 
