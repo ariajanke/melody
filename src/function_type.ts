@@ -1,5 +1,5 @@
 import { Helpers } from './helpers';
-import { type ContextVariable } from './context_variable';
+// import { type ContextVariable } from './context_variable';
 import { type PersistentStack } from './persistent_stack';
 import { type AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { MemoryArray } from './memory_array';
@@ -36,13 +36,15 @@ export const CallHandlingStrategies = (() => {
 })();
 
 export type BuiltInFunction =
-  (stack: PersistentStack<ContextVariable>,
+  (stack: PersistentStack<number>,
    memory: MemoryArray) => void;
 
 export interface FunctionType {
   parameters: () => Readonly<ObjectType[]>,
   onBuiltIn: (fn: (bif: BuiltInFunction) => void) => FunctionType,
   onNodeImplementation: (fn: (node: AstFunctionDefinitionNode) => void) => FunctionType,
+  // how do I prevent this type from becoming an implementation "dumping ground"?
+  // visitWasmCodeWriter
   name: () => string,
   returns: () => Readonly<ObjectType[]>,
   uid: () => symbol,
@@ -58,6 +60,7 @@ export interface IncompleteFunctionType {
   setParameters: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
   setReturns: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
   setBuiltin: (fn: BuiltInFunction) => IncompleteFunctionType,
+  // setWasm: (wcw: WasmCodeWriter) => IncompleteFunctionType,
   setAstNode: (node: AstFunctionDefinitionNode) => IncompleteFunctionType,
   setCallStrategy: (fn: () => CallHandlingStrategies) => IncompleteFunctionType,
   finish: () => FunctionType

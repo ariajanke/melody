@@ -2,13 +2,11 @@ import { Helpers } from './helpers';
 import { type AstNodeVisitor } from './ast_node_visitor';
 import { type ObjectLookUpTable } from './object_look_up_table';
 import { type ObjectTypeResolution } from './object_type_resolution';
+// for VAST stuff
+import { FunctionType } from './function_type';
+import { ObjectType } from './object_type';
 
 const { freeze, memoize } = Helpers;
-
-// export interface ContextualLookUpTable {
-//   lookUpIdentifierType: (identifierName: string) => ObjectTypeResolution,
-//   lookUpContextType: () => ObjectTypeResolution
-// }
 
 export interface AstNode {
   visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>) =>

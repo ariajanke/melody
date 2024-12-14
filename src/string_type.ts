@@ -7,7 +7,7 @@ import { AstNode } from './ast_node';
 import { type AstNodeVisitor } from './ast_node_visitor';
 import { AstStringLiteralNode } from './ast_string_literal_node';
 import { type AstTupleNode } from './ast_tuple_node';
-import { ContextVariable } from './context_variable';
+// import { ContextVariable } from './context_variable';
 import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
@@ -55,7 +55,7 @@ const class_ = freeze({
       setName(':=').
       setParameters(type.decomposeAsParameters()).
       setReturns  ([ type ]).
-      setBuiltin((_0: PersistentStack<ContextVariable>) => {}).
+      setBuiltin((_0: PersistentStack<number>) => {}).
       finish() });
     return type;
   })

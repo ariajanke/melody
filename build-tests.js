@@ -25,3 +25,4 @@ import './tests/wasm_compilation/wasm_functions_section_tests';
 import './tests/wasm_compilation/wasm_imports_section_tests';
 import './tests/wasm_compilation/wasm_types_section_tests';
 import './tests/context_type_retrieval_tests';
+import './tests/puts_function_look_up_table_tests';

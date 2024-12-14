@@ -63,8 +63,8 @@ export const ContextVariable = (() => {
   function make
     (mValue?: StorableValue): ContextVariable
   {
-    const { getBuiltinTypes } = ObjectLookUpTable;
-    const kBuiltinTypes = getBuiltinTypes();
+    // const { getBuiltinTypes } = ObjectLookUpTable;
+    // const kBuiltinTypes = getBuiltinTypes();
     const inst = freeze({ set, asString, asNumber, type, copyTo, setType, asNode });
 
     let mType = kBuiltinTypes.Unresolved;

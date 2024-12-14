@@ -1,25 +1,26 @@
 // simulate linear memory
 
-import { ContextVariable } from './context_variable';
+// import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
 
 const { freeze } = Helpers;
 
 function construct(mSlotCapacity: number = 2048) {
-  const mSlots = Array<ContextVariable | undefined>(mSlotCapacity);
+  const mSlots = Array<number | undefined>(mSlotCapacity);
   function verifySlotNumber(slot: number) {
     if (slot >= 0 && slot < mSlots.length)
       { return; }
     throw new Error(`Slot number (${slot}) is inaccessible`);
   }
   const inst = freeze({
-    load(slot: number): ContextVariable {
+    load(slot: number): number {
       verifySlotNumber(slot);
-      return mSlots[slot] ??= ContextVariable.make();
+      return mSlots[slot] ??= Infinity;
     },
-    store(slot: number, cvar: ContextVariable): void {
+    store(slot: number, cvar: number): void {
       verifySlotNumber(slot);
-      cvar.copyTo( mSlots[slot] ??= ContextVariable.make() );
+      mSlots[slot] = cvar;
+      // cvar.copyTo( mSlots[slot] ??= Infinity );
     }
   });
   return inst;
