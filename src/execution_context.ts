@@ -1,5 +1,5 @@
 import { Helpers } from './helpers';
-import { ContextVariable } from './context_variable';
+// import { ContextVariable } from './context_variable';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { ObjectType } from './object_type';
 import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
@@ -10,7 +10,7 @@ import { type LetNameElement } from './let_names_collection';
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { VariableDeclarationFunctionTable } from './variable_declaration_function_table';
 import { MemoryArray } from './memory_array';
-import { ContextType } from './context_type';
+// import { ContextType } from './context_type';
 
 const { freeze } = Helpers;
 const { noReceiver } = CallHandlingStrategies;
@@ -26,7 +26,7 @@ export interface ExecutionContext {
 
 export const ExecutionContext = (() => {
 
-  function make(mContextType: ObjectType = ContextType.make()): ExecutionContext {
+  function make(mContextType: ObjectType): ExecutionContext {
     const counter = (() => {
       let i = 1 + MemoryArray.stackPointerLocation();
       return () => i++;
@@ -53,10 +53,9 @@ export const ExecutionContext = (() => {
         mContextType.setLookUp({ [name]: func });
       }
       
-      const cvar = ContextVariable.make().setType(element.type);
       // cvar is set later by it's := or = operator
       const lookUp = VariableDeclarationFunctionTable.
-        make( cvar, element.operator, counter() );
+        make( element.type, element.operator, counter() );
       mContextType.setLookUpTable({ [`.${name}`]: lookUp });
       return type;
     }

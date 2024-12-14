@@ -3,7 +3,7 @@ import { Helpers } from './helpers';
 // a few assumptions are made about this thing's usage which requires some care
 // and attention
 export interface PersistentStack<Type> {
-  push: () => Type,
+  push: (member?: Type) => Type,
   pop: () => Type,
   isEmpty: () => boolean,
   count: () => number,

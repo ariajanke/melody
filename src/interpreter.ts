@@ -4,7 +4,6 @@ import { Tokenization } from './tokenization';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { Helpers } from './helpers';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
-import { ContextVariable } from './context_variable';
 import { ExecutionContext } from './execution_context';
 import { PersistentStack } from './persistent_stack';
 import { AstNodeVisitor, AstNodeVisitorBuilder } from './ast_node_visitor';
@@ -52,13 +51,16 @@ export const LetVisitor = (() => {
 })();
 
 const InterpreterNodeVisitor = freeze({
-  make: (context: ExecutionContext, injections = Interpreter.defaultInjections()) => {
+  make: (context: ExecutionContext,
+         stringPool: StringPool,
+         injections = Interpreter.defaultInjections()) =>
+  {
     const mLetVisitor = LetVisitor.make();
     const mStack = injections.makeStack();
     const mMemory = injections.makeMemory();
     const mFunctionRetrieval = FunctionTypeRetrieval.make();
     const { stackPointerLocation } = MemoryArray;
-    mMemory.load(stackPointerLocation()).set(stackPointerLocation() + 1);
+    mMemory.store(stackPointerLocation(), stackPointerLocation() + 1);
 
     function runFunction(funcType: FunctionType) {
       funcType.
@@ -68,11 +70,12 @@ const InterpreterNodeVisitor = freeze({
         onNodeImplementation((node: AstFunctionDefinitionNode) => {
           inst.callFunctionDefinition(node);
         });
+      // funcType.uid();
     }
 
     const inst = freeze({
       visitLiteral(node: AstLiteralNode) {
-        node.value().copyTo( mStack.push() );
+        mStack.push( node.value(stringPool) );
       },
       visitFunctionCall: (node: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode) => {
         const func = mFunctionRetrieval.
@@ -106,8 +109,7 @@ const InterpreterNodeVisitor = freeze({
       visitTuple: (node: AstTupleNode) => {
         node.forEach((node: AstNode) => node.visit(inst));
       },
-      visitFunctionDefinition(fnDefNode: AstFunctionDefinitionNode, _1: AstNode[]) {
-        mStack.push().set(fnDefNode);
+      visitFunctionDefinition(_0: AstFunctionDefinitionNode, _1: AstNode[]) {
       },
       visitIdentifier(node: AstIdentifierNode) {
         // still get here with let definitions
@@ -141,29 +143,31 @@ export interface Interpreter {
   interpret: (node: AstNode) => void
 };
 
-
 export const Interpreter = freeze({
   defaultInjections: memoize(() => freeze({
     makeMemory: MemoryArray.make,
-    makeStack : () => PersistentStack.make<ContextVariable>(ContextVariable.make),
-    makeContext: (getStringPool: () => StringPool) =>
-      ExecutionContext.make(ContextType.make({
-        ...ContextType.defaultInjections(), getStringPool
-      }))
+    makeStack : () => PersistentStack.make<number>(() => Infinity),
+    makeContextType: ContextType.make,
+    makeContext: ExecutionContext.make,
+    makeStringPool: StringPool.make,
+    putsFunction: (str: string) => console.log(str)
   })),
   make: (injections = Interpreter.defaultInjections()):
     Interpreter =>
   {
-    
-    
     function interpret(node: AstNode) {
       if (!AstFunctionDefinitionNode.hasCreated( node )) {
         throw new Error('node must be a function defintion');
       }
-      
-      const context = injections.makeContext(() => StringPool.make(node));
-      const mVisitor = InterpreterNodeVisitor.make(context, injections);
-      
+
+      const { putsFunction } = injections;
+      const stringPool = injections.makeStringPool(node);
+      const contextType = injections.makeContextType(stringPool, {
+        ...ContextType.defaultInjections(),
+        putsFunction
+      })
+      const context = injections.makeContext(contextType);
+      const mVisitor = InterpreterNodeVisitor.make(context, stringPool, injections);
       mVisitor.callFunctionDefinition(node as AstFunctionDefinitionNode);
     }
 

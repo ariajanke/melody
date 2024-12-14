@@ -10,7 +10,9 @@ export const WasmFunctionBody = (() => {
     i32Subtract: 0x6B,
     i32Multiply: 0x6C,
     i32Const   : 0x41,
-    call       : 0x10
+    call       : 0x10,
+    i32load    : 0x28,
+    i32store   : 0x36
   });
   const kFunctionEnd = 0x0B;
   
@@ -43,6 +45,22 @@ export const WasmFunctionBody = (() => {
         pushI32Add: () => pushSingleInstruction(kOpCodes.i32Add),
         pushI32Subtract: () => pushSingleInstruction(kOpCodes.i32Subtract),
         pushI32Multiply: () => pushSingleInstruction(kOpCodes.i32Multiply),
+        pushI32Load    : () => {
+          mCode = [
+            ...mCode,
+            kOpCodes.i32load,
+            0x02,
+            ...encodeVaruint32(0)
+          ]
+        },
+        pushI32Store: () => {
+          mCode = [
+            ...mCode,
+            kOpCodes.i32store,
+            0x02,
+            ...encodeVaruint32(0)
+          ]
+        },
         pushFunctionCall(funcIdx: number) {
           mCode = [
             ...mCode,

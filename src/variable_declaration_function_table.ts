@@ -1,4 +1,3 @@
-import { ContextVariable } from './context_variable';
 import { type FunctionLookUpTable } from './function_look_up_table';
 import { BuiltInFunction, CallHandlingStrategies, type FunctionType, IncompleteFunctionType } from './function_type';
 import { Helpers } from './helpers';
@@ -9,22 +8,21 @@ import { MemoryArray } from './memory_array';
 const { freeze } = Helpers;
 
 export interface VariableDeclarationFunctionTable extends FunctionLookUpTable {
-  // variableType: () => ObjectType
+  offset(): number
 };
 
 export const VariableDeclarationFunctionTable = freeze({
-  make(cvar: ContextVariable, operator: string, memoryOffset: number)
-  {
+  make(varType: ObjectType, operator: string, memoryOffset: number) {
     const { noReceiver } = CallHandlingStrategies;
-    const { uid } = cvar.type();
+    const { uid } = varType;
     const mGetter = IncompleteFunctionType.
       make().
       setCallStrategy(noReceiver).
       setParameters([]).
-      setReturns([cvar.type()]).
-      setBuiltin((stack: PersistentStack<ContextVariable>, memory: MemoryArray) =>
+      setReturns([varType]).
+      setBuiltin((stack: PersistentStack<number>, memory: MemoryArray) =>
       {
-        memory.load(memoryOffset).copyTo( stack.push() );
+        stack.push( memory.load( memoryOffset ) );
       }).
       finish();
     // still need setter (once though) for the "=" case
@@ -35,13 +33,12 @@ export const VariableDeclarationFunctionTable = freeze({
       return IncompleteFunctionType.
         make().
         setCallStrategy(noReceiver).
-        setParameters([cvar.type()]).
-        setReturns([cvar.type()]).
-        setBuiltin((stack: PersistentStack<ContextVariable>, memory: MemoryArray) =>
+        setParameters([varType]).
+        setReturns([varType]).
+        setBuiltin((stack: PersistentStack<number>, memory: MemoryArray) =>
         {
           const cvarToStore = stack.pop();
           memory.store(memoryOffset, cvarToStore);
-          cvarToStore.copyTo( stack.push() );
           // also do getter things
           mGetter.onBuiltIn((bif: BuiltInFunction) => {
             bif(stack, memory);
@@ -50,6 +47,7 @@ export const VariableDeclarationFunctionTable = freeze({
         finish();
       })();
     return freeze({
+      offset: () => memoryOffset,
       byParameters(args: Readonly<ObjectType[]>): FunctionType | undefined {
         if (args.length === 0) {
           return mGetter;
@@ -58,7 +56,7 @@ export const VariableDeclarationFunctionTable = freeze({
         }
         return undefined;
       },
-      variableType: cvar.type
-    }) satisfies FunctionLookUpTable;
+      variableType: varType
+    }) satisfies VariableDeclarationFunctionTable;
   }
 });

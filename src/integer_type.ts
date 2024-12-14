@@ -2,7 +2,6 @@ import { Helpers } from './helpers';
 import { CallHandlingStrategies, IncompleteFunctionType} from './function_type';
 import { ObjectType } from './object_type';
 import { type PersistentStack } from './persistent_stack';
-import { type ContextVariable } from './context_variable';
 
 const { freeze, memoize } = Helpers;
 
@@ -16,12 +15,12 @@ function makeIntegerType() {
     setCallStrategy(withReceiver).
     setParameters(integer_.decomposeAsParameters()).
     setReturns  ([ integer_ ]).
-    setBuiltin((stack: PersistentStack<ContextVariable>) =>
+    setBuiltin((stack: PersistentStack<number>) =>
       {
         const lhs = stack.pop();
         const rhs = stack.pop();
         
-        stack.push().set(rhs.asNumber() + lhs.asNumber());
+        stack.push(rhs + lhs);
       }).
     finish();
 
@@ -31,12 +30,12 @@ function makeIntegerType() {
     setCallStrategy(withReceiver).
     setParameters(integer_.decomposeAsParameters()).
     setReturns  ([ integer_ ]).
-    setBuiltin((stack: PersistentStack<ContextVariable>) =>
+    setBuiltin((stack: PersistentStack<number>) =>
       {
         const lhs = stack.pop();
         const rhs = stack.pop();
         
-        stack.push().set(rhs.asNumber() - lhs.asNumber());
+        stack.push(rhs - lhs);
       }).
     finish();
 
@@ -46,11 +45,11 @@ function makeIntegerType() {
     setCallStrategy(withReceiver).
     setParameters(integer_.decomposeAsParameters()).
     setReturns  ([ integer_ ]).
-    setBuiltin((stack: PersistentStack<ContextVariable>) =>
+    setBuiltin((stack: PersistentStack<number>) =>
       {
         const lhs = stack.pop();
         const rhs = stack.pop();
-        stack.push().set(rhs.asNumber()*lhs.asNumber());
+        stack.push(rhs*lhs);
       }).
     finish();
 
@@ -60,7 +59,7 @@ function makeIntegerType() {
     setCallStrategy(noReceiver).
     setParameters(integer_.decomposeAsParameters()).
     setReturns  ([ integer_ ]).
-    setBuiltin((_0: PersistentStack<ContextVariable>) => {}).
+    setBuiltin((_0: PersistentStack<number>) => {}).
     finish();
   return integer_.setLookUp({
     ['*' ]: mul,

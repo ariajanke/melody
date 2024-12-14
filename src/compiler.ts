@@ -5,6 +5,7 @@ import { Helpers } from './helpers';
 import { LetVisitor } from './interpreter';
 import { LetNameElement } from './let_names_collection';
 import { WasmCodeWriter } from './wasm_compilation';
+// import { FunctionTypeRetrieval } from './function_type_retrieval';
 
 const { freeze } = Helpers;
 

@@ -2,7 +2,7 @@ import { Helpers } from './helpers';
 import { AstNode } from './ast_node';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { type ObjectTypeResolution } from './object_type_resolution';
-import { ContextVariable } from './context_variable';
+// import { ContextVariable } from './context_variable';
 import { ObjectLookUpTable } from './object_look_up_table';
 
 const { freeze } = Helpers;
@@ -19,9 +19,9 @@ export const AstFunctionDefinitionNode = freeze({
       type,
       executionType: (typeTable: ObjectLookUpTable): ObjectTypeResolution =>
         typeTable.lookUpByName('Function'),
-      evaluate(_0: (name: string) => ContextVariable): ContextVariable {
-        return ContextVariable.make(inst as AstFunctionDefinitionNode);
-      },
+      // evaluate(_0: (name: string) => ContextVariable): ContextVariable {
+      //   return ContextVariable.make(inst as AstFunctionDefinitionNode);
+      // },
       count: () => mSubExpressions.length,
       asString: () => `<fn def>`
     });

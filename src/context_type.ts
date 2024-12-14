@@ -1,6 +1,6 @@
 import { AstNode } from './ast_node';
 import { AstStringLiteralNode } from './ast_string_literal_node';
-import { ContextVariable } from './context_variable';
+// import { ContextVariable } from './context_variable';
 import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
 import { Helpers } from './helpers';
@@ -14,23 +14,37 @@ const { noReceiver } = CallHandlingStrategies;
 
 export type StringPool = {
   lookUp(str: string): number | undefined
+  reverseLookUp(n: number): string | undefined
+  askString(): number
 };
 export const StringPool = freeze({  
   makeDefault: memoize((): StringPool => {
     const node = AstStringLiteralNode.make('bees');
     return StringPool.make(node);
-  }),   
-  make(rootNode: AstNode): StringPool {
+  }),
+  makeForStrings(getStrings: () => string[]) {
+    const stringsArray = memoize(getStrings);
     const reversePoolLookUp = memoize(() => {
-      const revmap = rootNode.
-        visit( StringType.stringPoolVisitor() ).
+      const revmap = stringsArray().
         map((val: string, idx: number) => ({ [val]: idx }));
       return Object.assign({}, ...revmap) as { [name: string]: number | undefined };
     });
+    let mAskRot = 0;
     return freeze({
       lookUp: (str: string) =>
-        reversePoolLookUp()[str]
+        reversePoolLookUp()[str],
+      reverseLookUp: (n: number) =>
+        stringsArray()[n],
+      askString() {
+        const rv = mAskRot;
+        mAskRot = (mAskRot + 1) % stringsArray().length;
+        return rv;
+      }
     });
+  },
+  make(rootNode: AstNode): StringPool {
+    return StringPool.makeForStrings(() => rootNode.
+      visit( StringType.stringPoolVisitor() ));
   }
 });
 
@@ -42,31 +56,27 @@ const defaultInjections = memoize(() => freeze({
     return () => i++;
   }) (),
   getStringType: StringType.instance,
-  getIntegerType: IntegerType.instance,
-  getStringPool: StringPool.makeDefault
+  getIntegerType: IntegerType.instance
 }));
 
-function construct(injections = defaultInjections()) {
+function construct(mStringPool: StringPool, injections = defaultInjections()) {
   const {
     putsFunction,
     askStringFunction,
     askIntegerFunction,
     getIntegerType,
     getStringType,
-    getStringPool
   } = injections;
   const stringType = getStringType();
   const integerType = getIntegerType();
-  const stringPool = getStringPool();
   const askString = IncompleteFunctionType.
     make().
     setCallStrategy(noReceiver).
     setName('askString').
     setParameters([]).
     setReturns([ stringType ]).
-    setBuiltin((stack: PersistentStack<ContextVariable>) => {
-      stringPool.lookUp(askStringFunction());
-      stack.push().set(askStringFunction());
+    setBuiltin((stack: PersistentStack<number>) => {
+      stack.push( mStringPool.lookUp(askStringFunction()) );
     }).
     finish();
 
@@ -76,12 +86,12 @@ function construct(injections = defaultInjections()) {
     setName('askInteger').
     setParameters([]).
     setReturns([ integerType ]).
-    setBuiltin((stack: PersistentStack<ContextVariable>) => {
-      stack.push().set(askIntegerFunction());
+    setBuiltin((stack: PersistentStack<number>) => {
+      stack.push(askIntegerFunction());
     }).
     finish();
 
-  const puts = PutsFunctionLookUpTable.make(getStringPool, putsFunction);
+  const puts = PutsFunctionLookUpTable.make(mStringPool, putsFunction);
 
   return ObjectType.
     make(class_.typeName()).

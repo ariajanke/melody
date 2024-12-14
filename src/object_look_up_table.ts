@@ -1,7 +1,7 @@
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
-import { ContextVariable } from './context_variable';
+// import { ContextVariable } from './context_variable';
 import { PersistentStack } from './persistent_stack';
 import { ObjectTypeResolution } from './object_type_resolution';
 import { StandardErrorMessage } from './helpers';
@@ -31,13 +31,12 @@ export const ObjectLookUpTable = (() => {
       setName(':=').
       setParameters(function_.decomposeAsParameters()).
       setReturns  ([ function_ ]).
-      setBuiltin((_0: PersistentStack<ContextVariable>) => {}).
+      setBuiltin((_0: PersistentStack<number>) => {}).
       finish();
 
     return freeze({
       Integer: IntegerType.instance(),
       String: StringType.instance(),
-      Context: ContextType.make(),
       Function: function_.
         setLookUp({
           [':=']: assignFn
@@ -56,32 +55,38 @@ export const ObjectLookUpTable = (() => {
       return inst;
     }
 
-    const lookUpTuple = (() => {
-      type TupleLookUpTableEntry = {
-        object: ObjectType,
-        [uid: symbol]: TupleLookUpTableEntry | undefined
-      };
+    // const lookUpTuple = (() => {
+    //   type TupleLookUpTableEntry = {
+    //     object: ObjectType,
+    //     [uid: symbol]: TupleLookUpTableEntry | undefined
+    //   };
 
-      const mTable: TupleLookUpTableEntry = {
-        object: ObjectType.makeForTuple([], 'Tuple()')
-      };
+    //   const mTable: TupleLookUpTableEntry = {
+    //     object: ObjectType.emptyTupleInstance()
+    //   };
   
-      return (types: Readonly<ObjectType[]>): ObjectType => {
-        if (types.length === 1) {
-          return types[0];
-        }
-        // doesn't work for tuples with more than one member
-        let seekingOn = mTable;
-        let tupleName = 'Tuple(';
-        types.forEach((type: ObjectType) => {
-          tupleName += type.name();
-          seekingOn = seekingOn[type.uid()] ??=
-            { object: ObjectType.makeForTuple(types, `${tupleName})`) };
-          tupleName += ', ';
-        });
-        return seekingOn.object;
-      };
-    })();
+    //   return (types: Readonly<ObjectType[]>): ObjectType => {
+    //     if (types.length === 1) {
+    //       return types[0];
+    //     }
+    //     // doesn't work for tuples with more than one member
+    //     let seekingOn = mTable;
+    //     let tupleName = 'Tuple(';
+    //     types.forEach((type: ObjectType) => {
+    //       tupleName += type.name();
+    //       seekingOn = seekingOn[type.uid()] ??=
+    //         { object: ObjectType.makeForTuple(types, `${tupleName})`) };
+    //       tupleName += ', ';
+    //     });
+    //     return seekingOn.object;
+    //   };
+    // })();
+
+    function lookUpTuple(types: Readonly<ObjectType[]>) {
+      const tupleType = ObjectType.makeForTuple(types);
+      addType(tupleType);
+      return tupleType
+    }
 
     function lookUpByName(name: string): ObjectTypeResolution {
       const res = mLookUpByName[name];
@@ -124,5 +129,5 @@ export const ObjectLookUpTable = (() => {
     return inst;
   }
 
-  return freeze({ make, getBuiltinTypes });
+  return freeze({ make });//, getBuiltinTypes });
 })();

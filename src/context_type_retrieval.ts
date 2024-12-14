@@ -1,6 +1,6 @@
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { type AstNode } from './ast_node';
-import { ContextVariable } from './context_variable';
+// import { ContextVariable } from './context_variable';
 import { FunctionLookUpTable } from './function_look_up_table';
 import { CallHandlingStrategies, FunctionType, IncompleteFunctionType } from './function_type';
 import { Helpers, StandardError } from './helpers';
@@ -63,9 +63,9 @@ function construct
     (element: Entry, fn: (funcTable: FunctionLookUpTable) => Type): Type
   {
     const type = assertedResolvedTypeOf(element);
-    const cvar = ContextVariable.make().setType(type);
+    // const cvar = ContextVariable.make().setType(type);
     const lookUpTable = VariableDeclarationFunctionTable.
-      make( cvar, element.operator, 0 );
+      make( type, element.operator, 0 );
     return fn(lookUpTable);
   }
 

@@ -3,15 +3,16 @@ import { AstIntegerLiteralNode } from './ast_integer_literal_node';
 import { AstNode } from './ast_node';
 import { AstStringLiteralNode } from './ast_string_literal_node';
 import { Helpers } from './helpers';
-import { ContextVariable } from './context_variable';
+// import { ContextVariable } from './context_variable';
 import { Token } from './token';
+import { StringPool } from './context_type';
 
 const { freeze } = Helpers;
 
 export interface AstFringeNode extends AstNode {}
 
 export interface AstLiteralNode extends AstFringeNode {
-  value: () => ContextVariable
+  value: (stringPool: StringPool) => number
 }
 
 export const AstFringeNode = (() => {
