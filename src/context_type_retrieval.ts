@@ -1,11 +1,11 @@
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { type AstNode } from './ast_node';
-// import { ContextVariable } from './context_variable';
+import { ContextType, StringPool } from './context_type';
 import { FunctionLookUpTable } from './function_look_up_table';
 import { CallHandlingStrategies, FunctionType, IncompleteFunctionType } from './function_type';
 import { Helpers, StandardError } from './helpers';
 import { LetDeclarationsRetrieval } from './let_declarations_retrieval';
-import { LetNameElement } from './let_names_collection_new';
+import { LetNameElement } from './let_names_collection';
 import { type ObjectLookUpTable } from './object_look_up_table';
 import { ObjectType } from './object_type';
 import { ObjectTypeResolution } from './object_type_resolution';
@@ -18,15 +18,25 @@ interface Entry extends LetNameElement {
 };
 
 function construct
-  (node: AstNode, objTable: ObjectLookUpTable): ObjectTypeResolution
+  (node: AstNode,
+   objTable: ObjectLookUpTable,
+   makeDefaultContextType?: () => ObjectType): ObjectTypeResolution
 {
+  makeDefaultContextType ??= () =>
+    ContextType.make(StringPool.make(node));
   const { error, setErrorFn, hasErrorSet } = StandardError.make();
   const mLetDecRetrieval = LetDeclarationsRetrieval.make(node);
+  const mCounter = (() => {
+    let i = 0;
+    return () => i++;
+  })();
+
   function assertedResolvedTypeOf(element: Entry): ObjectType {
     return element.typeResolution().resolve() ?? (() => {
       throw new Error('errors must be caught by now');
     })();
   }
+
   function onLetDecs<Type>(fn: (decs: Readonly<LetNameElement[]>) => Type): Type | undefined {
     const { elements, error } = mLetDecRetrieval;
     const els = elements();
@@ -35,6 +45,7 @@ function construct
     }
     return setErrorFn(error);
   }
+
   function onFunctionDef
     (element: Entry, fn: (funcType: FunctionType) => void)
   {
@@ -63,13 +74,12 @@ function construct
     (element: Entry, fn: (funcTable: FunctionLookUpTable) => Type): Type
   {
     const type = assertedResolvedTypeOf(element);
-    // const cvar = ContextVariable.make().setType(type);
     const lookUpTable = VariableDeclarationFunctionTable.
-      make( type, element.operator, 0 );
+      make( type, element.operator, mCounter() );
     return fn(lookUpTable);
   }
 
-  const getContext = memoize(() => ObjectType.make('Context'));
+  const getContext = memoize(makeDefaultContextType);
 
   const objTableWithContext = memoize(() => {
     const {

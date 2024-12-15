@@ -6,7 +6,7 @@ import { PutsFunctionLookUpTable } from '../src/puts_function_look_up_table';
 import { StringType } from '../src/string_type';
 import { TestHelpers } from './test_helpers';
 
-const { describeNamed } = TestHelpers
+const { describeNamed } = TestHelpers;
 
 describeNamed({ PutsFunctionLookUpTable }, () => {
   const stringType = StringType.instance();
@@ -25,7 +25,7 @@ describeNamed({ PutsFunctionLookUpTable }, () => {
       onBuiltIn((bif: BuiltInFunction) => {
         bif(stack, MemoryArray.make());
       });
-    expect(strings).toEqual(['hello', 'mario'])
+    expect(strings).toEqual(['hello', 'mario']);
   });
 
   it('can print only one string', () => {

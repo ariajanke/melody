@@ -1,13 +1,11 @@
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
-// import { ContextVariable } from './context_variable';
 import { PersistentStack } from './persistent_stack';
 import { ObjectTypeResolution } from './object_type_resolution';
 import { StandardErrorMessage } from './helpers';
 import { IntegerType } from './integer_type';
 import { StringType } from './string_type';
-import { ContextType } from './context_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -54,38 +52,10 @@ export const ObjectLookUpTable = (() => {
       [ Integer, String , Function ].forEach(addType);
       return inst;
     }
-
-    // const lookUpTuple = (() => {
-    //   type TupleLookUpTableEntry = {
-    //     object: ObjectType,
-    //     [uid: symbol]: TupleLookUpTableEntry | undefined
-    //   };
-
-    //   const mTable: TupleLookUpTableEntry = {
-    //     object: ObjectType.emptyTupleInstance()
-    //   };
-  
-    //   return (types: Readonly<ObjectType[]>): ObjectType => {
-    //     if (types.length === 1) {
-    //       return types[0];
-    //     }
-    //     // doesn't work for tuples with more than one member
-    //     let seekingOn = mTable;
-    //     let tupleName = 'Tuple(';
-    //     types.forEach((type: ObjectType) => {
-    //       tupleName += type.name();
-    //       seekingOn = seekingOn[type.uid()] ??=
-    //         { object: ObjectType.makeForTuple(types, `${tupleName})`) };
-    //       tupleName += ', ';
-    //     });
-    //     return seekingOn.object;
-    //   };
-    // })();
-
     function lookUpTuple(types: Readonly<ObjectType[]>) {
       const tupleType = ObjectType.makeForTuple(types);
       addType(tupleType);
-      return tupleType
+      return tupleType;
     }
 
     function lookUpByName(name: string): ObjectTypeResolution {
@@ -129,5 +99,5 @@ export const ObjectLookUpTable = (() => {
     return inst;
   }
 
-  return freeze({ make });//, getBuiltinTypes });
+  return freeze({ make });
 })();

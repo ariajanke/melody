@@ -10,7 +10,7 @@ import { TokenRange } from '../src/token_range';
 import { AstNodeVisitorBuilder } from '../src/ast_node_visitor';
 import { AstFunctionDefinitionNode } from '../src/ast_function_definition_node';
 import { AstTupleNode } from '../src/ast_tuple_node';
-import { OperativeStatementAstCreation } from '../src/ast_build/operative_statement_ast_creation';
+import { ContextType } from '../src/context_type';
 
 const { describeNamed } = TestHelpers;
 
@@ -386,7 +386,8 @@ describeNamed({ AstBuild }, () => {
 
     it('queue call is outside the function definition', () => {
       const rootNode = buildAst();
-      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const { points, verifyAllHit } = ReachPoint.makeCollection(2);
+      const [pt1, pt2] = points();
       const functionCalls: string[] = [];
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
@@ -394,8 +395,13 @@ describeNamed({ AstBuild }, () => {
           lineNodes.forEach((node: AstNode) => node.visit(visitor));
         }).
         visitIdentifier((node: AstFringeNode) => {
+          // 'puts' and 'queue' will both hit context once
+          if (node.asString() === '<context>') {
+            pt2.hitsAtExactly(2);
+            return;
+          }
           expect(node.asString()).toEqual('a');
-          hitsAtExactly(2);
+          pt1.hitsAtExactly(2);
         }).
         visitFunctionCall((node: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode): void => {
           functionCalls.push(node.name);
@@ -405,7 +411,7 @@ describeNamed({ AstBuild }, () => {
         finish();
       rootNode.visit(visitor);
       expect(functionCalls).toEqual([':=', 'puts', 'queue']);
-      expect(verifyHit()).toBeTruthy();
+      expect(verifyAllHit()).toBeTruthy();
     });
   });
 
@@ -487,7 +493,7 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
-          if (rec.type() === OperativeStatementAstCreation.contextReceiverDummyNode().type()) {
+          if (rec.type() === ContextType.asReceiverPlaceholderNode().type()) {
             expect(node.name).toEqual('puts');
             pt3.hitsAtExactly(1);
           } else {

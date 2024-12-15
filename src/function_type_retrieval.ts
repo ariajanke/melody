@@ -2,9 +2,10 @@ import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstIdentifierNode } from './ast_identifier_node';
 import { AstNode } from './ast_node';
 import { AstTupleNode } from './ast_tuple_node';
-import { ExecutionContext } from './execution_context';
 import { FunctionLookUpTable } from './function_look_up_table';
 import { Helpers, StandardError } from './helpers';
+import { type ObjectLookUpTable } from './object_look_up_table';
+import { type ObjectType } from './object_type';
 
 const { freeze } = Helpers;
 
@@ -12,23 +13,24 @@ function construct() {
   let mCall: AstFunctionCallNode | undefined;
   let mReceiver: AstNode | undefined; 
   let mParams: AstTupleNode | undefined;
-  let mContext: ExecutionContext | undefined;
+  let mContext: ObjectLookUpTable | undefined;
+  let mContextType: ObjectType | undefined;
 
   const { error, setErrorFn, setErrorMessage } = StandardError.make();
 
   function verifyMembersPresent() {
-    mCall || mReceiver || mParams || mContext || (() => {
+    mCall || mReceiver || mParams || mContext || mContextType || (() => {
       throw new Error('Must call reset with all three parameters');
     })();
   }
 
   function getReceiverType() {
-    const tr = (mContext as ExecutionContext).executionTypeOf(mReceiver as AstNode);
+    const tr = (mReceiver as AstNode).executionType(mContext as ObjectLookUpTable);
     return tr.resolve() ?? setErrorFn(tr.error);
   }
 
   function getParametersType() {
-    const tr = (mContext as ExecutionContext).executionTypeOf(mParams as AstTupleNode);
+    const tr = (mParams as AstTupleNode).executionType(mContext as ObjectLookUpTable);
     return tr.resolve() ?? setErrorFn(tr.error);
   }
 
@@ -36,22 +38,23 @@ function construct() {
     const call = mCall as AstFunctionCallNode;
     if (call.name === ':=' && AstIdentifierNode.hasCreated(mReceiver as AstNode)) {
       const receiverAsIdentifier = mReceiver as AstIdentifierNode;
-      const context = mContext as ExecutionContext;
-      return context.
-        lookUpOnContextType(receiverAsIdentifier.contextMethodName()) ??
-        context.lookUpOnContextType(receiverAsIdentifier.asString());
+      return (mContextType as ObjectType).
+        lookUp(receiverAsIdentifier.contextMethodName()) ??
+        (mContextType as ObjectType).
+          lookUp(receiverAsIdentifier.asString());
     }
     return undefined;
   }
 
   const inst = freeze({
     reset(call: AstFunctionCallNode, receiver: AstNode, params: AstTupleNode,
-          context: ExecutionContext)
+          lookUpTable: ObjectLookUpTable, contextType: ObjectType)
     {
       mCall = call;
       mReceiver = receiver;
       mParams = params;
-      mContext = context;
+      mContext = lookUpTable;
+      mContextType = contextType;
       return inst;
     },
     retrievedType() {

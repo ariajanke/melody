@@ -130,6 +130,6 @@ export const ObjectType = (() => {
     make,
     makeForTuple,
     emptyTupleInstance: memoize(() => makeForTuple([])),
-    wildCardFunctionName: () => '$' // NOTE: it'll appear in code as $$
+    wildCardFunctionName: () => '<any>' // NOTE: it'll appear in code as $<any>
   });
 })();

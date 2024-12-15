@@ -39,7 +39,7 @@ const class_ = freeze({
       visitFunctionDefinition: (_0: AstFunctionDefinitionNode, lineNodes: AstNode[]): string[] =>
         reduceToStrings(lineNodes),
       visitLiteral: (node: AstLiteralNode): string[] => {
-        if (AstStringLiteralNode.hasCreated(  node )) { //.type() === AstNode.types.stringLiteral) {
+        if (AstStringLiteralNode.hasCreated(  node )) {
           return [node.asString()];
         }
         return [];

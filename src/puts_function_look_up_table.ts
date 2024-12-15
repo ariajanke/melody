@@ -24,7 +24,7 @@ export const PutsFunctionLookUpTable = freeze({
             return str;
           }
           return '??UNKNOWN??';
-        }
+        };
       }
       return (stack: PersistentStack<number>) =>
         `${stack.pop()}`;
@@ -38,7 +38,7 @@ export const PutsFunctionLookUpTable = freeze({
             map((fn: (stack: PersistentStack<number>) => string) => fn(stack)).
             reverse().
             forEach(mPutsFn);
-        }
+        };
     }
 
     function lookUpImpl

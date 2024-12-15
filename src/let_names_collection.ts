@@ -1,6 +1,5 @@
 import { AstTupleNode } from './ast_tuple_node';
 import { Helpers, StandardError, type StandardErrorFn } from './helpers';
-import { ObjectType } from './object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -14,26 +13,27 @@ export const LetNamesCollection = freeze({
     });
     return inst satisfies LetNamesCollection;
   },
-  make: (mNames: string[], operator: string, type: ObjectType, node: AstTupleNode) => {
+  make: (mNames: string[], operator: string, dependeeNames: string[], node: AstTupleNode) => {
     const inst = freeze({
       elements: memoize((): Readonly<LetNameElement[]> | undefined => {
         return mNames.
-          map((name: string) => ({ name, operator, type, node }));
+          map((name: string) => ({ name, operator, dependeeNames, node }));
       }),
       error: () => StandardError.make().error(),
     });
     return inst satisfies LetNamesCollection;
   },
-  makeEmpty: () => freeze({
+  makeEmpty: memoize(() => freeze({
     elements: () => [],
     error: () => StandardError.make().error(),
-  }) satisfies LetNamesCollection
+  }) satisfies LetNamesCollection)
 });
 
 export type LetNameElement = {
   name: string,
   operator: string,
-  type: ObjectType,
+  dependeeNames: string[],
+  // type: ObjectType,
   node: AstTupleNode
 }
 

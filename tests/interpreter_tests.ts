@@ -1,19 +1,15 @@
 import { TestHelpers } from './test_helpers';
-import { Interpreter } from '../src/interpreter';
-import { ExecutionContext } from '../src/execution_context';
-import { AstStringLiteralNode } from '../src/ast_string_literal_node';
-import { ObjectType } from '../src/object_type';
-import { AstTupleNode } from '../src/ast_tuple_node';
-import { BuiltInFunction, FunctionType } from '../src/function_type';
+// import { Interpreter } from '../src/interpreter';
 import { MemoryArray } from '../src/memory_array';
-import { Helpers } from '../src/helpers';
 import { ContextType, StringPool } from '../src/context_type';
 import { PersistentStack } from '../src/persistent_stack';
+import { VastInterpreter } from '../src/vast_interpreter';
+import { VariableDeclarationFunctionTable } from '../src/variable_declaration_function_table';
+import { StringType } from '../src/string_type';
 
-const { memoize } = Helpers;
 const { describeNamed } = TestHelpers;
 
-describeNamed({ Interpreter }, () => {
+describeNamed({ VastInterpreter }, () => {
   function makePutsFunction() {
     const printedStrings: string[] = [];
     const putsFunction = (str: string) => { printedStrings.push(str); };
@@ -21,131 +17,117 @@ describeNamed({ Interpreter }, () => {
     return { putsFunction, printedStrings };
   }
 
+  function ranInterpreterOk(interpreter: VastInterpreter) {
+    if (!interpreter.interpret()) {
+      throw new Error(interpreter.errors()[0].message);
+    }
+  }
+
   describe('integration specs', () => {
     it('compiles and runs a "hello world!" program', () => {
-      const programRootNode = Interpreter.buildFor("puts('hello', 'there', ' world!')");
       const { printedStrings, putsFunction } = makePutsFunction();
-      
-      const interpreter = Interpreter.make({
-        ...Interpreter.defaultInjections(),
+      const interpreter = VastInterpreter.make("puts('hello', 'there', ' world!')", {
+        ...VastInterpreter.defaultInjections(),
         putsFunction
       });
-      interpreter.interpret(programRootNode);
+
+      ranInterpreterOk(interpreter);
       expect(printedStrings).toEqual(['hello', 'there' ,' world!']);
     });
 
     it('compiles and runs a "hello world!" program with a variable', () => {
-      const programRootNode = Interpreter.buildFor("puts(foo)");
       const { printedStrings, putsFunction } = makePutsFunction();
       const stringPool = StringPool.makeForStrings(() => ['hello world!']);
       const makeStringPool = () => stringPool;
       const contextType = ContextType.
         make( stringPool, { ...ContextType.defaultInjections(), putsFunction } );
-      const context = ExecutionContext.make( contextType );
-      const fooNode = AstStringLiteralNode.make('foo');
+      const makeContextType = () => contextType;
       const memory = MemoryArray.make();
       const stack = PersistentStack.make<number>(() => Infinity);
+      const fooTable = VariableDeclarationFunctionTable.
+        make(StringType.instance(), ':=', 0);
+      
+      contextType.setLookUpTable({ ['.foo']: fooTable });
+      const spOffset = 1;
+      memory.store(fooTable.offset() + spOffset, 0);
 
-      const fooType = context.declareVariable({
-        name: 'foo',
-        type: context.executionTypeOf(fooNode).resolve() as ObjectType,
-        operator: ':=',
-        node: AstTupleNode.make(',', [fooNode])
-      });
-      (context.
-        lookUpOnContextType('.foo').
-        byParameters([fooType]) as FunctionType ).
-        onBuiltIn((bif: BuiltInFunction) => {
-          stack.push(0); // 'hello world!'
-          bif(stack, memory);
-        });
-      const interpreter = Interpreter.make({
-        ...Interpreter.defaultInjections(),
+      const interpreter = VastInterpreter.make('puts(foo)', {
+        ...VastInterpreter.defaultInjections(),
         makeMemory : () => memory,
         makeStack  : () => stack,
-        makeContextType: () => contextType,
-        makeContext: () => context,
         putsFunction,
-        makeStringPool
+        makeStringPool,
+        makeContextType
       });
 
-      interpreter.interpret(programRootNode);
+      ranInterpreterOk(interpreter);
       expect(printedStrings).toEqual(['hello world!']);
     });
 
     it('compiles and runs a multiline "hello world!" program', () => {
-      const programRootNode = Interpreter.
-      buildFor("puts('hello')\nputs('world!')");
       const { printedStrings, putsFunction } = makePutsFunction();
-      const interpreter = Interpreter.
-        make({ ...Interpreter.defaultInjections(), putsFunction });
-      interpreter.interpret(programRootNode);
+      const interpreter = VastInterpreter.
+        make("puts('hello')\nputs('world!')", {
+          ...VastInterpreter.defaultInjections(),
+          putsFunction
+        });
+      ranInterpreterOk(interpreter);
       expect(printedStrings).toEqual(['hello', 'world!']);
     });
 
     it('compiles and runs a "hello world!" program with an assignment', () => {
-      const programRootNode = Interpreter.buildFor(`
+      const { printedStrings, putsFunction } = makePutsFunction();
+      const stringPool = StringPool.makeForStrings(() => ['hello world!']);
+      const contextType = ContextType.
+        make( stringPool, { ...ContextType.defaultInjections(), putsFunction } );
+      const fooTable = VariableDeclarationFunctionTable.
+        make(StringType.instance(), ':=', 0);
+      
+      contextType.setLookUpTable({ ['.foo']: fooTable });
+      const makeContextType = () => contextType;
+      const interpreter = VastInterpreter.make(`
         foo := 'hello world!'
         puts(foo)
-      `);
-      const makeStringPool = memoize(() =>
-        StringPool.makeForStrings(() => ['hello world!']));
-      const { printedStrings, putsFunction } = makePutsFunction();
-      const contextType = ContextType.make(makeStringPool(), {
-        ...ContextType.defaultInjections(),
-        putsFunction
+      `, {
+        ...VastInterpreter.defaultInjections(),
+        putsFunction,
+        makeContextType
       });
-      const context = ExecutionContext.make( contextType );
-      
-      const fooNode = AstStringLiteralNode.make('foo');
-      context.
-        declareVariable({
-          name: 'foo',
-          type: context.executionTypeOf(fooNode).resolve() as ObjectType,
-          operator: ':=',
-          node: AstTupleNode.make(',', [fooNode])});
-      const interpreter = Interpreter.make({
-        ...Interpreter.defaultInjections(),
-        makeStringPool,
-        makeContext: () => context,
-        makeContextType: () => contextType,
-        putsFunction
-      });
-      interpreter.interpret(programRootNode);
+      ranInterpreterOk(interpreter);
+
       expect(printedStrings).toEqual(['hello world!']);
     });
 
     it('compiles and runs a simple program with a let declaration', () => {
-      const programRootNode = Interpreter.buildFor(`
+      const { printedStrings, putsFunction } = makePutsFunction();
+      const interpreter = VastInterpreter.make(`
         let a := 'hello world!'
         puts(a)
-      `);
-      const { printedStrings, putsFunction } = makePutsFunction();
-      const intr = Interpreter.make({
-        ...Interpreter.defaultInjections(),
+      `, {
+        ...VastInterpreter.defaultInjections(),
         putsFunction
       });
-      intr.interpret(programRootNode);
+      ranInterpreterOk(interpreter);
       expect(printedStrings).toEqual(['hello world!']);
     });
 
     it('compiles and runs a simple adder program', () => {
-      const programRootNode = Interpreter.buildFor(`
+      const { printedStrings, putsFunction } = makePutsFunction();
+      const interpreter = VastInterpreter.make(`
         let a := 2
         let b := a + 2
         puts(b)
-      `);
-      const { printedStrings, putsFunction } = makePutsFunction();
-      const intr = Interpreter.make({
-        ...Interpreter.defaultInjections(),
+      `, {
+        ...VastInterpreter.defaultInjections(),
         putsFunction
       });
-      intr.interpret(programRootNode);
+      ranInterpreterOk(interpreter);
       expect(printedStrings).toEqual(['4']);
     });
 
     it('compiles and runs a program with simple functions', () => {
-      const rootNode = Interpreter.buildFor(`
+      const { printedStrings, putsFunction } = makePutsFunction();
+      const interpreter = VastInterpreter.make(`
         let a := fn
           puts('world')
         ~
@@ -153,13 +135,11 @@ describeNamed({ Interpreter }, () => {
         
         b()
         a()
-      `);
-      const { printedStrings, putsFunction } = makePutsFunction();
-      const intr = Interpreter.make({
-        ...Interpreter.defaultInjections(),
+      `, {
+        ...VastInterpreter.defaultInjections(),
         putsFunction
       });
-      intr.interpret(rootNode);
+      ranInterpreterOk(interpreter);
       expect(printedStrings).toEqual(['hello', 'world']);
     });
   });

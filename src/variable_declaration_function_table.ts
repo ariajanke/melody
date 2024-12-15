@@ -22,7 +22,8 @@ export const VariableDeclarationFunctionTable = freeze({
       setReturns([varType]).
       setBuiltin((stack: PersistentStack<number>, memory: MemoryArray) =>
       {
-        stack.push( memory.load( memoryOffset ) );
+        const sp = memory.load(MemoryArray.stackPointerLocation());
+        stack.push( memory.load( sp + memoryOffset ) );
       }).
       finish();
     // still need setter (once though) for the "=" case
@@ -37,8 +38,9 @@ export const VariableDeclarationFunctionTable = freeze({
         setReturns([varType]).
         setBuiltin((stack: PersistentStack<number>, memory: MemoryArray) =>
         {
+          const sp = memory.load(MemoryArray.stackPointerLocation());
           const cvarToStore = stack.pop();
-          memory.store(memoryOffset, cvarToStore);
+          memory.store(sp + memoryOffset, cvarToStore);
           // also do getter things
           mGetter.onBuiltIn((bif: BuiltInFunction) => {
             bif(stack, memory);

@@ -4,38 +4,20 @@ import { AstNode } from '../ast_node';
 import { AstTupleNode } from '../ast_tuple_node';
 import { AstLetDeclarationNode } from '../ast_let_declaration_node';
 import { AstFunctionCallNode } from '../ast_function_call_node';
-import { AstFringeNode, AstLiteralNode } from '../ast_fringe_node'; 
+import { AstFringeNode } from '../ast_fringe_node'; 
 import {
   type OperativeStatementVisitable,
   type OperativeStatementVisitor
 } from '../operative_statement_builder';
 import { AstIdentifierNode } from '../ast_identifier_node';
-import { type ObjectLookUpTable } from '../object_look_up_table';
-import { type AstNodeVisitor } from '../ast_node_visitor';
-import { type ContextVariable } from '../context_variable';
-import { ContextType } from '../context_type';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
 
 export interface OperativeStatementAstCreation extends OperativeStatementVisitor {
   finish: () => AstNode
 };
 
 export const OperativeStatementAstCreation = freeze({
-  contextReceiverDummyNode: memoize((): AstLiteralNode => {
-    const inst = freeze({
-      value: (): ContextVariable => {
-        throw new Error('Special context type cannot have a value');
-      },
-      visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
-        visitor.visitLiteral(inst),
-      type: memoize(Symbol),
-      executionType: (objTable: ObjectLookUpTable) => 
-        objTable.lookUpByName(ContextType.typeName()),
-      asString: () => '<context>'
-    });
-    return inst;
-  }),
   make: (): OperativeStatementAstCreation => {
     const makeFringeForOperator = (() => {
       const sOperatorFringes: { [name: string]: AstNode } = {};
@@ -56,7 +38,7 @@ export const OperativeStatementAstCreation = freeze({
       const first = popOrThrow();
       const second = popOrThrow();
 
-      if (AstTupleNode.hasCreated( second )) {//.type() === AstNode.types.tuple) {
+      if (AstTupleNode.hasCreated( second )) {
         (second as AstTupleNode).append(first);
         return mNodeStack.push(second);
       }
@@ -69,9 +51,7 @@ export const OperativeStatementAstCreation = freeze({
       const argsNode = popOrThrow();
       const nameNode = AstFringeNode.downcast(popOrThrow());
       const callNode = AstFunctionCallNode.
-        make(OperativeStatementAstCreation.contextReceiverDummyNode(),
-             nameNode,
-             argsNode);
+        makeWithContextReceiver(nameNode, argsNode);
       mNodeStack.push(callNode);
     };
     const mOperatorFactories = {
