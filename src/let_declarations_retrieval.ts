@@ -2,8 +2,8 @@ import { AstNode } from './ast_node';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { AstTupleNode } from './ast_tuple_node';
 import { StandardErrorFn } from './helpers';
-import { LetNamesCollectionNew } from './let_names_collection_new';
-import { LetNameElement } from '../src/let_names_collection_new';
+import { LetNamesCollection } from './let_names_collection';
+import { LetNameElement } from './let_names_collection';
 import { Helpers } from './helpers';
 import { AstFunctionCallNode } from './ast_function_call_node';
 import { AstLetDeclarationNode } from './ast_let_declaration_node';
@@ -14,48 +14,75 @@ import { LetVisitor2 } from './let_visitor';
 
 const { freeze, memoize } = Helpers;
 
-function makeVisitorInstance(): AstNodeVisitor<LetNamesCollectionNew> {
-  type Reducable = [Readonly<LetNameElement[]> | undefined, StandardErrorFn];
-  function reduceTuple(tuple: AstTupleNode) {
-    const collections = tuple.map((node: AstNode) => node.visit(inst));
-      const [elements, error] = collections.
-        map((collection: LetNamesCollectionNew): Reducable =>
-          [collection.elements(), collection.error]).
-        reduce((prev: Reducable, cur: Reducable): Reducable => {
-          if (prev[0]) {
-            const [elements, errorFn] = cur;
-            if (elements) {
-              return [prev[0].concat(elements), errorFn];
-            }
-            return cur;
-          }
-          return prev;
-        });
-      return freeze({ elements: () => elements, error });
+type LetCollectionVisitor = AstNodeVisitor<LetNamesCollection>;
+
+type Reducable = [Readonly<LetNameElement[]> | undefined, StandardErrorFn];
+function reduceTuple(collections: LetNamesCollection[]) {
+  const [elements, error] = collections.
+    map((collection: LetNamesCollection): Reducable =>
+      [collection.elements(), collection.error]).
+    reduce((prev: Reducable, cur: Reducable): Reducable => {
+      if (prev[0]) {
+        const [elements, errorFn] = cur;
+        if (elements) {
+          return [prev[0].concat(elements), errorFn];
+        }
+        return cur;
+      }
+      return prev;
+    });
+  return freeze({ elements: () => elements, error });
+}
+
+function makeVisitorInstance(): LetCollectionVisitor {
+  function reduceTuple_(tuple: AstTupleNode) {
+    return reduceTuple( tuple.map((node: AstNode) => node.visit(inst)) );
   }
   const inst = freeze({
-    visitFunctionCall: (callNode: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode): LetNamesCollectionNew => {
-      return reduceTuple(fArgs);
+    visitFunctionCall: (_0: AstFunctionCallNode, _1: AstNode, fArgs: AstTupleNode): LetNamesCollection => {
+      return reduceTuple_(fArgs);
     },
-    visitLetDeclaration: (letNode: AstLetDeclarationNode, node: AstNode) => {
+    visitLetDeclaration: (_0: AstLetDeclarationNode, node: AstNode) => {
       return node.visit( LetVisitor2.make() ).finish();
     },
     visitIdentifier: (_0: AstIdentifierNode) =>
-      LetNamesCollectionNew.makeEmpty(),
-    visitTuple: (tuple: AstTupleNode): LetNamesCollectionNew =>
-      reduceTuple( tuple),
+      LetNamesCollection.makeEmpty(),
+    visitTuple: (tuple: AstTupleNode): LetNamesCollection =>
+      reduceTuple_(tuple),
     visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) =>
-      LetNamesCollectionNew.makeEmpty(),
+      LetNamesCollection.makeEmpty(),
     visitLiteral: (_0: AstLiteralNode) =>
-      LetNamesCollectionNew.makeEmpty()
+      LetNamesCollection.makeEmpty()
+  });
+  return inst;
+}
+
+function makeTopVisitor(): AstNodeVisitor<LetNamesCollection> {
+  const visitor = visitorInstance();
+  const inst = freeze({
+    visitFunctionCall: (_0: AstFunctionCallNode, _1: AstNode, fArgs: AstTupleNode): LetNamesCollection => {
+      return fArgs.visit(visitor);
+    },
+    visitLetDeclaration: (letNode: AstLetDeclarationNode, _1: AstNode) => {
+      return letNode.visit(visitor);
+    },
+    visitIdentifier: (_0: AstIdentifierNode) =>
+      LetNamesCollection.makeEmpty(),
+    visitTuple: (tuple: AstTupleNode): LetNamesCollection =>
+      tuple.visit(visitor),
+    visitFunctionDefinition: (_0: AstFunctionDefinitionNode, nodes: AstNode[]) =>
+      reduceTuple( nodes.map((node: AstNode) => node.visit(visitor)) ),
+    visitLiteral: (_0: AstLiteralNode) =>
+      LetNamesCollection.makeEmpty()
   });
   return inst;
 }
 
 const visitorInstance = memoize(makeVisitorInstance);
+const topVisitor = memoize(makeTopVisitor);
 
-function construct(mNode: AstNode): LetNamesCollectionNew {
-  const mVisitor = visitorInstance();
+function construct(mNode: AstNode): LetNamesCollection {
+  const mVisitor = topVisitor();
   const res = memoize(() => mNode.visit(mVisitor));
   
   return freeze({

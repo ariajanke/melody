@@ -1,9 +1,8 @@
 import { Helpers } from './helpers';
-// import { type ContextVariable } from './context_variable';
 import { type PersistentStack } from './persistent_stack';
 import { type AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { MemoryArray } from './memory_array';
-import { type ObjectType } from './object_type';
+import { ObjectType } from './object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -52,7 +51,8 @@ export interface FunctionType {
   // can't let this get tangled up with the intepreter (dependancy wise)
   // have the intepreter/compiler/whatever provide a table of strategies
   // let this function type choose which strategy is appropriate
-  withCallStrategy: () => CallHandlingStrategies
+  withCallStrategy: () => CallHandlingStrategies,
+  composeWith(compositor: FunctionCompositor): FunctionCompositor
 };
 
 export interface IncompleteFunctionType {
@@ -60,7 +60,6 @@ export interface IncompleteFunctionType {
   setParameters: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
   setReturns: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
   setBuiltin: (fn: BuiltInFunction) => IncompleteFunctionType,
-  // setWasm: (wcw: WasmCodeWriter) => IncompleteFunctionType,
   setAstNode: (node: AstFunctionDefinitionNode) => IncompleteFunctionType,
   setCallStrategy: (fn: () => CallHandlingStrategies) => IncompleteFunctionType,
   finish: () => FunctionType
@@ -74,6 +73,43 @@ type FunctionInitialization = {
   name        : string,
   callStrategy: CallHandlingStrategies
 };
+
+export interface FunctionCompositor {
+  pushBuiltin: (fn: BuiltInFunction, returnTypes: Readonly<ObjectType[]>) => FunctionCompositor,
+  haveReturnNothing: () => FunctionCompositor,
+  finish(): FunctionType
+};
+
+export const FunctionCompositor = freeze({
+  make() {
+    const mBuiltins: BuiltInFunction[] = [];
+    const mTypes: ObjectType[][] = [];
+    const mDefaultReturnTypes = () =>
+      mTypes.map((types: ObjectType[]) => ObjectType.makeForTuple(types));
+    let mOverrideReturn: () => Readonly<ObjectType[]> | undefined = () => undefined;
+    const inst = freeze({
+      pushBuiltin(fn: BuiltInFunction, _1: Readonly<ObjectType[]>): FunctionCompositor {
+        mBuiltins.push(fn);
+        return inst;
+      },
+      haveReturnNothing() {
+        mOverrideReturn = (): Readonly<ObjectType[]> => [];
+        return inst;
+      },
+      finish: memoize((): FunctionType =>
+        IncompleteFunctionType.
+          make().
+          setCallStrategy(CallHandlingStrategies.noReceiver).
+          setBuiltin((stack: PersistentStack<number>, memory: MemoryArray) => {
+            mBuiltins.forEach((fn: BuiltInFunction) => fn(stack, memory));
+          }).
+          setParameters([]).
+          setReturns(mOverrideReturn() ?? mDefaultReturnTypes()).
+          finish())
+    });
+    return inst;
+  }
+});
 
 export const IncompleteFunctionType = (() => {
   const reservedAnonymousName = '<anonymous>';
@@ -173,6 +209,11 @@ export const FunctionType = (() => {
       name: () => name,
       withCallStrategy: () => callStrategy,
       onNodeImplementation,
+      composeWith(compositor: FunctionCompositor): FunctionCompositor {
+        return compositor.pushBuiltin(builtin ?? (() => {
+          throw new Error('no builtin');
+        })(), returns);
+      },
       onBuiltIn
     });
     return inst;

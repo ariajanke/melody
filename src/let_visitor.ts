@@ -5,7 +5,7 @@ import { AstLetDeclarationNode } from './ast_let_declaration_node';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { AstTupleNode } from './ast_tuple_node';
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
-import { LetNamesCollectorNew } from './let_names_collector_new';
+import { LetNamesCollector } from './let_names_collector';
 import { NamingExpressionVisitor } from './naming_expression_visitor';
 import { AstIdentifierNode } from './ast_identifier_node';
 import { AstLiteralNode } from './ast_fringe_node';
@@ -37,7 +37,7 @@ const DependeeNameRetrieval = (() => {
 })();
 
 export const LetVisitor2 = (() => {
-  function make(): AstNodeVisitor<LetNamesCollectorNew> {
+  function make(): AstNodeVisitor<LetNamesCollector> {
     const inst = freeze({
       visitFunctionCall(callNode: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode) {
         // receiver('s name) is being named by fArgs
@@ -47,18 +47,18 @@ export const LetVisitor2 = (() => {
         }
         const names = [...res.names() as Readonly<string[]>];
         const dependeeNames = fArgs.visit(DependeeNameRetrieval.make());
-        return LetNamesCollectorNew.make(names, callNode.name, dependeeNames, fArgs);
+        return LetNamesCollector.make(names, callNode.name, dependeeNames, fArgs);
       },
       visitLetDeclaration: (_0: AstLetDeclarationNode, _1: AstNode) =>
-        LetNamesCollectorNew.makeErroneous('no nested lets allowed'),
+        LetNamesCollector.makeErroneous('no nested lets allowed'),
       visitIdentifier: (_0: AstIdentifierNode) =>
-        LetNamesCollectorNew.makeErroneous('missing operator "=" or ":="'),
-      visitTuple: (_0: AstTupleNode) => LetNamesCollectorNew.
+        LetNamesCollector.makeErroneous('missing operator "=" or ":="'),
+      visitTuple: (_0: AstTupleNode) => LetNamesCollector.
         makeErroneous('nott supported'), // maybe for function param tuples?
       visitFunctionDefinition: (_0: AstFunctionDefinitionNode, _1: AstNode[]) =>
-        LetNamesCollectorNew.makeErroneous('fn def doesn\'t make sense here'),
+        LetNamesCollector.makeErroneous('fn def doesn\'t make sense here'),
       visitLiteral: (_0: AstLiteralNode) =>
-        LetNamesCollectorNew.makeErroneous('cannot use literal as a name')
+        LetNamesCollector.makeErroneous('cannot use literal as a name')
     });
     return inst;
   }

@@ -9,25 +9,8 @@ type FunctionLookUpTableEntry = {
   [uid: symbol]: FunctionLookUpTableEntry | undefined
 };
 
-// function allTheSameReturns(
-//   root: FunctionLookUpTableEntry): 'null' | symbol | undefined
-// {
-//   // and that's why I need all my tuple shit
-//   let implType: 'null' | symbol | undefined = root.implementation?.returns();
-
-//   Object.getOwnPropertySymbols(root).map((val: symbol) => {
-//     implType ??= val;
-//     return (implType === val) && allTheSameReturns(root) === val;
-//   })
-// }
-
-// // function verifySameReturns() {
-
-// // }
-
 export const FunctionLookUpTable = freeze({
   make(mTable: FunctionLookUpTableEntry) {
-    mTable
     return freeze({
       byParameters(types: Readonly<ObjectType[]>): FunctionType | undefined {
         let table: FunctionLookUpTableEntry | undefined = mTable;

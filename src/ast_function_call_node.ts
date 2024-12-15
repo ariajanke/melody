@@ -10,6 +10,7 @@ import { FunctionLookUpTable } from './function_look_up_table';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { AstIdentifierNode } from './ast_identifier_node';
 import { AstStringLiteralNode } from './ast_string_literal_node';
+import { ContextType } from './context_type';
 
 const { freeze } = Helpers;
 
@@ -30,6 +31,11 @@ export const AstFunctionCallNode = (() => {
   // equally import, is *what* is receiving the call
   // askInteger() the current context
   // 1 + 2 one receives a "+" call
+
+  function makeWithContextReceiver(mName: AstFringeNode, mArgNode: AstNode) {
+    return make(ContextType.asReceiverPlaceholderNode(), mName, mArgNode);
+  }
+
   function make(mReceiver: AstNode, mName: AstFringeNode, mArgNode: AstNode): AstFunctionCallNode
   {
     const mArguments: AstTupleNode = (() => {
@@ -134,5 +140,5 @@ export const AstFunctionCallNode = (() => {
     return inst;
   }
 
-  return freeze({ make, hasCreated, type });
+  return freeze({ make, hasCreated, type, makeWithContextReceiver });
 })();

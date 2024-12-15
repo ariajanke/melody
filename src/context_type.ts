@@ -1,6 +1,5 @@
 import { AstNode } from './ast_node';
 import { AstStringLiteralNode } from './ast_string_literal_node';
-// import { ContextVariable } from './context_variable';
 import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
 import { Helpers } from './helpers';
@@ -8,6 +7,9 @@ import { IntegerType } from './integer_type';
 import { ObjectType } from './object_type';
 import { PersistentStack } from './persistent_stack';
 import { StringType } from './string_type';
+import { type AstNodeVisitor } from './ast_node_visitor';
+import { AstIdentifierNode } from './ast_identifier_node';
+import { type ObjectLookUpTable } from './object_look_up_table';
 
 const { memoize, freeze } = Helpers;
 const { noReceiver } = CallHandlingStrategies;
@@ -59,6 +61,24 @@ const defaultInjections = memoize(() => freeze({
   getIntegerType: IntegerType.instance
 }));
 
+export type ContextTypeInjections = ReturnType<typeof defaultInjections>;
+
+function contextReceiverDummyNode(): AstIdentifierNode {
+  const inst = freeze({
+    value: () => {
+      throw new Error('Special context type cannot have a value');
+    },
+    visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
+      visitor.visitIdentifier(inst),
+    type: AstIdentifierNode.type,
+    executionType: (objTable: ObjectLookUpTable) => 
+      objTable.lookUpByName(ContextType.typeName()),
+    asString: () => '<context>',
+    contextMethodName: () => '<context>' // call by "$<context>"
+  });
+  return inst;
+}
+
 function construct(mStringPool: StringPool, injections = defaultInjections()) {
   const {
     putsFunction,
@@ -91,18 +111,33 @@ function construct(mStringPool: StringPool, injections = defaultInjections()) {
     }).
     finish();
 
+  const { contextMethodName } = class_.asReceiverPlaceholderNode();
+  const getSelf = IncompleteFunctionType.
+    make().
+    setCallStrategy(noReceiver).
+    setName(contextMethodName()).
+    setParameters([]).
+    setReturns([]).
+    setBuiltin((_0: PersistentStack<number>) => {}).
+    finish();
+
   const puts = PutsFunctionLookUpTable.make(mStringPool, putsFunction);
 
   return ObjectType.
     make(class_.typeName()).
-    setLookUp({ askString, askInteger }).
+    setLookUp({
+      askString,
+      askInteger,
+      [contextMethodName()]: getSelf
+    }).
     setLookUpTable({ puts });
 }
 
 const class_ = freeze({
   make: construct,
   defaultInjections,
-  typeName: () => 'Context'
+  typeName: () => 'Context',
+  asReceiverPlaceholderNode: memoize(contextReceiverDummyNode)
 });
 
 export const ContextType = class_;
