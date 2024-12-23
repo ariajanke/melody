@@ -5,6 +5,7 @@ import { ObjectTypeResolution } from './object_type_resolution';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { AstFringeNode } from './ast_fringe_node';
 import { ContextType } from './context_type';
+import { ObjectType } from './object_type';
 
 const { freeze } = Helpers;
 
@@ -25,13 +26,12 @@ export const AstIdentifierNode = (() => {
         }
         const funcType = ctxType.
           lookUp(inst.contextMethodName())?.
-          byParameters([]);
+          byParameters(ObjectType.emptyTupleInstance());
         if (!funcType) {
           return ObjectTypeResolution.
             makeForError(`"${value}" is not declared`);
         }
-        return ObjectTypeResolution.
-          makeFixedForType(oTable.lookUpTuple(funcType.returns()));
+        return ObjectTypeResolution.makeFixedForType(funcType.returns());
         // return types.lookUpIdentifierType(value);
       },
       type,

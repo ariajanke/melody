@@ -1,8 +1,7 @@
 import { Helpers } from './helpers';
-import { type PersistentStack } from './persistent_stack';
 import { type AstFunctionDefinitionNode } from './ast_function_definition_node';
-import { MemoryArray } from './memory_array';
 import { ObjectType } from './object_type';
+import { type FunctionCompositor } from './function_compositor';
 
 const { freeze, memoize } = Helpers;
 
@@ -34,149 +33,164 @@ export const CallHandlingStrategies = (() => {
   });
 })();
 
+export interface CodeWriter {
+  pushInteger(i: number): CodeWriter,
+  addIntegers(): CodeWriter,
+  subtractIntegers(): CodeWriter,
+  multiplyIntegers(): CodeWriter,
+  loadInteger(): CodeWriter,
+  storeInteger(): CodeWriter,
+  printInteger(): CodeWriter,
+  printString(): CodeWriter,
+  askString(): CodeWriter,
+  askInteger(): CodeWriter,
+  swapTopTwo(): CodeWriter,
+  drop(): CodeWriter
+}
+
+type CallingContextFactory =
+  (callingContext: CallingContext) => CallingContext;
+
+export interface CallingContext {
+  // TODO refactor me to take only one object type
+  canTake(...objTypes: Readonly<ObjectType[]>): boolean
+}
+
+export const CallingContext = freeze({
+  toTakeAll: (_0: CallingContext) =>
+    CallingContext.canTakeAll(),
+  toTakeNothing: (_0: CallingContext) =>
+    CallingContext.canTakeNothing(),
+  toInherit: (callingContext: CallingContext) =>
+    callingContext,
+  canTakeAll: memoize((): CallingContext => freeze({
+    canTake(..._00: Readonly<ObjectType[]>) { return true; }
+  })),
+  canTakeNothing: memoize((): CallingContext => freeze({
+    canTake(...results: Readonly<ObjectType[]>) {
+      return results.length === 0;
+    }
+  }))
+});
+
 export type BuiltInFunction =
-  (stack: PersistentStack<number>,
-   memory: MemoryArray) => void;
+  (callingContext: CallingContext,
+   codeWriter: CodeWriter) => void;
 
 export interface FunctionType {
-  parameters: () => Readonly<ObjectType[]>,
+  parameters: () => ObjectType,
   onBuiltIn: (fn: (bif: BuiltInFunction) => void) => FunctionType,
   onNodeImplementation: (fn: (node: AstFunctionDefinitionNode) => void) => FunctionType,
   // how do I prevent this type from becoming an implementation "dumping ground"?
   // visitWasmCodeWriter
   name: () => string,
-  returns: () => Readonly<ObjectType[]>,
+  returns: () => ObjectType,
   uid: () => symbol,
   // have to know for instance, how to handle the lhs identifier
   // can't let this get tangled up with the intepreter (dependancy wise)
   // have the intepreter/compiler/whatever provide a table of strategies
   // let this function type choose which strategy is appropriate
   withCallStrategy: () => CallHandlingStrategies,
+  // really also receiver too
+  callingContextForParameters: (callingContext: CallingContext) => CallingContext,
   composeWith(compositor: FunctionCompositor): FunctionCompositor
 };
 
 export interface IncompleteFunctionType {
   setName: (name: string) => IncompleteFunctionType,
-  setParameters: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
-  setReturns: (args: Readonly<ObjectType[]>) => IncompleteFunctionType,
+  setParameters: (args: ObjectType) => IncompleteFunctionType,
+  setReturns: (args: ObjectType) => IncompleteFunctionType,
   setBuiltin: (fn: BuiltInFunction) => IncompleteFunctionType,
   setAstNode: (node: AstFunctionDefinitionNode) => IncompleteFunctionType,
   setCallStrategy: (fn: () => CallHandlingStrategies) => IncompleteFunctionType,
+  setContextToTakeAll: () => IncompleteFunctionType,
+  implementationDoesNothing: () => IncompleteFunctionType,
   finish: () => FunctionType
 };
 
 type FunctionInitialization = {
-  parameters  : ObjectType[],
-  returns     : ObjectType[],
-  builtin     : BuiltInFunction | undefined,
+  parameters        : ObjectType,
+  returns           : ObjectType,
+  builtin           : BuiltInFunction | undefined,
   nodeImplementation: AstFunctionDefinitionNode | undefined,
-  name        : string,
-  callStrategy: CallHandlingStrategies
+  name              : string,
+  callStrategy      : CallHandlingStrategies,
+  contextStrategy   : CallingContextFactory
 };
 
-export interface FunctionCompositor {
-  pushBuiltin: (fn: BuiltInFunction, returnTypes: Readonly<ObjectType[]>) => FunctionCompositor,
-  haveReturnNothing: () => FunctionCompositor,
-  finish(): FunctionType
-};
+const reservedAnonymousName = '<anonymous>';
+function constructIncompleteFunctionType() {
+  const m: FunctionInitialization = {
+    parameters        : ObjectType.emptyTupleInstance(),
+    returns           : ObjectType.emptyTupleInstance(),
+    builtin           : undefined,
+    nodeImplementation: undefined,
+    name              : reservedAnonymousName,
+    callStrategy      : uninitializedCallStrategies(),
+    contextStrategy   : CallingContext.toInherit
+  };
 
-export const FunctionCompositor = freeze({
-  make() {
-    const mBuiltins: BuiltInFunction[] = [];
-    const mTypes: ObjectType[][] = [];
-    const mDefaultReturnTypes = () =>
-      mTypes.map((types: ObjectType[]) => ObjectType.makeForTuple(types));
-    let mOverrideReturn: () => Readonly<ObjectType[]> | undefined = () => undefined;
-    const inst = freeze({
-      pushBuiltin(fn: BuiltInFunction, _1: Readonly<ObjectType[]>): FunctionCompositor {
-        mBuiltins.push(fn);
-        return inst;
-      },
-      haveReturnNothing() {
-        mOverrideReturn = (): Readonly<ObjectType[]> => [];
-        return inst;
-      },
-      finish: memoize((): FunctionType =>
-        IncompleteFunctionType.
-          make().
-          setCallStrategy(CallHandlingStrategies.noReceiver).
-          setBuiltin((stack: PersistentStack<number>, memory: MemoryArray) => {
-            mBuiltins.forEach((fn: BuiltInFunction) => fn(stack, memory));
-          }).
-          setParameters([]).
-          setReturns(mOverrideReturn() ?? mDefaultReturnTypes()).
-          finish())
-    });
-    return inst;
-  }
+  const inst = freeze({
+    setName(name: string): IncompleteFunctionType {
+      if (name === reservedAnonymousName) {
+        throw Error(`Cannot name function "${name}"`);
+      }
+      m.name = name;
+      return inst;
+    },
+    implementationDoesNothing() {
+      m.builtin = (_0: CallingContext, _1: CodeWriter) => {};
+      return inst;
+    },
+    setParameters(args: ObjectType): IncompleteFunctionType {
+      m.parameters = args;
+      return inst;
+    },
+    setReturns(rets: ObjectType): IncompleteFunctionType {
+      m.returns = rets;
+      return inst;
+    },
+    setAstNode(node: AstFunctionDefinitionNode): IncompleteFunctionType {
+      m.builtin = undefined;
+      m.nodeImplementation = node;
+      return inst;
+    },
+    setCallStrategy(fn: () => CallHandlingStrategies): IncompleteFunctionType {
+      m.callStrategy = fn();
+      return inst;
+    },
+    setContextToTakeAll() {
+      m.contextStrategy = CallingContext.toTakeAll;
+      return inst;
+    },
+    finish(): FunctionType {
+      if (m.nodeImplementation === undefined &&
+          m.builtin            === undefined)
+      {
+        throw new Error('Cannot complete function without an implementation');
+      }
+      // throws if "uninitialized"
+      m.callStrategy.chooseReceiver(() => {});
+      return FunctionType.make(m);
+    },
+    setBuiltin(fn: BuiltInFunction): IncompleteFunctionType {
+      m.builtin = fn;
+      m.nodeImplementation = undefined;
+      return inst;
+    }
+  });
+  return inst;
+}
+
+export const IncompleteFunctionType = freeze({
+  make: constructIncompleteFunctionType,
+  reservedAnonymousName
 });
-
-export const IncompleteFunctionType = (() => {
-  const reservedAnonymousName = '<anonymous>';
-  function make(): IncompleteFunctionType {
-    const m: FunctionInitialization = {
-      parameters  : [],
-      returns     : [],
-      builtin     : undefined,
-      nodeImplementation: undefined,
-      name        : reservedAnonymousName,
-      callStrategy: uninitializedCallStrategies()
-    };
-
-    const inst = freeze({
-      setName(name: string): IncompleteFunctionType {
-        if (name === reservedAnonymousName) {
-          throw Error(`Cannot name function "${name}"`);
-        }
-        m.name = name;
-        return inst;
-      },
-      setParameters(args: Readonly<ObjectType[]>): IncompleteFunctionType {
-        m.parameters.length = 0;
-        m.parameters.push(...args);
-        return inst;
-      },
-      setReturns(rets: Readonly<ObjectType[]>): IncompleteFunctionType {
-        m.returns.length = 0;
-        m.returns.push(...rets);
-        return inst;
-      },
-      setAstNode(node: AstFunctionDefinitionNode): IncompleteFunctionType {
-        m.builtin = undefined;
-        m.nodeImplementation = node;
-        return inst;
-      },
-      setCallStrategy(fn: () => CallHandlingStrategies): IncompleteFunctionType {
-        m.callStrategy = fn();
-        return inst;
-      },
-      finish(): FunctionType {
-        if (m.nodeImplementation === undefined &&
-            m.builtin            === undefined)
-        {
-          throw new Error('Cannot complete function without an implementation');
-        }
-        // throws if "uninitialized"
-        m.callStrategy.chooseReceiver(() => {});
-        return FunctionType.make(m);
-      },
-      setBuiltin(fn: BuiltInFunction): IncompleteFunctionType {
-        m.builtin = fn;
-        m.nodeImplementation = undefined;
-        return inst;
-      },
-    });
-
-    return inst;
-  }
-
-  return freeze({ make, reservedAnonymousName });
-})();
 
 export const FunctionType = (() => {
   function make(m: FunctionInitialization): FunctionType {
-    const parameters: Readonly<ObjectType[]> = m.parameters;
-    const returns   : Readonly<ObjectType[]> = m.returns;
+    const parameters: ObjectType = m.parameters;
+    const returns   : ObjectType = m.returns;
     let onBuiltIn = (_0: (bif: BuiltInFunction) => void): FunctionType =>
       inst;
     let onNodeImplementation = (_0: (node: AstFunctionDefinitionNode) => void): FunctionType =>
@@ -203,6 +217,7 @@ export const FunctionType = (() => {
     }
 
     const inst = freeze({
+      callingContextForParameters: m.contextStrategy,
       parameters: () => parameters,
       returns: () => returns,
       uid: memoize(Symbol),
@@ -212,7 +227,7 @@ export const FunctionType = (() => {
       composeWith(compositor: FunctionCompositor): FunctionCompositor {
         return compositor.pushBuiltin(builtin ?? (() => {
           throw new Error('no builtin');
-        })(), returns);
+        })());
       },
       onBuiltIn
     });

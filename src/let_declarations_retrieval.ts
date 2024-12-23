@@ -1,7 +1,7 @@
 import { AstNode } from './ast_node';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { AstTupleNode } from './ast_tuple_node';
-import { StandardErrorFn } from './helpers';
+import { StandardError, StandardErrorFn } from './helpers';
 import { LetNamesCollection } from './let_names_collection';
 import { LetNameElement } from './let_names_collection';
 import { Helpers } from './helpers';
@@ -18,6 +18,12 @@ type LetCollectionVisitor = AstNodeVisitor<LetNamesCollection>;
 
 type Reducable = [Readonly<LetNameElement[]> | undefined, StandardErrorFn];
 function reduceTuple(collections: LetNamesCollection[]) {
+  if (collections.length === 0) {
+    return freeze({
+      elements: (): Readonly<LetNameElement[]> => [],
+      error: () => StandardError.make().error()
+    });
+  }
   const [elements, error] = collections.
     map((collection: LetNamesCollection): Reducable =>
       [collection.elements(), collection.error]).

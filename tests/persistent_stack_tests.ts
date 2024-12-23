@@ -28,4 +28,12 @@ describeNamed({ PersistentStack }, () => {
     s.pop();
     expect(s.push()?.e).toEqual(1);
   });
+
+  it('maintains accurate count of elements', () => {
+    const s = PersistentStack.make(() => Infinity);
+    s.push(10);
+    s.push(10);
+    s.pop();
+    expect(s.count()).toEqual(1);
+  });
 });

@@ -1,15 +1,17 @@
 import { TestHelpers } from './test_helpers';
-// import { Interpreter } from '../src/interpreter';
 import { MemoryArray } from '../src/memory_array';
-import { ContextType, StringPool } from '../src/context_type';
+import { ContextType } from '../src/context_type';
 import { PersistentStack } from '../src/persistent_stack';
 import { VastInterpreter } from '../src/vast_interpreter';
 import { VariableDeclarationFunctionTable } from '../src/variable_declaration_function_table';
 import { StringType } from '../src/string_type';
+import { StringPool } from '../src/string_pool';
+import { VastCompiler } from '../src/vast_compiler';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ VastInterpreter }, () => {
+  VastCompiler.make('');
   function makePutsFunction() {
     const printedStrings: string[] = [];
     const putsFunction = (str: string) => { printedStrings.push(str); };
@@ -39,15 +41,15 @@ describeNamed({ VastInterpreter }, () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const stringPool = StringPool.makeForStrings(() => ['hello world!']);
       const makeStringPool = () => stringPool;
-      const contextType = ContextType.
-        make( stringPool, { ...ContextType.defaultInjections(), putsFunction } );
+      const contextType = ContextType.makeWritable();
+
       const makeContextType = () => contextType;
       const memory = MemoryArray.make();
       const stack = PersistentStack.make<number>(() => Infinity);
       const fooTable = VariableDeclarationFunctionTable.
         make(StringType.instance(), ':=', 0);
       
-      contextType.setLookUpTable({ ['.foo']: fooTable });
+      contextType.pushFunctionTableByName('.foo', fooTable);
       const spOffset = 1;
       memory.store(fooTable.offset() + spOffset, 0);
 
@@ -78,12 +80,11 @@ describeNamed({ VastInterpreter }, () => {
     it('compiles and runs a "hello world!" program with an assignment', () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const stringPool = StringPool.makeForStrings(() => ['hello world!']);
-      const contextType = ContextType.
-        make( stringPool, { ...ContextType.defaultInjections(), putsFunction } );
+      const contextType = ContextType.makeWritable();
       const fooTable = VariableDeclarationFunctionTable.
         make(StringType.instance(), ':=', 0);
       
-      contextType.setLookUpTable({ ['.foo']: fooTable });
+      contextType.pushFunctionTableByName('.foo', fooTable);
       const makeContextType = () => contextType;
       const interpreter = VastInterpreter.make(`
         foo := 'hello world!'
@@ -91,7 +92,8 @@ describeNamed({ VastInterpreter }, () => {
       `, {
         ...VastInterpreter.defaultInjections(),
         putsFunction,
-        makeContextType
+        makeContextType,
+        makeStringPool: () => stringPool
       });
       ranInterpreterOk(interpreter);
 

@@ -2,13 +2,17 @@ import { Helpers } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { WasmCompiler } from './wasm_compiler';
+import { type CodeWriter } from '../function_type';
 
 const { freeze, expose } = Helpers;
 
+export interface WasmCodeWriter extends CodeWriter {
+  makeCompilerFromCode(): WasmCompiler
+};
+
 export const WasmCodeWriter = (() => {
   return freeze({
-    make(mFunctionBody: WasmFunctionBody = WasmFunctionBody.make())
-    {
+    make(mFunctionBody: WasmFunctionBody = WasmFunctionBody.make()): WasmCodeWriter {
       const getImportFuncIndex = (name: string) => {
         const { descriptions } = WasmBuiltinImportsCreation;
         const desc = descriptions()[name];
@@ -45,6 +49,14 @@ export const WasmCodeWriter = (() => {
           mFunctionBody = mFunctionBody.pushI32Multiply();
           return inst;
         },
+        loadInteger: () => {
+          mFunctionBody.pushI32Load();
+          return inst;
+        },
+        storeInteger: () => {
+          mFunctionBody.pushI32Store();
+          return inst;
+        },
         printInteger: () =>
           pushFunctionCall('printInteger'),
         printString: () =>
@@ -54,11 +66,27 @@ export const WasmCodeWriter = (() => {
         askInteger: () =>
           pushFunctionCall('askInteger'),
         makeCompilerFromCode: () =>
-          WasmCompiler.makeWithEntryImplementation(mFunctionBody)
+          WasmCompiler.makeWithEntryImplementation(mFunctionBody),
+        swapTopTwo() {
+          // throw new Error('unimplemented');
+          for (let i = 0; mFunctionBody.localCount() < 2; ++i) {
+            mFunctionBody.pushLocal();
+          }
+          mFunctionBody.
+            setLocal(0).
+            setLocal(1).
+            getLocal(0).
+            getLocal(1);
+          return inst;
+        },
+        drop() {
+          mFunctionBody.pushDrop();
+          return inst;
+        }
       });
       return inst;
     }
   });
 })();
-export type WasmCodeWriter = ReturnType<typeof WasmCodeWriter.make>;
+// export type WasmCodeWriter = ReturnType<typeof WasmCodeWriter.make>;
 expose({ WasmCodeWriter });

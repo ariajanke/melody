@@ -7,11 +7,9 @@ import { AstNode } from './ast_node';
 import { type AstNodeVisitor } from './ast_node_visitor';
 import { AstStringLiteralNode } from './ast_string_literal_node';
 import { type AstTupleNode } from './ast_tuple_node';
-// import { ContextVariable } from './context_variable';
-import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
+import { CallHandlingStrategies, CallingContext, CodeWriter, IncompleteFunctionType } from './function_type';
 import { Helpers } from './helpers';
-import { ObjectType } from './object_type';
-import { PersistentStack } from './persistent_stack';
+import { WritableObjectType } from './object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -23,11 +21,10 @@ const class_ = freeze({
     const reduceToStrings = (mappable: Mappable<AstNode, string[]>) =>
       mappable.
         map((node: AstNode): string[] => node.visit(inst)).
-        reduce((prev: string[], cur: string[]) =>
-        {
+        reduce((prev: string[], cur: string[]) => {
           cur.push(...prev);
           return cur;
-        });
+        }, []);
     const inst = freeze({
       visitFunctionCall:
         (_0: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode): string[] =>
@@ -48,15 +45,16 @@ const class_ = freeze({
     return inst;
   }),
   instance: memoize(() => {
-    const type = ObjectType.make('String');
-    type.setLookUp({ [':=']: IncompleteFunctionType.
+    const mutable_type = WritableObjectType.make().setName('String');
+    const type = mutable_type.objectType();
+    mutable_type.pushFunctionTypeByName(':=', IncompleteFunctionType.
       make().
       setCallStrategy( CallHandlingStrategies.noReceiver ).
       setName(':=').
-      setParameters(type.decomposeAsParameters()).
-      setReturns  ([ type ]).
-      setBuiltin((_0: PersistentStack<number>) => {}).
-      finish() });
+      setParameters(type).
+      setReturns   (type).
+      setBuiltin((_0: CallingContext, _1: CodeWriter) => {}).
+      finish());
     return type;
   })
 });

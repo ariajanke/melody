@@ -1,6 +1,3 @@
-// simulate linear memory
-
-// import { ContextVariable } from './context_variable';
 import { Helpers } from './helpers';
 
 const { freeze } = Helpers;
@@ -20,7 +17,6 @@ function construct(mSlotCapacity: number = 2048) {
     store(slot: number, cvar: number): void {
       verifySlotNumber(slot);
       mSlots[slot] = cvar;
-      // cvar.copyTo( mSlots[slot] ??= Infinity );
     }
   });
   return inst;

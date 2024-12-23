@@ -22,6 +22,25 @@ describeNamed({ ContextTypeRetrieval }, () => {
     return AstFunctionCallNode.
       make(rec, AstIdentifierNode.make(op), params);
   }
+
+  function mkAssign(name: string, literal: AstLiteralNode) {
+    const aVar = AstIdentifierNode.make(name);
+    return makeOp(':=', aVar, literal);
+  }
+
+  function mkLetNode(name: string, literal: AstLiteralNode) {
+    const aAss = mkAssign(name, literal);
+    return AstLetDeclarationNode.make(aAss);
+  }
+
+  function returnNamesOf(name: string, objType: ObjectType) {
+    return objType.
+      lookUp(name)?.
+      byParameters(ObjectType.emptyTupleInstance())?.
+      returns()?.
+      name();
+  }
+
   const makeObjTable = () =>
     ObjectLookUpTable.make().addBuiltinTypes();
 
@@ -35,24 +54,10 @@ describeNamed({ ContextTypeRetrieval }, () => {
     const context = ContextTypeRetrieval.make(letDec, oTable);
     const obj = context.resolve();
     if (!obj) {
-      return fail();
+      throw new Error(context.error().message);
     }
-    expect(obj.lookUp('.a')?.byParameters([])).toBeDefined();
+    expect(obj.lookUp('.a')?.byParameters(ObjectType.emptyTupleInstance())).toBeDefined();
   });
-
-  function mkAssign(name: string, literal: AstLiteralNode) {
-    const aVar = AstIdentifierNode.make(name);
-    return makeOp(':=', aVar, literal);
-  }
-
-  function mkLetNode(name: string, literal: AstLiteralNode) {
-    const aAss = mkAssign(name, literal);
-    return AstLetDeclarationNode.make(aAss);
-  }
-
-  function returnNamesOf(name: string, objType: ObjectType) {
-    return objType.lookUp(name)?.byParameters([])?.returns()[0]?.name();
-  }
 
   it('correctly deduces type on an operator and literal', () => {
     // let a := 3

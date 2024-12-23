@@ -1,12 +1,14 @@
 import { Helpers, StandardErrorMessage } from './helpers';
-import { VastBuild, VastNode } from './vast_build';
-import { BuiltInFunction } from './function_type';
+import { VastBuild } from './vast_build';
+import { BuiltInFunction, CallingContext } from './function_type';
 import { Tokenization } from './tokenization';
 import { AstBuild } from './ast_build';
 import { MemoryArray } from './memory_array';
 import { ContextType } from './context_type';
 import { PersistentStack } from './persistent_stack';
-import { StringPool } from './context_type';
+import { StringPool } from './string_pool';
+import { VastNode } from './vast_node';
+import { InterpretedCodeWriter } from './interpreted_code_writer';
 
 const { freeze, memoize } = Helpers;
 
@@ -14,14 +16,13 @@ function makeDefaultInjections() {
   return freeze({
     makeMemory: MemoryArray.make,
     makeStack : () => PersistentStack.make<number>(() => Infinity),
-    makeContextType: ContextType.make,
+    makeContextType: ContextType.makeWritable,
     makeStringPool: StringPool.make,
     putsFunction: (str: string) => console.log(str)
   });
 }
 
 function construct(source: string,
-                   // TODO have my own injections
                    injections = class_.defaultInjections()) {
   let mErrorsFn = (): Readonly<StandardErrorMessage[]> => {
     throw new Error('Should not call this method when no errors are set');
@@ -34,21 +35,26 @@ function construct(source: string,
       mErrorsFn = astBuild.errors;
       return undefined;
     }
-    const mMemory = injections.makeMemory();
-    const mStack  = injections.makeStack();
     const mStringPool = injections.makeStringPool(astRoot);
+    const { putsFunction, makeMemory, makeStack } = injections;
+    const codeWriter = InterpretedCodeWriter.make(mStringPool, {
+      ...InterpretedCodeWriter.defaultInjections(),
+      putsFunction, makeMemory, makeStack
+    });
+    
     const mBuild = VastBuild.make(astRoot, mStringPool, freeze({
       ...ContextType.defaultInjections(),
       putsFunction: injections.putsFunction
     }), injections.makeContextType);
-    mMemory.store(MemoryArray.stackPointerLocation(), 1);
     if (!mBuild.root()) {
       mErrorsFn = mBuild.errors;
       return undefined;
     }
     return (mBuild.root() as VastNode).
       functionType().
-      onBuiltIn((impl: BuiltInFunction) => { impl(mStack, mMemory); });
+      onBuiltIn((impl: BuiltInFunction) => {
+        impl(CallingContext.canTakeAll(), codeWriter);
+      });
   }
   return freeze({
     interpret,
@@ -58,7 +64,6 @@ function construct(source: string,
 
 const class_ = freeze({
   make: construct,
-  // defaultInjections: Interpreter.defaultInjections,
   defaultInjections: memoize(makeDefaultInjections)
 });
 

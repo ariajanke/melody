@@ -12,9 +12,9 @@ type FunctionLookUpTableEntry = {
 export const FunctionLookUpTable = freeze({
   make(mTable: FunctionLookUpTableEntry) {
     return freeze({
-      byParameters(types: Readonly<ObjectType[]>): FunctionType | undefined {
+      byParameters(type: ObjectType): FunctionType | undefined {
         let table: FunctionLookUpTableEntry | undefined = mTable;
-        types.forEach((p: ObjectType) => {
+        type.decompose().forEach((p: ObjectType) => {
           if (!table)
             { return; }
           table = table[p.uid()];
@@ -24,9 +24,10 @@ export const FunctionLookUpTable = freeze({
     });
   },
   makeSingleLookUp(mFuncType: FunctionType): FunctionLookUpTable {
+    const params = mFuncType.parameters().decompose();
     return freeze({
-      byParameters(types: Readonly<ObjectType[]>): FunctionType | undefined {
-        const params = mFuncType.parameters();
+      byParameters(type: ObjectType): FunctionType | undefined {
+        const types = type.decompose();
         if (types.length !== params.length)
           { return undefined; }
         let matches = true;
@@ -54,7 +55,7 @@ export const IncompleteFunctionLookUpTable = freeze({
       finish() {
         mImplementations.forEach((impl: FunctionType) => {
           let table = mTable;
-          impl.parameters().forEach((param: ObjectType) => {
+          impl.parameters().decompose().forEach((param: ObjectType) => {
             table = table[param.uid()] ??= { implementation: undefined };
           });
           table.implementation ??= impl;

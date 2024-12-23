@@ -93,7 +93,7 @@ export const AstFunctionCallNode = (() => {
         visitor.visitFunctionCall(inst, mReceiver, mArguments),
       type,
       functionTypeBy(lookUpTable: FunctionLookUpTable, parameterType: ObjectType): FunctionTypeResolution {
-        const func = lookUpTable.byParameters(parameterType.decomposeAsParameters());
+        const func = lookUpTable.byParameters(parameterType);
         const err = StandardError.make();
         return freeze({
           resolve: () => {
@@ -117,7 +117,7 @@ export const AstFunctionCallNode = (() => {
         }
 
         const { error, setErrorFn, hasErrorSet } = StandardError.make();
-        const objTypes = func.returns().map((objType: ObjectType) => {
+        const objTypes = func.returns().decompose().map((objType: ObjectType) => {
           const { resolve, error } = objTbl.lookUpByType(objType);
           const res = resolve();
           if (res)
@@ -133,7 +133,7 @@ export const AstFunctionCallNode = (() => {
         }
 
         return ObjectTypeResolution.
-          makeFixedForType(objTbl.lookUpTuple(objTypes as ObjectType[]));
+          makeFixedForType(ObjectType.asTuple(objTypes as ObjectType[]));
       }
     });
 

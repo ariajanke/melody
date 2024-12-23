@@ -33,7 +33,6 @@ export type LetNameElement = {
   name: string,
   operator: string,
   dependeeNames: string[],
-  // type: ObjectType,
   node: AstTupleNode
 }
 

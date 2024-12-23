@@ -1,44 +1,70 @@
 import { Helpers } from './helpers';
-import { CallHandlingStrategies, IncompleteFunctionType } from './function_type';
-import { type PersistentStack } from './persistent_stack';
+import { BuiltInFunction, CallHandlingStrategies, CallingContext, CodeWriter, IncompleteFunctionType } from './function_type';
 import { FunctionType } from './function_type';
-import { StringPool } from './context_type';
 import { type FunctionLookUpTable } from './function_look_up_table';
-import { ObjectType } from './object_type';
+import { ObjectType, WritableObjectType } from './object_type';
+import { StackReversalLookUpTable } from './stack_reversal_type';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
-export const PutsFunctionLookUpTable = freeze({
-  make: (mStringPool: StringPool, mPutsFn: (s: string) => void): FunctionLookUpTable => {
+export const PutsPrinterType = freeze({
+  make(mOwner?: ObjectType) {
+    const stackReversalTable = () => StackReversalLookUpTable.
+      make(mOwner?.sizeInWords() ?? 0);
+    const putsLookUpTable = memoize(() =>
+      PutsFunctionLookUpTable.make(stackReversalTable()));
+
+    return freeze({
+      name: () => 'PutsPrinter',
+      lookUp(operation: string): FunctionLookUpTable | undefined {
+        if (operation === 'puts') {
+          return putsLookUpTable();
+        };
+        return undefined;
+      },
+      forEachName(fn: (name: string, table: FunctionLookUpTable) => void) {
+        fn('puts', putsLookUpTable());
+      },
+      uid: memoize(Symbol),
+      decompose: (): Readonly<ObjectType[]> => [],
+      mergeInto(obj: WritableObjectType): WritableObjectType {
+        return obj.acceptMerge((_0: number) => {
+          return PutsPrinterType.make(obj.objectType());
+        });
+      },
+      sizeInWords: () => 0
+    });
+  }
+});
+
+const PutsFunctionLookUpTable = freeze({
+  make: (mReversalLookUpTable = StackReversalLookUpTable.make(0)): FunctionLookUpTable => {
     type ImplementationTable = {
       implementation: FunctionType | undefined
       [uid: symbol]: ImplementationTable
     };
     const mTable: ImplementationTable = { implementation: undefined };
 
-    function makeAsString(objType: ObjectType) {
+    function makePrintItem(objType: ObjectType) {
       if (objType.name() === 'String') {
-        return (stack: PersistentStack<number>) => {
-          const str = mStringPool.reverseLookUp(stack.pop());
-          if (str) {
-            return str;
-          }
-          return '??UNKNOWN??';
-        };
+        return (writer: CodeWriter) => { writer.printString(); };
       }
-      return (stack: PersistentStack<number>) =>
-        `${stack.pop()}`;
+      return (writer: CodeWriter) => { writer.printInteger(); };
     }
-
+    
     function makeImplementation(objTypes: Readonly<ObjectType[]>) {
-      const allAsStrings = objTypes.
-        map((obj: ObjectType) => makeAsString(obj));
-        return (stack: PersistentStack<number>): void => {
-          allAsStrings.
-            map((fn: (stack: PersistentStack<number>) => string) => fn(stack)).
-            reverse().
-            forEach(mPutsFn);
-        };
+      const itemPrinters  = objTypes.
+        map((obj: ObjectType) => makePrintItem(obj));
+
+      const func = mReversalLookUpTable.
+        byParameters(ObjectType.asTuple(objTypes)) ?? (() => {
+          throw new Error('this should not happen');
+        })();
+
+      return (callingContext: CallingContext, writer: CodeWriter): void => {
+        func.onBuiltIn((bif: BuiltInFunction) => bif(callingContext, writer));
+        itemPrinters.forEach((fn: (writer: CodeWriter) => void) => fn(writer));
+      };
     }
 
     function lookUpImpl
@@ -50,16 +76,17 @@ export const PutsFunctionLookUpTable = freeze({
       return tbl;
     }
 
-
     return freeze({
-      byParameters(types: Readonly<ObjectType[]>): FunctionType | undefined {
+      byParameters(type: ObjectType): FunctionType | undefined {
+        const types = type.decompose();
         const table = lookUpImpl(mTable, types);
         return table.implementation ??= IncompleteFunctionType.
           make().
+          setContextToTakeAll().
           setCallStrategy(CallHandlingStrategies.noReceiver).
           setBuiltin( makeImplementation(types) ).
-          setParameters(types).
-          setReturns([]).
+          setParameters(type).
+          setReturns(ObjectType.emptyTupleInstance()).
           setName('puts').
           finish();
       }
