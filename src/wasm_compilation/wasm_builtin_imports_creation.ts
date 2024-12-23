@@ -2,6 +2,7 @@ import { Helpers } from '../helpers';
 import { SimpleCounter, type FuncImportDescription } from './wasm_helpers';
 import { WasmTypesSection } from './wasm_types_section';
 import { WasmImportsSection } from './wasm_imports_section';
+import { StringPool } from '../string_pool';
 
 const { freeze, memoize } = Helpers;
 
@@ -40,7 +41,7 @@ export const WasmBuiltinImportsCreation = (() => {
         }
       });
     }),
-    make: (mStringPool: string[],
+    make: (mStringPool: StringPool,
            mJsPrint: (s: string | number) => void,
            mJsAskInteger: () => number,
            mJsAskString: () => number) =>
@@ -51,7 +52,7 @@ export const WasmBuiltinImportsCreation = (() => {
           mJsPrint(i);
         },
         printString(i: number) {
-          mJsPrint(mStringPool[i]);
+          mJsPrint(mStringPool.reverseLookUp(i) ?? '<??UNKNOWN??>');
         },
         askString: mJsAskString,
         askInteger: mJsAskInteger

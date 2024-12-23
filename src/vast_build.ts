@@ -8,229 +8,23 @@ import { AstNode } from './ast_node';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { AstStringLiteralNode } from './ast_string_literal_node';
 import { AstTupleNode } from './ast_tuple_node';
-import { ContextType, ContextTypeInjections, StringPool } from './context_type';
+import { ContextType, ContextTypeInjections } from './context_type';
 import { ContextTypeRetrieval } from './context_type_retrieval';
-import { FunctionLookUpTable } from './function_look_up_table';
-import { CallHandlingStrategies, FunctionCompositor, FunctionType, IncompleteFunctionType } from './function_type';
 import { FunctionTypeRetrieval } from './function_type_retrieval';
 import { Helpers, StandardErrorFn, StandardErrorMessage } from './helpers';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { ObjectType } from './object_type';
-import { PersistentStack } from './persistent_stack';
+import { VastNode, VastIdentifierNode } from './vast_node';
+import { StringPool } from './string_pool';
+import { VastFunctionCallNode } from './vast_function_call_node';
+import { VastTupleNode } from './vast_tuple_node';
+import { VastFunctionDefinitionNode } from './vast_function_definition_node';
+import { VastIntegerLiteralNode, VastStringLiteralNode } from './vast_literal_node';
 
 const { freeze, memoize } = Helpers;
 
 // Validated Abstract Syntax Tree Node, just doesn't quite roll off the tongue
 
-export interface VastNode {
-  // valueType
-  objectType(): ObjectType,
-  functionType(): FunctionType,
-  itCanBe(ability: (() => symbol)): boolean,
-
-  // a uid for compilers/interpreters to remember stuff by
-  uid(): symbol
-}
-
-interface VastFunctionCallNode extends VastNode {
-  // on construction
-  // - verify (continue or raise) validity
-  // - force as much validity by argument types as possible
-  // allow receivers:
-  // literals may receive:
-  //   any defined: ".",
-  
-}
-
-interface VastFunctionDefinitionNode extends VastNode {
-}
-
-// each will have:
-// - a context
-const VastNode = freeze({
-  ableToBe: {
-    evaluated: memoize(Symbol)
-    // KEEP: reserved for resolved
-    // KEEP: reserved for discovered
-  },
-  itCanBe(...abilities: (() => symbol)[]): (fn: () => symbol) => boolean {
-    return (fn: () => symbol) =>
-      abilities.findIndex((can: () => symbol) => can() === fn()) > -1;
-  }
-});
-
-const VastStringLiteralNode = freeze({
-  make(mStringType: ObjectType, mValue: number): VastNode {
-    const { itCanBe, ableToBe } = VastNode;
-    const { noReceiver } = CallHandlingStrategies;
-    return freeze({
-      objectType: () => mStringType,
-      functionType: memoize(() => IncompleteFunctionType.
-        make().
-        setParameters([]).
-        setReturns([mStringType]).
-        setCallStrategy(noReceiver).
-        setName(`__string_pool(${mValue})`).
-        setBuiltin((stack: PersistentStack<number>) => {
-          stack.push(mValue);
-        }).
-        finish()),
-      itCanBe: itCanBe(ableToBe.evaluated),
-      uid: memoize(Symbol)
-    });
-  }
-});
-
-const VastIntegerLiteralNode = freeze({
-  make(mIntegerType: ObjectType, mValue: number): VastNode {
-    const { itCanBe, ableToBe } = VastNode;
-    const { noReceiver } = CallHandlingStrategies;
-    return freeze({
-      objectType: () => mIntegerType,
-      functionType: memoize(() => IncompleteFunctionType.
-        make().
-        setParameters([]).
-        setReturns([mIntegerType]).
-        setCallStrategy(noReceiver).
-        setName(`.${mValue}`).
-        setBuiltin((stack: PersistentStack<number>) => {
-          stack.push(mValue);
-        }).
-        finish()),
-      itCanBe: itCanBe(ableToBe.evaluated),
-      uid: memoize(Symbol)
-    });
-  }
-});
-
-const VastIdentifierNode = freeze({
-  hasGetter(tbl: FunctionLookUpTable) {
-    return !!tbl.byParameters([]);
-  },
-  make(mDefinedBy: FunctionLookUpTable) {
-    const { itCanBe } = VastNode;
-    if (!this.hasGetter(mDefinedBy)) {
-      throw new Error('Must check if getter exist');
-    }
-    const mGetter = mDefinedBy.byParameters([]) as FunctionType;
-    return freeze({
-      objectType: () => ObjectType.makeForTuple(mGetter.returns()),
-      functionType: () => mGetter as FunctionType,
-      itCanBe: itCanBe(),
-      uid: memoize(Symbol)
-    }) satisfies VastNode;
-  }
-});
-
-const VastFunctionDefinitionNode = (() => {
-  return freeze({
-    make(lineNodes: Readonly<VastNode[]>, mContextType: ObjectType) {
-      const { itCanBe } = VastNode;
-      // will need for call indicies later, though it need not be defined here
-      VastTupleNode.verifyAllZeroParameterFunctions(lineNodes);
-      const nodesIntoTypes = () =>
-        VastTupleNode.nodesIntoFunctionTypes(lineNodes);
-      return freeze({
-        objectType: () => mContextType,
-        functionType: memoize(() =>
-          VastTupleNode.
-            functionCompositorFor(nodesIntoTypes()).
-            haveReturnNothing().
-            finish()),
-        itCanBe: itCanBe(),
-        uid: memoize(Symbol)
-      }) satisfies VastNode;
-    }
-  });
-})();
-
-const VastTupleNode = (() => {
-  const class_ = freeze({
-    isZeroParameterFunction(node: VastNode) {
-      return node.functionType().parameters().length === 0;
-    },
-    verifyAllZeroParameterFunctions(nodes: Readonly<VastNode[]>) {
-      const allZero = nodes.
-        map(class_.isZeroParameterFunction).
-        reduce((prev: boolean, cur: boolean) => prev && cur);
-      if (allZero)
-        { return; }
-      throw new Error('All nodes must be zero parameter functions');
-    },
-    functionCompositorFor(funcs: Readonly<FunctionType[]>): FunctionCompositor {
-      const compositor = FunctionCompositor.make();
-      funcs.forEach((fnType: FunctionType) => {
-        fnType.composeWith(compositor);
-      });
-      return compositor;
-    },
-    nodesIntoFunctionTypes: (nodes: Readonly<VastNode[]>) =>
-      nodes.map((node: VastNode) => node.functionType()),
-    make(nodes: Readonly<VastNode[]>) {
-      const { itCanBe } = VastNode;
-      const funcTypes = (): Readonly<FunctionType[]> =>
-        nodes.map((node: VastNode) => node.functionType());
-      class_.verifyAllZeroParameterFunctions(nodes);
-      return freeze({
-        objectType: memoize(() => ObjectType.
-          makeForTuple(nodes.map((node :VastNode) => node.objectType()))),
-          functionType: memoize(() => class_.functionCompositorFor(funcTypes()).finish()),
-          itCanBe: itCanBe(),
-          uid: memoize(Symbol)
-      }) satisfies VastNode;
-    }
-  });
-  return class_;
-})();
-
-const VastFunctionCallNode = freeze({
-  // we try and keep validating class methods that can work with both
-  // VAST as well as AST nodes
-  validateFunctionParameters:
-    (functionType: FunctionType,
-     parameterType: ObjectType,
-     onError: (msg: string) => void): void =>
-  {
-    let msg: string | undefined = undefined;
-    const givenParams = parameterType.decomposeAsParameters();
-    const expectedParams = functionType.parameters();
-    if (givenParams.length !== expectedParams.length) {
-      msg = `function type expected ${expectedParams.length} parameters`; 
-    }
-    msg || givenParams.forEach((givenParam: ObjectType, idx: number) => {
-      const expectedParam = expectedParams[idx];
-      if (msg || givenParam.uid() === expectedParam.uid())
-        { return; }
-      msg = `Parameter (${idx}) expected to be a "${expectedParam.name()}", got a "${givenParam.name()}" instead`;
-    });
-    msg && onError( msg );
-    return undefined;
-  },
-  make(mFunctionType: FunctionType, mReceiver: VastNode, mParameters: VastNode) {
-    VastFunctionCallNode.
-      validateFunctionParameters(mFunctionType, mParameters.objectType(), (msg: string) =>
-        { throw new Error(msg); });
-    
-    // the function call itself ought not be seen as taking arguments since it
-    // already has them
-    const functionType = memoize(() => {
-      let mCompositor = FunctionCompositor.make();
-      mFunctionType.withCallStrategy().chooseReceiver(() => {
-        mCompositor = mReceiver.functionType().composeWith(mCompositor);
-      });
-      mCompositor = mParameters.functionType().composeWith(mCompositor);
-      mCompositor = mFunctionType.composeWith(mCompositor);
-      return mCompositor.finish();  
-    });
-      
-    return freeze({
-      objectType: memoize(() => ObjectType.makeForTuple( mFunctionType.returns())),
-      functionType,
-      itCanBe: () => false,
-      uid: memoize(Symbol)
-    }) satisfies VastNode;
-  }
-});
 
 export interface VastBuild {
   root(): VastNode | undefined,
@@ -241,11 +35,11 @@ const VastBuildVisitor = freeze({
   make(mErrors: StandardErrorFn[],
        mStringPool: StringPool,
        mContextInjections?: ContextTypeInjections,
-       mMakeContextType?: typeof ContextType.make,
+       mStartContextType?: typeof ContextType.makeWritable,
        mObjectTable?: ObjectLookUpTable): AstNodeVisitor<VastNode | undefined>
   {
     mObjectTable ??= ObjectLookUpTable.make().addBuiltinTypes();
-    mMakeContextType ??= ContextType.make;
+    mStartContextType ??= ContextType.makeWritable;
     const mContextTypeStack: ObjectType[] = [];
     const mFunctionRetrieval = FunctionTypeRetrieval.make();
     function topContextType() {
@@ -299,7 +93,7 @@ const VastBuildVisitor = freeze({
         VastNode | undefined =>
       {
         const ctxRet = ContextTypeRetrieval.
-          make(node, mObjectTable, () => mMakeContextType(mStringPool, mContextInjections));
+          make(node, mObjectTable, () => mStartContextType(mContextInjections));
         const ctxType = ctxRet.resolve();
         if (!ctxType) {
           mErrors.push(ctxRet.error);
@@ -353,16 +147,16 @@ export const VastBuild = freeze({
   make(mRoot: AstNode,
        mStringPool?: StringPool,
        mContextInjections?: ContextTypeInjections,
-       mMakeContextType?: typeof ContextType.make,
+       mStartContextType?: typeof ContextType.makeWritable,
        mObjectTable?: ObjectLookUpTable)
   {
     mStringPool ??= StringPool.make(mRoot);
     mObjectTable ??= ObjectLookUpTable.make().addBuiltinTypes();
     mContextInjections ??= ContextType.defaultInjections();
-    mMakeContextType ??= ContextType.make;
+    mStartContextType ??= ContextType.makeWritable;
     const mErrors: StandardErrorFn[] = [];
     const mVisitor = VastBuildVisitor.
-      make(mErrors, mStringPool, mContextInjections, mMakeContextType, mObjectTable);
+      make(mErrors, mStringPool, mContextInjections, mStartContextType, mObjectTable);
 
     return freeze({
       root: memoize(() => mRoot.visit(mVisitor)),

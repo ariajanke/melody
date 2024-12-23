@@ -489,3 +489,31 @@ $.b(9)
 
 # What all do I need, to validate an AST?
 # Does type discovery work out ok?
+
+let a := 3 # + 4
+let b := 4 # + 4
+let c := f(g()) # variable length
+
+table
+  a := 3
+  b := 4
+~
+
+let Rational = table
+  make = fn (num is Integer, den is Integer)
+    table
+      $+ = fn (rhs is Rational) Rational.make(num + rhs.num, den + rhs.den)
+      $- = fn (rhs is Rational) Rational.make(num - rhs.num, den - rhs.den)
+      $* = fn (rhs is Rational) Rational.make(num*rhs.num, den*rhs.den)
+      $/ = fn (rhs is Rational) Rational.make(num / rhs.num, den / rhs.den)
+      num = num
+      den = den
+    ~
+  ~
+  $is = Rational.make
+~
+
+Rational is table
+  make is Fn(Integer, Integer)
+  $is is Table
+~

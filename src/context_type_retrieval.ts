@@ -1,15 +1,16 @@
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { type AstNode } from './ast_node';
-import { ContextType, StringPool } from './context_type';
-import { FunctionLookUpTable } from './function_look_up_table';
+import { ContextType } from './context_type';
 import { CallHandlingStrategies, FunctionType, IncompleteFunctionType } from './function_type';
 import { Helpers, StandardError } from './helpers';
 import { LetDeclarationsRetrieval } from './let_declarations_retrieval';
 import { LetNameElement } from './let_names_collection';
 import { type ObjectLookUpTable } from './object_look_up_table';
-import { ObjectType } from './object_type';
+import { WritableObjectType, ObjectType } from './object_type';
 import { ObjectTypeResolution } from './object_type_resolution';
-import { VariableDeclarationFunctionTable } from './variable_declaration_function_table';
+import { PutsPrinterType } from './puts_function_look_up_table';
+import { StackReversalType } from './stack_reversal_type';
+import { VariableDeclaration } from './variable_declaration_function_table';
 
 const { freeze, memoize } = Helpers;
 
@@ -20,30 +21,16 @@ interface Entry extends LetNameElement {
 function construct
   (node: AstNode,
    objTable: ObjectLookUpTable,
-   makeDefaultContextType?: () => ObjectType): ObjectTypeResolution
+   startDefaultContextType?: () => WritableObjectType): ObjectTypeResolution
 {
-  makeDefaultContextType ??= () =>
-    ContextType.make(StringPool.make(node));
+  startDefaultContextType ??= () => ContextType.makeWritable();
   const { error, setErrorFn, hasErrorSet } = StandardError.make();
   const mLetDecRetrieval = LetDeclarationsRetrieval.make(node);
-  const mCounter = (() => {
-    let i = 0;
-    return () => i++;
-  })();
 
   function assertedResolvedTypeOf(element: Entry): ObjectType {
     return element.typeResolution().resolve() ?? (() => {
       throw new Error('errors must be caught by now');
     })();
-  }
-
-  function onLetDecs<Type>(fn: (decs: Readonly<LetNameElement[]>) => Type): Type | undefined {
-    const { elements, error } = mLetDecRetrieval;
-    const els = elements();
-    if (els) {
-      return fn(els);
-    }
-    return setErrorFn(error);
   }
 
   function onFunctionDef
@@ -58,28 +45,20 @@ function construct
     const type = assertedResolvedTypeOf(element);
     if (type.name() !== 'Function' || isDef)
       { return; }
-    
+    const { emptyTupleInstance } = ObjectType;
     const func = IncompleteFunctionType.
       make().
       setCallStrategy(CallHandlingStrategies.noReceiver).
       setName(element.name).
-      setParameters([]).
-      setReturns([]).
+      setParameters(emptyTupleInstance()).
+      setReturns(emptyTupleInstance()).
       setAstNode(element.node.map((node: AstNode) => node)[0] as AstFunctionDefinitionNode).
       finish();
     fn(func);
   }
 
-  function onLetDef<Type>
-    (element: Entry, fn: (funcTable: FunctionLookUpTable) => Type): Type
-  {
-    const type = assertedResolvedTypeOf(element);
-    const lookUpTable = VariableDeclarationFunctionTable.
-      make( type, element.operator, mCounter() );
-    return fn(lookUpTable);
-  }
-
-  const getContext = memoize(makeDefaultContextType);
+  const writableContextType = memoize(startDefaultContextType);
+  const getContext = writableContextType().objectType;
 
   const objTableWithContext = memoize(() => {
     const {
@@ -87,7 +66,6 @@ function construct
       addType,
       lookUpByName,
       lookUpByType,
-      lookUpTuple
     } = objTable;
     const ctx = getContext();
     const ctxRes = ObjectTypeResolution.makeFixedForType(ctx);
@@ -104,45 +82,50 @@ function construct
           { return ctxRes; }
         return lookUpByType(type);
       },
-      lookUpTuple,
       addType,
       addBuiltinTypes
     });
   });
 
-  return freeze({
-    resolve: memoize(() => {
-      const entries = onLetDecs((decs: Readonly<LetNameElement[]>): Entry[] =>
-        decs.
-          map((el: LetNameElement): Entry => {
-            return freeze({
-              ...el,
-              typeResolution: memoize(() => el.node.executionType(objTableWithContext()))
-            });
-          }));
+  function resolve() {
+    const { elements } = mLetDecRetrieval;
+      const entries = elements()?.map((el: LetNameElement): Entry => {
+        return freeze({
+          ...el,
+          typeResolution: memoize(() => el.node.executionType(objTableWithContext()))
+        });
+      });
       if (!entries) {
-        return undefined;
+        return setErrorFn(mLetDecRetrieval.error);
       }
 
       entries.forEach((val: Entry) => {
         if (hasErrorSet())
           { return; }
+
         const res = val.typeResolution();
         const type = res.resolve();
         if (!type) {
           return setErrorFn(res.error);
         }
-        onLetDef(val, (funcTable: FunctionLookUpTable) => {
-          getContext().setLookUpTable({ [`.${val.name}`]: funcTable });
-        });
+        VariableDeclaration.
+          make(val.name, type, val.operator).
+          mergeInto( writableContextType() );
+
         onFunctionDef(val, (funcType: FunctionType) => {
-          getContext().setLookUp({ [val.name]: funcType });
+          writableContextType().pushFunctionTypeByName(val.name, funcType);
         });
+        PutsPrinterType.make().mergeInto(writableContextType());
+
+        StackReversalType.make().mergeInto(writableContextType());
       });
       if (hasErrorSet())
         { return undefined; }
       return getContext();
-    }),
+  }
+
+  return freeze({
+    resolve: memoize(resolve),
     error
   });
 }

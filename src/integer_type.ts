@@ -1,72 +1,77 @@
 import { Helpers } from './helpers';
-import { CallHandlingStrategies, IncompleteFunctionType} from './function_type';
-import { ObjectType } from './object_type';
-import { type PersistentStack } from './persistent_stack';
+import { CallHandlingStrategies, CallingContext, CodeWriter, IncompleteFunctionType} from './function_type';
+import { WritableObjectType } from './object_type';
 
 const { freeze, memoize } = Helpers;
 
 function makeIntegerType() {
   const { noReceiver, withReceiver } = CallHandlingStrategies;
-  const integer_ = ObjectType.make('Integer');
+  
+  const mutable_integer_type = WritableObjectType.make().setName('Integer');
+  const integer_ = mutable_integer_type.objectType();
+
+  const onTakeInteger = (fn: (codeWriter: CodeWriter) => void) => {
+    return (callingContext: CallingContext, codeWriter: CodeWriter) => {
+      if (!callingContext.canTake(integer_))
+        { return (_0: CallingContext, _1: CodeWriter) => {}; }
+      fn(codeWriter);
+    };
+  };
   
   const add = IncompleteFunctionType.
     make().
     setName('+').
     setCallStrategy(withReceiver).
-    setParameters(integer_.decomposeAsParameters()).
-    setReturns  ([ integer_ ]).
-    setBuiltin((stack: PersistentStack<number>) =>
-      {
-        const lhs = stack.pop();
-        const rhs = stack.pop();
-        
-        stack.push(rhs + lhs);
-      }).
+    setParameters(integer_).
+    setReturns  ( integer_ ).
+    setBuiltin(onTakeInteger((writer: CodeWriter) => {
+      writer.addIntegers();
+    })).
     finish();
 
   const sub = IncompleteFunctionType.
     make().
     setName('-').
     setCallStrategy(withReceiver).
-    setParameters(integer_.decomposeAsParameters()).
-    setReturns  ([ integer_ ]).
-    setBuiltin((stack: PersistentStack<number>) =>
-      {
-        const lhs = stack.pop();
-        const rhs = stack.pop();
-        
-        stack.push(rhs - lhs);
-      }).
+    setParameters(integer_).
+    setReturns  ( integer_ ).
+    setBuiltin(onTakeInteger((writer: CodeWriter) => {
+      writer.subtractIntegers();
+    })).
     finish();
 
   const mul = IncompleteFunctionType.
     make().
     setName('*').
     setCallStrategy(withReceiver).
-    setParameters(integer_.decomposeAsParameters()).
-    setReturns  ([ integer_ ]).
-    setBuiltin((stack: PersistentStack<number>) =>
-      {
-        const lhs = stack.pop();
-        const rhs = stack.pop();
-        stack.push(rhs*lhs);
-      }).
+    setParameters(integer_).
+    setReturns  ( integer_ ).
+    setBuiltin(onTakeInteger((writer: CodeWriter) => {
+      writer.multiplyIntegers();
+    })).
     finish();
 
   const assign = IncompleteFunctionType.
     make().
     setName(':=').
     setCallStrategy(noReceiver).
-    setParameters(integer_.decomposeAsParameters()).
-    setReturns  ([ integer_ ]).
-    setBuiltin((_0: PersistentStack<number>) => {}).
+    setParameters(integer_).
+    setReturns  ( integer_ ).
+    setBuiltin((_0: CallingContext, _1: CodeWriter) => {}).
     finish();
-  return integer_.setLookUp({
-    ['*' ]: mul,
-    ['+' ]: add,
-    ['-' ]: sub,
-    [':=']: assign
-  });
+
+  mutable_integer_type.
+    pushFunctionTypes({
+      ['*' ]: mul,
+      ['+' ]: add,
+      ['-' ]: sub,
+      [':=']: assign
+      // a := (something)
+      // as an alias for
+      // $.a(something)?
+      // what about overloading ":="?
+    });
+  return integer_;
 }
 
 export const IntegerType = freeze({

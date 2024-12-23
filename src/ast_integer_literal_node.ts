@@ -5,7 +5,7 @@ import { Token } from './token';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { type ObjectTypeResolution } from './object_type_resolution';
 import { ObjectLookUpTable } from './object_look_up_table';
-import { type StringPool } from './context_type';
+import { type StringPool } from './string_pool';
 
 const { freeze } = Helpers;
 

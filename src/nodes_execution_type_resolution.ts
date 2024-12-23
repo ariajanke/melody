@@ -2,7 +2,7 @@ import { Helpers } from './helpers';
 import { type AstNode } from './ast_node';
 import { StandardError } from './helpers';
 import { type ObjectTypeResolution } from './object_type_resolution';
-import { type ObjectType } from './object_type';
+import { ObjectType } from './object_type';
 import { ObjectLookUpTable } from './object_look_up_table';
 
 const { freeze, memoize } = Helpers;
@@ -30,7 +30,7 @@ export const NodesExecutionTypeResolution = freeze({
           // Tuples of size one are treated as if they are just that value
           return rv[0];
         }
-        return mTypesTable.lookUpTuple(rv as ObjectType[]);
+        return ObjectType.asTuple(rv as ObjectType[]);
       }),
       error
     });

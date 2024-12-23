@@ -4,5 +4,11 @@ Mew prrr prrrr :3!!!
 
 *Always remember to please put away your cat toys before work!*
 
-This is always toy, just a Spielzueg. nya~
-Kitty things are not serious, and should not be taken as such.
+You are free to play with these toys too, provided you follow the GPLv3. Which
+for the ignorant is **NOT** public domain! (Though I can't imagine this being
+of interest to anyone.)
+
+### Dev Rules
+
+- "Class" names are at least two words
+- never define something in the same place that it's used

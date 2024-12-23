@@ -2,6 +2,7 @@ import { Helpers } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { WasmFunctionDeclarationsCompilation } from './wasm_function_declarations_compilation';
+import { StringPool } from '../string_pool';
 
 const { memoize, freeze } = Helpers;
 
@@ -29,11 +30,12 @@ export const WasmCompiler = (() => {
     makeWithEntryImplementation(mFunctionBody: WasmFunctionBody) {
       return freeze({
         compile:
-          (mStringPool: string[],
+          (mStringPool: StringPool,
            mJsPrint: (s: string | number) => void = class_.defaultJsPrint,
            mJsAskInteger: () => number = class_.makeDefaultIntegerGenerator(),
-           mJsAskString: () => number = class_.makeAskString(mStringPool)) =>
+           mJsAskString?: () => number) =>// () => number = class_.makeAskString(mStringPool)) =>
         {
+          mJsAskString ??= mStringPool.askString;
           const imports = WasmBuiltinImportsCreation.
             make(mStringPool, mJsPrint, mJsAskInteger, mJsAskString);
           const typesSec = imports.typesSection();

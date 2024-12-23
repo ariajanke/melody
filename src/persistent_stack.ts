@@ -49,7 +49,7 @@ export const PersistentStack = (() => {
       return mPosition === -1;
     }
 
-    return freeze({ push, pop, top, isEmpty, count: () => mMembers.length });
+    return freeze({ push, pop, top, isEmpty, count: () => mPosition + 1 });
   }
 
   return freeze({ make });
