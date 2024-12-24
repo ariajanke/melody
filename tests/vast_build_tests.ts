@@ -1,18 +1,18 @@
-import { TestHelpers } from './test_helpers';
+  import { TestHelpers } from './test_helpers';
 import { VastBuild } from '../src/vast_build';
-import { AstStringLiteralNode } from '../src/ast_string_literal_node';
 import { StringPool } from '../src/string_pool';
 import { StringType } from '../src/string_type';
 import { BuiltInFunction, CallingContext } from '../src/function_type';
-import { AstIdentifierNode } from '../src/ast_identifier_node';
-import { AstIntegerLiteralNode } from '../src/ast_integer_literal_node';
-import { AstFunctionCallNode } from '../src/ast_function_call_node';
 import { MemoryArray } from '../src/memory_array';
 import { PersistentStack } from '../src/persistent_stack';
-import { AstFunctionDefinitionNode } from '../src/ast_function_definition_node';
-import { AstLetDeclarationNode } from '../src/ast_let_declaration_node';
 import { InterpretedCodeWriter } from '../src/interpreted_code_writer';
 import { ObjectType } from '../src/object_type';
+import { AstStringLiteralNode } from '../src/vast_build/ast_string_literal_node';
+import { AstIdentifierNode } from '../src/vast_build/ast_identifier_node';
+import { AstIntegerLiteralNode } from '../src/vast_build/ast_integer_literal_node';
+import { AstLetDeclarationNode } from '../src/vast_build/ast_let_declaration_node';
+import { AstFunctionCallNode } from '../src/vast_build/ast_function_call_node';
+import { AstFunctionDefinitionNode } from '../src/vast_build/ast_function_definition_node';
 
 // What am I trying to accomplish?
 // That the valid Validated ASTs are created
@@ -24,7 +24,7 @@ describeNamed({ VastBuild }, () => {
   describe('string literals', () => {
     function makeBuild() {
       const astNode = AstStringLiteralNode.make('cat');
-      return VastBuild.make(astNode, StringPool.make(astNode));
+      return VastBuild.make(astNode, VastBuild.makeStringPoolFrom(astNode));
     }
     it('builds a valid node', () => {
       const build = makeBuild();

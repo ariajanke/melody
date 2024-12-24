@@ -1,5 +1,4 @@
 import { Helpers } from './helpers';
-import { type AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { ObjectType } from './object_type';
 import { type FunctionCompositor } from './function_compositor';
 
@@ -80,7 +79,6 @@ export type BuiltInFunction =
 export interface FunctionType {
   parameters: () => ObjectType,
   onBuiltIn: (fn: (bif: BuiltInFunction) => void) => FunctionType,
-  onNodeImplementation: (fn: (node: AstFunctionDefinitionNode) => void) => FunctionType,
   // how do I prevent this type from becoming an implementation "dumping ground"?
   // visitWasmCodeWriter
   name: () => string,
@@ -101,7 +99,6 @@ export interface IncompleteFunctionType {
   setParameters: (args: ObjectType) => IncompleteFunctionType,
   setReturns: (args: ObjectType) => IncompleteFunctionType,
   setBuiltin: (fn: BuiltInFunction) => IncompleteFunctionType,
-  setAstNode: (node: AstFunctionDefinitionNode) => IncompleteFunctionType,
   setCallStrategy: (fn: () => CallHandlingStrategies) => IncompleteFunctionType,
   setContextToTakeAll: () => IncompleteFunctionType,
   implementationDoesNothing: () => IncompleteFunctionType,
@@ -112,7 +109,6 @@ type FunctionInitialization = {
   parameters        : ObjectType,
   returns           : ObjectType,
   builtin           : BuiltInFunction | undefined,
-  nodeImplementation: AstFunctionDefinitionNode | undefined,
   name              : string,
   callStrategy      : CallHandlingStrategies,
   contextStrategy   : CallingContextFactory
@@ -124,7 +120,6 @@ function constructIncompleteFunctionType() {
     parameters        : ObjectType.emptyTupleInstance(),
     returns           : ObjectType.emptyTupleInstance(),
     builtin           : undefined,
-    nodeImplementation: undefined,
     name              : reservedAnonymousName,
     callStrategy      : uninitializedCallStrategies(),
     contextStrategy   : CallingContext.toInherit
@@ -150,11 +145,6 @@ function constructIncompleteFunctionType() {
       m.returns = rets;
       return inst;
     },
-    setAstNode(node: AstFunctionDefinitionNode): IncompleteFunctionType {
-      m.builtin = undefined;
-      m.nodeImplementation = node;
-      return inst;
-    },
     setCallStrategy(fn: () => CallHandlingStrategies): IncompleteFunctionType {
       m.callStrategy = fn();
       return inst;
@@ -164,9 +154,7 @@ function constructIncompleteFunctionType() {
       return inst;
     },
     finish(): FunctionType {
-      if (m.nodeImplementation === undefined &&
-          m.builtin            === undefined)
-      {
+      if (m.builtin === undefined) {
         throw new Error('Cannot complete function without an implementation');
       }
       // throws if "uninitialized"
@@ -175,7 +163,6 @@ function constructIncompleteFunctionType() {
     },
     setBuiltin(fn: BuiltInFunction): IncompleteFunctionType {
       m.builtin = fn;
-      m.nodeImplementation = undefined;
       return inst;
     }
   });
@@ -193,25 +180,16 @@ export const FunctionType = (() => {
     const returns   : ObjectType = m.returns;
     let onBuiltIn = (_0: (bif: BuiltInFunction) => void): FunctionType =>
       inst;
-    let onNodeImplementation = (_0: (node: AstFunctionDefinitionNode) => void): FunctionType =>
-      inst;
     const {
       builtin,
-      nodeImplementation,
       name,
       callStrategy
     } = m;
-    if (builtin && !nodeImplementation) {
+    if (builtin) {
       onBuiltIn = (fn: (bif: BuiltInFunction) => void): FunctionType => {
         fn(builtin);
         return inst;
       };
-    } else if (nodeImplementation && !builtin) {
-      onNodeImplementation =
-        (fn: (node: AstFunctionDefinitionNode) => void): FunctionType => {
-          fn(nodeImplementation as AstFunctionDefinitionNode);
-          return inst;
-        };
     } else {
       throw new Error('implementation was not set');
     }
@@ -223,7 +201,6 @@ export const FunctionType = (() => {
       uid: memoize(Symbol),
       name: () => name,
       withCallStrategy: () => callStrategy,
-      onNodeImplementation,
       composeWith(compositor: FunctionCompositor): FunctionCompositor {
         return compositor.pushBuiltin(builtin ?? (() => {
           throw new Error('no builtin');

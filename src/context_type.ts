@@ -7,15 +7,11 @@ import {
 import { Helpers } from './helpers';
 import { IntegerType } from './integer_type';
 import { StringType } from './string_type';
-import { type AstNodeVisitor } from './ast_node_visitor';
-import { AstIdentifierNode } from './ast_identifier_node';
-import { type ObjectLookUpTable } from './object_look_up_table';
 import { ObjectType, WritableObjectType } from './object_type';
 import { PutsPrinterType } from './puts_function_look_up_table';
 
 const { memoize, freeze } = Helpers;
 const { noReceiver } = CallHandlingStrategies;
-
 
 const defaultInjections = memoize(() => freeze({
   getStringType: StringType.instance,
@@ -23,22 +19,6 @@ const defaultInjections = memoize(() => freeze({
 }));
 
 export type ContextTypeInjections = ReturnType<typeof defaultInjections>;
-
-function contextReceiverDummyNode(): AstIdentifierNode {
-  const inst = freeze({
-    value: () => {
-      throw new Error('Special context type cannot have a value');
-    },
-    visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
-      visitor.visitIdentifier(inst),
-    type: AstIdentifierNode.type,
-    executionType: (objTable: ObjectLookUpTable) => 
-      objTable.lookUpByName(ContextType.typeName()),
-    asString: () => '<context>',
-    contextMethodName: () => '<context>' // call by "$<context>"
-  });
-  return inst;
-}
 
 function makeWritable(injections = defaultInjections()) {
   const { getIntegerType, getStringType, } = injections;
@@ -68,7 +48,7 @@ function makeWritable(injections = defaultInjections()) {
     }).
     finish();
 
-  const { contextMethodName } = class_.asReceiverPlaceholderNode();
+  const { contextMethodName } = class_;
   const getSelf = IncompleteFunctionType.
     make().
     setCallStrategy(noReceiver).
@@ -101,7 +81,7 @@ const class_ = freeze({
   makeWritable,
   defaultInjections,
   typeName: () => 'Context',
-  asReceiverPlaceholderNode: memoize(contextReceiverDummyNode)
+  contextMethodName: () => '<context>',
 });
 
 export const ContextType = class_;
