@@ -1,7 +1,7 @@
-import { AstNode } from './ast_node';
-import { AstStringLiteralNode } from './ast_string_literal_node';
+// import { AstNode } from './ast_node';
+// import { AstStringLiteralNode } from './ast_string_literal_node';
 import { Helpers } from './helpers';
-import { StringType } from './string_type';
+// import { StringType } from './string_type';
 
 const { memoize, freeze } = Helpers;
 
@@ -13,8 +13,7 @@ export type StringPool = {
 
 export const StringPool = freeze({  
   makeDefault: memoize((): StringPool => {
-    const node = AstStringLiteralNode.make('bees');
-    return StringPool.make(node);
+    return StringPool.makeForStrings(() => ['bees']);
   }),
   makeForStrings(getStrings: () => string[]) {
     const stringsArray = memoize(getStrings);
@@ -36,8 +35,8 @@ export const StringPool = freeze({
       }
     });
   },
-  make(rootNode: AstNode): StringPool {
-    return StringPool.makeForStrings(() => rootNode.
-      visit( StringType.stringPoolVisitor() ));
-  }
+  // make(rootNode: AstNode): StringPool {
+  //   return StringPool.makeForStrings(() => rootNode.
+  //     visit( StringType.stringPoolVisitor() ));
+  // }
 });

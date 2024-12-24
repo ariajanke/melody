@@ -12,3 +12,9 @@ of interest to anyone.)
 
 - "Class" names are at least two words
 - never define something in the same place that it's used
+- every module may see all of:
+  - sibling modules
+  - modules above
+  - modules below only in a directory by the same name as the module itself
+- next merge code:spec ratio is 100:35
+
