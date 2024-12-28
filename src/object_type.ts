@@ -25,7 +25,7 @@ export const WritableObjectType = freeze({
 
     function acceptMerge(fn: (currentOffset: number) => ObjectType): WritableObjectType {
       const objType = fn(mPosition);
-      mPosition += objType.sizeInWords();
+      mPosition += objType.sizeInWords()*4;
       objType.forEachName((name: string, table: FunctionLookUpTable) => {
         mLookupTable[name] = table;
       });

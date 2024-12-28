@@ -5,17 +5,20 @@ const { freeze } = Helpers;
 function construct(mSlotCapacity: number = 2048) {
   const mSlots = Array<number | undefined>(mSlotCapacity);
   function verifySlotNumber(slot: number) {
+    if (slot % 4 !== 0) {
+      throw new Error('slot number must be divisible by four');
+    }
     if (slot >= 0 && slot < mSlots.length)
-      { return; }
+      { return slot / 4; }
     throw new Error(`Slot number (${slot}) is inaccessible`);
   }
   const inst = freeze({
     load(slot: number): number {
-      verifySlotNumber(slot);
+      slot = verifySlotNumber(slot);
       return mSlots[slot] ??= Infinity;
     },
     store(slot: number, cvar: number): void {
-      verifySlotNumber(slot);
+      slot = verifySlotNumber(slot);
       mSlots[slot] = cvar;
     }
   });

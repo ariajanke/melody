@@ -6,6 +6,7 @@ import { WasmExportsSection } from './wasm_exports_section';
 import { WasmFunctionsSection } from './wasm_functions_section';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmImportsSection } from './wasm_imports_section';
+import { WasmMemorySection } from './wasm_memory_section';
 
 const { freeze } = Helpers;
 
@@ -43,14 +44,16 @@ export const WasmFunctionDeclarationsCompilation = (() => {
                  mFunctionSection.pushSignatureFrom(idx));
         },
         compileWith: (makeHeader: () => number[], importsSection: WasmImportsSection) => {
-          return Uint8Array.from([
+          const byteCode = [
             ...makeHeader(),
             ...mTypesSection.finish(),
             ...importsSection.finish(),
             ...mFunctionSection.finish(),
+            ...WasmMemorySection.make().finish(),
             ...mExportsSection.finish(),
             ...mCodeSection.finish()
-          ]);
+          ];
+          return Uint8Array.from(byteCode);
         }
       });
     }

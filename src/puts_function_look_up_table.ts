@@ -1,19 +1,19 @@
 import { Helpers } from './helpers';
-import { BuiltInFunction, CallHandlingStrategies, CallingContext, CodeWriter, IncompleteFunctionType } from './function_type';
+import {
+  CallHandlingStrategies,
+  CallingContext,
+  IncompleteFunctionType,
+} from './function_type';
 import { FunctionType } from './function_type';
 import { type FunctionLookUpTable } from './function_look_up_table';
 import { ObjectType, WritableObjectType } from './object_type';
-import { StackReversalLookUpTable } from './stack_reversal_type';
+import { type CodeWriter, PrintCodeWriter } from './code_writer';
 
 const { freeze, memoize } = Helpers;
 
 export const PutsPrinterType = freeze({
-  make(mOwner?: ObjectType) {
-    const stackReversalTable = () => StackReversalLookUpTable.
-      make(mOwner?.sizeInWords() ?? 0);
-    const putsLookUpTable = memoize(() =>
-      PutsFunctionLookUpTable.make(stackReversalTable()));
-
+  make() {
+    const putsLookUpTable = memoize(PutsFunctionLookUpTable.make);
     return freeze({
       name: () => 'PutsPrinter',
       lookUp(operation: string): FunctionLookUpTable | undefined {
@@ -29,7 +29,7 @@ export const PutsPrinterType = freeze({
       decompose: (): Readonly<ObjectType[]> => [],
       mergeInto(obj: WritableObjectType): WritableObjectType {
         return obj.acceptMerge((_0: number) => {
-          return PutsPrinterType.make(obj.objectType());
+          return PutsPrinterType.make();
         });
       },
       sizeInWords: () => 0
@@ -38,33 +38,32 @@ export const PutsPrinterType = freeze({
 });
 
 const PutsFunctionLookUpTable = freeze({
-  make: (mReversalLookUpTable = StackReversalLookUpTable.make(0)): FunctionLookUpTable => {
+  make: (): FunctionLookUpTable => {
     type ImplementationTable = {
       implementation: FunctionType | undefined
       [uid: symbol]: ImplementationTable
     };
     const mTable: ImplementationTable = { implementation: undefined };
 
-    function makePrintItem(objType: ObjectType) {
-      if (objType.name() === 'String') {
-        return (writer: CodeWriter) => { writer.printString(); };
-      }
-      return (writer: CodeWriter) => { writer.printInteger(); };
-    }
-    
     function makeImplementation(objTypes: Readonly<ObjectType[]>) {
-      const itemPrinters  = objTypes.
-        map((obj: ObjectType) => makePrintItem(obj));
-
-      const func = mReversalLookUpTable.
-        byParameters(ObjectType.asTuple(objTypes)) ?? (() => {
-          throw new Error('this should not happen');
-        })();
-
-      return (callingContext: CallingContext, writer: CodeWriter): void => {
-        func.onBuiltIn((bif: BuiltInFunction) => bif(callingContext, writer));
-        itemPrinters.forEach((fn: (writer: CodeWriter) => void) => fn(writer));
-      };
+      return IncompleteFunctionType.
+        make().
+        setParameters(ObjectType.asTuple(objTypes)).
+        setReturns(ObjectType.emptyTupleInstance()).
+        setContextToTakeAll().
+        setCallStrategy(CallHandlingStrategies.noReceiver).
+        setName('puts').
+        setBuiltin((_0: CallingContext, codeWriter: CodeWriter) => {
+          codeWriter.forPrintMethod((cwp: PrintCodeWriter) => {
+            objTypes.forEach((objType: ObjectType) => {
+              if (objType.name() === 'String')
+                { cwp.printString(); }
+              else
+                { cwp.printInteger(); }
+            });
+          });
+        }).
+        finish();
     }
 
     function lookUpImpl
@@ -80,15 +79,7 @@ const PutsFunctionLookUpTable = freeze({
       byParameters(type: ObjectType): FunctionType | undefined {
         const types = type.decompose();
         const table = lookUpImpl(mTable, types);
-        return table.implementation ??= IncompleteFunctionType.
-          make().
-          setContextToTakeAll().
-          setCallStrategy(CallHandlingStrategies.noReceiver).
-          setBuiltin( makeImplementation(types) ).
-          setParameters(type).
-          setReturns(ObjectType.emptyTupleInstance()).
-          setName('puts').
-          finish();
+        return table.implementation ??= makeImplementation(types);
       }
     });
   }

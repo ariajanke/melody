@@ -1,43 +1,43 @@
 import { Helpers } from '../helpers';
-import { WasmHelpers } from './wasm_helpers';
+import { FinisherHelpers, WasmHelpers } from './wasm_helpers';
 
 const { freeze } = Helpers;
 
 export const WasmImportsSection = freeze({
   make(mCode: number [] = [], mImportsCount: number = 0) {
     const { encodeVaruint32, convertStringToNumbers, externalKinds } = WasmHelpers;
-    return freeze({
+    const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
+    const inst = freeze({
       pushFunction(idx: number, moduleName: string, fieldName: string) {
+        resetFinishedCode();
         (idx >= 0 && idx < 256) || (() => {
           throw new Error('index too beefy');
         })();
-        return WasmImportsSection.
-          make(
-            [
-              ...mCode,
-              ...encodeVaruint32(moduleName.length),
-              ...convertStringToNumbers(moduleName),
-              ...encodeVaruint32(fieldName.length),
-              ...convertStringToNumbers(fieldName),
-              externalKinds().func,
-              ...encodeVaruint32(idx)
-            ],
-            mImportsCount + 1);
+        mCode.push(
+          ...encodeVaruint32(moduleName.length),
+          ...convertStringToNumbers(moduleName),
+          ...encodeVaruint32(fieldName.length),
+          ...convertStringToNumbers(fieldName),
+          externalKinds().func,
+          ...encodeVaruint32(idx)
+        );
+        mImportsCount += 1;
+        return inst;
       },
       functionCount: () => mImportsCount,
       finish() {
-        const imptCount = encodeVaruint32(mImportsCount);
-        const rv = [
-          2, // section code
-          ...encodeVaruint32(mCode.length + imptCount.length),
-          ...imptCount,
-          ...mCode
-        ];
-        mCode.length = 0;
-        mImportsCount = 0;
-        return rv;
+        return trackFinished(() => {
+          const imptCount = encodeVaruint32(mImportsCount);
+          return [
+            2, // section code
+            ...encodeVaruint32(mCode.length + imptCount.length),
+            ...imptCount,
+            ...mCode
+          ];
+        });
       }
     });
+    return inst;
   }
 });
 export type WasmImportsSection = ReturnType<typeof WasmImportsSection.make>;

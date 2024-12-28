@@ -1,20 +1,21 @@
 import { Helpers } from '../helpers';
-import { TypesAware, WasmHelpers } from './wasm_helpers';
+import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 
 const { freeze } = Helpers;
 
 export const WasmFunctionBody = (() => {
   const kOpCodes = freeze({
-    getLocal   : 0x20,
-    setLocal   : 0x21,
-    i32Add     : 0x6A,
-    i32Subtract: 0x6B,
-    i32Multiply: 0x6C,
-    i32Const   : 0x41,
-    call       : 0x10,
-    i32load    : 0x28,
-    i32store   : 0x36,
-    drop       : 0x1A
+    getLocal    : 0x20,
+    setLocal    : 0x21,
+    i32Add      : 0x6A,
+    i32Subtract : 0x6B,
+    i32Multiply : 0x6C,
+    i32Const    : 0x41,
+    call        : 0x10,
+    i32load     : 0x28,
+    i32store    : 0x36,
+    drop        : 0x1A,
+    indirectCall: 0x11
   });
   const kFunctionEnd = 0x0B;
 
@@ -25,94 +26,107 @@ export const WasmFunctionBody = (() => {
     if (count === 0) {
       return [...encodeVaruint32(0)];
     }
+    // treat everything as an i32
     return [
-      ...encodeVaruint32(count),
+      ...encodeVaruint32(1),
       ...encodeVaruint32(count),
       asCode(wasmTypes().i32)
     ];
   }
   
   const class_ = freeze({
-    make(mCode: number[] = [], mLocalCount = 0) {
+    make(mCode: number[] = [], mLocalCount = 0, mStackCount = 0) {
       const { encodeVaruint32 } = WasmHelpers;
+      const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
+      function verifyStackIncrement(amount: number) {
+        mStackCount += amount;
+        if (mStackCount < 0) {
+          throw new Error('Trying to use an empty stack');
+        }
+      }
 
-      const pushSingleInstruction = (instr: number) => {
-        mCode = [
-          ...mCode,
-          instr
-        ];
+      const pushCode = (...code: number[]) => {
+        resetFinishedCode();
+        mCode.push(...code);
         return inst;
       };
       const inst = freeze({
         pushI32Const(constant: number) {
+          verifyStackIncrement(1);
           if (constant < 0 || constant > 2000000000) {
             throw new Error(`Value ${constant} not supported for i32 const`);
           }
-          mCode = [
-            ...mCode,
-            0x41,
-            ...encodeVaruint32(constant)
-          ];
-          return inst;
+          return pushCode(0x41, ...encodeVaruint32(constant));
         },
-        pushI32Add: () => pushSingleInstruction(kOpCodes.i32Add),
-        pushI32Subtract: () => pushSingleInstruction(kOpCodes.i32Subtract),
-        pushI32Multiply: () => pushSingleInstruction(kOpCodes.i32Multiply),
+        pushI32Add: () => {
+          verifyStackIncrement(-1);
+          return pushCode(kOpCodes.i32Add);
+        },
+        pushI32Subtract: () => {
+          verifyStackIncrement(-1);
+          return pushCode(kOpCodes.i32Subtract);
+        },
+        pushI32Multiply: () => {
+          verifyStackIncrement(-1);
+          return pushCode(kOpCodes.i32Multiply);
+        },
         pushI32Load    : () => {
-          mCode = [
-            ...mCode,
+          return pushCode(
             kOpCodes.i32load,
-            0x02,
-            ...encodeVaruint32(0)
-          ];
-          return inst;
+            0x0, // offset
+            ...encodeVaruint32(0) // align
+          );
         },
         pushI32Store: () => {
-          mCode = [
-            ...mCode,
-            kOpCodes.i32store,
-            0x02,
-            ...encodeVaruint32(0)
-          ];
-          return inst;
+          verifyStackIncrement(-2);
+          return pushCode(kOpCodes.i32store, 0x02, ...encodeVaruint32(0));
         },
         pushFunctionCall(funcIdx: number) {
-          mCode = [
-            ...mCode,
-            kOpCodes.call,
-            ...encodeVaruint32(funcIdx)
-          ];
-          return inst;
+          return pushCode(kOpCodes.call, ...encodeVaruint32(funcIdx));
         },
         pushLocal() {
           mLocalCount += 1;
+          resetFinishedCode();
           return inst;
         },
         localCount: () => mLocalCount,
+        stackCount: () => mStackCount,
         pushDrop() {
-          mCode.push(kOpCodes.drop);
-          return inst;
+          return pushCode(kOpCodes.drop);
         },
         setLocal(idx: number) {
-          mCode.push(kOpCodes.setLocal);
-          mCode.push(idx);
-          return inst;
+          verifyStackIncrement(-1);
+          if (idx < 0 || idx > 255) {
+            throw new Error(`Invalid/Unsupported local index ${idx}`);
+          }
+          return pushCode(kOpCodes.setLocal, idx);
         },
         getLocal(idx: number) {
-          mCode.push(kOpCodes.getLocal);
-          mCode.push(idx);
-          return inst;
+          verifyStackIncrement(1);
+          if (idx < 0 || idx > 255) {
+            throw new Error(`Invalid/Unsupported local index ${idx}`);
+          }
+          return pushCode(kOpCodes.getLocal, idx);
+        },
+        callIndirect(typeIdx: number) {
+          verifyStackIncrement(-1);
+          return pushCode(kOpCodes.indirectCall, ...encodeVaruint32(typeIdx), 0);
         },
         finish() {
-          mCode.push(kFunctionEnd);
-          // must begin with local decl count
-          mCode = [...localCountIntoCode(mLocalCount), ...mCode];
-          mCode = [
-            ...encodeVaruint32(mCode.length),
-            ...mCode
-          ];
-          const rv = mCode;
-          return rv;
+          return trackFinished(() => {
+            // must begin with local decl count
+            const localsInfo = localCountIntoCode(mLocalCount);
+            const wrappedCode = [
+              ...localsInfo,
+              ...mCode,
+              kFunctionEnd
+            ];
+            
+            return [
+              ...encodeVaruint32(wrappedCode.length),
+              ...wrappedCode
+            ];
+          });
         }
       });
       return inst;

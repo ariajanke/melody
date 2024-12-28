@@ -3,6 +3,7 @@ import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { WasmFunctionDeclarationsCompilation } from './wasm_function_declarations_compilation';
 import { StringPool } from '../string_pool';
+import { TypesAware } from './wasm_helpers';
 
 const { memoize, freeze } = Helpers;
 
@@ -28,12 +29,13 @@ export const WasmCompiler = (() => {
       class_.makeDefaultIntegerGenerator(0, strings.length),
     makeDefaultIntegerGenerator,
     makeWithEntryImplementation(mFunctionBody: WasmFunctionBody) {
+      const { i32 } = TypesAware.wasmTypes();
       return freeze({
         compile:
           (mStringPool: StringPool,
-           mJsPrint: (s: string | number) => void = class_.defaultJsPrint,
+           mJsPrint: (s: string) => void = class_.defaultJsPrint,
            mJsAskInteger: () => number = class_.makeDefaultIntegerGenerator(),
-           mJsAskString?: () => number) =>// () => number = class_.makeAskString(mStringPool)) =>
+           mJsAskString?: () => number) =>
         {
           mJsAskString ??= mStringPool.askString;
           const imports = WasmBuiltinImportsCreation.
@@ -42,8 +44,8 @@ export const WasmCompiler = (() => {
           const imptSec = imports.importsSection();
           let funcDecs = WasmFunctionDeclarationsCompilation.
             make(typesSec, WasmBuiltinImportsCreation.cloneDescriptionsCounter());
-          
-          funcDecs = funcDecs.declareFunction('entry', [], [], mFunctionBody, true);
+          mFunctionBody.pushI32Const(0);
+          funcDecs = funcDecs.declareFunction('entry', [], [i32], mFunctionBody, true);
           const byteCode = funcDecs.compileWith(header, imptSec);
           return [byteCode, imports.importObject()] as [Uint8Array, ReturnType<typeof imports.importObject>];
         }

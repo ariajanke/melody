@@ -34,7 +34,9 @@ describeNamed({ WasmHelpers }, () => {
           cat.codePointAt(0),
           cat.codePointAt(1),
           cat.codePointAt(2)
-        ];
+        ].map((n: number | undefined) => n ?? (() => {
+          throw new Error('bad testing data');
+        })());
       expect(convertStringToNumbers(cat)).toEqual(codePoints);
     });
   });

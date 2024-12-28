@@ -1,6 +1,7 @@
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { type FunctionCompositor } from './function_compositor';
+import { type CodeWriter } from './code_writer';
 
 const { freeze, memoize } = Helpers;
 
@@ -32,21 +33,6 @@ export const CallHandlingStrategies = (() => {
   });
 })();
 
-export interface CodeWriter {
-  pushInteger(i: number): CodeWriter,
-  addIntegers(): CodeWriter,
-  subtractIntegers(): CodeWriter,
-  multiplyIntegers(): CodeWriter,
-  loadInteger(): CodeWriter,
-  storeInteger(): CodeWriter,
-  printInteger(): CodeWriter,
-  printString(): CodeWriter,
-  askString(): CodeWriter,
-  askInteger(): CodeWriter,
-  swapTopTwo(): CodeWriter,
-  drop(): CodeWriter
-}
-
 type CallingContextFactory =
   (callingContext: CallingContext) => CallingContext;
 
@@ -73,8 +59,7 @@ export const CallingContext = freeze({
 });
 
 export type BuiltInFunction =
-  (callingContext: CallingContext,
-   codeWriter: CodeWriter) => void;
+  (callingContext: CallingContext, codeWriter: CodeWriter) => void;
 
 export interface FunctionType {
   parameters: () => ObjectType,

@@ -1,7 +1,7 @@
 import { TestHelpers } from './test_helpers';
-import { VariableDeclaration } from '../src/variable_declaration_function_table';
+import { VariableDeclaration } from '../src/variable_declaration';
 import { StringPool } from '../src/string_pool';
-import { BuiltInFunction, CallingContext, CodeWriter } from '../src/function_type';
+import { BuiltInFunction, CallingContext } from '../src/function_type';
 import { IntegerType } from '../src/integer_type';
 import { VastIdentifierNode } from '../src/vast_node';
 import { InterpretedCodeWriter } from '../src/interpreted_code_writer';
@@ -9,41 +9,36 @@ import { Helpers } from '../src/helpers';
 import { VastFunctionCallNode } from '../src/vast_function_call_node';
 import { VastIntegerLiteralNode } from '../src/vast_literal_node';
 import { PutsPrinterType } from '../src/puts_function_look_up_table';
+import { type CodeWriter } from '../src/code_writer';
 
-const { freeze } = Helpers;
+const { freeze, presenceAsserted, memoize } = Helpers;
 const { describeNamed } = TestHelpers;
 
 describeNamed({ VastFunctionCallNode }, () => {
-  function assertDefined<Type>(thing: Type | undefined, expText?: string) {
-    return thing ?? (() => {
-      throw new Error(expText ?? 'Failed always defined assertion');
-    })();
-  }
-
   function makeGenericFuncCall() {
     const intType = IntegerType.instance();
-    const funcLookUp = assertDefined(PutsPrinterType.make().lookUp('puts'));
-    const idNode = VastIdentifierNode.make(funcLookUp);
-    const funcType = assertDefined(funcLookUp.byParameters(intType));
-    return VastFunctionCallNode.make(funcType, idNode, VastIntegerLiteralNode.make(intType, 3));
+    const funcLookUp = presenceAsserted(() => PutsPrinterType.make().lookUp('puts'));
+    const idNode = VastIdentifierNode.make(funcLookUp());
+    const funcType = presenceAsserted(() => funcLookUp().byParameters(intType));
+    return VastFunctionCallNode.make(funcType(), idNode, VastIntegerLiteralNode.make(intType, 3));
   }
 
   it('gives control of what defines current context to individual functions', () => {
     const intType = IntegerType.instance();
     const cvar = VariableDeclaration.make('a', intType, ':=');
     const integerLit = VastIntegerLiteralNode.make(intType, 3);
-    const cvarLookUp = assertDefined( cvar.lookUp('a') );
-    const cvarSetFunc = assertDefined(cvarLookUp.byParameters(intType));
+    const cvarLookUp = presenceAsserted(memoize(() => cvar.lookUp('a') ));
+    const cvarSetFunc = presenceAsserted(() => cvarLookUp().byParameters(intType));
     const funcCall = VastFunctionCallNode.
-      make(cvarSetFunc, VastIdentifierNode.make( cvarLookUp ), integerLit );
+      make(cvarSetFunc(), VastIdentifierNode.make( cvarLookUp() ), integerLit );
     const pushedInts: number[] = [];
     const writer: CodeWriter = (() => {
       const inst = InterpretedCodeWriter.make(StringPool.makeDefault());
       return freeze({
         ...inst,
-        pushInteger(n: number) {
+        pushRepresentation(n: number) {
           pushedInts.push(n);
-          inst.pushInteger(n);
+          inst.pushRepresentation(n);
           return writer;
         },
       });
@@ -52,7 +47,7 @@ describeNamed({ VastFunctionCallNode }, () => {
     funcCall.functionType().onBuiltIn((bif: BuiltInFunction) => {
       bif(CallingContext.canTakeNothing(), writer);
     });
-    expect(pushedInts).toEqual([3, 0]);
+    expect(pushedInts).toEqual([3]);
   });
 
   it('is its function type, but takes no parameters', () => {

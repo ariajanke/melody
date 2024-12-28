@@ -95,7 +95,7 @@ describeNamed({ ContextTypeRetrieval }, () => {
     const aOffset = (obj.lookUp('.a') as VariableDeclarationFunctionTable)?.offset();
     const bOffset = (obj.lookUp('.b') as VariableDeclarationFunctionTable)?.offset();
     expect(aOffset).toEqual(0);
-    expect(bOffset).toEqual(1);
+    expect(bOffset).toEqual(4);
   });
 
   it('declarations are given their own slots in memory', () => {

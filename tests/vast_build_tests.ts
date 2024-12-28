@@ -1,4 +1,4 @@
-  import { TestHelpers } from './test_helpers';
+import { TestHelpers } from './test_helpers';
 import { VastBuild } from '../src/vast_build';
 import { StringPool } from '../src/string_pool';
 import { StringType } from '../src/string_type';
@@ -20,11 +20,18 @@ import { AstFunctionDefinitionNode } from '../src/vast_build/ast_function_defini
 const { describeNamed } = TestHelpers;
 
 describeNamed({ VastBuild }, () => {
+  const { makeStringPoolFrom } = VastBuild;
+  function sampleFunctionDef() {
+    const foo = AstIdentifierNode.make('foo');
+    const def = AstFunctionDefinitionNode.make( [AstStringLiteralNode.make('cat')] );
+    const call = AstFunctionCallNode.make(foo, AstIdentifierNode.make(':='), def);
+    return AstLetDeclarationNode.make(call);
+  }
 
   describe('string literals', () => {
     function makeBuild() {
       const astNode = AstStringLiteralNode.make('cat');
-      return VastBuild.make(astNode, VastBuild.makeStringPoolFrom(astNode));
+      return VastBuild.make(astNode, makeStringPoolFrom(astNode));
     }
     it('builds a valid node', () => {
       const build = makeBuild();
@@ -77,11 +84,11 @@ describeNamed({ VastBuild }, () => {
         const root = build.root();
         if (!root)
           { throw new Error(build.errors()[0].message); }
-        memory.store(MemoryArray.stackPointerLocation(), 1);
+        memory.store(MemoryArray.stackPointerLocation(), 4);
         root.functionType().onBuiltIn((impl: BuiltInFunction) => {
           impl(CallingContext.canTakeAll(), codeWriter);
         });
-        expect(memory.load(1)).toEqual(3);
+        expect(memory.load(4)).toEqual(3);
         expect(stack.count()).toEqual(1);
         expect(stack.pop()).toEqual(3);
       });
@@ -103,15 +110,48 @@ describeNamed({ VastBuild }, () => {
         const root = build.root();
         if (!root)
           { throw new Error(build.errors()[0].message); }
-        memory.store(MemoryArray.stackPointerLocation(), 1);
+        memory.store(MemoryArray.stackPointerLocation(), 4);
         root.functionType().onBuiltIn((impl: BuiltInFunction) => {
           impl(CallingContext.canTakeAll(), codeWriter);
         });
-        expect(memory.load(1)).toEqual(3);
-        expect(memory.load(2)).toEqual(3);
+        expect(memory.load(4)).toEqual(3);
+        expect(memory.load(8)).toEqual(3);
         expect(stack.count()).toEqual(1);
         expect(stack.pop()).toEqual(3);
       });
+    });
+  });
+
+  describe('defining a function with a let', () => {
+    // let foo := fn 'cat'
+    it('is a valid declaration', () => {
+      const letStt = sampleFunctionDef();
+      const build = VastBuild.
+        make(AstFunctionDefinitionNode.make([letStt]),
+             makeStringPoolFrom(letStt));
+      const root = build.root();
+      if (!root) {
+        throw new Error(build.errors()[0].message);
+      }
+      expect(root.functionType().parameters().uid()).
+        toEqual(ObjectType.emptyTupleInstance().uid());
+    });
+  });
+
+  describe('defining a function that attempts a capture', () => {
+    it('fails (for now)', () => {
+      const bvar = AstIdentifierNode.make('b');
+      const putsB = AstFunctionCallNode.
+        makeWithContextReceiver(AstIdentifierNode.make('puts'), bvar);
+      const blet = AstLetDeclarationNode.make(AstFunctionCallNode.
+        make(bvar, AstIdentifierNode.make(':='), AstIntegerLiteralNode.make('1')));
+      const defNode = AstFunctionDefinitionNode.make([putsB]);
+      const astRoot = AstFunctionDefinitionNode.make([blet, defNode]);
+      const build = VastBuild.make(astRoot, makeStringPoolFrom(astRoot));
+      if (build.root()) {
+        throw new Error('ought to not be valid');
+      }
+      expect(build.errors()[0].message).toEqual('"b" is not declared');
     });
   });
 });
