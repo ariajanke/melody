@@ -57,6 +57,12 @@ export const VastBuildVisitor = freeze({
         const argsAsVast = fArgs.visit(inst);
         if (!recAsVast || !argsAsVast)
           { return undefined; }
+        VastFunctionCallNode.
+          validateFunctionParameters(func, argsAsVast.objectType(), (message: string) => {
+            mErrors.push(() => freeze({ message }));
+          });
+        if (mErrors.length > 0)
+          { return undefined; }
         return VastFunctionCallNode.make(func, recAsVast, argsAsVast);
       },
       visitLetDeclaration: (_0: AstLetDeclarationNode, rhs: AstNode): VastNode | undefined =>
@@ -101,10 +107,17 @@ export const VastBuildVisitor = freeze({
         if (!allDefined) {
           return undefined;
         }
-
+        const resv = mObjectTable.lookUpByName('Function');
+        const funcType = resv.resolve();
+        if (!funcType) { 
+          throw new Error(resv.error().message);
+        }
         const rv = VastFunctionDefinitionNode.
-          make(vnodes as VastNode[], ctxType);
+          make(vnodes as VastNode[], funcType);
         mContextTypeStack.pop();
+        // oh gawd
+        if (mContextTypeStack.length > 0)
+          mObjectTable.addType(topContextType());
         return rv;
       },
       visitLiteral: (node: AstLiteralNode): VastNode | undefined => {

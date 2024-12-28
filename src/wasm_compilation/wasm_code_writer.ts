@@ -1,10 +1,9 @@
 import { Helpers } from '../helpers';
-import { WasmFunctionBody } from './wasm_function_body';
-import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { WasmCompiler } from './wasm_compiler';
-import { type CodeWriter } from '../function_type';
+import { WasmFunctionCodeWriter } from './wasm_function_code_writer';
+import { PrintCodeWriter, type CodeWriter } from '../code_writer';
 
-const { freeze, expose } = Helpers;
+const { freeze } = Helpers;
 
 export interface WasmCodeWriter extends CodeWriter {
   makeCompilerFromCode(): WasmCompiler
@@ -12,75 +11,69 @@ export interface WasmCodeWriter extends CodeWriter {
 
 export const WasmCodeWriter = (() => {
   return freeze({
-    make(mFunctionBody: WasmFunctionBody = WasmFunctionBody.make()): WasmCodeWriter {
-      const getImportFuncIndex = (name: string) => {
-        const { descriptions } = WasmBuiltinImportsCreation;
-        const desc = descriptions()[name];
-        if (!desc) { 
-          throw new Error(`"${name}" is mispelled or does not exist`);
-        }
-        return desc.index;
-      };
-      const pushFunctionCall = (name: string) => {
-        mFunctionBody = mFunctionBody.pushFunctionCall(getImportFuncIndex(name));
-        return inst;
-      };
+    make(): WasmCodeWriter {
+      const mFunctionWriters: WasmFunctionCodeWriter[] = [];
+      const mWriterStack: WasmFunctionCodeWriter[] = [];
+      const topFunctionWriter = () =>
+        mWriterStack[mWriterStack.length - 1] ??
+        (() => { throw new Error('no top'); })();
       const inst = freeze({
-        pushInteger(i: number) {
-          if (i < 0) {
-            throw new Error('Negative integers not implemented');
-          }
-          const asHex = i.toString(16).padStart(8, '0');
-          if (asHex.length > 8) {
-            throw new Error('Given number is too large');
-          }
-          mFunctionBody = mFunctionBody.pushI32Const(i);
+        pushRepresentation(i: number) {
+          topFunctionWriter().pushRepresentation(i);
           return inst;
         },
         addIntegers() {
-          mFunctionBody = mFunctionBody.pushI32Add();
+          topFunctionWriter().addIntegers();
           return inst;
         },
         subtractIntegers() {
-          mFunctionBody = mFunctionBody.pushI32Subtract();
+          topFunctionWriter().subtractIntegers();
           return inst;
         },
         multiplyIntegers() {
-          mFunctionBody = mFunctionBody.pushI32Multiply();
+          topFunctionWriter().multiplyIntegers();
           return inst;
         },
-        loadInteger: () => {
-          mFunctionBody.pushI32Load();
+        loadInteger: (offset: number) => {
+          topFunctionWriter().loadInteger(offset);
           return inst;
         },
-        storeInteger: () => {
-          mFunctionBody.pushI32Store();
+        storeInteger: (offset: number) => {
+          topFunctionWriter().storeInteger(offset);
           return inst;
         },
-        printInteger: () =>
-          pushFunctionCall('printInteger'),
-        printString: () =>
-          pushFunctionCall('printString'),
-        askString: () =>
-          pushFunctionCall('askString'),
-        askInteger: () =>
-          pushFunctionCall('askInteger'),
+        forPrintMethod(fn: (cwp: PrintCodeWriter) => void): CodeWriter {
+          topFunctionWriter().forPrintMethod(fn);
+          return inst;
+        },
+        askString() {
+          topFunctionWriter().askString();
+          return inst;
+        },
+        askInteger() {
+          topFunctionWriter().askInteger();
+          return inst;
+        },
         makeCompilerFromCode: () =>
-          WasmCompiler.makeWithEntryImplementation(mFunctionBody),
-        swapTopTwo() {
-          // throw new Error('unimplemented');
-          for (let i = 0; mFunctionBody.localCount() < 2; ++i) {
-            mFunctionBody.pushLocal();
-          }
-          mFunctionBody.
-            setLocal(0).
-            setLocal(1).
-            getLocal(0).
-            getLocal(1);
+          WasmCompiler.makeWithEntryImplementation(mFunctionWriters[0].toFunctionBody()),
+        drop() {
+          topFunctionWriter().drop();
           return inst;
         },
-        drop() {
-          mFunctionBody.pushDrop();
+        pushFunctionIndex(definer: (codeWriter: CodeWriter) => void): CodeWriter {
+          const toPush = mFunctionWriters.length;
+          const writer = WasmFunctionCodeWriter.make();
+          mFunctionWriters.push(writer);
+          mWriterStack.push(writer);
+          definer(inst);
+          mWriterStack.pop();
+          if (mWriterStack.length > 0) {
+            topFunctionWriter().pushRepresentation(toPush);
+          }
+          return inst;
+        },
+        indirectCall(n: number) {
+          topFunctionWriter().indirectCall(n);
           return inst;
         }
       });
@@ -88,5 +81,3 @@ export const WasmCodeWriter = (() => {
     }
   });
 })();
-// export type WasmCodeWriter = ReturnType<typeof WasmCodeWriter.make>;
-expose({ WasmCodeWriter });

@@ -71,3 +71,4 @@ const class_ = freeze({
 
 export const VastInterpreter = class_;
 export type VastInterpreter = ReturnType<typeof construct>;
+Helpers.expose({ VastInterpreter });

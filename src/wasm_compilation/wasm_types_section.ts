@@ -1,5 +1,10 @@
 import { Helpers } from '../helpers';
-import { type SymFunc, TypesAware, WasmHelpers } from './wasm_helpers';
+import {
+  FinisherHelpers,
+  TypesAware,
+  WasmHelpers,
+  type SymFunc,
+} from './wasm_helpers';
 import { TypeSignatureTracker } from './type_signature_tracker';
 
 const { freeze, expose } = Helpers;
@@ -15,6 +20,7 @@ export const WasmTypesSection = (() => {
     {
       const { func } = class_.wasmTypes();
       const { encodeVaruint32 } = WasmHelpers;
+      const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
       
       const inst = freeze({
         // NOTE
@@ -23,6 +29,7 @@ export const WasmTypesSection = (() => {
         // defined. (verify?) 
         pushFunction(arguments_: SymFunc[], returns: SymFunc[]) {
           // have to exclude known types?
+          resetFinishedCode();
           if (arguments_.length > 255 || returns.length > 255) {
             throw new Error('Too many arguments for WASM');
           }
@@ -41,16 +48,17 @@ export const WasmTypesSection = (() => {
         indexFor: mTypeSignatureTracker.indexFor,
         typeCount: () => mTypeCount,
         finish() {
-          const typeCount = encodeVaruint32(mTypeCount);
-          const sectionSize = encodeVaruint32(mCode.length + typeCount.length);
-          const rv = [
-            1, // section code
-            ...sectionSize,
-            ...typeCount,
-            ...mCode
-          ];
-          mCode.length = 0;
-          return rv;
+          return trackFinished(() => {
+            const typeCount = encodeVaruint32(mTypeCount);
+            const sectionSize = encodeVaruint32(mCode.length + typeCount.length);
+            const rv = [
+              1, // section code
+              ...sectionSize,
+              ...typeCount,
+              ...mCode
+            ];
+            return rv;
+          });
         }
       });
       return inst;

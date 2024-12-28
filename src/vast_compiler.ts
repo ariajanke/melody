@@ -1,31 +1,45 @@
+import { ContextType } from './context_type';
 import { BuiltInFunction, CallingContext } from './function_type';
 import { Helpers, StandardErrorMessage } from './helpers';
 import { StringPool } from './string_pool';
 import { Tokenization } from './tokenization';
 import { AstBuild, VastBuild } from './vast_build';
+import { VastInterpreter } from './vast_interpreter';
 import { VastNode } from './vast_node';
 import { WasmCodeWriter } from './wasm_compilation';
 
 const { freeze, expose } = Helpers;
 
-function construct(mSource: string) {
+function construct(mSource: string,
+                   mInjections = VastInterpreter.defaultInjections())
+{
   let mErrorsFn = (): Readonly<StandardErrorMessage[]> => {
     throw new Error('Should not call this method when no errors are set');
   };
+  
   const tokens = Tokenization.make().tokenize(mSource);
   const astBuild = AstBuild.make(tokens);
   const astRoot  = astBuild.build();
   if (!astRoot) {
     mErrorsFn = astBuild.errors;
-    return undefined;
+    return freeze({
+      compile: () => undefined,
+      errors: mErrorsFn
+    });
   }
 
-  const stringPool = VastBuild.makeStringPoolFrom(astRoot);
+  const stringPool = mInjections.makeStringPool(astRoot);
   const mCodeWriter = WasmCodeWriter.make();
-  const mBuild = VastBuild.make(astRoot, stringPool);
+  const mBuild = VastBuild.make(astRoot, stringPool, freeze({
+    ...ContextType.defaultInjections(),
+    putsFunction: mInjections.putsFunction
+  }), mInjections.makeContextType);
   if (!mBuild.root()) {
     mErrorsFn = mBuild.errors;
-    return undefined;
+    return freeze({
+      compile: () => undefined,
+      errors: mErrorsFn
+    });;
   }
   (mBuild.root() as VastNode).
     functionType().
@@ -35,7 +49,8 @@ function construct(mSource: string) {
   return freeze({
     compile: () => mCodeWriter.
       makeCompilerFromCode().
-      compile(mBuild.stringPool() as StringPool),
+      compile(stringPool as StringPool,
+              mInjections.putsFunction),
     errors: mErrorsFn
   });
 }

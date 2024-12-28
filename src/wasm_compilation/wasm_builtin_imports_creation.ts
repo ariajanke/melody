@@ -42,14 +42,14 @@ export const WasmBuiltinImportsCreation = (() => {
       });
     }),
     make: (mStringPool: StringPool,
-           mJsPrint: (s: string | number) => void,
+           mJsPrint: (s: string) => void,
            mJsAskInteger: () => number,
            mJsAskString: () => number) =>
     {
       
       const imports = {
         printInteger(i: number) {
-          mJsPrint(i);
+          mJsPrint(i.toString());
         },
         printString(i: number) {
           mJsPrint(mStringPool.reverseLookUp(i) ?? '<??UNKNOWN??>');

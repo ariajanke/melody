@@ -1,5 +1,5 @@
 import { Helpers } from '../helpers';
-import { WasmHelpers } from './wasm_helpers';
+import { FinisherHelpers, WasmHelpers } from './wasm_helpers';
 
 const { freeze } = Helpers;
 
@@ -7,24 +7,27 @@ export const WasmFunctionsSection = (() => {
   const class_ = freeze({
     make(mCode: number[] = [], mNumberOfFunctions = 0) {
       const { encodeVaruint32 } = WasmHelpers;
-      return freeze({
+      const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
+      const inst = freeze({
         pushSignatureFrom(n: number) {
+          resetFinishedCode();
           mCode.push( ...encodeVaruint32(n) );
-          const rv = class_.make(mCode, mNumberOfFunctions + 1);
-          mCode = [];
-          return rv;
+          mNumberOfFunctions += 1;
+          return inst;
         },
         finish() {
-          mCode = [...encodeVaruint32(mNumberOfFunctions), ...mCode];
-          const rv = [
-            0x03,
-            ...encodeVaruint32(mCode.length),
-            ...mCode
-          ];
-          mCode.length = 0;
-          return rv;
+          return trackFinished(() => {
+            const funcCount = encodeVaruint32(mNumberOfFunctions);
+            return [
+              0x03,
+              ...encodeVaruint32(mCode.length + funcCount.length),
+              ...funcCount,
+              ...mCode
+            ];
+          });
         }
       });
+      return inst;
     }
   });
   return class_;

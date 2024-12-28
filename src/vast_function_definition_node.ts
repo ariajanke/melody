@@ -2,11 +2,11 @@ import {
   BuiltInFunction,
   CallHandlingStrategies,
   CallingContext,
-  CodeWriter,
   IncompleteFunctionType } from './function_type';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { VastNode } from './vast_node';
+import { CodeWriter } from './code_writer';
 
 const { freeze, memoize } = Helpers;
 
@@ -53,9 +53,26 @@ function construct(lineNodes: Readonly<VastNode[]>, mContextType: ObjectType) {
   // on my *own* returning node, take anything
   const { functionType, itCanBe, uid } = lineNodes.
     reduce((prev: VastNode, cur: VastNode) => VastReturningNode.make(prev, cur));
+  function makeFunctionType() {
+    return IncompleteFunctionType.
+      make().
+      // will have a receiver in the future depending on call site
+      setCallStrategy(CallHandlingStrategies.noReceiver).
+      setParameters(ObjectType.emptyTupleInstance()).
+      setReturns(functionType().returns()).
+      setBuiltin((CallingContext: CallingContext, codeWriter: CodeWriter) => {
+        codeWriter.pushFunctionIndex((codeWriter: CodeWriter) => {
+          functionType().
+            onBuiltIn((bif: BuiltInFunction) => {
+              bif(CallingContext, codeWriter);
+            });
+        });
+      }).
+      finish();
+  }
   return freeze({
     objectType: () => mContextType,
-    functionType,
+    functionType: memoize(makeFunctionType),
     itCanBe,
     uid
   }) satisfies VastNode;

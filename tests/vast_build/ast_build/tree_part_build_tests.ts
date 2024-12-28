@@ -36,13 +36,15 @@ describeNamed({ TreePartBuild }, () => {
       pushToken ??= (_0: Token, _1: string) => inst;
       pushNode ??= (_0: AstNode) => inst;
       pushNewLine ??= () => inst;
-      const inst = Object.freeze({
+      const inst: BuildSink = Object.freeze({
         pushPart,
         pushStatement,
         popStatement,
         pushToken,
         pushNode,
-        pushNewLine
+        pushNewLine,
+        pushBlock: () => { return inst; },
+        popBlock: () => { return inst; }
       });
       return inst;
     };

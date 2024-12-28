@@ -7,11 +7,12 @@ import { VariableDeclarationFunctionTable } from '../src/variable_declaration_fu
 import { StringType } from '../src/string_type';
 import { StringPool } from '../src/string_pool';
 import { VastCompiler } from '../src/vast_compiler';
+import { Helpers } from '../src/helpers';
 
 const { describeNamed } = TestHelpers;
+const { presenceAsserted } = Helpers;
 
 describeNamed({ VastInterpreter }, () => {
-  VastCompiler.make('');
   function makePutsFunction() {
     const printedStrings: string[] = [];
     const putsFunction = (str: string) => { printedStrings.push(str); };
@@ -25,18 +26,62 @@ describeNamed({ VastInterpreter }, () => {
     }
   }
 
-  describe('integration specs', () => {
-    it('compiles and runs a "hello world!" program', () => {
-      const { printedStrings, putsFunction } = makePutsFunction();
-      const interpreter = VastInterpreter.make("puts('hello', 'there', ' world!')", {
-        ...VastInterpreter.defaultInjections(),
-        putsFunction
+  function runRunner(runner: VastInterpreter | VastCompiler): Promise<void> {
+    const runnerAsCompiler = <Type>(fn: (compiler: VastCompiler) => Type): Type =>
+      fn(presenceAsserted(() => runner as VastCompiler)());
+    const runnerAsInterpreter = <Type>(fn: (compiler: VastInterpreter) => Type): Type =>
+      fn(runner as VastInterpreter);
+    if ((runner as VastCompiler).compile !== undefined) {
+      return runnerAsCompiler((compiler: VastCompiler) => {
+        const params = compiler.compile();
+        if (!params) {
+          throw new Error(compiler.errors()[0].message);
+        }
+        const memory = new WebAssembly.Memory({
+          initial: 1024,
+          maximum: 1024,
+        });
+        for (let i = 0; i < 5000; ++i)
+          new DataView(memory.buffer).setInt32(i*4, 4);
+        const [code, imports] = params;
+        const assembled = WebAssembly.instantiate(code, { ...imports, js: { mem: memory } });
+        return assembled.then((inst: WebAssembly.WebAssemblyInstantiatedSource) => {
+          const entry = inst.instance.exports.entry as CallableFunction;
+          entry();
+        });
       });
+    } else if ((runner as VastInterpreter).interpret !== undefined) {
+      return runnerAsInterpreter((intepreter: VastInterpreter) =>
+        (new Promise((resolve: (_0: unknown) => void, _1: () => void) => { resolve(undefined); })).
+          then(() => {
+            intepreter.interpret();
+          }));
+    }
+    throw new Error('impossible branch?');
+  }
 
-      ranInterpreterOk(interpreter);
-      expect(printedStrings).toEqual(['hello', 'there' ,' world!']);
+  describe('integration specs', () => {
+    [
+      { runnerDoes: 'interprets', makeRunner: VastInterpreter.make },
+      { runnerDoes: 'compiles'  , makeRunner: VastCompiler.make    }
+    ].forEach(({ runnerDoes, makeRunner }) => {
+      it(`${runnerDoes} and runs a "hello world!" program with three parameters`, (done: () => void) => {
+        const { printedStrings, putsFunction } = makePutsFunction();
+        // In WASM:
+        // generates a function that does nothing
+        // signature expects an i32? yes by all appearences
+        // but it doesn't even bother emitting the puts call
+        const runner = makeRunner("puts('hello', 'there', ' world!')", {
+          ...VastInterpreter.defaultInjections(),
+          putsFunction
+        });
+        runRunner(runner).then(() => {
+          expect(printedStrings).toEqual(['hello', 'there' ,' world!']);
+          done();
+        }).catch(done);
+      });
     });
-
+    
     it('compiles and runs a "hello world!" program with a variable', () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const stringPool = StringPool.makeForStrings(() => ['hello world!']);
@@ -50,7 +95,7 @@ describeNamed({ VastInterpreter }, () => {
         make(StringType.instance(), ':=', 0);
       
       contextType.pushFunctionTableByName('.foo', fooTable);
-      const spOffset = 1;
+      const spOffset = 4;
       memory.store(fooTable.offset() + spOffset, 0);
 
       const interpreter = VastInterpreter.make('puts(foo)', {

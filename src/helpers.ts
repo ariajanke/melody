@@ -9,7 +9,8 @@ export const Helpers = Object.freeze({
   memoize,
   verifyInTesting,
   symbolToString: getSymbolThings().symbolToString,
-  registerSymbolStrings: getSymbolThings().registerSymbolStrings
+  registerSymbolStrings: getSymbolThings().registerSymbolStrings,
+  presenceAsserted
 });
 
 
@@ -115,6 +116,12 @@ export const TypeCheckable = (() => {
 function verifyInTesting() {
   if (kDebugMode) return;
   throw Error('Cannot be called outside of a testing environment');
+}
+
+function presenceAsserted<Type>(fn: () => Type | undefined) {
+  return () => fn() ?? (() => {
+    throw new Error('Presence assertion failed');
+  })();
 }
 
 function pass<Type>(arg: Type): Readonly<Type> { return arg; }

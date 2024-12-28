@@ -1,6 +1,11 @@
 import { Helpers } from './helpers';
-import { CallHandlingStrategies, CallingContext, CodeWriter, IncompleteFunctionType} from './function_type';
+import {
+  CallHandlingStrategies,
+  CallingContext,
+  IncompleteFunctionType
+} from './function_type';
 import { WritableObjectType } from './object_type';
+import { type CodeWriter } from './code_writer';
 
 const { freeze, memoize } = Helpers;
 

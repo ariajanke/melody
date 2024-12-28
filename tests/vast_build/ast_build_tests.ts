@@ -461,7 +461,7 @@ describeNamed({ AstBuild }, () => {
       const { verifyHit, hitsAtExactly } = ReachPoint.make();
       const rootNode = buildAst();
       const fnnames: string[] = [];
-      const kExpectArgumentCount = Object.freeze({
+      const kExpectArgumentCount: { [fnName: string]: number } = Object.freeze({
         askString: 0,
         puts: 1
       });

@@ -1,6 +1,13 @@
-import { BuiltInFunction, CallHandlingStrategies, CallingContext, CodeWriter, FunctionType, IncompleteFunctionType } from './function_type';
+import {
+  BuiltInFunction,
+  CallHandlingStrategies,
+  CallingContext,
+  FunctionType,
+  IncompleteFunctionType
+} from './function_type';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
+import { type CodeWriter } from './code_writer';
 
 const { freeze, memoize } = Helpers;
 

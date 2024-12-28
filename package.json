@@ -6,9 +6,10 @@
   },
   "scripts": {
     "build": "npx esbuild build.js --bundle --outfile=build/stuff.m.js",
+    "buildn": "npx esbuild $(find src/ | grep '.ts$') $(find tests/ | grep -P '(?<!\\.d)\\.ts$') --outdir=/media/ramdisk/melody-build/build-es",
     "build_for_tests": "cat build-tests.js | npx esbuild --bundle --outfile=build/tests.js",
     "lint": "npx eslint $(find src/ | grep '.ts$') $(find tests/ | grep -P '(?<!\\.d)\\.ts$')",
-    "test": "npx jasmine build/tests.js",
+    "test": "npx jasmine /media/ramdisk/melody-build/build-ts/tests.js",
     "watch": "npx tsc -w"
   },
   "include": [
@@ -16,10 +17,12 @@
   ],
   "devDependencies": {
     "@eslint/js": "^9.3.0",
+    "@types/jasmine": "^5.1.5",
     "eslint": "^8.57.0",
+    "fix-esm-import-path": "^1.10.1",
     "globals": "^15.3.0",
-    "jasmine": "^5.1.0",
-    "typescript": "^5.6.3",
+    "jasmine": "^5.5.0",
+    "typescript": "^5.7.2",
     "typescript-eslint": "^7.9.0"
   },
   "compilerOptions": {}

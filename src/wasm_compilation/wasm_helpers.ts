@@ -78,4 +78,18 @@ export const WasmHelpers = freeze({
   }
 });
 
+export const FinisherHelpers = freeze({
+  make() {
+    let mFinalCode: Readonly<number[]> | undefined = undefined;
+    return freeze({
+      resetFinishedCode() {
+        mFinalCode = undefined;
+      },
+      trackFinished(finisher: () => Readonly<number[]>): Readonly<number[]> {
+        return mFinalCode ?? finisher();
+      }
+    });
+  }
+});
+
 export type SymFunc = () => symbol;

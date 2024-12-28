@@ -3,13 +3,13 @@ import { ObjectType, WritableObjectType } from './object_type';
 import {
   CallHandlingStrategies,
   CallingContext,
-  CodeWriter,
   IncompleteFunctionType
 } from './function_type';
 import { ObjectTypeResolution } from './object_type_resolution';
 import { StandardErrorMessage } from './helpers';
 import { IntegerType } from './integer_type';
 import { StringType } from './string_type';
+import { type CodeWriter } from './code_writer';
 
 const { freeze, memoize } = Helpers;
 

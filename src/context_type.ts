@@ -1,7 +1,6 @@
 import { 
   CallHandlingStrategies,
   CallingContext,
-  CodeWriter,
   IncompleteFunctionType
 } from './function_type';
 import { Helpers } from './helpers';
@@ -9,6 +8,7 @@ import { IntegerType } from './integer_type';
 import { StringType } from './string_type';
 import { ObjectType, WritableObjectType } from './object_type';
 import { PutsPrinterType } from './puts_function_look_up_table';
+import { CodeWriter } from './code_writer';
 
 const { memoize, freeze } = Helpers;
 const { noReceiver } = CallHandlingStrategies;
