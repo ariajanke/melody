@@ -1,7 +1,8 @@
 import { type FunctionLookUpTable } from './function_look_up_table';
 import { Helpers } from './helpers';
-import { ObjectType, WritableObjectType } from './object_type';
+import { ObjectType } from './object_type';
 import { VariableDeclarationFunctionTable } from './variable_declaration_function_table';
+import { WritableObjectType } from './writable_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -34,8 +35,8 @@ export const VariableDeclaration = freeze({
             make(`.${name}`, varType, operator, currentOffset);
         });
       },
-      sizeInWords: () => 1, // size of integer by definition
-
+      // size of integer by definition
+      sizeInBytes: () => varType.decompose().length*4,
     });
     return inst;
   }

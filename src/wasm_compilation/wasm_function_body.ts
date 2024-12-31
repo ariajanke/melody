@@ -51,6 +51,14 @@ export const WasmFunctionBody = (() => {
         return inst;
       };
       const inst = freeze({
+        prependCode(extraCode: number[]) {
+          mCode = [...extraCode, ...mCode];
+          return inst;
+        },
+        prependCodeTo(wfb: WasmFunctionBody) {
+          wfb.prependCode(mCode);
+          return inst;
+        },
         pushI32Const(constant: number) {
           verifyStackIncrement(1);
           if (constant < 0 || constant > 2000000000) {
@@ -73,8 +81,8 @@ export const WasmFunctionBody = (() => {
         pushI32Load    : () => {
           return pushCode(
             kOpCodes.i32load,
-            0x0, // offset
-            ...encodeVaruint32(0) // align
+            ...encodeVaruint32(Math.log2(4)), // alignmnet
+            ...encodeVaruint32(0) // offset
           );
         },
         pushI32Store: () => {

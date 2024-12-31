@@ -1,5 +1,5 @@
 import { Helpers } from './helpers';
-import { ObjectType, WritableObjectType } from './object_type';
+import { ObjectType } from './object_type';
 import {
   CallHandlingStrategies,
   CallingContext,
@@ -10,6 +10,7 @@ import { StandardErrorMessage } from './helpers';
 import { IntegerType } from './integer_type';
 import { StringType } from './string_type';
 import { type CodeWriter } from './code_writer';
+import { WritableObjectType } from './writable_object_type';
 
 const { freeze, memoize } = Helpers;
 

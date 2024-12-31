@@ -6,9 +6,10 @@ import {
 import { Helpers } from './helpers';
 import { IntegerType } from './integer_type';
 import { StringType } from './string_type';
-import { ObjectType, WritableObjectType } from './object_type';
+import { ObjectType } from './object_type';
 import { PutsPrinterType } from './puts_function_look_up_table';
 import { CodeWriter } from './code_writer';
+import { WritableObjectType } from './writable_object_type';
 
 const { memoize, freeze } = Helpers;
 const { noReceiver } = CallHandlingStrategies;

@@ -1,7 +1,8 @@
 import { Helpers } from '../helpers';
 import { WasmCompiler } from './wasm_compiler';
 import { WasmFunctionCodeWriter } from './wasm_function_code_writer';
-import { PrintCodeWriter, type CodeWriter } from '../code_writer';
+import { StackReversal, type CodeWriter } from '../code_writer';
+import { WasmFunctionBody } from './wasm_function_body';
 
 const { freeze } = Helpers;
 
@@ -42,8 +43,8 @@ export const WasmCodeWriter = (() => {
           topFunctionWriter().storeInteger(offset);
           return inst;
         },
-        forPrintMethod(fn: (cwp: PrintCodeWriter) => void): CodeWriter {
-          topFunctionWriter().forPrintMethod(fn);
+        forStackReversal(fn: (sr: StackReversal) => void): CodeWriter {
+          topFunctionWriter().forStackReversal(fn);
           return inst;
         },
         askString() {
@@ -54,10 +55,25 @@ export const WasmCodeWriter = (() => {
           topFunctionWriter().askInteger();
           return inst;
         },
-        makeCompilerFromCode: () =>
-          WasmCompiler.makeWithEntryImplementation(mFunctionWriters[0].toFunctionBody()),
+        makeCompilerFromCode: () => {
+          const setSpPreface = WasmFunctionBody.make().
+            pushI32Const(0).
+            pushI32Const(4).
+            pushI32Store();
+          const firstFBody = mFunctionWriters[0].toFunctionBody();
+          setSpPreface.prependCodeTo( firstFBody );
+          return WasmCompiler.makeWithEntryImplementation(firstFBody);
+        },
         drop() {
           topFunctionWriter().drop();
+          return inst;
+        },
+        printInteger() {
+          topFunctionWriter().printInteger();
+          return inst;
+        },
+        printString() {
+          topFunctionWriter().printString();
           return inst;
         },
         pushFunctionIndex(definer: (codeWriter: CodeWriter) => void): CodeWriter {

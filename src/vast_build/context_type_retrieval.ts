@@ -4,7 +4,7 @@ import { Helpers, StandardError } from '../helpers';
 import { LetDeclarationsRetrieval } from './let_declarations_retrieval';
 import { LetNameElement } from './let_names_collection';
 import { type ObjectLookUpTable } from '../object_look_up_table';
-import { WritableObjectType } from '../object_type';
+import { WritableObjectType } from '../writable_object_type';
 import { ObjectTypeResolution } from '../object_type_resolution';
 import { PutsPrinterType } from '../puts_function_look_up_table';
 import { VariableContextModifier } from './variable_context_modifier';

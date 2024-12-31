@@ -2,43 +2,35 @@ import { Helpers } from './helpers';
 
 const { freeze } = Helpers;
 
-export interface PrintCodeWriter {
-  printInteger(): PrintCodeWriter,
-  printString(): PrintCodeWriter,
-}
+export interface StackReversal {
+  pushWord(): StackReversal,
+  forNested(fn: (rsr: ReadableStackReversal) => void): StackReversal
+};
 
-export interface ReadablePrintCodeWriter extends PrintCodeWriter {
-  parameterCount(): number,
-  forEach(fn: (functionName: string, idx: number) => void): void,
-  reset(): ReadablePrintCodeWriter
-}
+export interface ReadableStackReversal extends StackReversal {
+  count(): number,
+  forEach(fn: (idx: number) => void): void
+};
 
-export const ReadablePrintCodeWriter = freeze({
-  make(): ReadablePrintCodeWriter {
-    let mParamCount = 0;
-    const mPrintMethods: string[] = [];
+export const ReadableStackReversal = freeze({
+  make() {
+    let mLength = 0;
     const inst = freeze({
-      printInteger() {
-        ++mParamCount;
-        mPrintMethods.push('printInteger');
+      pushWord() {
+        ++mLength;
         return inst;
       },
-      printString() {
-        ++mParamCount;
-        mPrintMethods.push('printString');
+      forNested(fn: (rsr: ReadableStackReversal) => void) {
+        fn(inst);
         return inst;
       },
-      parameterCount: () => mParamCount,
-      forEach(fn: (functionName: string, idx: number) => void) {
-        mPrintMethods.forEach(fn);
-      },
-      reset(): ReadablePrintCodeWriter {
-        mPrintMethods.length = 0;
-        mParamCount = 0;
-        return inst;
+      count: () => mLength,
+      forEach(fn: (idx: number) => void) {
+        for (let i = 0; i < mLength; ++i)
+          { fn(i); }
       }
     });
-    return inst satisfies ReadablePrintCodeWriter;
+    return inst satisfies ReadableStackReversal;
   }
 });
 
@@ -46,8 +38,9 @@ export interface CodeWriter {
   addIntegers(): CodeWriter,
   askInteger(): CodeWriter,
   askString(): CodeWriter,
+  printString(): CodeWriter,
+  printInteger(): CodeWriter,
   drop(): CodeWriter
-  forPrintMethod(fn: (cwp: PrintCodeWriter) => void): CodeWriter,
   indirectCall(signatureIndex: number): CodeWriter,
   loadInteger(offset: number): CodeWriter,
   multiplyIntegers(): CodeWriter,
@@ -55,4 +48,5 @@ export interface CodeWriter {
   pushRepresentation(num: number): CodeWriter,
   storeInteger(offset: number): CodeWriter,
   subtractIntegers(): CodeWriter,
+  forStackReversal(fn: (sr: StackReversal) => void): CodeWriter
 }

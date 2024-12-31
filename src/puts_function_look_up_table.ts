@@ -6,14 +6,24 @@ import {
 } from './function_type';
 import { FunctionType } from './function_type';
 import { type FunctionLookUpTable } from './function_look_up_table';
-import { ObjectType, WritableObjectType } from './object_type';
-import { type CodeWriter, PrintCodeWriter } from './code_writer';
+import { ObjectType } from './object_type';
+import { type CodeWriter } from './code_writer';
+import { type WritableObjectType } from './writable_object_type';
+import { StringType } from './string_type';
+import { IntegerType } from './integer_type';
 
 const { freeze, memoize } = Helpers;
 
+export interface PutsPrinterType extends ObjectType {};
+
 export const PutsPrinterType = freeze({
-  make() {
-    const putsLookUpTable = memoize(PutsFunctionLookUpTable.make);
+  defaultInjections: memoize(() => freeze({
+    stringType: StringType.instance(),
+    integerType: IntegerType.instance()
+  })),
+  make(mInjections = PutsPrinterType.defaultInjections()) {
+    const putsLookUpTable =
+      memoize(() => PutsFunctionLookUpTable.make(mInjections));
     return freeze({
       name: () => 'PutsPrinter',
       lookUp(operation: string): FunctionLookUpTable | undefined {
@@ -32,18 +42,36 @@ export const PutsPrinterType = freeze({
           return PutsPrinterType.make();
         });
       },
-      sizeInWords: () => 0
+      sizeInBytes: () => 0
     });
   }
 });
 
 const PutsFunctionLookUpTable = freeze({
-  make: (): FunctionLookUpTable => {
+  make: (mInjections: ReturnType<typeof PutsPrinterType.defaultInjections>):
+    FunctionLookUpTable =>
+  {
+    const { stringType, integerType } = mInjections;
     type ImplementationTable = {
       implementation: FunctionType | undefined
       [uid: symbol]: ImplementationTable
     };
-    const mTable: ImplementationTable = { implementation: undefined };
+    const mFunctionTypeTable: ImplementationTable = { implementation: undefined };
+    function writerForType
+      (objType: ObjectType, cw: CodeWriter)
+    {
+      const tupleMembers = objType.decompose();
+      if (tupleMembers.length > 1) {
+        tupleMembers.forEach((objType: ObjectType) =>
+          writerForType(objType, cw));  
+      } else if (objType.uid() === stringType.uid()) {
+        cw.printString();
+      } else if (objType.uid() === integerType.uid()) {
+        cw.printInteger();
+      } else {
+        throw new Error(`Cannot find string for object of type: ${objType.name()}`);
+      }
+    }
 
     function makeImplementation(objTypes: Readonly<ObjectType[]>) {
       return IncompleteFunctionType.
@@ -54,14 +82,8 @@ const PutsFunctionLookUpTable = freeze({
         setCallStrategy(CallHandlingStrategies.noReceiver).
         setName('puts').
         setBuiltin((_0: CallingContext, codeWriter: CodeWriter) => {
-          codeWriter.forPrintMethod((cwp: PrintCodeWriter) => {
-            objTypes.forEach((objType: ObjectType) => {
-              if (objType.name() === 'String')
-                { cwp.printString(); }
-              else
-                { cwp.printInteger(); }
-            });
-          });
+          objTypes.forEach((objType: ObjectType) =>
+            writerForType(objType, codeWriter));
         }).
         finish();
     }
@@ -78,7 +100,7 @@ const PutsFunctionLookUpTable = freeze({
     return freeze({
       byParameters(type: ObjectType): FunctionType | undefined {
         const types = type.decompose();
-        const table = lookUpImpl(mTable, types);
+        const table = lookUpImpl(mFunctionTypeTable, types);
         return table.implementation ??= makeImplementation(types);
       }
     });

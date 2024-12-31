@@ -1,11 +1,12 @@
 import { ObjectLookUpTable } from '../../src/object_look_up_table';
-import { ObjectType, WritableObjectType } from '../../src/object_type';
+import { ObjectType } from '../../src/object_type';
 import { AstFunctionDefinitionNode } from '../../src/vast_build/ast_function_definition_node';
 import { AstIntegerLiteralNode } from '../../src/vast_build/ast_integer_literal_node';
 import { AstNode } from '../../src/vast_build/ast_node';
 import { AstTupleNode } from '../../src/vast_build/ast_tuple_node';
 import { LetNameElement } from '../../src/vast_build/let_names_collection';
 import { VariableContextModifier } from '../../src/vast_build/variable_context_modifier';
+import { WritableObjectType } from '../../src/writable_object_type';
 import { TestHelpers } from '../test_helpers';
 
 const { describeNamed } = TestHelpers;

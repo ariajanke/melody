@@ -2,7 +2,7 @@ import { Helpers } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { MemoryArray } from '../memory_array';
-import { PrintCodeWriter, ReadablePrintCodeWriter } from '../code_writer';
+import { ReadableStackReversal, StackReversal } from '../code_writer';
 
 const { freeze } = Helpers;
 
@@ -71,22 +71,26 @@ export const WasmFunctionCodeWriter = (() => {
           mFunctionBody.pushI32Store();
           return inst;
         },
-        forPrintMethod(fn: (cwp: PrintCodeWriter) => void) {
-          const rpcw = ReadablePrintCodeWriter.make();
+        forStackReversal(fn: (sr: StackReversal) => void) {
+          const rpcw = ReadableStackReversal.make();
           fn(rpcw);
-          while (mFunctionBody.localCount() < rpcw.parameterCount()) {
-            mFunctionBody.pushLocal();
+          if (rpcw.count() > 1) {
+            while (mFunctionBody.localCount() < rpcw.count()) {
+              mFunctionBody.pushLocal();
+            }
+            rpcw.forEach((idx: number) => {
+              mFunctionBody.setLocal(idx);
+            });
+            rpcw.forEach((idx: number) => {
+              mFunctionBody.getLocal(idx);
+            });
           }
-          for (let i = 0; i < rpcw.parameterCount(); ++i) {
-            mFunctionBody.setLocal( i );
-          }
-          for (let i = 0; i < rpcw.parameterCount(); ++i) {
-            mFunctionBody.getLocal( i );
-          }
-          rpcw.forEach(pushFunctionCall);
-
           return inst;
         },
+        printString: () =>
+          pushFunctionCall('printString'),
+        printInteger: () =>
+          pushFunctionCall('printInteger'),
         askString: () =>
           pushFunctionCall('askString'),
         askInteger: () =>
