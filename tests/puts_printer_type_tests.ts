@@ -11,6 +11,7 @@ const { describeNamed } = TestHelpers;
 
 describeNamed({ PutsPrinterType }, () => {
   const stringType = StringType.instance();
+  const { asTuple } = ObjectType;
   
   function makeStuff() {
     const strings: string[] = [];
@@ -27,14 +28,14 @@ describeNamed({ PutsPrinterType }, () => {
   }
   it('prints strings in order', () => {
     const { stack, strings, icw } = makeStuff();
-    
     const printer = PutsPrinterType.make();
-    stack.push(0);
+
     stack.push(1);
+    stack.push(0);
 
     (printer.
       lookUp('puts')?.
-      byParameters(ObjectType.asTuple([stringType, stringType])) as FunctionType
+      byParameters(asTuple([stringType, stringType])) as FunctionType
     ).onBuiltIn((bif: BuiltInFunction) => {
         bif(CallingContext.canTakeAll(), icw);
       });
@@ -44,6 +45,7 @@ describeNamed({ PutsPrinterType }, () => {
   it('can print only one string', () => {
     const { stack, strings, icw } = makeStuff();
     const printer = PutsPrinterType.make();
+
     stack.push(1);
 
     (printer.lookUp('puts')?.
@@ -52,5 +54,23 @@ describeNamed({ PutsPrinterType }, () => {
         bif(CallingContext.canTakeAll(), icw);
       });
     expect(strings).toEqual(['mario']);
+  });
+
+  it('can print nested tuples', () => {
+    const { stack, strings, icw } = makeStuff();
+    const printer = PutsPrinterType.make();
+
+    // stack reversal is not this class's responsibility
+    stack.push(1);
+    stack.push(1);
+    stack.push(0);
+
+    const paramsType =
+      asTuple([asTuple([stringType, stringType]), stringType]);
+    printer.lookUp('puts')!.byParameters(paramsType)!.
+      onBuiltIn((bif: BuiltInFunction) => {
+        bif(CallingContext.canTakeAll(), icw);
+      });
+      expect(strings).toEqual(['hello', 'mario', 'mario']);
   });
 });

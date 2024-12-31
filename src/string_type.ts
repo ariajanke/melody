@@ -4,7 +4,7 @@ import {
   IncompleteFunctionType
 } from './function_type';
 import { Helpers } from './helpers';
-import { WritableObjectType } from './object_type';
+import { WritableObjectType } from './writable_object_type';
 import { type CodeWriter } from './code_writer';
 
 const { freeze, memoize } = Helpers;
@@ -22,7 +22,10 @@ const class_ = freeze({
       setReturns   (type).
       setBuiltin((_0: CallingContext, _1: CodeWriter) => {}).
       finish());
-    return type;
+    return freeze({
+      ...type,
+      sizeInBytes: () => 4
+    });
   })
 });
 

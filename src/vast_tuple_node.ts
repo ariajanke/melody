@@ -1,5 +1,9 @@
 import { FunctionCompositor } from './function_compositor';
-import { CallHandlingStrategies, FunctionType, IncompleteFunctionType } from './function_type';
+import {
+  CallHandlingStrategies,
+  FunctionType,
+  IncompleteFunctionType
+} from './function_type';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { VastNode } from './vast_node';

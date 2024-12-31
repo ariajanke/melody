@@ -7,10 +7,11 @@ import {
 import { Helpers, StandardError } from '../helpers';
 import { type CodeWriter } from '../code_writer';
 import { ObjectLookUpTable } from '../object_look_up_table';
-import { ObjectType, WritableObjectType } from '../object_type';
+import { ObjectType } from '../object_type';
 import { VariableDeclaration } from '../variable_declaration';
 import { AstFunctionDefinitionNode } from './ast_function_definition_node';
 import { type LetNameElement } from './let_names_collection';
+import { type WritableObjectType } from '../writable_object_type';
 
 const { freeze, memoize, presenceAsserted } = Helpers;
 

@@ -1,92 +1,17 @@
 import { Helpers } from './helpers';
-import { FunctionType } from './function_type';
-import { FunctionLookUpTable, IncompleteFunctionLookUpTable } from './function_look_up_table';
+import {
+  FunctionLookUpTable,
+  IncompleteFunctionLookUpTable
+} from './function_look_up_table';
 
 const { freeze, memoize } = Helpers;
-
-type LookUpLookUpTable = { [name: string]: FunctionLookUpTable };
-
-export interface WritableObjectType {
-  setName: (name: string) => WritableObjectType,
-  pushFunctionTypeByName: (name: string, func: FunctionType) => WritableObjectType
-  pushFunctionTableByName: (name: string, funcTable: FunctionLookUpTable) =>
-    WritableObjectType
-  pushFunctionTypes: (types: { [name: string]: FunctionType }) => WritableObjectType
-  pushFunctionTables: (tables: LookUpLookUpTable) => WritableObjectType
-  acceptMerge: (fn: (currentOffset: number) => ObjectType) => WritableObjectType,
-  objectType: () => ObjectType
-}
-
-export const WritableObjectType = freeze({
-  make() {
-    let mName = '<anonymous>';
-    let mPosition = 0;
-    const mLookupTable: LookUpLookUpTable = {};
-
-    function acceptMerge(fn: (currentOffset: number) => ObjectType): WritableObjectType {
-      const objType = fn(mPosition);
-      mPosition += objType.sizeInWords()*4;
-      objType.forEachName((name: string, table: FunctionLookUpTable) => {
-        mLookupTable[name] = table;
-      });
-      return inst;
-    }
-
-    function setName(name: string): WritableObjectType {
-      mName = name;
-      return inst;
-    }
-
-    function pushFunctionTypeByName(name: string, func: FunctionType): WritableObjectType {
-      mLookupTable[name] = IncompleteFunctionLookUpTable.
-        make().push(func).finish();
-      return inst;
-    }
-
-    function pushFunctionTableByName(name: string, funcTable: FunctionLookUpTable):
-      WritableObjectType
-    {
-      mLookupTable[name] = funcTable;
-      return inst;
-    }
-
-    function pushFunctionTypes(types: { [name: string]: FunctionType }): WritableObjectType {
-      Object.keys(types).forEach((name: string) => {
-        inst.pushFunctionTypeByName(name, types[name]);
-      });
-      return inst;
-    }
-
-    function pushFunctionTables(tables: LookUpLookUpTable): WritableObjectType {
-      Object.keys(tables).forEach((name: string) => {
-        inst.pushFunctionTableByName(name, tables[name]);
-      });
-      return inst;
-    }
-
-    function objectType(): ObjectType {
-      return ObjectType.make(mName, 0, mLookupTable);
-    }
-
-    const inst = freeze({
-      acceptMerge,
-      setName,
-      pushFunctionTableByName,
-      pushFunctionTypeByName,
-      pushFunctionTypes,
-      pushFunctionTables,
-      objectType: memoize(objectType)
-    });
-    return inst;
-  }
-});
 
 export interface ObjectType {
   name: () => string,
   lookUp: (operation: string) => FunctionLookUpTable | undefined,
   uid: () => symbol,
   decompose: () => Readonly<ObjectType[]>,
-  sizeInWords: () => number
+  sizeInBytes: () => number
   forEachName: (fn: (name: string, table: FunctionLookUpTable) => void) => void
 }
 
@@ -106,9 +31,9 @@ const TupleObjectFactory = (() => {
     uid: memoize(Symbol),
     decompose: () => types,
     forEachName(_0: (name: string, table: FunctionLookUpTable) => void) {},
-    sizeInWords: memoize(() => types.
-      map((type: ObjectType) => type.sizeInWords()).
-      reduce((prev: number, cur: number) => prev + cur))
+    sizeInBytes: memoize(() => types.
+      map((type: ObjectType) => type.sizeInBytes()).
+      reduce((prev: number, cur: number) => prev + cur, 0))
   });
 
   const sTable: TupleLookUpTableEntry = { object: makeInstance('Tuple()', []) };
@@ -137,7 +62,7 @@ export const ObjectType = (() => {
   function make
     (name: string = '<anonymous>',
      size: number = 0,
-     mLookupTable: LookUpLookUpTable = {}): ObjectType
+     mLookupTable: { [name: string]: FunctionLookUpTable } = {}): ObjectType
   {
     const inst: ObjectType = freeze({
       lookUp,
@@ -145,7 +70,7 @@ export const ObjectType = (() => {
       uid: memoize(Symbol),
       decompose: memoize(() => [inst]),
       forEachName,
-      sizeInWords: () => size
+      sizeInBytes: () => size
     });
 
     function forEachName(fn: (name: string, table: FunctionLookUpTable) => void) {

@@ -15,11 +15,6 @@ const VastReturningNode = freeze({
     function functionType() {
       const cleanupAfterFunc = cleanupAfter.functionType();
       const returningFunc = returning.functionType();
-      const cleanUpPopCount = cleanupAfterFunc.
-        returns().
-        decompose().
-        map((objType: ObjectType) => objType.sizeInWords()).
-        reduce((prev: number, cur: number) => prev + cur, 0);
       return IncompleteFunctionType.
         make().
         setParameters(ObjectType.emptyTupleInstance()).
@@ -29,8 +24,7 @@ const VastReturningNode = freeze({
           cleanupAfterFunc.onBuiltIn((bif: BuiltInFunction) => {
             bif(CallingContext.canTakeNothing(), codeWriter);
           });
-          for (let i = 0; i < cleanUpPopCount; ++i)
-            codeWriter.drop();
+          
           returningFunc.onBuiltIn((bif: BuiltInFunction) => {
             bif(callingContext, codeWriter);
           });

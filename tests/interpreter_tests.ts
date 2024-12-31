@@ -80,9 +80,41 @@ describeNamed({ VastInterpreter }, () => {
           done();
         }).catch(done);
       });
+
+      it(`${runnerDoes} and runs a simple adder program`, (done: () => void) => {
+        const { printedStrings, putsFunction } = makePutsFunction();
+        const runner = makeRunner(`
+          let a := 2
+          let b := a + 2
+          puts(b)
+        `, {
+          ...VastInterpreter.defaultInjections(),
+          putsFunction
+        });
+        runRunner(runner).then(() => {
+          expect(printedStrings).toEqual(['4']);
+          done();
+        }).catch(done);
+      });
+
+      it(`${runnerDoes} and runs a program with tuples as variables`, (done: () => void) => {
+        const { printedStrings, putsFunction } = makePutsFunction();
+        const runner = makeRunner(`
+          let a := 3
+          let b := (a, 2)
+          puts(b, 4)
+        `, {
+          ...VastInterpreter.defaultInjections(),
+          putsFunction
+        });
+        runRunner(runner).then(() => {
+          expect(printedStrings).toEqual(['3', '2', '4']);
+          done();
+        }).catch(done);
+      });
     });
     
-    it('compiles and runs a "hello world!" program with a variable', () => {
+    it('interprets and runs a "hello world!" program with a variable', () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const stringPool = StringPool.makeForStrings(() => ['hello world!']);
       const makeStringPool = () => stringPool;
@@ -111,7 +143,7 @@ describeNamed({ VastInterpreter }, () => {
       expect(printedStrings).toEqual(['hello world!']);
     });
 
-    it('compiles and runs a multiline "hello world!" program', () => {
+    it('interprets and runs a multiline "hello world!" program', () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const interpreter = VastInterpreter.
         make("puts('hello')\nputs('world!')", {
@@ -122,7 +154,7 @@ describeNamed({ VastInterpreter }, () => {
       expect(printedStrings).toEqual(['hello', 'world!']);
     });
 
-    it('compiles and runs a "hello world!" program with an assignment', () => {
+    it('interprets and runs a "hello world!" program with an assignment', () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const stringPool = StringPool.makeForStrings(() => ['hello world!']);
       const contextType = ContextType.makeWritable();
@@ -145,7 +177,7 @@ describeNamed({ VastInterpreter }, () => {
       expect(printedStrings).toEqual(['hello world!']);
     });
 
-    it('compiles and runs a simple program with a let declaration', () => {
+    it('interprets and runs a simple program with a let declaration', () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const interpreter = VastInterpreter.make(`
         let a := 'hello world!'
@@ -158,21 +190,8 @@ describeNamed({ VastInterpreter }, () => {
       expect(printedStrings).toEqual(['hello world!']);
     });
 
-    it('compiles and runs a simple adder program', () => {
-      const { printedStrings, putsFunction } = makePutsFunction();
-      const interpreter = VastInterpreter.make(`
-        let a := 2
-        let b := a + 2
-        puts(b)
-      `, {
-        ...VastInterpreter.defaultInjections(),
-        putsFunction
-      });
-      ranInterpreterOk(interpreter);
-      expect(printedStrings).toEqual(['4']);
-    });
 
-    it('compiles and runs a program with simple functions', () => {
+    it('interprets and runs a program with simple functions', () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const interpreter = VastInterpreter.make(`
         let a := fn

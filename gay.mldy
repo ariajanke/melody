@@ -499,21 +499,59 @@ table
   b := 4
 ~
 
-let Rational = table
+let Rational = table (class)
   make = fn (num is Integer, den is Integer)
     table
-      $+ = fn (rhs is Rational) Rational.make(num + rhs.num, den + rhs.den)
-      $- = fn (rhs is Rational) Rational.make(num - rhs.num, den - rhs.den)
-      $* = fn (rhs is Rational) Rational.make(num*rhs.num, den*rhs.den)
-      $/ = fn (rhs is Rational) Rational.make(num / rhs.num, den / rhs.den)
-      num = num
-      den = den
+      $+ = fn (rhs is Rational) class.make(num + rhs.num, den + rhs.den)
+      $- = fn (rhs is Rational) class.make(num - rhs.num, den - rhs.den)
+      $* = fn (rhs is Rational) class.make(num*rhs.num, den*rhs.den)
+      $/ = fn (rhs is Rational) class.make(num / rhs.num, den / rhs.den)
+      numerator = num
+      denominator = den
     ~
   ~
-  $is = Rational.make
+  $is = class.make
 ~
 
 Rational is table
   make is Fn(Integer, Integer)
   $is is Table
 ~
+
+# tuples vs tables
+# What's the difference?
+# naming mostly
+
+table
+  a = 3 + 2
+  b = 'hello'
+~
+
+# What's the evaluation order here?
+# strip the names and you get:
+(3 + 2, 'hello')
+
+# The problem lies in function calls
+foo(3 + 2, 'hello') # needing things to be in ltr order
+
+# Can't worry about line splitting yet?
+$.a(3 + 2, 'hello')
+
+let Rational = table (class)
+  make = fn (num is Integer, den is Integer)
+    let public = table...
+    $public.+ = fn(rhs is Rational) class.
+      make(num + rhs.numerator, den + rhs.denominator)
+    $public.- = fn(rhs is Rational) class.
+      make(num - rhs.numerator, den - rhs.denominator)
+    $public.* = fn(rhs is Rational) class.
+      make(num*rhs.numerator, den*rhs.denominator)
+    $public./ = fn(rhs is Rational) class.
+      make(num / rhs.numerator, den / rhs.denominator)
+    public.numerator = num
+    public.denominator = den
+    public
+  ~
+  $is = class.make
+~
+

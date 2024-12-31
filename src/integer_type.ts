@@ -4,15 +4,17 @@ import {
   CallingContext,
   IncompleteFunctionType
 } from './function_type';
-import { WritableObjectType } from './object_type';
 import { type CodeWriter } from './code_writer';
+import { WritableObjectType } from './writable_object_type';
 
 const { freeze, memoize } = Helpers;
 
 function makeIntegerType() {
   const { noReceiver, withReceiver } = CallHandlingStrategies;
   
-  const mutable_integer_type = WritableObjectType.make().setName('Integer');
+  const mutable_integer_type = WritableObjectType.make().
+    setName('Integer').
+    setToIntegerSize();
   const integer_ = mutable_integer_type.objectType();
 
   const onTakeInteger = (fn: (codeWriter: CodeWriter) => void) => {

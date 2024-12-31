@@ -1,5 +1,6 @@
+import { CodeWriter, StackReversal } from './code_writer';
 import { FunctionCompositor } from './function_compositor';
-import { FunctionType } from './function_type';
+import { CallingContext, FunctionType } from './function_type';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { VastNode } from './vast_node';
@@ -35,6 +36,19 @@ export const VastFunctionCallNode = freeze({
         { throw new Error(msg); });
 
     const compositor = () => FunctionCompositor.make(mFunctionType);
+
+    function adjustStack(obj: ObjectType, sr: StackReversal) {
+      const decomposedTo = obj.decompose();
+      if (obj.sizeInBytes() === 4)
+        { sr.pushWord(); }
+      else if (decomposedTo.length > 1) {
+        decomposedTo.forEach((obj: ObjectType) => adjustStack(obj, sr));
+      } else if (decomposedTo.length === 0) {
+        // do nothing
+      } else {
+        throw new Error(`Non-integer fundemental type "${obj.name()}???"`);
+      }
+    }
     
     const functionType = memoize(() => {
       let mCompositor = compositor();
@@ -42,6 +56,11 @@ export const VastFunctionCallNode = freeze({
         mCompositor = mReceiver.functionType().composeWith(mCompositor);
       });
       mCompositor = mParameters.functionType().composeWith(mCompositor);
+      mCompositor.pushBuiltin((_0: CallingContext, cw: CodeWriter) => {
+        cw.forStackReversal((sr: StackReversal) => {
+          adjustStack(mParameters.functionType().returns(), sr);
+        });
+      });
       return mCompositor.finish();  
     });
       
