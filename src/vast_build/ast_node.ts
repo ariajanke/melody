@@ -8,9 +8,12 @@ const { freeze, memoize } = Helpers;
 export interface AstNode {
   visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>) =>
     AccumulationType,
-  type: () => symbol,
-  executionType: (tbl  : ObjectLookUpTable) => ObjectTypeResolution,
-  asString: () => string
+  type(): symbol,
+  executionType(tbl  : ObjectLookUpTable): ObjectTypeResolution,
+  asString(): string,
+  uid(): symbol,
+  asName(): string | undefined
+  // contextMethodName(): string | undefined
 }
 
 export const AstNode = (() => {

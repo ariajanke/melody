@@ -2,7 +2,7 @@ import { TestHelpers } from './test_helpers';
 import { VastBuild } from '../src/vast_build';
 import { StringPool } from '../src/string_pool';
 import { StringType } from '../src/string_type';
-import { BuiltInFunction, CallingContext } from '../src/function_type';
+import { CallingContext } from '../src/function_type';
 import { MemoryArray } from '../src/memory_array';
 import { PersistentStack } from '../src/persistent_stack';
 import { InterpretedCodeWriter } from '../src/interpreted_code_writer';
@@ -85,9 +85,10 @@ describeNamed({ VastBuild }, () => {
         if (!root)
           { throw new Error(build.errors()[0].message); }
         memory.store(MemoryArray.stackPointerLocation(), 4);
-        root.functionType().onBuiltIn((impl: BuiltInFunction) => {
-          impl(CallingContext.canTakeAll(), codeWriter);
-        });
+        root.functionType().builtIn()(CallingContext.canTakeAll(), codeWriter);
+        // root.functionType().onBuiltIn((impl: BuiltInFunction) => {
+        //   impl(CallingContext.canTakeAll(), codeWriter);
+        // });
         expect(memory.load(4)).toEqual(3);
         expect(stack.count()).toEqual(1);
         expect(stack.pop()).toEqual(3);
@@ -111,9 +112,10 @@ describeNamed({ VastBuild }, () => {
         if (!root)
           { throw new Error(build.errors()[0].message); }
         memory.store(MemoryArray.stackPointerLocation(), 4);
-        root.functionType().onBuiltIn((impl: BuiltInFunction) => {
-          impl(CallingContext.canTakeAll(), codeWriter);
-        });
+        root.functionType().builtIn()(CallingContext.canTakeAll(), codeWriter);
+        // root.functionType().onBuiltIn((impl: BuiltInFunction) => {
+        //   impl(CallingContext.canTakeAll(), codeWriter);
+        // });
         expect(memory.load(4)).toEqual(3);
         expect(memory.load(8)).toEqual(3);
         expect(stack.count()).toEqual(1);
@@ -151,7 +153,7 @@ describeNamed({ VastBuild }, () => {
       if (build.root()) {
         throw new Error('ought to not be valid');
       }
-      expect(build.errors()[0].message).toEqual('"b" is not declared');
+      expect(build.errors()[0].message).toEqual('identifier "b" is not defined');
     });
   });
 });

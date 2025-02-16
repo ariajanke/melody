@@ -7,7 +7,8 @@ import { VariableDeclarationFunctionTable } from '../src/variable_declaration_fu
 import { StringType } from '../src/string_type';
 import { StringPool } from '../src/string_pool';
 import { VastCompiler } from '../src/vast_compiler';
-import { Helpers } from '../src/helpers';
+import { Helpers, StandardErrorMessage } from '../src/helpers';
+import { VastNode } from '../src/vast_node';
 
 const { describeNamed } = TestHelpers;
 const { presenceAsserted } = Helpers;
@@ -54,7 +55,9 @@ describeNamed({ VastInterpreter }, () => {
       return runnerAsInterpreter((intepreter: VastInterpreter) =>
         (new Promise((resolve: (_0: unknown) => void, _1: () => void) => { resolve(undefined); })).
           then(() => {
-            intepreter.interpret();
+            intepreter.interpret() ?? (() => {
+              throw new Error(intepreter.errors().map((msg: StandardErrorMessage) => msg.message).join(', '));
+            })();
           }));
     }
     throw new Error('impossible branch?');
@@ -112,8 +115,51 @@ describeNamed({ VastInterpreter }, () => {
           done();
         }).catch(done);
       });
+
+      it(`${runnerDoes} and runs a program with splitting tuples and runtime constants`, (done: () => void) => {
+        const { printedStrings, putsFunction } = makePutsFunction();
+        // a: +0, +4, +8
+        // b: +12
+        // c: +16
+        // d: +20
+        // some idea, the key may lie with the "special function type" in
+        // function type retrieval
+
+        // a cannot have tuple position 0, it is the tuple
+        // whatever is in charge of deciding the element that describes a is 
+        // bugged!
+        const runner = makeRunner(`
+          let a := (1, 2, 3)
+          let (b, c, d) = a
+          puts(b, d)
+        `, {
+          ...VastInterpreter.defaultInjections(),
+          putsFunction
+        });
+        runRunner(runner).then(() => {
+          expect(printedStrings).toEqual(['1', '3']);
+          done();
+        }).catch(done);
+      });
+
+      it(`${runnerDoes} and runs a program with constants`, (done: () => void) => {
+        const { printedStrings, putsFunction } = makePutsFunction();
+        const runner = makeRunner(`
+          let a = 3
+          let b := a + 2
+          puts(a, b)
+        `, {
+          ...VastInterpreter.defaultInjections(),
+          putsFunction
+        });
+        runRunner(runner).then(() => {
+          expect(printedStrings).toEqual(['3', '5']);
+          done();
+        }).catch(done);
+      });
     });
-    
+
+    const specialTestVastNode = VastNode.forTesting.knowableLaterNode();
     it('interprets and runs a "hello world!" program with a variable', () => {
       const { printedStrings, putsFunction } = makePutsFunction();
       const stringPool = StringPool.makeForStrings(() => ['hello world!']);
@@ -124,7 +170,7 @@ describeNamed({ VastInterpreter }, () => {
       const memory = MemoryArray.make();
       const stack = PersistentStack.make<number>(() => Infinity);
       const fooTable = VariableDeclarationFunctionTable.
-        make(StringType.instance(), ':=', 0);
+        make(StringType.instance(), ':=', specialTestVastNode, 0);
       
       contextType.pushFunctionTableByName('.foo', fooTable);
       const spOffset = 4;
@@ -159,7 +205,7 @@ describeNamed({ VastInterpreter }, () => {
       const stringPool = StringPool.makeForStrings(() => ['hello world!']);
       const contextType = ContextType.makeWritable();
       const fooTable = VariableDeclarationFunctionTable.
-        make(StringType.instance(), ':=', 0);
+        make(StringType.instance(), ':=', specialTestVastNode, 0);
       
       contextType.pushFunctionTableByName('.foo', fooTable);
       const makeContextType = () => contextType;

@@ -10,6 +10,7 @@ import {
   type OperativeStatementVisitor
 } from '../operative_statement_builder';
 import { AstIdentifierNode } from '../ast_identifier_node';
+import { OperatorDefinitions } from '../../operator_definitions';
 
 const { freeze } = Helpers;
 
@@ -54,21 +55,26 @@ export const OperativeStatementAstCreation = freeze({
         makeWithContextReceiver(nameNode, argsNode);
       mNodeStack.push(callNode);
     };
-    const mOperatorFactories = {
-      ['+'  ]: binaryOperator,
-      [','  ]: tupleOperator,
-      [':=' ]: binaryOperator,
-      ['-'  ]: binaryOperator,
-      ['*'  ]: binaryOperator,
-      ['let']: letOperator,
+
+    const { binaryListing, unaryListing } = OperatorDefinitions;
+    const mSpecialOperatorFactories: { [op: string]: typeof letOperator } = {
+      [','  ]: tupleOperator ,
+      ['let']: letOperator   ,
       [Token.kCallToken.content()]: functionCall
     };
     const inst = freeze({
       visitToken   : (token: Token) => {
-        const opFactory = mOperatorFactories[token.content()];
+        const opFactory = mSpecialOperatorFactories[token.content()];
         if (opFactory) {
           return opFactory(token);
         }
+        if (binaryListing()[token.content()]) {
+          return binaryOperator(token);
+        }
+        if (unaryListing()[token.content()]) {
+          throw new Error('unimplemented');
+        }
+        
         mNodeStack.push(AstFringeNode.makeForToken(token));
       },
       visitNode    : (node: AstNode) =>

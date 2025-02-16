@@ -7,7 +7,7 @@ import { type ObjectTypeResolution } from '../object_type_resolution';
 import { ObjectLookUpTable } from '../object_look_up_table';
 import { StringPool } from '../string_pool';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export const AstStringLiteralNode = (() => {
   const { type, hasCreated } = AstNode.makeTypeClassMethods();
@@ -33,7 +33,9 @@ export const AstStringLiteralNode = (() => {
       asString: () => mValue,
       visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
         visitor.visitLiteral(inst),
-      value: mGetAsContextVar
+      value: mGetAsContextVar,
+      uid: memoize(Symbol),
+      asName: () => undefined
     });
     return inst;
   }

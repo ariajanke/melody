@@ -1,12 +1,13 @@
-import { Helpers, FinishingMemoization, StandardError } from '../helpers';
-import { LetNamesCollection } from './let_names_collection';
-import { type AstTupleNode } from './ast_tuple_node';
+import { Helpers, FinishingMemoization, StandardError } from '../../helpers';
+import { type AstTupleNode } from '../ast_tuple_node';
+import { LetNameGlob, LetNamesSplitter } from './let_names_splitter';
 
 const { freeze, memoize } = Helpers;
 
+// misnomer should me NameExpressionsCollector
 export type LetNamesCollector = {
   reduceOn: (fn: () => LetNamesCollector) => void,
-  finish: () => LetNamesCollection
+  finish: () => LetNamesSplitter
 };
 
 export const LetNamesCollector = freeze({
@@ -20,14 +21,26 @@ export const LetNamesCollector = freeze({
     });
     return inst satisfies LetNamesCollector;
   },
-  make(mNames: string[], mOperator: string, mDependeeNames: string[], mArgsNode: AstTupleNode) {
+  make(mNames: string[],
+       mOperator: string,
+       mDependeeNames: string[],
+      //  mDeclaringNode: AstLetDeclarationNode,
+       mArgsNode: AstTupleNode)
+  {
     const { beforeFinish, memoizedFinish } = FinishingMemoization.make();
     const inst = freeze({
       reduceOn: beforeFinish((_0: () => LetNamesCollector): LetNamesCollector => {
         return LetNamesCollector.makeErroneous('too many operators');
       }),
       finish: memoizedFinish(() => {
-        return LetNamesCollection.make(mNames, mOperator, mDependeeNames, mArgsNode);
+        const glob: LetNameGlob = {
+          names: mNames,
+          operator: mOperator,
+          dependeeNames: mDependeeNames,
+          // declaringNode: mDeclaringNode,
+          tupleNode: mArgsNode
+        };
+        return LetNamesSplitter.make(glob);
       })
     });
     return inst satisfies LetNamesCollector;

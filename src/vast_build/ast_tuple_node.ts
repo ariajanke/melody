@@ -77,7 +77,20 @@ export const AstTupleNode = (() => {
         asString: () => `(...${mSubExpressions.length} items)`,
 
         map: <Type>(fn: (node: AstNode) => Type): Type[] =>
-          mSubExpressions.map(fn)
+          mSubExpressions.map(fn),
+        uid: memoize(Symbol),
+
+        asName: memoize(() => {
+          if (mSubExpressions.length === 0)
+            { return undefined; }
+          const names = mSubExpressions.
+            map((node: AstNode) => node.asName());
+          return names.reduce((prev: string | undefined, cur: string | undefined) => {
+            if (!prev || !cur)
+              { return undefined; }
+            return prev + mSeperator + cur;
+          });
+        })
       });
 
       return inst;

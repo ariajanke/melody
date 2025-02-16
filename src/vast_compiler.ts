@@ -1,5 +1,5 @@
 import { ContextType } from './context_type';
-import { BuiltInFunction, CallingContext } from './function_type';
+import { CallingContext } from './function_type';
 import { Helpers, StandardErrorMessage } from './helpers';
 import { StringPool } from './string_pool';
 import { Tokenization } from './tokenization';
@@ -43,9 +43,7 @@ function construct(mSource: string,
   }
   (mBuild.root() as VastNode).
     functionType().
-    onBuiltIn((impl: BuiltInFunction) => {
-      impl(CallingContext.canTakeAll(), mCodeWriter);
-    });
+    builtIn()(CallingContext.canTakeAll(), mCodeWriter);
   return freeze({
     compile: () => mCodeWriter.
       makeCompilerFromCode().

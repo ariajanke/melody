@@ -9,6 +9,13 @@ type FunctionLookUpTableEntry = {
   [uid: symbol]: FunctionLookUpTableEntry | undefined
 };
 
+export interface FunctionLookUpTable {
+  byParameters(type: ObjectType): FunctionType | undefined,
+  // possibly and hopefully a hack
+  // TODO find a better way to "sneak" methods
+  oneTimeSetter(): FunctionType | undefined
+};
+
 export const FunctionLookUpTable = freeze({
   make(mTable: FunctionLookUpTableEntry) {
     return freeze({
@@ -20,7 +27,8 @@ export const FunctionLookUpTable = freeze({
           table = table[p.uid()];
         });
         return table?.implementation;
-      }
+      },
+      oneTimeSetter: () => undefined
     });
   },
   makeSingleLookUp(mFuncType: FunctionType): FunctionLookUpTable {
@@ -37,11 +45,11 @@ export const FunctionLookUpTable = freeze({
         if (matches)
           { return mFuncType; }
         return undefined;
-      }
+      },
+      oneTimeSetter: () => undefined
     });
   }
 });
-export type FunctionLookUpTable = ReturnType<typeof FunctionLookUpTable.make>;
 
 export const IncompleteFunctionLookUpTable = freeze({
   make() {

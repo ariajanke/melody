@@ -1,8 +1,9 @@
 import { Helpers } from '../helpers';
 import { WasmCompiler } from './wasm_compiler';
 import { WasmFunctionCodeWriter } from './wasm_function_code_writer';
-import { StackReversal, type CodeWriter } from '../code_writer';
+import { type CodeWriter } from '../code_writer';
 import { WasmFunctionBody } from './wasm_function_body';
+import { ObjectType } from '../object_type';
 
 const { freeze } = Helpers;
 
@@ -43,10 +44,6 @@ export const WasmCodeWriter = (() => {
           topFunctionWriter().storeInteger(offset);
           return inst;
         },
-        forStackReversal(fn: (sr: StackReversal) => void): CodeWriter {
-          topFunctionWriter().forStackReversal(fn);
-          return inst;
-        },
         askString() {
           topFunctionWriter().askString();
           return inst;
@@ -76,7 +73,7 @@ export const WasmCodeWriter = (() => {
           topFunctionWriter().printString();
           return inst;
         },
-        pushFunctionIndex(definer: (codeWriter: CodeWriter) => void): CodeWriter {
+        pushFunctionIndex(_0: ObjectType, definer: (codeWriter: CodeWriter) => void): CodeWriter {
           const toPush = mFunctionWriters.length;
           const writer = WasmFunctionCodeWriter.make();
           mFunctionWriters.push(writer);

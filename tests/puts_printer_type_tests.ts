@@ -1,4 +1,4 @@
-import { CallingContext, type BuiltInFunction, type FunctionType } from '../src/function_type';
+import { CallingContext, type FunctionType } from '../src/function_type';
 import { InterpretedCodeWriter } from '../src/interpreted_code_writer';
 import { PersistentStack } from '../src/persistent_stack';
 import { StringType } from '../src/string_type';
@@ -36,9 +36,7 @@ describeNamed({ PutsPrinterType }, () => {
     (printer.
       lookUp('puts')?.
       byParameters(asTuple([stringType, stringType])) as FunctionType
-    ).onBuiltIn((bif: BuiltInFunction) => {
-        bif(CallingContext.canTakeAll(), icw);
-      });
+    ).builtIn()(CallingContext.canTakeAll(), icw);
     expect(strings).toEqual(['hello', 'mario']);
   });
 
@@ -50,9 +48,7 @@ describeNamed({ PutsPrinterType }, () => {
 
     (printer.lookUp('puts')?.
       byParameters(stringType) as FunctionType).
-      onBuiltIn((bif: BuiltInFunction) => {
-        bif(CallingContext.canTakeAll(), icw);
-      });
+      builtIn()(CallingContext.canTakeAll(), icw);
     expect(strings).toEqual(['mario']);
   });
 
@@ -68,9 +64,7 @@ describeNamed({ PutsPrinterType }, () => {
     const paramsType =
       asTuple([asTuple([stringType, stringType]), stringType]);
     printer.lookUp('puts')!.byParameters(paramsType)!.
-      onBuiltIn((bif: BuiltInFunction) => {
-        bif(CallingContext.canTakeAll(), icw);
-      });
+      builtIn()(CallingContext.canTakeAll(), icw);
       expect(strings).toEqual(['hello', 'mario', 'mario']);
   });
 });

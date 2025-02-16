@@ -1,13 +1,10 @@
-import {
-  CodeWriter,
-  ReadableStackReversal,
-  StackReversal
-} from '../code_writer';
+import { CodeWriter } from '../code_writer';
 import { MemoryArray } from '../memory_array';
 import { PersistentStack } from '../persistent_stack';
 import { StringPool } from '../string_pool';
 import { Helpers } from '../helpers';
 import { DeferredWriter } from './deferred_writer';
+import { ObjectType } from '../object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -72,7 +69,7 @@ function construct
       mStack.push( mInjections.askIntegerFunction() );
       return inst;
     },
-    pushFunctionIndex(definer: (codeWriter: CodeWriter) => void): CodeWriter {
+    pushFunctionIndex(_0: ObjectType, definer: (codeWriter: CodeWriter) => void): CodeWriter {
       const top = DeferredWriter.make(inst);
       mStack.push( mDeferredWriters.length );
       mDeferredWriters.push(top);
@@ -87,18 +84,6 @@ function construct
     },
     printInteger() {
       mInjections.putsFunction( `${mStack.pop()}` ) ;
-      return inst;
-    },
-    forStackReversal(fn: (sr: StackReversal) => void) {
-      const rsr = ReadableStackReversal.make();
-      fn(rsr);
-      if (rsr.count() > 1) {
-        const temp: number[] = Array<number>(rsr.count());
-        rsr.forEach((idx: number) => {
-          temp[idx] = mStack.pop();
-        });
-        temp.forEach(mStack.push);
-      }
       return inst;
     },
     indirectCall(signatureIndex: number) {

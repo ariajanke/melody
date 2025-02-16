@@ -5,7 +5,8 @@ import { ObjectType } from '../src/object_type';
 import { InterpretedCodeWriter } from '../src/interpreted_code_writer';
 import { StringPool } from '../src/string_pool';
 import { Helpers } from '../src/helpers';
-import { BuiltInFunction, CallingContext } from '../src/function_type';
+import { CallingContext } from '../src/function_type';
+import { VastNode } from '../src/vast_node';
 
 const { freeze } = Helpers;
 const { describeNamed } = TestHelpers;
@@ -16,16 +17,16 @@ describeNamed({ VariableDeclarationFunctionTable }, () => {
   const { emptyTupleInstance, asTuple } = ObjectType;
   const makeSampleWriter = () =>
     InterpretedCodeWriter.make(StringPool.makeDefault());
-
+  const { knowableLaterNode } = VastNode.forTesting;
   function specsForOneWordInSizeWithOffset(examplesOffset: number) {
-    const subject = make(intType, ':=', examplesOffset);
+    const subject = () => make(intType, ':=', knowableLaterNode(), examplesOffset);
 
     it('has a setter', () => {
-      expect(subject.byParameters(intType)).toBeDefined();
+      expect(subject().byParameters(intType)).toBeDefined();
     });
 
     it('has a getter', () => {
-      expect(subject.byParameters(emptyTupleInstance())).toBeDefined();
+      expect(subject().byParameters(emptyTupleInstance())).toBeDefined();
     });
 
     it('will store exactly one "word"', () => {
@@ -38,9 +39,8 @@ describeNamed({ VariableDeclarationFunctionTable }, () => {
           return writer;
         },
       });
-      subject.byParameters(intType)!.onBuiltIn((bif: BuiltInFunction) => {
-        bif(CallingContext.canTakeAll(), writer);
-      });
+      subject().byParameters(intType)!.
+        builtIn()(CallingContext.canTakeAll(), writer);
       expect(verifyHit()).toBeTruthy();
     });
 
@@ -54,11 +54,9 @@ describeNamed({ VariableDeclarationFunctionTable }, () => {
           return writer;
         },
       });
-      subject.
+      subject().
         byParameters(emptyTupleInstance())!.
-        onBuiltIn((bif: BuiltInFunction) => {
-          bif(CallingContext.canTakeAll(), writer);
-        });
+        builtIn()(CallingContext.canTakeAll(), writer);
       expect(verifyHit()).toBeTruthy();
     });
   }
@@ -72,7 +70,7 @@ describeNamed({ VariableDeclarationFunctionTable }, () => {
   });
 
   describe('For a type that is multiple "words" large', () => {
-    const subject = make(asTuple([intType, intType]), ':=', 0);
+    const subject = () => make(asTuple([intType, intType]), ':=', knowableLaterNode(), 0);
 
     it('will load exactly two "words"', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
@@ -85,11 +83,9 @@ describeNamed({ VariableDeclarationFunctionTable }, () => {
           return writer;
         },
       });
-      subject.
+      subject().
         byParameters(emptyTupleInstance())!.
-        onBuiltIn((bif: BuiltInFunction) => {
-          bif(CallingContext.canTakeAll(), writer);
-        });
+        builtIn()(CallingContext.canTakeAll(), writer);
       expect(verifyHit()).toBeTruthy();
     });
   });

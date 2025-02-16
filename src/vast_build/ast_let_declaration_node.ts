@@ -2,7 +2,7 @@ import { AstNode } from './ast_node';
 import { Helpers } from '../helpers';
 import { AstNodeVisitor } from './ast_node_visitor';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export interface AstLetDeclarationNode extends AstNode {};
 
@@ -17,7 +17,9 @@ export const AstLetDeclarationNode = freeze({
         visitor.visitLetDeclaration(inst, node),
       type,
       executionType,
-      asString: () => `let ${node.asString()}...`
+      asString: () => `let ${node.asString()}...`,
+      uid: memoize(Symbol),
+      asName: () => undefined
     });
 
     return inst;

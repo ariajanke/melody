@@ -11,7 +11,8 @@ const { describeNamed } = TestHelpers;
 describeNamed({ VastIntegerLiteralNode }, () => {
   it('is its (declared) type', () => {
     const node = VastIntegerLiteralNode.make(IntegerType.instance(), 3);
-    expect(node.objectType().uid()).toEqual(IntegerType.instance().uid());
+    expect(node.functionType().returns().uid()).
+      toEqual(IntegerType.instance().uid());
   });
 
   it('is the expected function type', () => {

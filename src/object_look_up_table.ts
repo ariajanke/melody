@@ -1,16 +1,10 @@
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
-import {
-  CallHandlingStrategies,
-  CallingContext,
-  IncompleteFunctionType
-} from './function_type';
+import { FunctionType } from './function_type';
 import { ObjectTypeResolution } from './object_type_resolution';
 import { StandardErrorMessage } from './helpers';
 import { IntegerType } from './integer_type';
 import { StringType } from './string_type';
-import { type CodeWriter } from './code_writer';
-import { WritableObjectType } from './writable_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -20,27 +14,16 @@ export interface ObjectLookUpTable {
   // usefulness???
   lookUpByType: (type: ObjectType) => ObjectTypeResolution,
   lookUpByName: (name: string) => ObjectTypeResolution,
+  temporarilyDefineType<Type>(obj: ObjectType, fn: () => Type): Type
 }
 
 export const ObjectLookUpTable = (() => {
   const getBuiltinTypes = memoize(() => {
-    const mutable_function_type = WritableObjectType.make().setName('Function');
-    const function_ = mutable_function_type.objectType();
-    const { noReceiver } = CallHandlingStrategies;
-
-    mutable_function_type.pushFunctionTypeByName(':=', IncompleteFunctionType.
-      make().
-      setCallStrategy( noReceiver ).
-      setName(':=').
-      setParameters(function_).
-      setReturns  ( function_ ).
-      setBuiltin((_0: CallingContext, _1: CodeWriter) => {}).
-      finish());
-
+    
     return freeze({
       Integer: IntegerType.instance(),
       String: StringType.instance(),
-      Function: function_,
+      Function: FunctionType.asAnObjectType(),
       Unresolved: ObjectType.make('Unresolved')
     });
   });
@@ -86,11 +69,21 @@ export const ObjectLookUpTable = (() => {
       return inst;
     }
 
+    function temporarilyDefineType<Type>(obj: ObjectType, fn: () => Type): Type {
+      const oldByName = mLookUpByName[obj.name()];
+      inst.addType(obj);
+      const rv = fn();
+      mLookUpByName[obj.name()] = oldByName;
+      mLookUpByUid[obj.uid()] = undefined;
+      return rv;
+    }
+
     const inst = freeze({
       addBuiltinTypes,
       lookUpByType,
       lookUpByName,
-      addType
+      addType,
+      temporarilyDefineType
     });
     return inst;
   }

@@ -1,5 +1,4 @@
 import {
-  CallHandlingStrategies,
   CallingContext,
   IncompleteFunctionType
 } from './function_type';
@@ -16,7 +15,7 @@ const class_ = freeze({
     const type = mutable_type.objectType();
     mutable_type.pushFunctionTypeByName(':=', IncompleteFunctionType.
       make().
-      setCallStrategy( CallHandlingStrategies.noReceiver ).
+      // callWithoutReceiver().
       setName(':=').
       setParameters(type).
       setReturns   (type).

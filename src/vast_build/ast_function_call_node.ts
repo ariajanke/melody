@@ -12,7 +12,7 @@ import { AstIdentifierNode } from './ast_identifier_node';
 import { AstStringLiteralNode } from './ast_string_literal_node';
 import { ContextType } from '../context_type';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export interface FunctionTypeResolution {
   resolve: () => FunctionType | undefined,
@@ -20,7 +20,8 @@ export interface FunctionTypeResolution {
 };
 
 export interface AstFunctionCallNode extends AstNode {
-  name: string,
+  // name: string,
+  alwaysAsName(): string,
   arguments: AstTupleNode
   functionTypeBy: (lookUpTable: FunctionLookUpTable, parameterType: ObjectType) => FunctionTypeResolution
 };
@@ -43,7 +44,9 @@ export const AstFunctionCallNode = (() => {
       executionType: (objTable: ObjectLookUpTable) => 
         objTable.lookUpByName(ContextType.typeName()),
       asString: ContextType.contextMethodName,
-      contextMethodName: ContextType.contextMethodName // call by "$<context>"
+      // contextMethodName: ContextType.contextMethodName, // call by "$<context>"
+      asName: ContextType.contextMethodName,
+      uid: memoize(Symbol)
     });
     return inst;
   }
@@ -102,8 +105,8 @@ export const AstFunctionCallNode = (() => {
     }
 
     const inst: AstFunctionCallNode = freeze({
-      name,
-      asString: () => `${name}(...)`,
+      // name,
+      asString: () => `${mReceiver.asString()}.${name}(...)`,
       arguments: mArguments,
       visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
         visitor.visitFunctionCall(inst, mReceiver, mArguments),
@@ -111,14 +114,14 @@ export const AstFunctionCallNode = (() => {
       functionTypeBy(lookUpTable: FunctionLookUpTable, parameterType: ObjectType): FunctionTypeResolution {
         const func = lookUpTable.byParameters(parameterType);
         const err = StandardError.make();
+        if (!func) {
+          err.
+            setErrorMessage(`Could not find an implementation for ` +
+                            `${inst.asString()} given parameters ` +
+                            parameterType.name());
+        }
         return freeze({
-          resolve: () => {
-            if (!func) {
-              return err.
-                setErrorMessage('Could not find an implementation for the given arguments');
-            }
-            return func;
-          },
+          resolve: () => func,
           error: err.error
         });
       },
@@ -150,7 +153,10 @@ export const AstFunctionCallNode = (() => {
 
         return ObjectTypeResolution.
           makeFixedForType(ObjectType.asTuple(objTypes as ObjectType[]));
-      }
+      },
+      alwaysAsName: () => name,
+      asName: () => name,
+      uid: memoize(Symbol)
     });
 
     return inst;

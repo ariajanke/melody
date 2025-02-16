@@ -1,6 +1,5 @@
 import { Helpers } from './helpers';
 import {
-  CallHandlingStrategies,
   CallingContext,
   IncompleteFunctionType
 } from './function_type';
@@ -10,8 +9,6 @@ import { WritableObjectType } from './writable_object_type';
 const { freeze, memoize } = Helpers;
 
 function makeIntegerType() {
-  const { noReceiver, withReceiver } = CallHandlingStrategies;
-  
   const mutable_integer_type = WritableObjectType.make().
     setName('Integer').
     setToIntegerSize();
@@ -19,16 +16,20 @@ function makeIntegerType() {
 
   const onTakeInteger = (fn: (codeWriter: CodeWriter) => void) => {
     return (callingContext: CallingContext, codeWriter: CodeWriter) => {
-      if (!callingContext.canTake(integer_))
-        { return (_0: CallingContext, _1: CodeWriter) => {}; }
-      fn(codeWriter);
+      if (callingContext.canTake(integer_)) {
+        fn(codeWriter);
+      } else {
+        // just clean up parameters (and receiver)
+        codeWriter.drop().drop();
+      }
     };
   };
   
   const add = IncompleteFunctionType.
     make().
     setName('+').
-    setCallStrategy(withReceiver).
+    // callWithReceiver().
+    immediatelyKnowable().
     setParameters(integer_).
     setReturns  ( integer_ ).
     setBuiltin(onTakeInteger((writer: CodeWriter) => {
@@ -39,7 +40,8 @@ function makeIntegerType() {
   const sub = IncompleteFunctionType.
     make().
     setName('-').
-    setCallStrategy(withReceiver).
+    // callWithReceiver().
+    immediatelyKnowable().
     setParameters(integer_).
     setReturns  ( integer_ ).
     setBuiltin(onTakeInteger((writer: CodeWriter) => {
@@ -50,7 +52,8 @@ function makeIntegerType() {
   const mul = IncompleteFunctionType.
     make().
     setName('*').
-    setCallStrategy(withReceiver).
+    // callWithReceiver().
+    immediatelyKnowable().
     setParameters(integer_).
     setReturns  ( integer_ ).
     setBuiltin(onTakeInteger((writer: CodeWriter) => {
@@ -61,7 +64,8 @@ function makeIntegerType() {
   const assign = IncompleteFunctionType.
     make().
     setName(':=').
-    setCallStrategy(noReceiver).
+    // callWithReceiver().
+    immediatelyKnowable().
     setParameters(integer_).
     setReturns  ( integer_ ).
     setBuiltin((_0: CallingContext, _1: CodeWriter) => {}).

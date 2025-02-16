@@ -1,6 +1,6 @@
 import { Helpers, StandardErrorMessage } from './helpers';
 import { AstBuild, VastBuild } from './vast_build';
-import { BuiltInFunction, CallingContext } from './function_type';
+import { CallingContext } from './function_type';
 import { Tokenization } from './tokenization';
 import { MemoryArray } from './memory_array';
 import { ContextType } from './context_type';
@@ -52,11 +52,12 @@ function construct(mSource: string,
              ...InterpretedCodeWriter.defaultInjections(),
              putsFunction, makeMemory, makeStack
            });
-    return (build.root() as VastNode).
-      functionType().
-      onBuiltIn((impl: BuiltInFunction) => {
-        impl(CallingContext.canTakeAll(), mCodeWriter);
-      });
+    const functionType = (build.root() as VastNode).functionType();
+    functionType.builtIn()(CallingContext.canTakeAll(), mCodeWriter);
+    return functionType;
+      // onBuiltIn((impl: BuiltInFunction) => {
+      //   impl(CallingContext.canTakeAll(), mCodeWriter);
+      // });
   }
   return freeze({
     interpret,
