@@ -1,11 +1,9 @@
 import { Helpers } from './helpers';
-import {
-  CodeWriter,
-  StackReversal
-} from './code_writer';
+import { CodeWriter } from './code_writer';
 import { MemoryArray } from './memory_array';
 import { StringPool } from './string_pool';
 import { ImmediateWriter } from './interpreted_code_writer/immediate_writer';
+import { ObjectType } from './object_type';
 
 const { freeze } = Helpers;
 
@@ -47,8 +45,12 @@ function construct
     askInteger(): CodeWriter {
       return makeImmediateWriter().askInteger();
     },
-    pushFunctionIndex(definer: (codeWriter: CodeWriter) => void) {
+    pushFunctionIndex(expectedRt: ObjectType, definer: (codeWriter: CodeWriter) => void) {
       definer(makeImmediateWriter());
+      if (mStack.count() !== expectedRt.sizeInBytes() / 4) {
+        throw new Error(`stack must be balanced with return type, ` +
+                        `${mStack.count()} items left on stack`);
+      }
       return inst;
     },
     indirectCall(n: number) {
@@ -62,9 +64,6 @@ function construct
     },
     printInteger(): CodeWriter {
       return makeImmediateWriter().printInteger();
-    },
-    forStackReversal(fn: (sr: StackReversal) => void): CodeWriter {
-      return makeImmediateWriter().forStackReversal(fn);
     },
   });
   return inst satisfies CodeWriter;

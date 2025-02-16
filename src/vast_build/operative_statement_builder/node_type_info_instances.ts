@@ -57,11 +57,11 @@ export const NodeTypeInfoInstance = freeze({
       const dict = fn();
       const { unary, binary } = OperatorDefinitions.operandRelationships;
       const asArray = Object.keys(dict).map((representation: string) => {
-        const def: OperatorDefinition = dict[representation];
-        if (def.operandRelation === unary) {
-          return makeUnary(def);
-        } else if (def.operandRelation === binary) {
-          return makeBinary(def);
+        const def: OperatorDefinition | undefined = dict[representation];
+        if (def!.operandRelation === unary) {
+          return makeUnary(def as OperatorDefinition);
+        } else if (def!.operandRelation === binary) {
+          return makeBinary(def as OperatorDefinition);
         }
         return fringe;
       });

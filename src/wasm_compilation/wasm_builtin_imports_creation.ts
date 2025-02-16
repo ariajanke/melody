@@ -82,7 +82,6 @@ export const WasmBuiltinImportsCreation = (() => {
             if (index === undefined) {
               throw new Error(`Index for "${name}" not defined`);
             }
-            console.log(name, index);
             imptSec = imptSec.pushFunction(index, 'imports', name);
           });
           return imptSec;

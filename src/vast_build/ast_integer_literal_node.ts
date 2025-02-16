@@ -1,13 +1,12 @@
 import { AstNode } from './ast_node';
 import { Helpers } from '../helpers';
 import { AstLiteralNode } from './ast_fringe_node';
-import { Token } from '../token';
 import { AstNodeVisitor } from './ast_node_visitor';
 import { type ObjectTypeResolution } from '../object_type_resolution';
 import { ObjectLookUpTable } from '../object_look_up_table';
 import { type StringPool } from '../string_pool';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 interface AstIntegerLiteralNode extends AstLiteralNode {}
 
@@ -15,10 +14,17 @@ export const AstIntegerLiteralNode = (() => {
   const { hasCreated, type } = AstNode.makeTypeClassMethods();
 
   function make(value: string): AstLiteralNode {
-    return construct(Number.parseInt(value));
+    const asNum = Number.parseInt(value);
+    if (Number.isNaN(asNum)) {
+      throw new Error(`Cannot use "${value}" as an integer`);
+    }
+    return construct(asNum);
   }
 
   function construct(mValue: number): AstLiteralNode {
+    if (Number.isNaN(mValue)) {
+      throw new Error('Cannot use NaN as an integer');
+    }
     const inst = freeze({
       visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
         visitor.visitLiteral(inst),
@@ -27,13 +33,8 @@ export const AstIntegerLiteralNode = (() => {
         types.lookUpByName('Integer'),
       asString: (): string => `${mValue}`,
       value: (_0: StringPool) => mValue,
-      comesBeforeOperator: (operator: Token): boolean => {
-        switch (operator.content()) {
-        case ',': case '+': case '-': case '*':
-          return true;
-        default: return false;
-        }
-      }
+      uid: memoize(Symbol),
+      asName: () => undefined
     });
     return inst;
   }

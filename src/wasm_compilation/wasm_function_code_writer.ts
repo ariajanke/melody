@@ -2,7 +2,6 @@ import { Helpers } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { MemoryArray } from '../memory_array';
-import { ReadableStackReversal, StackReversal } from '../code_writer';
 
 const { freeze } = Helpers;
 
@@ -69,22 +68,6 @@ export const WasmFunctionCodeWriter = (() => {
           getAddrOnTop(offset);
           mFunctionBody.getLocal(0);
           mFunctionBody.pushI32Store();
-          return inst;
-        },
-        forStackReversal(fn: (sr: StackReversal) => void) {
-          const rpcw = ReadableStackReversal.make();
-          fn(rpcw);
-          if (rpcw.count() > 1) {
-            while (mFunctionBody.localCount() < rpcw.count()) {
-              mFunctionBody.pushLocal();
-            }
-            rpcw.forEach((idx: number) => {
-              mFunctionBody.setLocal(idx);
-            });
-            rpcw.forEach((idx: number) => {
-              mFunctionBody.getLocal(idx);
-            });
-          }
           return inst;
         },
         printString: () =>

@@ -2,13 +2,13 @@
 import * as astnode from './vast_build/ast_node';
 import { StringPoolVisitor } from './vast_build/string_pool_visitor';
 import * as astbuild from './vast_build/ast_build';
-import { VastBuildVisitor } from './vast_build/vast_build_visitor';
 // Public
 import { ContextType, ContextTypeInjections } from './context_type';
-import { Helpers, StandardErrorFn, StandardErrorMessage } from './helpers';
+import { Helpers, StandardErrorMessage } from './helpers';
 import { ObjectLookUpTable } from './object_look_up_table';
 import { VastNode } from './vast_node';
 import { StringPool } from './string_pool';
+import { NewVastBuildVisitor } from './vast_build/vast_build_visitor';
 
 const { freeze, memoize } = Helpers;
 
@@ -34,18 +34,17 @@ function construct(mRootNode: AstNode,
                    mStartContextType?: typeof ContextType.makeWritable,
                    mObjectTable?: ObjectLookUpTable)
 {
-  const mErrors: StandardErrorFn[] = [];
   mObjectTable ??= ObjectLookUpTable.make().addBuiltinTypes();
   mContextInjections ??= ContextType.defaultInjections();
   mStartContextType ??= ContextType.makeWritable;
 
-  const mVisitor = VastBuildVisitor.
-  make(mErrors, mStringPool, mContextInjections, mStartContextType, mObjectTable);
-
+  const mVisitor = NewVastBuildVisitor.
+    make(mStringPool, mObjectTable, () => mStartContextType(mContextInjections));
+  const result = memoize(() => mRootNode.visit(mVisitor));
   return freeze({
-    root: memoize(() => mRootNode.visit(mVisitor)),
+    root: memoize(() => result().node()),
     stringPool: () => mStringPool,
-    errors: memoize(() => mErrors.map((fn: StandardErrorFn) => fn()))
+    errors: memoize(() => result().errors())
   }) satisfies VastBuild;
 }
 

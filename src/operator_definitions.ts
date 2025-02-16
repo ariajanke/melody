@@ -1,7 +1,7 @@
 import { Helpers } from './helpers';
 import { Token } from './token';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 interface OperatorDefinitionMut {
   representation: string,
@@ -11,7 +11,9 @@ interface OperatorDefinitionMut {
 
 export type OperatorDefinition = Readonly<OperatorDefinitionMut>;
 
-export type OperatorDefinitionDictionary = Readonly<{ [representation: string]: OperatorDefinition }>;
+export type OperatorDefinitionDictionary = Readonly<{
+  [representation: string]: OperatorDefinition | undefined
+}>;
 
 const makeListingFunction = (operandRelation: string) => {
   let sListing: OperatorDefinitionDictionary | undefined;
@@ -85,7 +87,7 @@ export const OperatorDefinitions = freeze({
     };
     return fn;
   })(),
-  unaryListing : makeListingFunction(operandRelationships.unary ),
-  binaryListing: makeListingFunction(operandRelationships.binary),
+  unaryListing : memoize(makeListingFunction(operandRelationships.unary )),
+  binaryListing: memoize(makeListingFunction(operandRelationships.binary)),
   operandRelationships
 });

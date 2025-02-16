@@ -7,10 +7,10 @@ import { AstFringeNode } from './ast_fringe_node';
 import { ContextType } from '../context_type';
 import { ObjectType } from '../object_type';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export interface AstIdentifierNode extends AstFringeNode {
-  contextMethodName: () => string
+  // contextMethodName: () => string
 };
 
 export const AstIdentifierNode = (() => {
@@ -21,24 +21,24 @@ export const AstIdentifierNode = (() => {
       executionType: (oTable: ObjectLookUpTable): ObjectTypeResolution => {
         const ctxTypeRes = oTable.lookUpByName(ContextType.typeName());
         const ctxType = ctxTypeRes.resolve();
-        if (!ctxType) {
+        if (!ctxType || value === ContextType.contextMethodName()) {
           return ctxTypeRes;
         }
         const funcType = ctxType.
-          lookUp(inst.contextMethodName())?.
+          lookUp(`.${value}`)?.
           byParameters(ObjectType.emptyTupleInstance());
         if (!funcType) {
           return ObjectTypeResolution.
             makeForError(`"${value}" is not declared`);
         }
         return ObjectTypeResolution.makeFixedForType(funcType.returns());
-        // return types.lookUpIdentifierType(value);
       },
       type,
       asString: () => value,
       visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
         visitor.visitIdentifier(inst),
-      contextMethodName: () => `.${value}`
+      asName: () => value,
+      uid: memoize(Symbol)
     });
     return inst;
   }

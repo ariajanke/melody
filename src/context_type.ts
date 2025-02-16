@@ -1,5 +1,4 @@
-import { 
-  CallHandlingStrategies,
+import {
   CallingContext,
   IncompleteFunctionType
 } from './function_type';
@@ -12,7 +11,6 @@ import { CodeWriter } from './code_writer';
 import { WritableObjectType } from './writable_object_type';
 
 const { memoize, freeze } = Helpers;
-const { noReceiver } = CallHandlingStrategies;
 
 const defaultInjections = memoize(() => freeze({
   getStringType: StringType.instance,
@@ -28,19 +26,18 @@ function makeWritable(injections = defaultInjections()) {
   const { emptyTupleInstance } = ObjectType;
   const askString = IncompleteFunctionType.
     make().
-    setCallStrategy(noReceiver).
+    // callWithoutReceiver().
     setName('askString').
     setParameters(emptyTupleInstance()).
     setReturns( stringType ).
     setBuiltin((_0: CallingContext, writer: CodeWriter) => {
-      // just ignore it, problem solved n.-
       writer.askString();
     }).
     finish();
 
   const askInteger = IncompleteFunctionType.
     make().
-    setCallStrategy(noReceiver).
+    // callWithoutReceiver().
     setName('askInteger').
     setParameters(emptyTupleInstance()).
     setReturns( integerType ).
@@ -52,7 +49,7 @@ function makeWritable(injections = defaultInjections()) {
   const { contextMethodName } = class_;
   const getSelf = IncompleteFunctionType.
     make().
-    setCallStrategy(noReceiver).
+    // callWithoutReceiver().
     setName(contextMethodName()).
     setParameters(emptyTupleInstance()).
     setReturns(emptyTupleInstance()).

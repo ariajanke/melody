@@ -79,7 +79,7 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
-          vop = node.name;
+          vop = node.alwaysAsName();
           
           expect(Number(rec.asString())).toEqual(2);
           expect(fArgs.count()).toEqual(1);
@@ -103,7 +103,7 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
-          foundOperators.push(node.name);
+          foundOperators.push(node.alwaysAsName());
           pt1.hitsAtExactly(1);
           rec.visit(visitor);
           fArgs.forEach((node: AstNode) => {
@@ -133,7 +133,7 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
-          foundOperators.push(node.name);
+          foundOperators.push(node.alwaysAsName());
           rec.visit(visitor);
           fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
@@ -149,7 +149,7 @@ describeNamed({ AstBuild }, () => {
         makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2')
       ];
       const rootNode = buildAst();
-      if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {//.type() !== AstNode.types.functionDefinition) {
+      if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {
         return fail();
       }
       expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(2);
@@ -164,7 +164,7 @@ describeNamed({ AstBuild }, () => {
         makeToken('a')
       ];
       const rootNode = buildAst();
-      if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {//!== AstNode.types.functionDefinition) {
+      if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {
         return fail();
       }
       expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(3);
@@ -226,7 +226,7 @@ describeNamed({ AstBuild }, () => {
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
           hitsAtExactly(1);
-          expect(node.name).toEqual(':=');
+          expect(node.alwaysAsName()).toEqual(':=');
           rec.visit(visitor);
           fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
@@ -250,7 +250,7 @@ describeNamed({ AstBuild }, () => {
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
           hitsAtExactly(1);
-          expect(node.name).toEqual('askString');
+          expect(node.alwaysAsName()).toEqual('askString');
         }).
         finish();
       rootNode.visit(visitor);
@@ -300,7 +300,7 @@ describeNamed({ AstBuild }, () => {
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
           hitsAtExactly(1);
-          expect(node.name).toEqual('puts');
+          expect(node.alwaysAsName()).toEqual('puts');
         }).
         finish();
       rootNode.visit(visitor);
@@ -404,7 +404,7 @@ describeNamed({ AstBuild }, () => {
           pt1.hitsAtExactly(2);
         }).
         visitFunctionCall((node: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode): void => {
-          functionCalls.push(node.name);
+          functionCalls.push(node.alwaysAsName());
           receiver.visit(visitor);
           fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
@@ -425,7 +425,7 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, receiver: AstNode, fArgs: AstTupleNode) => {
-          gottenNames.push(node.name);
+          gottenNames.push(node.alwaysAsName());
           receiver.visit(visitor);
           fArgs.forEach((node: AstNode) => node.visit(visitor));
         }).
@@ -469,9 +469,9 @@ describeNamed({ AstBuild }, () => {
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
           hitsAtExactly(2);
-          fnnames.push(node.name);
+          fnnames.push(node.alwaysAsName());
           expect(node.arguments.count()).
-            toEqual(kExpectArgumentCount[node.name]);
+            toEqual(kExpectArgumentCount[node.alwaysAsName()]);
           node.arguments.forEach((node: AstNode) => node.visit(visitor));
         }).
         finish();
@@ -494,10 +494,10 @@ describeNamed({ AstBuild }, () => {
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode, rec: AstNode, fArgs: AstTupleNode) => {
           if (rec.type() === AstIdentifierNode.type()) {
-            expect(node.name).toEqual('puts');
+            expect(node.alwaysAsName()).toEqual('puts');
             pt3.hitsAtExactly(1);
           } else {
-            expect(node.name).toEqual('+');
+            expect(node.alwaysAsName()).toEqual('+');
             pt2.hitsAtExactly(2);
             expect(rec.type()).toEqual(AstIntegerLiteralNode.type());// AstNode.types.integerLiteral);
             fArgs.forEach((node: AstNode) => {
@@ -541,7 +541,7 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
-          expect(node.name).toEqual('puts');
+          expect(node.alwaysAsName()).toEqual('puts');
           pt1.hitsAtExactly(1);
           node.arguments.forEach((node: AstNode) => {
             // const { functionCall } = AstNode.types;
@@ -549,7 +549,7 @@ describeNamed({ AstBuild }, () => {
             expect(node.type()).toEqual(functionCall);
             if (node.type() === functionCall) {
               pt2.hitsAtExactly(2);
-              expect((node as AstFunctionCallNode).name).toEqual('askString');
+              expect((node as AstFunctionCallNode).alwaysAsName()).toEqual('askString');
             }
           });
         }).
@@ -568,7 +568,7 @@ describeNamed({ AstBuild }, () => {
       const visitor = AstNodeVisitorBuilder.
         makeDefaultingToContinue().
         visitFunctionCall((node: AstFunctionCallNode) => {
-          expect(node.name).toEqual('puts');
+          expect(node.alwaysAsName()).toEqual('puts');
           pt1.hitsAtExactly(1);
         }).
         finish();

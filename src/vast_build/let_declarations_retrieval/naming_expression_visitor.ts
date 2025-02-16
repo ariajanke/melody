@@ -1,12 +1,12 @@
-import { Helpers, StandardError } from '../helpers';
-import { type AstNodeVisitor } from './ast_node_visitor';
-import { type AstFunctionCallNode } from './ast_function_call_node';
-import { type AstNode } from './ast_node';
-import { type AstTupleNode } from './ast_tuple_node';
-import { type AstLetDeclarationNode } from './ast_let_declaration_node';
-import { type AstFunctionDefinitionNode } from './ast_function_definition_node';
-import { AstIdentifierNode } from './ast_identifier_node';
-import { AstLiteralNode } from './ast_fringe_node';
+import { Helpers, StandardError } from '../../helpers';
+import { type AstNodeVisitor } from '../ast_node_visitor';
+import { type AstFunctionCallNode } from '../ast_function_call_node';
+import { type AstNode } from '../ast_node';
+import { type AstTupleNode } from '../ast_tuple_node';
+import { type AstLetDeclarationNode } from '../ast_let_declaration_node';
+import { type AstFunctionDefinitionNode } from '../ast_function_definition_node';
+import { AstIdentifierNode } from '../ast_identifier_node';
+import { AstLiteralNode } from '../ast_fringe_node';
 
 const { freeze, memoize } = Helpers;
 

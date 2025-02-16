@@ -1,6 +1,5 @@
 import { Helpers } from './helpers';
 import {
-  CallHandlingStrategies,
   CallingContext,
   IncompleteFunctionType,
 } from './function_type';
@@ -79,7 +78,7 @@ const PutsFunctionLookUpTable = freeze({
         setParameters(ObjectType.asTuple(objTypes)).
         setReturns(ObjectType.emptyTupleInstance()).
         setContextToTakeAll().
-        setCallStrategy(CallHandlingStrategies.noReceiver).
+        // callWithoutReceiver().
         setName('puts').
         setBuiltin((_0: CallingContext, codeWriter: CodeWriter) => {
           objTypes.forEach((objType: ObjectType) =>
@@ -102,7 +101,8 @@ const PutsFunctionLookUpTable = freeze({
         const types = type.decompose();
         const table = lookUpImpl(mFunctionTypeTable, types);
         return table.implementation ??= makeImplementation(types);
-      }
+      },
+      oneTimeSetter: () => undefined
     });
   }
 });

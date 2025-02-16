@@ -1,9 +1,14 @@
-import { CodeWriter, StackReversal } from './code_writer';
-import { FunctionCompositor } from './function_compositor';
-import { CallingContext, FunctionType } from './function_type';
+import { CodeWriter } from './code_writer';
+import {
+  BuiltInFunction,
+  CallingContext,
+  FunctionType,
+  IncompleteFunctionType
+} from './function_type';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { VastNode } from './vast_node';
+import { FunctionAbility } from './function_ability';
 
 const { freeze, memoize } = Helpers;
 
@@ -30,45 +35,48 @@ export const VastFunctionCallNode = freeze({
     msg && onError( msg );
     return undefined;
   },
+  pushVastAsParameters(node: VastNode): BuiltInFunction[] {
+    const bifs: BuiltInFunction[] = [];
+    const pushBif = (bif: BuiltInFunction) => bifs.push(bif);
+    pushBif(node.functionType().builtIn());
+    return bifs;
+  },
   make(mFunctionType: FunctionType, mReceiver: VastNode, mParameters: VastNode) {
-    VastFunctionCallNode.
-      validateFunctionParameters(mFunctionType, mParameters.objectType(), (msg: string) =>
-        { throw new Error(msg); });
+    VastFunctionCallNode.validateFunctionParameters(
+      mFunctionType,
+      mParameters.functionType().returns(),
+      (msg: string) => { throw new Error(msg); });
 
-    const compositor = () => FunctionCompositor.make(mFunctionType);
-
-    function adjustStack(obj: ObjectType, sr: StackReversal) {
-      const decomposedTo = obj.decompose();
-      if (obj.sizeInBytes() === 4)
-        { sr.pushWord(); }
-      else if (decomposedTo.length > 1) {
-        decomposedTo.forEach((obj: ObjectType) => adjustStack(obj, sr));
-      } else if (decomposedTo.length === 0) {
-        // do nothing
-      } else {
-        throw new Error(`Non-integer fundemental type "${obj.name()}???"`);
-      }
-    }
-    
     const functionType = memoize(() => {
-      let mCompositor = compositor();
-      mFunctionType.withCallStrategy().chooseReceiver(() => {
-        mCompositor = mReceiver.functionType().composeWith(mCompositor);
-      });
-      mCompositor = mParameters.functionType().composeWith(mCompositor);
-      mCompositor.pushBuiltin((_0: CallingContext, cw: CodeWriter) => {
-        cw.forStackReversal((sr: StackReversal) => {
-          adjustStack(mParameters.functionType().returns(), sr);
-        });
-      });
-      return mCompositor.finish();  
+      const bifs: BuiltInFunction[] = [];
+      const pushBif = (bif: BuiltInFunction) => bifs.push(bif);
+      pushBif(mReceiver.functionType().builtIn());
+
+      bifs.push(...VastFunctionCallNode.pushVastAsParameters(mParameters));
+      return IncompleteFunctionType.
+        make().
+        setParameters(ObjectType.emptyTupleInstance()).
+        setReturns(mFunctionType.returns()).
+        setBuiltin((context: CallingContext, writer: CodeWriter) => {
+          bifs.forEach((bif: BuiltInFunction) =>
+            bif(CallingContext.canTakeAll(), writer));
+          // the function itself is responsible for cleaning up after itself
+          mFunctionType.builtIn()(context, writer);
+        }).
+        finish();
     });
       
-    return freeze({
-      objectType: memoize(() => mFunctionType.returns()),
+    const inst = freeze({
       functionType,
-      itCanBe: () => false,
-      uid: memoize(Symbol)
-    }) satisfies VastNode;
+      itCanBe: memoize(() => FunctionAbility.
+        reductionOf(/* v TODO: and the function itself v */
+                    FunctionAbility.isKnownableLater(),
+                    
+                    mReceiver.itCanBe(),
+                    mParameters.itCanBe())),
+      uid: memoize(Symbol),
+      decompose: () => [inst]
+    });
+    return inst satisfies VastNode;
   }
 });

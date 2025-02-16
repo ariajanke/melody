@@ -1,8 +1,6 @@
 import { Helpers } from '../helpers';
-import {
-  CodeWriter,
-  StackReversal
-} from '../code_writer';
+import { CodeWriter } from '../code_writer';
+import { ObjectType } from '../object_type';
 
 const { freeze } = Helpers;
 
@@ -41,7 +39,7 @@ function construct(mImmediateWriter: CodeWriter) {
       mInstructions.push(() => { mImmediateWriter.askInteger(); });
       return inst;
     },
-    pushFunctionIndex(_0: (codeWriter: CodeWriter) => void): CodeWriter {
+    pushFunctionIndex(_0: ObjectType, _1: (codeWriter: CodeWriter) => void): CodeWriter {
       throw new Error('unimplemented');
     },
     printString(): CodeWriter {
@@ -50,10 +48,6 @@ function construct(mImmediateWriter: CodeWriter) {
     },
     printInteger(): CodeWriter {
       mInstructions.push(() => { mImmediateWriter.printInteger(); });
-      return inst;
-    },
-    forStackReversal(fn: (sr: StackReversal) => void): CodeWriter {
-      mInstructions.push(() => { mImmediateWriter.forStackReversal(fn); });
       return inst;
     },
     drop(): CodeWriter {

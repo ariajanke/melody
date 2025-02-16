@@ -1,30 +1,19 @@
-import { FunctionCompositor } from './function_compositor';
 import {
-  CallHandlingStrategies,
+  BuiltInFunction,
+  CallingContext,
   FunctionType,
   IncompleteFunctionType
 } from './function_type';
 import { Helpers } from './helpers';
 import { ObjectType } from './object_type';
 import { VastNode } from './vast_node';
+import { FunctionAbility } from './function_ability';
+import { CodeWriter } from './code_writer';
 
 const { freeze, memoize } = Helpers;
 
 function tupleTypeOfReturns(funcs: Readonly<FunctionType[]>) {
   return ObjectType.asTuple( funcs.map((func: FunctionType) => func.returns()) );
-}
-
-function functionCompositorFor(funcs: Readonly<FunctionType[]>): FunctionCompositor {
-  const compositor = FunctionCompositor.make(IncompleteFunctionType.
-    make().
-    setReturns(tupleTypeOfReturns(funcs)).
-    setCallStrategy(CallHandlingStrategies.noReceiver).
-    implementationDoesNothing().
-    finish());
-  funcs.forEach((fnType: FunctionType) => {
-    fnType.composeWith(compositor);
-  });
-  return compositor;
 }
 
 function isZeroParameterFunction(node: VastNode) {
@@ -43,18 +32,68 @@ function verifyNoNonZeroParameterFunctions(nodes: Readonly<VastNode[]>) {
   throw new Error('All nodes must be zero parameter functions');
 }
 
-function construct(nodes: Readonly<VastNode[]>) {
-  const { itCanBe } = VastNode;
-  const funcTypes = (): Readonly<FunctionType[]> =>
-    nodes.map((node: VastNode) => node.functionType());
-  verifyNoNonZeroParameterFunctions(nodes);
+function abilityForEmptyTuple() {
+  return FunctionAbility.isEvaluatableNow();
+}
+
+const emptyTuple = memoize((): VastNode => {
   return freeze({
-    objectType: memoize(() => ObjectType.
-      asTuple(nodes.map((node :VastNode) => node.objectType()))),
-    functionType: memoize(() => functionCompositorFor(funcTypes()).finish()),
-    itCanBe: itCanBe(),
-    uid: memoize(Symbol)
+    functionType: memoize(() => IncompleteFunctionType.
+      make().
+      immediatelyKnowable().
+      implementationDoesNothing().
+      setParameters(ObjectType.emptyTupleInstance()).
+      setReturns(ObjectType.emptyTupleInstance()).
+      finish()),
+    itCanBe: () => FunctionAbility.isEvaluatableNow(),
+    uid: memoize(Symbol),
+    decompose: () => []
+  });
+});
+
+function construct(nodes: Readonly<VastNode[]>) {
+  if (nodes.length === 0)
+    { return emptyTuple(); }
+  else if (nodes.length === 1)
+    { return nodes[0]; }
+  
+  verifyNoNonZeroParameterFunctions(nodes);
+
+  const itCanBe = memoize(() => {
+    return nodes.
+      map((node: VastNode) => node.itCanBe()).
+      reduce((prev: FunctionAbility, cur: FunctionAbility) =>
+        cur.intersectWith(prev), abilityForEmptyTuple());
+  });
+
+  return freeze({
+    functionType: memoize(() => {
+      const funcTypes = memoize((): Readonly<FunctionType[]> =>
+        nodes.map((node: VastNode) => node.functionType()));
+      const returnType = tupleTypeOfReturns(funcTypes());
+      const bifs: BuiltInFunction[] = [];
+      const pushBif = (bif: BuiltInFunction) => bifs.push(bif);
+      nodes.forEach((node: VastNode) => {
+        pushBif(node.functionType().builtIn());
+      });
+      bifs.reverse();
+
+      const incmp = IncompleteFunctionType.
+        make().
+        setReturns(returnType).
+        setParameters(ObjectType.emptyTupleInstance()).
+        setBuiltin((context: CallingContext, writer: CodeWriter) => {
+          bifs.forEach((bif: BuiltInFunction) => bif(context, writer));
+        });
+      if (itCanBe().evaluatedNow()) {
+        incmp.immediatelyKnowable();
+      }
+      return incmp.finish();
+    }),
+    itCanBe,
+    uid: memoize(Symbol),
+    decompose: () => nodes
   }) satisfies VastNode;
 }
 
-export const VastTupleNode = freeze({ make: construct });
+export const VastTupleNode = freeze({ make: construct, emptyTuple });
