@@ -51,8 +51,10 @@ export const OperativeStatementAstCreation = freeze({
     const functionCall = (_0: Token) => {
       const argsNode = popOrThrow();
       const nameNode = AstFringeNode.downcast(popOrThrow());
+      // const callNode = AstFunctionCallNode.
+      //   makeWithContextReceiver(nameNode, argsNode);
       const callNode = AstFunctionCallNode.
-        makeWithContextReceiver(nameNode, argsNode);
+        make(AstFunctionCallNode.contextReceiver(), nameNode, argsNode);
       mNodeStack.push(callNode);
     };
 

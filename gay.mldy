@@ -555,3 +555,11 @@ let Rational = table (class)
   $is = class.make
 ~
 
+let (a, b, c) = stuff()
+# call stuff
+# top and pop into c
+# then b
+# then a
+# reduced back to original context
+# name group: ['.a=', '.b=', '.c=', '.a', '.b', '.c']
+(a, b) + (c, d)

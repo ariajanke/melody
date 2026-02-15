@@ -27,7 +27,7 @@ export const ObjectType = (() => {
       forEachName,
       sizeInBytes: () => size
     });
-
+    
     function forEachName(fn: (name: string, table: FunctionLookUpTable) => void) {
       Object.keys(mLookupTable).forEach((name: string) => {
         fn(name, mLookupTable[name]);

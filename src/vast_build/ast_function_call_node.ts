@@ -33,27 +33,50 @@ export const AstFunctionCallNode = (() => {
   // askInteger() the current context
   // 1 + 2 one receives a "+" call
 
-  function contextReceiverDummyNode(): AstIdentifierNode {
+  const contextReceiver = memoize((): AstNode => {
     const inst = freeze({
       value: () => {
         throw new Error('Special context type cannot have a value');
       },
-      visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
-        visitor.visitIdentifier(inst),
-      type: AstIdentifierNode.type,
-      executionType: (objTable: ObjectLookUpTable) => 
-        objTable.lookUpByName(ContextType.typeName()),
+      visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType => {
+        throw new Error('Cannot visit receiver');
+      },
+      type: memoize(Symbol),
+      executionType: (objTable: ObjectLookUpTable) => {
+        throw new Error('cannot use this method');
+      },
       asString: ContextType.contextMethodName,
-      // contextMethodName: ContextType.contextMethodName, // call by "$<context>"
       asName: ContextType.contextMethodName,
       uid: memoize(Symbol)
     });
     return inst;
-  }
+  });
 
-  function makeWithContextReceiver(mName: AstFringeNode, mArgNode: AstNode) {
-    return make(contextReceiverDummyNode(), mName, mArgNode);
-  }
+  // function contextReceiverDummyNode(): AstIdentifierNode {
+  //   const inst = freeze({
+  //     value: () => {
+  //       throw new Error('Special context type cannot have a value');
+  //     },
+  //     visit: <AccumulationType>(visitor: AstNodeVisitor<AccumulationType>): AccumulationType =>
+  //       visitor.visitIdentifier(inst),
+  //     type: AstIdentifierNode.type,
+  //     executionType: (objTable: ObjectLookUpTable) => 
+  //       objTable.lookUpByName(ContextType.typeName()),
+  //     asString: ContextType.contextMethodName,
+  //     // contextMethodName: ContextType.contextMethodName, // call by "$<context>"
+  //     asName: ContextType.contextMethodName,
+  //     uid: memoize(Symbol)
+  //   });
+  //   return inst;
+  // }
+
+  // function makeWithContextReceiver(mName: AstFringeNode, mArgNode: AstNode) {
+  //   return make(contextReceiverDummyNode(), mName, mArgNode);
+  // }
+
+  // function isContextReceiverNode(node: AstNode): boolean {
+  //   return node.uid() === 
+  // }
 
   function make(mReceiver: AstNode, mName: AstFringeNode, mArgNode: AstNode): AstFunctionCallNode
   {
@@ -162,5 +185,11 @@ export const AstFunctionCallNode = (() => {
     return inst;
   }
 
-  return freeze({ make, hasCreated, type, makeWithContextReceiver });
+  return freeze({
+    make,
+    hasCreated,
+    type,
+    // makeWithContextReceiver,
+    contextReceiver
+  });
 })();
