@@ -74,5 +74,3 @@ export const ReachPoint = (() => {
 
   return Object.freeze({ make, makeCollection });
 })();
-
-// find src/ | grep -P '(?<!\.d)\.ts$'

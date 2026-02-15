@@ -1,9 +1,25 @@
-// import { AstNode } from './ast_node';
-// import { AstStringLiteralNode } from './ast_string_literal_node';
 import { Helpers } from './helpers';
-// import { StringType } from './string_type';
 
 const { memoize, freeze } = Helpers;
+
+export interface StringPoolBuilder {
+  append(str: string): number;
+  finish(): StringPool;
+};
+
+export const StringPoolBuilder = freeze({
+  make() {
+    const mStrings: string[] = [];
+    return freeze({
+      append: (str: string): number => {
+        const { length } = mStrings;
+        mStrings.push(str);
+        return length;
+      },
+      finish: () => StringPool.makeForStrings(() => mStrings)
+    });
+  }
+});
 
 export type StringPool = {
   lookUp(str: string): number | undefined
@@ -34,9 +50,5 @@ export const StringPool = freeze({
         return rv;
       }
     });
-  },
-  // make(rootNode: AstNode): StringPool {
-  //   return StringPool.makeForStrings(() => rootNode.
-  //     visit( StringType.stringPoolVisitor() ));
-  // }
+  }
 });

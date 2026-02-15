@@ -1,7 +1,8 @@
 import { CharacterCrawler } from './tokenization/character_crawler';
-import { CharacterClass } from './tokenization/character_class';
+import { CharacterClass, CharacterClassName }
+  from './tokenization/character_class';
 import { Helpers } from './helpers';
-import { Token } from './token';
+import { Token, TokenType } from './token';
 import { TokenRange } from './token_range';
 
 const { memoize, freeze } = Helpers;
@@ -15,15 +16,15 @@ const getCharacterClassToTokenTypeMap = (() => {
     const { classes } = CharacterClass;
     const { types   } = Token;
     return freeze({
-      [classes.numeric ]: (): symbol => types.integerLiteral,
-      [classes.literal ]: (): symbol => types.stringLiteral ,
-      [classes.spacious]: (): symbol =>
+      [classes.numeric ]: (): TokenType => types.integerLiteral,
+      [classes.literal ]: (): TokenType => types.stringLiteral ,
+      [classes.spacious]: (): TokenType =>
         { throw Error(`May not use whitespace as a token`); },
-      [classes.newLine ]: (): symbol => types.newLine
-    });
+      [classes.newLine ]: (): TokenType => types.newLine
+    }) as { [name in CharacterClassName]: () => TokenType };
   }
 
-  let sMap: { [charClass: symbol]: () => symbol } | undefined = undefined;
+  let sMap: { [charClass in CharacterClassName]: () => TokenType } | undefined = undefined;
   return () => sMap ??= makeCharacterClassToTokenTypeMap();
 })();
 
@@ -43,15 +44,14 @@ const class_ = freeze({
       }
     }),
   tokenTypeOfNonKeyword:
-    (tokenContent: string, charClassClass = CharacterClass): symbol =>
+    (tokenContent: string, charClassClass = CharacterClass): TokenType =>
   {
     const charClass = charClassClass.classOfNonKeyword(tokenContent);
     const getter =
       getCharacterClassToTokenTypeMap()[charClass] ?? 
-      ((): symbol => Token.types.identifier);
+      ((): TokenType => Token.types.identifier);
     return getter();
   }
 });
 
 export const Tokenization = class_;
-

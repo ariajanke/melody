@@ -1,7 +1,10 @@
 import { Helpers } from '../helpers';
 import { FinisherHelpers, WasmHelpers } from './wasm_helpers';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
+
+const kMemorySectionId = 0x05;
+const kPagesofMemory = 16;
 
 function construct() {
   const { encodeVaruint32 } = WasmHelpers;
@@ -11,11 +14,11 @@ function construct() {
     finish() {
       return trackFinished(() => {
         return [
-          0x05,
-          3, // section size
-          1, // count of memory descriptions
+          kMemorySectionId,
+          3  , // section size
+          1  , // count of memory descriptions
           0x0, // no flags -> no maximum
-          ...encodeVaruint32(16) // number of pages
+          ...encodeVaruint32(kPagesofMemory)
         ];
       });
     }
@@ -23,5 +26,5 @@ function construct() {
   return inst;
 }
 
-export const WasmMemorySection = freeze({ make: construct });
+export const WasmMemorySection = freeze({ instance: memoize(construct) });
 export type  WasmMemorySection = ReturnType<typeof construct>;

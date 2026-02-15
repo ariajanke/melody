@@ -6,7 +6,7 @@
   },
   "scripts": {
     "build": "npx esbuild build.js --bundle --outfile=build/stuff.m.js",
-    "buildn": "npx esbuild $(find src/ | grep '.ts$') $(find tests/ | grep -P '(?<!\\.d)\\.ts$') --outdir=/media/ramdisk/melody-build/build-es",
+    "buildn": "npx esbuild $(find src/ | grep '.ts$') $npm_config_testsfiles --outdir=$npm_config_melbuilddir/build-es",
     "build_for_tests": "cat build-tests.js | npx esbuild --bundle --outfile=build/tests.js",
     "lint": "npx eslint $(find src/ | grep '.ts$') $(find tests/ | grep -P '(?<!\\.d)\\.ts$')",
     "test": "npx jasmine /media/ramdisk/melody-build/build-ts/tests.js",

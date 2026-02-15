@@ -3,39 +3,48 @@ import { Helpers } from '../helpers';
 const { freeze, memoize } = Helpers;
 
 export type FuncImportDescription = {
-  index  : number,
-  args   : (() => symbol)[],
-  returns: (() => symbol)[]
+  index  : number;
+  args   : Readonly<WasmType[]>;
+  returns: Readonly<WasmType[]>;
 };
 
-export const SimpleCounter = freeze({
-  make: (mIndex = 0) => freeze({
-    next: () => mIndex++,
-    clone: () => SimpleCounter.make(mIndex)
-  })
+const kOpCodes = freeze({
+  getLocal    : 0x20,
+  setLocal    : 0x21,
+  i32Add      : 0x6A,
+  i32Subtract : 0x6B,
+  i32Multiply : 0x6C,
+  i32Const    : 0x41,
+  call        : 0x10,
+  i32load     : 0x28,
+  i32store    : 0x36,
+  drop        : 0x1A,
+  indirectCall: 0x11,
+  functionEnd : 0x0B,
 });
 
-export type SimpleCounter = ReturnType<typeof SimpleCounter.make>;
+const kTypes = freeze({
+  i32: 0x7F,
+  func: 0x60
+});
+
+export type WasmOpCode = keyof typeof kOpCodes;
+export type WasmType   = keyof typeof kTypes;
 
 export const TypesAware = (() => {
-  const getRepresentations = memoize(() => {
-    const { i32, func } = class_.wasmTypes();
-    return freeze({
-      [func()]: 0x60,
-      [i32 ()]: 0x7F
-    });
-  });
-
   const class_ = freeze({
-    wasmTypes: memoize(() => freeze({
-      i32 : memoize(Symbol), //0x7F,
-      func: memoize(Symbol)  //0x60
-    })),
-    asCodeArray: (fns: SymFunc[]) =>
-      [...WasmHelpers.encodeVaruint32(fns.length), ...fns.map(class_.asCode)],
-    asCode: (fn: SymFunc) =>
-      getRepresentations()[fn()] ?? (() => {
-        throw new Error('Symbol function did not map to valid WASM byte code');
+    opCodes: () => kOpCodes,
+    types: memoize(() => freeze(Object.assign(
+        {},
+        ...(Object.
+          keys(kTypes) as WasmType[]).
+          map(k => ({ [k]: k }))
+      ) as { [type in WasmType]: WasmType })),
+    asCodeArray: (types: Readonly<WasmType[]>) =>
+      [...WasmHelpers.encodeVaruint32(types.length), ...types.map(class_.asCode)],
+    asCode: (str: WasmType) =>
+      kTypes[str] ?? (() => {
+        throw new Error(`could not map ${str} to a WASM code`);
       })()
   });
   return class_;

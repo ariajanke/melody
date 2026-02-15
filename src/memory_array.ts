@@ -2,14 +2,18 @@ import { Helpers } from './helpers';
 
 const { freeze } = Helpers;
 
+const kWordSizeInBytes = 4;
+const kStackPointerLocation = 0;
+const kStartOfStack = kStackPointerLocation + kWordSizeInBytes;
+
 function construct(mSlotCapacity: number = 2048) {
   const mSlots = Array<number | undefined>(mSlotCapacity);
   function verifySlotNumber(slot: number) {
-    if (slot % 4 !== 0) {
+    if (slot % kWordSizeInBytes !== 0) {
       throw new Error('slot number must be divisible by four');
     }
     if (slot >= 0 && slot < mSlots.length)
-      { return slot / 4; }
+      { return slot / kWordSizeInBytes; }
     throw new Error(`Slot number (${slot}) is inaccessible`);
   }
   const inst = freeze({
@@ -27,6 +31,8 @@ function construct(mSlotCapacity: number = 2048) {
 
 export const MemoryArray = freeze({
   make: () => construct(),
-  stackPointerLocation: () => 0
+  kWordSizeInBytes,
+  kStackPointerLocation,
+  kStartOfStack
 });
 export type MemoryArray = ReturnType<typeof construct>;

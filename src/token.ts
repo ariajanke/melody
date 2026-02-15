@@ -1,34 +1,40 @@
-import { Tokenization } from "./tokenization";
+import { Tokenization } from './tokenization';
+import { Helpers } from './helpers';
 
-const { freeze } = Object;
+const { freeze, toNamedMap } = Helpers;
+
+const tokenTypes = [
+  'functionDefinition',
+  'operator'          ,
+  'newLine'           ,
+  'grouping'          ,
+  'identifier'        ,
+  'stringLiteral'     ,
+  'integerLiteral'    ,
+  'special'
+] as const;
+
+export type TokenType = typeof tokenTypes[number];
 
 export interface Token {
-  type   : () => symbol,
+  type   : () => TokenType,
   content: () => string
   start  : () => number,
   end    : () => number
 }
 
 export const Token = (() => {
-  const types = freeze({
-    functionDefinition: Symbol(),
-    operator          : Symbol(),
-    newLine           : Symbol(),
-    grouping          : Symbol(),
-    identifier        : Symbol(),
-    stringLiteral     : Symbol(),
-    integerLiteral    : Symbol(),
-  });
+  const types = toNamedMap(tokenTypes);
+  const specialType = (): TokenType => 'special';
+  function unimplemented<Type>(desc: string): () => Type {
+    return (): Type => {
+      throw Error(`Cannot call ${desc} unimplemented`);
+    };
+  }
 
   function makeSpecialToken(content_: string): Token {
-    function unimplemented<Type>(desc: string): () => Type {
-      return (): Type => {
-        throw Error(`Cannot call ${desc} unimplemented`);
-      };
-    }
-
     return freeze({
-      type   : unimplemented<symbol>('type'),
+      type   : specialType,
       // TODO: try to get rid of this hack, blank token should
       // never be used
       content: () => content_,
@@ -39,9 +45,10 @@ export const Token = (() => {
 
   const kBlankToken: Token = makeSpecialToken('');
   const kCallToken : Token = makeSpecialToken('call');
+  const kContextToken: Token = makeSpecialToken('<context>');
 
   const tokenTypeOf = (() => {
-    const kControlSeqs: { [sequence: string]: symbol } = freeze({
+    const kControlSeqs: { [sequence: string]: TokenType } = freeze({
       ['let']: types.operator,
       ['fn' ]: types.functionDefinition,
       ['('  ]: types.grouping,
@@ -66,12 +73,12 @@ export const Token = (() => {
   function construct
     (mTokenContent: string, mStart: number, mEnd: number): Token
   {
-    let mType: symbol | undefined = undefined;
+    let mType: TokenType | undefined = undefined;
     return freeze({
       content: (): string => mTokenContent,
       start  : (): number => mStart,
       end    : (): number => mEnd,
-      type   : (): symbol => mType ??= tokenTypeOf(mTokenContent)
+      type   : (): TokenType => mType ??= tokenTypeOf(mTokenContent)
     });
   }
 
@@ -81,6 +88,7 @@ export const Token = (() => {
     types,
     kBlankToken,
     kCallToken,
+    kContextToken,
     forTesting: { makeFromStringOnly }
   });
 })();

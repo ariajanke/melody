@@ -4,9 +4,10 @@ Mew prrr prrrr :3!!!
 
 *Always remember to please put away your cat toys before work!*
 
-You are free to play with these toys too, provided you follow the GPLv3. Which
+You are free to play with these toys too, provided you follow the AGPLv3. Which
 for the ignorant is **NOT** public domain! (Though I can't imagine this being
 of interest to anyone.)
+Please note that the AGPLv3 means that if used in a SaaS setup, source code must be made available under the same license (IANAL!!).
 
 ### Dev Rules
 

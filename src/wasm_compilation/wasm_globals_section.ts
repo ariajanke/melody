@@ -1,19 +1,24 @@
+// RETAIN
+// rationale: globals maybe a thing at some point, but I need to understand
+
 import { Helpers } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
-import { SymFunc, TypesAware, WasmHelpers } from './wasm_helpers';
+import { TypesAware, WasmHelpers, WasmType } from './wasm_helpers';
 
 const { encodeVaruint32 } = WasmHelpers;
 const { freeze } = Helpers;
-const { asCode, wasmTypes } = TypesAware;
+const { asCode } = TypesAware;
 
-function construct(mCode: number[] = [], mNumberOfGlobals = 0) {
-  function pushGlobal(mutable: number, type: SymFunc, initialValue: number) {
+function construct() {
+  const mCode: number[] = [];
+  const mNumberOfGlobals = 0;
+  function pushGlobal(mutable: number, type: WasmType, initialValue: number) {
     const fbody = WasmFunctionBody.make().pushI32Const(initialValue);
     mCode.push(asCode(type), mutable, ...fbody.finish());
     return inst;
   }
   const inst = freeze({
-    pushWritableGlobal: (type: SymFunc, initialValue: number) =>
+    pushWritableGlobal: (type: WasmType, initialValue: number) =>
       pushGlobal(1, type, initialValue),
     finish() {
       const numGlobs = encodeVaruint32(mNumberOfGlobals);
@@ -28,8 +33,5 @@ function construct(mCode: number[] = [], mNumberOfGlobals = 0) {
   return inst;
 }
 
-export const WasmGlobalsSection = freeze({
-  wasmTypes,
-  make: () => construct()
-});
+export const WasmGlobalsSection = freeze({ make: construct });
 export type WasmGlobalsSection = ReturnType<typeof construct>;

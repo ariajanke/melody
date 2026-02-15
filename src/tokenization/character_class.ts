@@ -1,15 +1,27 @@
-import { Helpers } from '../helpers';
+import { Helpers } from  '../helpers';
+
+const characterClassNames =
+  [
+    'numeric'   ,
+    'alphabetic',
+    'operative' ,
+    'spacious'  ,
+    'newLine'   ,
+    'literal'
+  ] as const;
+
+export type CharacterClassName = typeof characterClassNames[number];
 
 export const CharacterClass = (() => {
 
   const { freeze } = Helpers;
 
   function safeOneCharJumpTable
-    (charsPairs: [number | undefined, symbol][]):
-    symbol[]
+    (charsPairs: [number | undefined, CharacterClassName][]):
+    CharacterClassName[]
   {
-    const arr: symbol[] = [];
-    charsPairs.forEach((pair: [number | undefined, symbol]) => {
+    const arr: CharacterClassName[] = [];
+    charsPairs.forEach((pair: [number | undefined, CharacterClassName]) => {
       if (pair[0])
         arr[pair[0]] = pair[1];
     });
@@ -17,21 +29,17 @@ export const CharacterClass = (() => {
     return arr;
   }
 
-  const classes = freeze({
-    numeric   : Symbol(),
-    alphabetic: Symbol(),
-    operative : Symbol(),
-    spacious  : Symbol(),
-    newLine   : Symbol(),
-    literal   : Symbol()
-  });
+  const classes = Helpers.toNamedMap(characterClassNames);
 
-  function arrayAsCharacterSetFor(arr: string[], characterClass: symbol): [number | undefined, symbol][] {
+  function arrayAsCharacterSetFor
+    (arr: string[], characterClass: CharacterClassName):
+    [number | undefined, CharacterClassName][]
+  {
     return arr.
       map((k: string) => ([k.codePointAt(0), characterClass]));
   }
 
-  const kCharacterToCharacterClass: [number | undefined, symbol][] =
+  const kCharacterToCharacterClass: [number | undefined, CharacterClassName][] =
     [
       ...arrayAsCharacterSetFor(
         [
@@ -61,7 +69,7 @@ export const CharacterClass = (() => {
   return freeze({
     classes,
 
-    classOfString: (character: string): symbol => {
+    classOfString: (character: string): CharacterClassName => {
       if (character.length !== 1) {
         throw Error(`"${character}" is not one character`);
       } else if (typeof character !== 'string') {        
@@ -72,9 +80,7 @@ export const CharacterClass = (() => {
              classes.alphabetic;
     },
 
-    classOfNonKeyword: (tokenContent: string): symbol =>
+    classOfNonKeyword: (tokenContent: string): CharacterClassName =>
       CharacterClass.classOfString(tokenContent[0]),
   });
 })();
-
-Helpers.expose({ CharacterClass });

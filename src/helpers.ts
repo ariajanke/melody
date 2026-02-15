@@ -4,15 +4,13 @@ const kDebugMode: boolean = globalThis_['debug_mode'] as boolean ?? false;
 export const Helpers = Object.freeze({
   expose,
   freeze: !kDebugMode ? Object.freeze : pass,
+  makeCounter,
   mapValues,
-  depthOneCopy,
   memoize,
+  presenceAsserted,
+  toNamedMap,
   verifyInTesting,
-  symbolToString: getSymbolThings().symbolToString,
-  registerSymbolStrings: getSymbolThings().registerSymbolStrings,
-  presenceAsserted
 });
-
 
 export type StandardErrorMessage = Readonly<{ message: string }>;
 export type StandardErrorFn = (() => StandardErrorMessage);
@@ -91,28 +89,6 @@ export const FinishingMemoization = (() => {
 
 expose({ Helpers });
 
-export interface TypeCheckable {
-  type: () => symbol
-}
-
-export const TypeCheckable = (() => {
-  function make() {
-    const kTypeKey = Symbol();
-
-    function hasCreated
-      (thing: TypeCheckable | undefined): boolean
-    { return thing?.type() === kTypeKey; }
-
-    function type(): symbol { return kTypeKey; }
-
-    return Helpers.freeze({ hasCreated, type });
-  }
-
-  return Helpers.freeze({
-    make
-  });
-})();
-
 function verifyInTesting() {
   if (kDebugMode) return;
   throw Error('Cannot be called outside of a testing environment');
@@ -148,16 +124,6 @@ function mapValues<FromType, ToType>
   return transformedObj;
 }
 
-function depthOneCopy<Type>
-  (obj: { [id: symbol | string]: Type }): { [id: symbol | string]: Type }
-{
-  const copy: typeof obj = {};
-  forEachKeyIn(obj, (key: string | symbol): void => {
-    copy[key] = obj[key];
-  });
-  return copy;
-}
-
 function expose(braceEnclosedVar: { [name: string]: object }): void {
   const setToWindow = (k: string) => {
     globalThis_[k] = braceEnclosedVar[k];
@@ -166,42 +132,26 @@ function expose(braceEnclosedVar: { [name: string]: object }): void {
 }
 
 function memoize<Type>(fn: () => Type): () => Type {
-  let get = (): Type => {
-    const v = fn();
-    get = () => v;
-    return v;
+  let memorized = false;
+  let value: Type;
+
+  return () => {
+    if (memorized) { return value; }
+    memorized = true;
+    return value = fn();
   };
-  return () => get();
 }
 
-function getSymbolThings() {
-  const impl = memoize(() => {
-    const mRegistry: { [id: symbol]: string } = {};
+function makeCounter() {
+  let count = 0;
+  return () => count++;
+}
 
-    function symbolToString(id: symbol): string {
-      const got = mRegistry[id];
-      if (got) {
-        return got;
-      } else {
-        return '<unregistered symbol>';
-      }
-    }
-
-    function registerSymbolStrings
-      (topName: string, symbolTable: { [name:string]: symbol }): void
-    {
-      Object.
-        keys(symbolTable).
-        forEach((v: string) => {
-          mRegistry[symbolTable[v]] = `${topName}.${v}`;
-        });
-    }
-
-    return Object.freeze({
-      symbolToString,
-      registerSymbolStrings
-    });
-  });
-
-  return memoize(impl)();
+function toNamedMap<StringUnion extends string>
+  (arr: readonly StringUnion[]):
+  { [name in StringUnion]: StringUnion }
+{
+  const temp:  { [name: string]: StringUnion }[] =
+    arr.map((v: StringUnion) => ({ [v]: v }));
+  return Object.assign({}, ...temp) as { [name in StringUnion]: StringUnion };
 }

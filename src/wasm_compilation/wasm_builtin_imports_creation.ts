@@ -1,53 +1,66 @@
 import { Helpers } from '../helpers';
-import { SimpleCounter, type FuncImportDescription } from './wasm_helpers';
+import {
+  TypesAware,
+  type FuncImportDescription
+} from './wasm_helpers';
 import { WasmTypesSection } from './wasm_types_section';
 import { WasmImportsSection } from './wasm_imports_section';
 import { StringPool } from '../string_pool';
 
-const { freeze, memoize } = Helpers;
+const { freeze, memoize, makeCounter } = Helpers;
 
-export const WasmBuiltinImportsCreation = (() => {
-  const sDescriptionsCounter = SimpleCounter.make();
+interface NamedFuncImportDescription extends FuncImportDescription {
+  name: string;
+};
 
-  const class_ = freeze({
-    cloneDescriptionsCounter() {
-      class_.descriptions();
-      return sDescriptionsCounter.clone();
+const descriptions = memoize(()
+  : { [name: string]: FuncImportDescription | undefined } =>
+{
+  const { i32 } = TypesAware.types();
+  const next = makeCounter();
+
+  return freeze({
+    printInteger: {
+      index  : next(),
+      args   : [i32],
+      returns: []
     },
-    descriptions: memoize((): { [name: string]: FuncImportDescription | undefined } => {
-      const { i32 } = WasmTypesSection.wasmTypes();
-      const { next } = sDescriptionsCounter;
-      
-      return freeze({
-        printInteger: {
-          index  : next(),
-          args   : [i32],
-          returns: []
-        },
-        printString: {
-          index  : next(),
-          args   : [i32],
-          returns: []
-        },
-        askString: {
-          index  : next(),
-          args   : [],
-          returns: [i32]
-        },
-        askInteger: {
-          index  : next(),
-          args   : [],
-          returns: [i32] 
-        }
-      });
-    }),
-    make: (mStringPool: StringPool,
-           mJsPrint: (s: string) => void,
-           mJsAskInteger: () => number,
-           mJsAskString: () => number) =>
-    {
-      
-      const imports = {
+    printString: {
+      index  : next(),
+      args   : [i32],
+      returns: []
+    },
+    askString: {
+      index  : next(),
+      args   : [],
+      returns: [i32]
+    },
+    askInteger: {
+      index  : next(),
+      args   : [],
+      returns: [i32] 
+    }
+  });
+});
+
+const descriptionsInIndexOrder = memoize(()
+  : Readonly<NamedFuncImportDescription[]> =>
+{
+  const descriptions_ = descriptions();
+  return Object.keys(descriptions_)
+    .map(name => ({ name, ...descriptions_[name]! }))
+    .sort((a, b) => a.index - b.index);
+});
+
+function make
+  (mStringPool: StringPool,
+   mJsPrint: (s: string) => void,
+   mJsAskInteger: () => number,
+   mJsAskString: () => number)
+{
+  const importObject = memoize(() => freeze({
+    imports:
+      {
         printInteger(i: number) {
           mJsPrint(i.toString());
         },
@@ -56,40 +69,50 @@ export const WasmBuiltinImportsCreation = (() => {
         },
         askString: mJsAskString,
         askInteger: mJsAskInteger
-      };
-      const { descriptions } = class_;
-      const getDescription = (name: string) =>
-        class_.descriptions()[name] ?? (() => {
-          throw new Error(`no such "${name}"`);
-        })();
-      const inst = freeze({
-        importObject: memoize(() => freeze({ imports })),
-        typesSection: memoize(() => {
-          let typeSec = WasmTypesSection.make();
-          Object.keys(descriptions()).forEach((name: string) => {
-            const { args, returns } = getDescription(name);
-            typeSec = typeSec.pushFunction(args, returns);
-          });
-          return typeSec;
-        }),
-        importsSection: memoize(() => {
-          let imptSec = WasmImportsSection.make();
-          const typeSec = inst.typesSection();
+      }
+  }));
 
-          Object.keys(descriptions()).forEach((name: string) => {
-            const { args, returns } = getDescription(name);
-            const index = typeSec.indexFor( args, returns );
-            if (index === undefined) {
-              throw new Error(`Index for "${name}" not defined`);
-            }
-            imptSec = imptSec.pushFunction(index, 'imports', name);
-          });
-          return imptSec;
-        })
-      });
-      return inst;
-    }
+  const getDescription = (name: string) =>
+    descriptions()[name] ?? (() => {
+      throw new Error(`no such "${name}"`);
+    })();
+
+  const typesSection = memoize(() => {
+    let typeSec = WasmTypesSection.make();
+    Object.keys(descriptions()).forEach((name: string) => {
+      const { args, returns } = getDescription(name);
+      typeSec = typeSec.pushFunction(args, returns);
+    });
+    return typeSec;
   });
-  return class_;
-})();
-export type WasmBuiltinImportsCreation = ReturnType<typeof WasmBuiltinImportsCreation.make>;
+
+  const importsSection = memoize(() => {
+    let imptSec = WasmImportsSection.make();
+    const typeSec = inst.typesSection();
+
+    // NOTE must push in order, to make sure indices are correct
+    descriptionsInIndexOrder().forEach(({ name, args, returns }) => {
+      const index = typeSec.indexFor( args, returns );
+      if (index === undefined) {
+        throw new Error(`Index for "${name}" not defined`);
+      }
+      imptSec = imptSec.pushFunction(index, 'imports', name);
+    });
+    return imptSec;
+  });
+
+  const inst = freeze({
+    importObject,
+    typesSection,
+    importsSection
+  });
+  return inst;
+}
+
+export const WasmBuiltinImportsCreation = freeze({
+  descriptions,
+  descriptionsInIndexOrder,
+  make
+});
+export type WasmBuiltinImportsCreation =
+  ReturnType<typeof WasmBuiltinImportsCreation.make>;
