@@ -12,6 +12,7 @@ This language has a "set of preferences", which include "hugging the stack", pre
 In this and its previous incarnation, it was both compilable and interpreted. Its interpretability has the purpose of allowing Melody to support its "layered" nature. Including its meta type functions.
 
 # Goal of this Handbook
+Provide a central place to define the language in as much detail and precisely as possible. This is not a specification.
 
 # Influences
 - Ruby (the concept of "receiver")
@@ -46,6 +47,51 @@ This language solves this problem via a slightly different way. While in for exa
 
 In the above example, "a :=" is converted into "a:=" which is then sent to the current Context.
 
+## Builtin Types
+For now only the following two: `Integer`, and `ConstantString`.
+
+### Integer
+Represents the humble integer of course. In WASM it's represented with an `i32`, however Integer is not 32 bits by definition. Its byte width isn't fixed by definition. The following functions are defined:
+- `+`
+- `-`
+- `*`
+- `:=`
+
+#### [planned] functions
+- `<`
+- `>`
+- `=`
+
+### ConstantString
+Represents a string literal. It is immutable and interned (via a "StringPool"). It has no defined functions aside from assignment. It is also represented with an `i32` in WASM.
+
+### [planned] Boolean
+Represents a boolean value. It has the following functions:
+- `and` (binary operator)
+- `or` (binary operator)
+- `not` (unary operator)
+- `then`
+  - proper member function
+  - taking either a value or function returning some type
+
+Example
+```melody
+# returns BooleanContinueOf(Tuple())
+# NOTE you need that "else" call! Otherwise no "Hello World!" for you!
+(1 = 1).then(fn puts('Hello World!')).else()
+```
+
+### [planned] BooleanContinueOf(Type)
+Represents a boolean value that follows a "then" call. This is meant to be used in the context of if/else statements.
+Its functions are:
+- `else`
+  - as a proper member function
+  - taking either a value or function returning the same type as "then" had
+  - returns the actual value of the chain (i.e. "Type")
+- `else_if`
+  - first two points of "else"
+  - similarly returns a "BooleanContinueOf(Type)" for chaining
+
 ### Tuple declaration
 ```melody
 let t = (1, 2)
@@ -66,18 +112,14 @@ let t = (1, 2)
 let (a, b) = t
 ```
 
-### More on Tuples
-Further conviences maybe afforded in future developments. It will remain rigid for now.
+### [planned] More on Tuples
+Further conviences may be afforded in future developments. It will remain rigid for now.
 
 ### Basic Function Definition
 ```melody
 let f = fn
   puts('Hello, World!')
 ~ # <- note that this closes the function body
-
-let f2 = fn 5 # this one-liner, the if AST builder sees an expression after the "fn" it is treated as the body.
-# A function may also be closed by a ")", the AST builder is smart enough to know that if there's a dangling "(" from before
-callTwice(fn 'Hello, World!')
 
 f()
 f # is a reference
@@ -88,6 +130,16 @@ For now, a function accepts no parameters and returns nothing.
 A function defintion as an expression that itself evaluates to special reference type (i.e. an index).
 
 Since we want first class style functions, we need to given them properly defined object types. Tersely we could namify like: "FunctionType(Param1, Param2, ...)(Return1, Return2, ...)". Recall that type names do not necessarily uniquely identify a type, its just there for readability.
+
+#### [planned] alternate syntax
+So far the language doesn't support more terse syntax like:
+```melody
+let f = fn puts('Hello, World!')
+
+callTwice(fn
+  puts('Hello, World!')) # <- body close by that second parenthesis
+```
+(Mind my disappointment)
 
 ### [not implemented] Function Let
 ```melody
@@ -101,40 +153,10 @@ puts(c) # 7
 ```
 Shortcut for defining an accessor like function. A restriction is that the function must not take any parameters.
 
-#### NOTES TO SELF
-
-Each function would need to carry its own captures (a keen observer has noticed the absence of "receiver" this name). Generalized function calls involving a receiver mount (along with the usual arguments) may be able to bridge this gap. If a receiver is not needed, the function will just "eat" it.
-
-We're going to solve tables and captures in one go, and it's really exciting. The "Context" is already a table, we're mounting that as the receiver of a child function call. We now have access to the parent's table.
-In x86 parlance, the context that gets passed is the "previous stack frame pointer", like the "sp" register.
-
-We try to accomplish a lot with as few primitives as possible. The underlining pattern of how tuples and tables are derived from the same idea of sequential layouts.
-
-```melody
-let a = 10
-let f = fn
-  # so, what's going here?
-  # "a" is defined for *this* function's context, It is a thin wrapper around the parent's version of this function.
-  # the parent version is "load from index n"
-  # the child version is "load from index n from parent index"
-  # the best part is, is that this can be done recursively!
-  # "but what if I have another let named 'a' in my child function?"
-  # well, that's just scoping my friend, and your version of "a" becomes the only relevant definition and gets captured instead by the grandchild
-  # is it performant? No, does it work? In theory only (lol)
-  # my context builder is a tad big and could stand some refactoring
-
-  # we end up needing a seperate name for parent
-  puts(a)
-~
-
-f()
-```
-
 ### The "Context" Type
 A "Context" Type is the current scope as a sort of implicit "table" of functions. In similar vein as "binding" in Ruby, or "this" in JavaScript. In fact it is the very first true user defined type!
 
 Any function that does not have an explicit receiver, implicitly has the "Context" as its receiver.
-
 
 ### [mostly unimplemented feature] Tables
 Much like its predecessor C, a "table" is a sort of inline declared struct. Each member key is converted into an index (much like C), whose values maybe accessed by sending a message (like Ruby) to the table.
@@ -189,7 +211,7 @@ The closest thing this language has to a "pointer". Reference span from "smart" 
 
 In Melody's current incarnation, the only existing reference is the current context accessor function (i.e. ".&gt;context&lt;"). This accessor is not intented for use by the programmer, but rather is intented as a building block for other language features. One such example: making variables accessible to child functions [not yet implemented].
 
-### [Another Complex Idea] Arrays
+### [planned] Arrays
 Since Melody can be compiled down to WASM, we can import C functions (like malloc/free). Much like arrays, low level support for its syntax is needed.
 
 ```melody
@@ -234,21 +256,23 @@ let ex2 := ex
 
 (What advanced features are being assumed here? this is not a garbage collected language. But we can use shared_ptr like functionality)
 
-## Self-support needs
-arbitrary look ups
-arrays
-referentials
+## [planned] Self-support needs
+- arbitrary look ups
+- arrays
+- references
+
 trait adaptation, take class N and convert it into another object such that mappings for function calls matches the actual function's implementation. though with reflective capabilities enumerating functions and constructing a new type that functions as the adapter
 
 to take it back to earth, just having the tokenizer written this language would be a major feat
+
 # Definitions
 
-## Interface
+## [planned] Interface
 An inspecific "Type" which represents a contract.
 
 Two directions of support... one for traits the other for generics.
 
-### Trait like
+### [planned] Trait like
 ```melody
 let anyAdder = fn (a is any Numeric, b is any Numeric) a + b
 # thus enabling:
@@ -256,7 +280,7 @@ anyAdder(1, 2)
 anyAdder(1.5, 2.5)
 ```
 
-### Generic like
+### [planned] Generic like
 ```melody
 let Point = fn (a is type Numeric)
   fn (x is a, y is a) (x, y)
@@ -265,7 +289,7 @@ let Point = fn (a is type Numeric)
 const pt = Point(Integer)(1, 2)
 ```
 
-### The difficulty here
+#### The difficulty here
 In the trait like example, "a" is substituted with a value of a specific type. In the generic like example, "a" is substituted for the actual type of the argument. The issue here is two seperate treatments from the same syntax.
 
 ## Representation
@@ -273,5 +297,3 @@ Any kind of reference/pointer to a instance of a Type.
 
 ## Type (Object)
 Well defined, has an exact size in bytes. It has specific set of methods
-
-## "Context" Type

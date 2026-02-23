@@ -161,3 +161,32 @@ ADDR (in words) | VAR
 1               | &lt;context&gt;.make_counter
 2               | &lt;context&gt;.counter (index)
 4               | &lt;counter&gt;.counter (count)
+
+#### NOTES TO SELF
+
+Each function would need to carry its own captures (a keen observer has noticed the absence of "receiver" this name). Generalized function calls involving a receiver mount (along with the usual arguments) may be able to bridge this gap. If a receiver is not needed, the function will just "eat" it.
+
+We're going to solve tables and captures in one go, and it's really exciting. The "Context" is already a table, we're mounting that as the receiver of a child function call. We now have access to the parent's table.
+In x86 parlance, the context that gets passed is the "previous stack frame pointer", like the "sp" register.
+
+We try to accomplish a lot with as few primitives as possible. The underlying pattern of how tuples and tables are derived from the same idea of sequential layouts.
+
+```melody
+let a = 10
+let f = fn
+  # so, what's going here?
+  # "a" is defined for *this* function's context, It is a thin wrapper around the parent's version of this function.
+  # the parent version is "load from index n"
+  # the child version is "load from index n from parent index"
+  # the best part is, is that this can be done recursively!
+  # "but what if I have another let named 'a' in my child function?"
+  # well, that's just scoping my friend, and your version of "a" becomes the only relevant definition and gets captured instead by the grandchild
+  # is it performant? No, does it work? In theory only (lol)
+  # my context builder is a tad big and could stand some refactoring
+
+  # we end up needing a separate name for parent
+  puts(a)
+~
+
+f()
+```
