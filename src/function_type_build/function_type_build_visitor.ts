@@ -1,4 +1,9 @@
-import { DastLetDeclations, DastNode, DastVisitor } from '../dast_build';
+import { CallBackObjectHold } from '../call_back_object_hold';
+import {
+  DastLetDeclarations,
+  DastNode,
+  DastVisitor
+} from '../dast_build';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { FunctionTypeRegistry } from '../function_type_registry';
 import { Helpers } from '../helpers';
@@ -11,6 +16,7 @@ import { FunctionTypeBuildBase } from './function_type_build_base';
 import { InitialSetBuild } from './initial_set_build';
 import { LiteralFunctionTypeBuild } from './literal_function_type_build';
 import { TupleFunctionTypeBuild } from './tuple_function_type_build';
+// ;-;
 
 const { freeze } = Helpers;
 
@@ -24,22 +30,11 @@ function make
 {
   const mBuildCache = DastBuildCache.
     make((node: DastNode) => node.visit(inst));
-  let mTopContextType: () => ObjectType = () => {
-    throw new Error('root node must be a function definition');
-  };
-
-  const mHoldAsContextType: HoldContextTypeFunction =
-    <T>(getter: () => ObjectType, whileFn: () => T): T =>
-  {
-    const oldTopContextType = mTopContextType;
-    mTopContextType = getter;
-    const ret = whileFn();
-    mTopContextType = oldTopContextType;
-    return ret;
-  };
+  const { withHeldObject, currentObject } = CallBackObjectHold.
+    make<ObjectType>('root node must be a function definition');
 
   const visitFringe = (name: string) =>
-    FringeFunctionBuild.make(name, mTopContextType);
+    FringeFunctionBuild.make(name, currentObject);
 
   const visitString = (string_: string): FunctionTypeBuild => 
     LiteralFunctionTypeBuild.makeForString(string_, mStringPoolBuilder);
@@ -53,11 +48,11 @@ function make
   }
 
   function visitFunctionDefinition
-    (defs: DastLetDeclations, nodes: Readonly<DastNode[]>): FunctionTypeBuild
+    (defs: DastLetDeclarations, _1: Readonly<string[]>, nodes: Readonly<DastNode[]>): FunctionTypeBuild
   {
     const defBuild = FunctionDefinitionBuild.
       make(defs, nodes, mBuildCache.checkCachedBuild,
-           mHoldAsContextType);
+           withHeldObject);
 
     const compositeFunctionType = defBuild.functionType();
     if (!compositeFunctionType)
@@ -68,7 +63,7 @@ function make
 
   function visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): FunctionTypeBuild {
     return InitialSetBuild.
-      make(namesDefined, mBuildCache.checkCachedBuild(node), mTopContextType);
+      make(namesDefined, mBuildCache.checkCachedBuild(node), currentObject);
   }
 
   const visitTuple = (nodes: Readonly<DastNode[]>): FunctionTypeBuild =>

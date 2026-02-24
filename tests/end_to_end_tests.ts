@@ -99,89 +99,41 @@ describe('end-to-end', () => {
         f()
       `, ['Goodbye world!']);
 
-
-      // it(`runs "Hello World!"`, (done: () => void) => {
-      //   const source = `
-      //     puts('Hello world!')
-      //   `;
-      //   const printedStrings: string[] = [];
-      //   getEntryPoint(source, printedStrings).then(() => {
-      //     expect(printedStrings).toEqual(['Hello world!']);
-      //     done();
-      //   }).catch(handleError);
-      // });
-
-      // it(`runs simple arithmetic`, (done: () => void) => {
-      //   const source = `
-      //     let a = 1 + 2 * 3
-      //     let b = a - 4
-      //     puts(a, b)
-      //   `;
-      //   const printedStrings: string[] = [];
-      //   getEntryPoint(source, printedStrings).then(() => {
-      //     expect(printedStrings).toEqual(['7', '3']);
-      //     done();
-      //   }).catch(handleError);
-      // });
-        
-      // it(`runs function call`, (done: () => void) => {
-      //   const source = `
-      //     let f = fn
-      //       puts('Hello world!')
-      //     ~
-      //     f()
-      //   `;
-      //   const printedStrings: string[] = [];
-      //   getEntryPoint(source, printedStrings).then(() => {
-      //     expect(printedStrings).toEqual(['Hello world!']);
-      //     done();
-      //   }).catch(handleError);
-      // });
-
-      // it(`runs a simple load and store`, (done: () => void) => {
-      //   const source = `
-      //     let a := 10
-      //     a := 5
-      //     puts(a)
-      //   `;
-        
-      //   const printedStrings: string[] = [];
-      //   getEntryPoint(source, printedStrings).then(() => {
-      //     expect(printedStrings).toEqual(['5']);
-      //     done();
-      //   }).catch(handleError);
-      // });
-
-      // it(`runs function object reassignment`, (done: () => void) => {
-      //   const source = `
-      //     let f := fn
-      //       puts('Hello world!')
-      //     ~
-      //     f := fn
-      //       puts('Goodbye world!')
-      //     ~
-      //     f()
-      //   `;
-      //   // Something old Melody could not do!
-      //   const printedStrings: string[] = [];
-      //   getEntryPoint(source, printedStrings).then(() => {
-      //     expect(printedStrings).toEqual(['Goodbye world!']);
-      //     done();
-      //   }).catch(handleError);
-      // });
-
       // beyond old Melody's abilities out of scope for this PR
       xit(`runs a function whose variable is out of local scope`, (done: () => void) => {
         const source = `
           let a = 10
-          let f = fn
-            let f2 = fn
+          let f1 = fn
+            # <context>.parent
+            # could be <root> or <f2>
+            let f1a = fn
+              # define "a" = <f1>.a
+              # <f1> as fixed type
+              # but <context>.parent changes type?
               puts(a)
             ~
-            f2()
+            f1a()
+            # define "a" = <root>.a
+            # following a lexical path
             puts(a)
           ~
-          f()
+          let f2 = fn
+            let a = 20
+            # how did we get f1 here?
+            # call .f1, it's pulled from root
+            # could just pass in root as the context, done!
+            f1() # prints 10, not 20
+          ~
+          let f3 = fn
+            let a = 30
+            let f3a = fn
+              puts(a) # prints 30, not 20 or 10
+            ~
+            f3a()
+          ~
+          f1()
+          f2()
+          f3()
         `;
         const printedStrings: string[] = [];
         getEntryPoint(source, printedStrings).then(() => {

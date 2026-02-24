@@ -10,22 +10,23 @@ export type DastNode = DastNode_;
 export type DastVisitor<ResultType = void> = DastVisitor_<ResultType>;
 export const DastVisitor = DastVisitor_;
 
-interface DastLetDeclationBase {
+interface DastLetDeclarationBase {
   operator: string;
   dependeeNames: readonly string[];
   value: DastNode;
 };
 
-export interface DastLetDeclationSingle extends DastLetDeclationBase {
+export interface DastLetDeclarationSingle extends DastLetDeclarationBase {
   name: string;
 };
 
-export interface DastLetDeclationMany extends DastLetDeclationBase {
+export interface DastLetDeclarationMany extends DastLetDeclarationBase {
   names: readonly string[];
 };
 
-export type DastLetDeclation = DastLetDeclationSingle | DastLetDeclationMany;
-export type DastLetDeclations = readonly DastLetDeclation[];
+export type DastLetDeclaration =
+  DastLetDeclarationSingle | DastLetDeclarationMany;
+export type DastLetDeclarations = readonly DastLetDeclaration[];
 
 export interface ReseatableDastVisitor extends DastVisitor_<void> {
   setInstRef(newInst: ReseatableDastVisitor): ReseatableDastVisitor
@@ -35,10 +36,6 @@ export interface DastBuild {
   node(): DastNode | undefined;
   error(): StandardErrorMessage;
 }
-
-export interface MergeableDastBuild extends DastBuild {
-  mergeWith(build: DastBuild): MergeableDastBuild;
-};
 
 export const DastBuild = freeze({
   make(root: IastNode) {

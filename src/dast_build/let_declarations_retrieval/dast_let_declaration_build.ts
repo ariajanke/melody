@@ -1,10 +1,8 @@
 import { DastBuild, DastNode } from '../../dast_build';
-import { DastTuple } from '../../dast_build/dast_node_specializations';
-import { DastInitialSetBuild } from '../../dast_build/dast_initial_set_build';
+import { DastInitialSet, DastTuple } from '../dast_node_specializations';
 import { LetNamesCollector } from './let_names_collector';
 import { NamingExpressionVisitor } from './naming_expression_visitor';
 import { Helpers, StandardError, StandardErrorMessage } from '../../helpers';
-
 import { IastNode } from '../../iast_node';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { DastNamesCollector } from '../dast_names_collector';
@@ -12,7 +10,7 @@ import { LetNameElement } from './let_names_splitter';
 
 const { freeze, memoize } = Helpers;
 
-export interface DastLetDeclaration_ {
+export interface DastLetDeclarationBuild {
   dastNode(): DastNode | undefined;
   elements(): Readonly<LetNameElement[]> | undefined;
   error(): StandardErrorMessage;
@@ -23,7 +21,7 @@ function make
    mReceiver: IastNode,
    mArgs: IastNode,
    mIntoDastBuild: (node: IastNode) => DastBuild)
-  : DastLetDeclaration_
+  : DastLetDeclarationBuild
 {
   const { error, setErrorFn, setErrorMessage } = StandardError.make();
 
@@ -68,9 +66,11 @@ function make
 
   const elements = memoize(() => elementsCollector()?.elements());
 
-  const elementDastNodes = memoize(() => elements()?.
-    map((element: LetNameElement) => DastInitialSetBuild.
-      initialSetFrom(element, element.value)));
+  const elementDastNodes = memoize(() =>
+    elements()?.map((element: LetNameElement) => {
+      const namegroup = 'name' in element ? element.name : element.names;
+      return DastInitialSet.make(namegroup, element.value);
+    }));
 
   const dastNode = memoize(() => {
     if (!elementDastNodes())
@@ -86,7 +86,7 @@ function make
   });
 }
 
-function makeError(message: string): DastLetDeclaration_ {
+function makeError(message: string): DastLetDeclarationBuild {
   const { error, setErrorMessage } = StandardError.make();
   setErrorMessage(message);
   return freeze({
@@ -96,4 +96,4 @@ function makeError(message: string): DastLetDeclaration_ {
   });
 }
 
-export const DastLetDeclaration_ = freeze({ make, makeError });
+export const DastLetDeclarationBuild = freeze({ make, makeError });

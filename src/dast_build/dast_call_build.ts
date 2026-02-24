@@ -1,7 +1,6 @@
 import { DastBuild } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers, StandardError } from '../helpers';
-import { DastBuildBase } from './dast_build_base';
 import { DastNode_ } from './dast_node';
 import { DastCall } from './dast_node_specializations';
 import { ReceiverAssignmentStripping } from './receiver_assignment_stripping';
@@ -54,11 +53,7 @@ function make
 
   const node = memoize(() => nodeAsAnAssignment() ?? nodeAsACall());
 
-  return freeze({
-    ...DastBuildBase.defaultImplementations(),
-    node,
-    error
-  });
+  return freeze({ node, error });
 }
 
 export const DastCallBuild = freeze({ make });

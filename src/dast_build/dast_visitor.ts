@@ -1,6 +1,6 @@
 import { Helpers } from '../helpers';
 import type {
-  DastLetDeclations,
+  DastLetDeclarations,
   DastNode,
   ReseatableDastVisitor
 } from '../dast_build';
@@ -14,7 +14,10 @@ export interface DastVisitor_<ResultType = void> {
   visitTuple(nodes: Readonly<DastNode[]>): ResultType;
   visitCall(callName: DastNode, receiver: DastNode, args: DastNode): ResultType;
   visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): ResultType;
-  visitFunctionDefinition(orderedDefs: DastLetDeclations, nodes: Readonly<DastNode[]>):
+  visitFunctionDefinition(
+    orderedDefs: DastLetDeclarations,
+    usedNames: Readonly<string[]>,
+    nodes: Readonly<DastNode[]>):
     ResultType;
 }
 
@@ -36,7 +39,11 @@ function makeDefaultingToContinue(): ReseatableDastVisitor {
     visitInitialSet(_0: readonly string[] | string, node: DastNode) {
       node.visit(inst);
     },
-    visitFunctionDefinition(_0: DastLetDeclations, nodes: Readonly<DastNode[]>) {
+    visitFunctionDefinition(
+      _0: DastLetDeclarations,
+      _1: Readonly<string[]>,
+      nodes: Readonly<DastNode[]>)
+    {
       nodes.forEach((v: DastNode) => v.visit(inst));
     },
     setInstRef(newInst: ReseatableDastVisitor): ReseatableDastVisitor {

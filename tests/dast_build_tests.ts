@@ -3,9 +3,9 @@ import { Token } from '../src/token';
 import { IastNode } from '../src/iast_node';
 import {
   DastBuild,
-  DastLetDeclationMany,
-  DastLetDeclations,
-  DastLetDeclationSingle,
+  DastLetDeclarationMany,
+  DastLetDeclarations,
+  DastLetDeclarationSingle,
   DastNode,
   DastVisitor,
   ReseatableDastVisitor
@@ -60,9 +60,9 @@ describeNamed({ DastBuild }, () => {
     ]));
     const visitDnode = makeVisitDNode(root);
 
-    function namesOfDefs(defs: DastLetDeclations) {
-      return defs.map(def => (def as DastLetDeclationSingle)?.name ??
-                             (def as DastLetDeclationMany)?.names.join(','));
+    function namesOfDefs(defs: DastLetDeclarations) {
+      return defs.map(def => (def as DastLetDeclarationSingle)?.name ??
+                             (def as DastLetDeclarationMany)?.names.join(','));
     }
 
     it('visits a function definition twice', () => {
@@ -71,7 +71,7 @@ describeNamed({ DastBuild }, () => {
       let depth = 0;
       visitDnode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclations, nodes: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, nodes: Readonly<DastNode[]>) {
           if (depth === 0) {
             expect(namesOfDefs(defs)).toEqual(['b']);
           } else if (depth === 1) {
@@ -114,13 +114,13 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDnode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclations, _1: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
           expect(defs.length).toEqual(1);
           const def = defs[0];
           expect(def.dependeeNames.length).toEqual(0);
           expect(def.operator).toEqual('=');
-          expect((def as DastLetDeclationSingle).name).toEqual('a');
+          expect((def as DastLetDeclarationSingle).name).toEqual('a');
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -139,9 +139,9 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclations, _1: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect((defs[0] as DastLetDeclationSingle).name).toEqual('b');
+          expect((defs[0] as DastLetDeclarationSingle).name).toEqual('b');
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -151,7 +151,7 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclations, _1: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
           expect(defs[0].dependeeNames).toEqual(['.a']);
         }
@@ -171,7 +171,7 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclations, _1: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
           expect(defs.length).toEqual(2);
         }
@@ -183,9 +183,9 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclations, _1: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          const names = defs.map(def => (def as DastLetDeclationSingle)?.name).sort();
+          const names = defs.map(def => (def as DastLetDeclarationSingle)?.name).sort();
           expect(names).toEqual(['a', 'b']);
         }
       });
@@ -216,9 +216,9 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclations, _1: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect((defs[0] as DastLetDeclationMany).names.length).toEqual(2);
+          expect((defs[0] as DastLetDeclarationMany).names.length).toEqual(2);
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -254,8 +254,8 @@ describeNamed({ DastBuild }, () => {
       const names: string[] = [];
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclations, _1: Readonly<DastNode[]>) {
-          names.push(...defs.map(def => (def as DastLetDeclationSingle).name));
+        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
+          names.push(...defs.map(def => (def as DastLetDeclarationSingle).name));
         }
       });
       expect(names).toEqual(['a', 'b']);

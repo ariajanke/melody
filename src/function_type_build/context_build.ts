@@ -1,6 +1,6 @@
 import {
-  DastLetDeclationMany,
-  DastLetDeclations,
+  DastLetDeclarationMany,
+  DastLetDeclarations,
   DastNode
 } from '../dast_build';
 import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
@@ -19,7 +19,7 @@ export interface ContextBuild {
 }
 
 function make
-  (mDefs: DastLetDeclations,
+  (mDefs: DastLetDeclarations,
    mIntoFastBuild: (dnode: DastNode) => FunctionTypeBuild,
    mHoldAsContextType: HoldContextTypeFunction,
    mBuilder = ContextTypeBuilder.make())
@@ -51,7 +51,7 @@ function make
   }
 
   function handleNamesOkay
-    (specificTupleDef: DastLetDeclationMany,
+    (specificTupleDef: DastLetDeclarationMany,
      tupleType: ObjectType)
     : ObjectType | undefined
   {

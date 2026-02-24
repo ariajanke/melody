@@ -2,13 +2,13 @@ import { Helpers, StandardError } from '../helpers';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { ContextBuild } from './context_build';
 import { FunctionSequenceStackCleanUp } from './function_sequence_stack_clean_up';
-import { DastLetDeclations, DastNode } from '../dast_build';
+import { DastLetDeclarations, DastNode } from '../dast_build';
 import { HoldContextTypeFunction } from './function_type_build_visitor';
 
 const { freeze, memoize } = Helpers;
 
 function make
-  (mDefs: DastLetDeclations,
+  (mDefs: DastLetDeclarations,
    mNodes: Readonly<DastNode[]>,
    // last two params are tightly coupled, guh
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,

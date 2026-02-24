@@ -1,4 +1,8 @@
-import { DastLetDeclations, DastNode } from '../dast_build';
+import {
+  DastLetDeclarations,
+  DastLetDeclaration,
+  DastNode
+} from '../dast_build';
 import { Helpers } from '../helpers';
 import { DastNodeBase } from './dast_node';
 import { DastVisitor_ } from './dast_visitor';
@@ -6,9 +10,12 @@ import { DastVisitor_ } from './dast_visitor';
 const { freeze } = Helpers;
 
 export const DastFunctionDefintion = freeze({
-  make(defs: DastLetDeclations, nodes: DastNode[]) {
+  make(defs: DastLetDeclarations,
+       usedNames: Readonly<string[]>,
+       nodes: DastNode[])
+  {
     function check(): true {
-      defs.forEach(def => {
+      defs.forEach((def: DastLetDeclaration) => {
         if (def.value.uid() === inst.uid()) {
           throw new Error('A function definition cannot contain itself as a definition value');
         }
@@ -18,7 +25,7 @@ export const DastFunctionDefintion = freeze({
     const inst = freeze({
       ...DastNodeBase.make(),
       visit: <T>(visitor: DastVisitor_<T>): T =>
-        visitor.visitFunctionDefinition(defs, nodes)
+        visitor.visitFunctionDefinition(defs, usedNames, nodes)
     });
     check();
     return inst;

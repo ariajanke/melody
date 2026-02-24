@@ -6,17 +6,20 @@ import {
 import { IastNode, IastVisitor, ReseatableIastVisitor } from '../../src/iast_node';
 import { Token } from '../../src/token';
 import { DastNode_ } from '../../src/dast_build/dast_node';
-import { DastBuildBase } from '../../src/dast_build/dast_build_base';
+// import { DastBuildBase } from '../../src/dast_build/dast_build_base';
 import { DastBuild } from '../../src/dast_build';
 import { DastCall, DastTuple } from '../../src/dast_build/dast_node_specializations';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
+import { Helpers, StandardError } from '../../src/helpers';
 
 const { describeNamed } = TestHelpers;
+
+const { freeze } = Helpers;
 
 describeNamed({ LetDeclarationsRetrieval }, () => {
   const makeFringe = (v: string) =>
     IastNode.makeFringe(Token.forTesting.makeFromStringOnly(v));
-  const { makeCall, makeLetDeclation } = IastNode.forOperativeStatements;
+  const { makeCall } = IastNode.forOperativeStatements;
   // const { makeFunctionDefinition } = IastNode;
   const { makeTuple } = IastNode.forLetDeclarationRetrievals;
   function makeEqual(lhs: IastNode, rhs: IastNode) {
@@ -60,7 +63,11 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     };
   }
   const generallyIntoDastBuild = (() => {
-    const { makeFromNode } = DastBuildBase;
+    // const { makeFromNode } = DastBuildBase;
+    const makeFromNode = (node: DastNode_): DastBuild => freeze({
+      node: () => node,
+      error: () => StandardError.make().error()
+    });
     const forFringe = (fn: (v: string) => DastNode_) =>
       (str: string): DastBuild =>
         makeFromNode(fn(str));

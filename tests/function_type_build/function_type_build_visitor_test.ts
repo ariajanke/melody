@@ -11,7 +11,7 @@ describeNamed({ FunctionTypeBuildVisitor }, () => {
   it('creates exactly two function types for a nested function definition', () => {
     const registry = FunctionTypeRegistry.make();
     const visitor = FunctionTypeBuildVisitor.make(StringPoolBuilder.make(), registry);
-    const nestedFuncNode = DastFunctionDefintion.make([], []);
+    const nestedFuncNode = DastFunctionDefintion.make([], [], []);
     const defs = [
       {
         name: 'f',
@@ -21,7 +21,7 @@ describeNamed({ FunctionTypeBuildVisitor }, () => {
       }
     ];
     const fInitialSetNode = DastInitialSet.make('f', nestedFuncNode);
-    const root = DastFunctionDefintion.make(defs, [fInitialSetNode]);
+    const root = DastFunctionDefintion.make(defs, [], [fInitialSetNode]);
     root.visit(visitor);
     const { verifyHit, hitsAtExactly } = ReachPoint.make();
     registry.forEach((_0: FunctionType, _1: FunctionType) => {

@@ -1,5 +1,5 @@
 import { CodeWriter } from '../../src/code_writer';
-import { DastLetDeclation, DastLetDeclations } from '../../src/dast_build';
+import { DastLetDeclaration, DastLetDeclarations } from '../../src/dast_build';
 import { DastNode_ } from '../../src/dast_build/dast_node';
 import { DastTuple } from '../../src/dast_build/dast_node_specializations';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
@@ -77,7 +77,7 @@ describeNamed({ ContextBuild }, () => {
   });
 
   const makeContextBuild =
-    (callDict: { [name: string]: string[] }, defs: DastLetDeclations) =>
+    (callDict: { [name: string]: string[] }, defs: DastLetDeclarations) =>
   ContextBuild.make(
     defs,
     turnIntoFTypeBuild,
@@ -85,7 +85,7 @@ describeNamed({ ContextBuild }, () => {
     makeContextBuilder(callDict)
   );
 
-  function singleX(operator: string): DastLetDeclation {
+  function singleX(operator: string): DastLetDeclaration {
     return {
       name: 'x',
       operator,
@@ -100,7 +100,7 @@ describeNamed({ ContextBuild }, () => {
     return makeContextBuild(callDict, [singleX(operator)]);
   }
 
-  function makeValidPair(operator: string): DastLetDeclation {
+  function makeValidPair(operator: string): DastLetDeclaration {
     return {
       names: ['x', 'y'],
       operator,
