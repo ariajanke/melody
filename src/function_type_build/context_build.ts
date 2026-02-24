@@ -9,6 +9,7 @@ import { ContextTypeBuilder } from './context_type_builder';
 import { Token } from '../token';
 import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { HoldContextTypeFunction } from './function_type_build_visitor';
+import { FunctionNamingSchema } from '../function_naming_schema';
 
 const { freeze, memoize } = Helpers;
 
@@ -25,6 +26,7 @@ function make
   : ContextBuild
 {
   const { error, setErrorFn, setErrorMessage } = StandardError.make();
+  const { kAssignmentOperator } = FunctionNamingSchema;
   const mInProgressType = mBuilder.objectType;
 
   function addedAttrsOkay
@@ -37,7 +39,7 @@ function make
       mBuilder.addDirectLookUp(name, directCallLookUp);
     }
     switch (operator) {
-    case ':=':
+    case kAssignmentOperator:
       mBuilder.addModifier(name, otype);
       // FALLTHROUGH
     case '=':

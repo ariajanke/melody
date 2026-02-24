@@ -7,11 +7,12 @@ import { StackSafetyChecker } from './stack_safety_checker';
 import { TupleObjectFactory } from './tuple_type';
 
 const { freeze, memoize } = Helpers;
+const { kAssignmentOperator } = FunctionNamingSchema;
 
 const kLogToConsole = false;
 const kAssignmentNotAValidCallName =
-  '":=" is not a valid call name, DAST build should have stripped it out ' +
-  'and replaced it with the appropriate fringe accessor';
+  `"${kAssignmentOperator}" is not a valid call name, DAST build should have ` +
+  `stripped it out and replaced it with the appropriate fringe accessor`;
 
 function make
   (mCallName: DastNode,
@@ -26,7 +27,7 @@ function make
     const callNameStr = mCallName.asString();
     if (!callNameStr) {
       return setErrorMessage('Cannot use node as a call name');
-    } else if (callNameStr === ':=') {
+    } else if (callNameStr === kAssignmentOperator) {
       throw new Error(kAssignmentNotAValidCallName);
     }
 

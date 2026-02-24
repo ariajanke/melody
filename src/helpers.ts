@@ -155,3 +155,23 @@ function toNamedMap<StringUnion extends string>
     arr.map((v: StringUnion) => ({ [v]: v }));
   return Object.assign({}, ...temp) as { [name in StringUnion]: StringUnion };
 }
+
+// const kYes = 'yes';
+
+// type FalibleFunction<Type> = () => Type | undefined;
+// type FalibleFunctions<Types extends unknown[]> =
+//   FalibleFunction<Types[number]>[];
+// function anyFailed<ReturnTypes extends unknown[]>
+//   (...fns: FalibleFunctions<ReturnTypes>): 'yes' | undefined
+// {
+//   for (const fn of fns) {
+//     if (fn() === undefined) { return kYes; }
+//   }
+//   return undefined;
+// }
+
+// // const coolThing = (): number | undefined => 42;
+// // const coolThing2 = (): string | '' | undefined => 'hello';
+// // const coolThing3 = (hello: string): { hello: string } | undefined => ({ hello });
+
+// // const res = anyFailed(coolThing, coolThing2) ?? coolThing3('hi');

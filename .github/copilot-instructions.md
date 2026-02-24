@@ -19,6 +19,9 @@ applyTo: "**/*.ts,**/*.md"
 - Copilot MUST NOT USE FIRST PERSON PRONOUNS, BE IT PROMPTS/COMMENTS/CODE (even if I by accident use second person pronouns to refer to the copilot system.)
 - do not pull from copyleft codebases if possible
 
+## General Guidelines
+- avoid negating language (e.g. prefer "unique" over "de-duplicated")
+
 ## Import Rules
 - Do not import further down the directory hierarchy, unless that directory is the same name as the file being worked.
   - EXCEPTION: Tests are much more lax, though prefer to limit imports
@@ -46,6 +49,8 @@ applyTo: "**/*.ts,**/*.md"
   - e.g. injecting an array as a sort of "spy" in testing
 - use `Readonly<>` over `readonly`
 - do not do any work in a `make` function, it is only for construction
+- a `make` function's parameters may contain already completed work (i.e. values which themselves are products of previous abstractions/services)
+- have member functions defer the work of the abstraction until it is called
 - strictly follow the linting rules
 - throw exception only on code paths to signal "this is broken"
 - `StandardError` from `Helpers` for much of the `error` functionality
@@ -53,6 +58,7 @@ applyTo: "**/*.ts,**/*.md"
 - make use of `!` for values that are definitely defined, such as subsequent calls on memoized functions
 - lines must be fewer than 120 characters
 - have the `make` function be the only thing that creates an instance of `MyAbstraction`
+- no "new" keyword, use either existing helpers/abstractions/utilities or basic JavaScript objects or build your own in the same style as the rest of the codebase
 # Code Structure Guidelines
 - prefer one abstraction per file
 - abstractions ideally contain two functions: `outputThing` and `error`/`errors`
@@ -81,3 +87,8 @@ applyTo: "**/*.ts,**/*.md"
 - export interface `MyAbstraction` on top, export `const MyAbstraction` on the bottom
 - take a look at (at time of writing) `src/function_type_build/initial_set_implementation.ts`, this is an example of what *not* to do with regard to `outputThing` and `error` pattern
 - take a look at (at time of writing) `src/function_type_build/initial_set_build.ts`, this is the preferred way of handling `outputThing` and `error` patterns
+- if an if expression can fit into one line, don't and instead do this:
+```ts
+  if (condition)
+    { doThing(); }
+```

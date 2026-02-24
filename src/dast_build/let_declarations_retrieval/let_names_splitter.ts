@@ -1,20 +1,32 @@
+import { DastNode } from '../../dast_build';
 import { StandardError, Helpers } from '../../helpers';
-import { IastNode } from '../../iast_node';
-import {
-  LetNameElement,
-  NameExpressionSingle,
-  NameExpressionSingleToMany
-} from '../let_declarations_retrieval';
+import { DastTuple } from '../dast_node_specializations';
 
 const { freeze, memoize } = Helpers;
 
-const { detuplify } = IastNode.forLetDeclarationRetrievals;
+const { detuplify } = DastTuple;
+
+export interface NameExpressionBase {
+  operator: string;
+  value: DastNode;
+  dependeeNames: readonly string[];
+};
+
+export interface NameExpressionSingle extends NameExpressionBase {
+  name: string;
+};
+
+export interface NameExpressionSingleToMany extends NameExpressionBase {
+  names: readonly string[];
+};
+
+export type LetNameElement = NameExpressionSingle | NameExpressionSingleToMany;
 
 export type LetNameGlob = Readonly<{
   names: string[],
   operator: string,
   dependeeNames: readonly string[],
-  tupleNode: IastNode
+  tupleNode: DastNode
 }>
 
 function construct(mGlob: LetNameGlob) {
@@ -25,7 +37,7 @@ function construct(mGlob: LetNameGlob) {
   });
   const mDetupledNodes = detuplify(mGlob.tupleNode);
   const globAsSingle = () => {
-    if (mDetupledNodes.length !== 1) {
+    if (!mDetupledNodes) {
       return mGlob.tupleNode;
     }
     return mDetupledNodes[0];
@@ -33,7 +45,6 @@ function construct(mGlob: LetNameGlob) {
   // let a = 1
   const singleValueMapping = (): NameExpressionSingle => freeze({
     ...globCommon,
-    // namesDefined: mGlob.names,
     name: mGlob.names[0],
     value: globAsSingle(),
   });
@@ -45,15 +56,15 @@ function construct(mGlob: LetNameGlob) {
     value: mGlob.tupleNode
   });
   // let (a, b, ...) = (1, 2, ...)
-  const manyToMany = (): NameExpressionSingle[] => (mDetupledNodes.
-    map((node: IastNode, idx: number) => [mGlob.names[idx], node]) as [string, IastNode][]).
-    map(([name, node]: [string, IastNode]): NameExpressionSingle => freeze({
+  const manyToMany = (): NameExpressionSingle[] => (mDetupledNodes?.
+    map((node: DastNode, idx: number) => [mGlob.names[idx], node]) as [string, DastNode][]).
+    map(([name, node]: [string, DastNode]): NameExpressionSingle => freeze({
       ...globCommon,
       name,
       value: node,
     }));
   function makeElements(): Readonly<LetNameElement[]> | undefined {
-    const tupleCount = mDetupledNodes.length;
+    const tupleCount = mDetupledNodes?.length ?? 1;
     const nameCount = mGlob.names.length;
     if (nameCount === 1) {
       return [singleValueMapping()];

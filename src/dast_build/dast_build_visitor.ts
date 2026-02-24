@@ -9,7 +9,6 @@ import { IastNode, IastVisitor } from '../iast_node';
 import { LetDeclarationsRetrieval, LetNameElement } from './let_declarations_retrieval';
 import { DastBuildBase } from './dast_build_base';
 import { DastCallBuild } from './dast_call_build';
-import { DastInitialSetBuild } from './dast_initial_set_build';
 import { DastNode_ } from './dast_node';
 
 const { freeze } = Helpers;
@@ -28,22 +27,19 @@ function make() {
   const mDefinitionStack: DastLetDeclation[][] = [];
 
   function visitLet(innerNode: IastNode) {
-    const retr = LetDeclarationsRetrieval.
-      make(innerNode, LetDeclarationsRetrieval.skipTop);
-    const elements = retr.elements();
-    if (!elements) {
+    const retr = LetDeclarationsRetrieval.make(innerNode, (node: IastNode) => node.visit(inst));
+
+    const { elements, dastNode } = retr;
+    if (!elements() || !dastNode()) {
       return DastBuildBase.makeFailed(retr.error);
     }
     const topDefs = mDefinitionStack[ mDefinitionStack.length - 1 ];
 
-    return elements.map((element: LetNameElement) => {
-      const innerBuild = element.value.visit( inst );
-      return DastInitialSetBuild.
-        make(topDefs, innerBuild, element);
-    })?.
-    reduce((prev: MergeableDastBuild, something: DastBuild): MergeableDastBuild => {
-      return prev.mergeWith(something);
-    }, DastBuildBase.startTuple());
+    elements()!.forEach((element: LetNameElement) => {
+      topDefs.push(element);
+    });
+
+    return DastBuildBase.makeFromNode(dastNode()!);
   }
 
   function visitTuple(nodes: Readonly<IastNode[]>): DastBuild {

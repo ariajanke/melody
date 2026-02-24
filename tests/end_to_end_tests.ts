@@ -19,6 +19,9 @@ describe('end-to-end', () => {
     return WebSupport.getEntryPoint(compiler).then(entry => { entry(0); });
   }
 
+  type EntryPointGetter =
+    (source: string, printedStrings: string[]) => Promise<void>;
+
   function interpretFromSource(source: string, printedStrings: string[]): Promise<void> {
     const interpreter = Interpreter.make(source, {
       ...Interpreter.defaultInjections(),
@@ -32,102 +35,158 @@ describe('end-to-end', () => {
     });
   }
 
-  function handleError(err: unknown) {
-    throw err;
+  function errorHandler(done: () => void) {
+    return (err: unknown) => {
+      done();
+      throw err;
+    };
+  }
+
+  function makeExampleRunner
+    (getEntryPoint: EntryPointGetter)
+  {
+    return function (itStr: string, source: string, expectedPrintedStrings: string[]) {
+      it(itStr, (done: () => void) => {
+        const printedStrings: string[] = [];
+        getEntryPoint(source, printedStrings).then(() => {
+          expect(printedStrings).toEqual(expectedPrintedStrings);
+          done();
+        }).catch(errorHandler(done));
+      });
+    };
   }
 
   ([
     [compileFromSource, 'compiler'],
     [interpretFromSource, 'interpreter']
   ] as [
-    (source: string, printedStrings: string[]) => Promise<void>,
+    EntryPointGetter,
     string
   ][]).forEach(([getEntryPoint, name]) => {
     describe(`with a ${name}`, () => {
-      it(`runs "Hello World!"`, (done: () => void) => {
-        const source = `
+      const doRun = makeExampleRunner(getEntryPoint);
+
+      doRun(`runs "Hello World!"`, `
+        puts('Hello world!')
+      `, ['Hello world!']);
+
+      doRun(`runs simple arithmetic`, `
+        let a = 1 + 2 * 3
+        let b = a - 4
+        puts(a, b)
+      `, ['7', '3']);
+        
+      doRun(`runs function call`, `
+        let f = fn
           puts('Hello world!')
-        `;
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['Hello world!']);
-          done();
-        }).catch(handleError);
-      });
+        ~
+        f()
+      `, ['Hello world!']);
 
-      it(`runs simple arithmetic`, (done: () => void) => {
-        const source = `
-          let a = 1 + 2 * 3
-          let b = a - 4
-          puts(a, b)
-        `;
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['7', '3']);
-          done();
-        }).catch(handleError);
-      });
+      doRun(`runs a simple load and store`, `
+        let a := 10
+        a := 5
+        puts(a)
+      `, ['5']);
+
+      doRun(`runs function object reassignment`, `
+        let f := fn
+          puts('Hello world!')
+        ~
+        f := fn
+          puts('Goodbye world!')
+        ~
+        f()
+      `, ['Goodbye world!']);
+
+
+      // it(`runs "Hello World!"`, (done: () => void) => {
+      //   const source = `
+      //     puts('Hello world!')
+      //   `;
+      //   const printedStrings: string[] = [];
+      //   getEntryPoint(source, printedStrings).then(() => {
+      //     expect(printedStrings).toEqual(['Hello world!']);
+      //     done();
+      //   }).catch(handleError);
+      // });
+
+      // it(`runs simple arithmetic`, (done: () => void) => {
+      //   const source = `
+      //     let a = 1 + 2 * 3
+      //     let b = a - 4
+      //     puts(a, b)
+      //   `;
+      //   const printedStrings: string[] = [];
+      //   getEntryPoint(source, printedStrings).then(() => {
+      //     expect(printedStrings).toEqual(['7', '3']);
+      //     done();
+      //   }).catch(handleError);
+      // });
         
-      it(`runs function call`, (done: () => void) => {
-        const source = `
-          let f = fn
-            puts('Hello world!')
-          ~
-          f()
-        `;
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['Hello world!']);
-          done();
-        }).catch(handleError);
-      });
+      // it(`runs function call`, (done: () => void) => {
+      //   const source = `
+      //     let f = fn
+      //       puts('Hello world!')
+      //     ~
+      //     f()
+      //   `;
+      //   const printedStrings: string[] = [];
+      //   getEntryPoint(source, printedStrings).then(() => {
+      //     expect(printedStrings).toEqual(['Hello world!']);
+      //     done();
+      //   }).catch(handleError);
+      // });
 
-      it(`runs a simple load and store`, (done: () => void) => {
-        const source = `
-          let a := 10
-          a := 5
-          puts(a)
-        `;
+      // it(`runs a simple load and store`, (done: () => void) => {
+      //   const source = `
+      //     let a := 10
+      //     a := 5
+      //     puts(a)
+      //   `;
         
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['5']);
-          done();
-        }).catch(handleError);
-      });
+      //   const printedStrings: string[] = [];
+      //   getEntryPoint(source, printedStrings).then(() => {
+      //     expect(printedStrings).toEqual(['5']);
+      //     done();
+      //   }).catch(handleError);
+      // });
 
-      it(`runs function object reassignment`, (done: () => void) => {
-        const source = `
-          let f := fn
-            puts('Hello world!')
-          ~
-          f := fn
-            puts('Goodbye world!')
-          ~
-          f()
-        `;
-        // Something old Melody could not do!
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['Goodbye world!']);
-          done();
-        }).catch(handleError);
-      });
+      // it(`runs function object reassignment`, (done: () => void) => {
+      //   const source = `
+      //     let f := fn
+      //       puts('Hello world!')
+      //     ~
+      //     f := fn
+      //       puts('Goodbye world!')
+      //     ~
+      //     f()
+      //   `;
+      //   // Something old Melody could not do!
+      //   const printedStrings: string[] = [];
+      //   getEntryPoint(source, printedStrings).then(() => {
+      //     expect(printedStrings).toEqual(['Goodbye world!']);
+      //     done();
+      //   }).catch(handleError);
+      // });
 
       // beyond old Melody's abilities out of scope for this PR
       xit(`runs a function whose variable is out of local scope`, (done: () => void) => {
         const source = `
           let a = 10
           let f = fn
+            let f2 = fn
+              puts(a)
+            ~
+            f2()
             puts(a)
           ~
           f()
         `;
         const printedStrings: string[] = [];
         getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['10']);
-          done();
-        }).catch(handleError);
+          expect(printedStrings).toEqual(['10', '10']);
+        }).catch(errorHandler(done));
       });
     });
   });

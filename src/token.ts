@@ -1,5 +1,6 @@
 import { Tokenization } from './tokenization';
 import { Helpers } from './helpers';
+import { FunctionNamingSchema } from './function_naming_schema';
 
 const { freeze, toNamedMap } = Helpers;
 
@@ -46,19 +47,20 @@ export const Token = (() => {
   const kBlankToken: Token = makeSpecialToken('');
   const kCallToken : Token = makeSpecialToken('call');
   const kContextToken: Token = makeSpecialToken('<context>');
+  const kAsnOp = FunctionNamingSchema.kAssignmentOperator;
 
   const tokenTypeOf = (() => {
     const kControlSeqs: { [sequence: string]: TokenType } = freeze({
-      ['let']: types.operator,
-      ['fn' ]: types.functionDefinition,
-      ['('  ]: types.grouping,
-      [')'  ]: types.grouping,
-      [','  ]: types.operator,
-      ['+'  ]: types.operator,
-      ['-'  ]: types.operator,
-      ['*'  ]: types.operator,
-      [':=' ]: types.operator,
-      ['='  ]: types.operator
+      ['let' ]: types.operator,
+      ['fn'  ]: types.functionDefinition,
+      ['('   ]: types.grouping,
+      [')'   ]: types.grouping,
+      [','   ]: types.operator,
+      ['+'   ]: types.operator,
+      ['-'   ]: types.operator,
+      ['*'   ]: types.operator,
+      [kAsnOp]: types.operator,
+      ['='   ]: types.operator
     });
 
     return (tokenContent: string, tokenizationClass = Tokenization) =>

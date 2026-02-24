@@ -1,4 +1,4 @@
-import type { DastBuild, DastLetDeclation } from '../dast_build';
+import type { DastBuild, DastLetDeclation, DastNode } from '../dast_build';
 import { Helpers, StandardError } from '../helpers';
 import { DastInitialSet } from './dast_node_specializations';
 
@@ -24,6 +24,13 @@ function mergeWith(_0: DastBuild): DastBuild {
   throw new Error('Cannot merge with an initial set build');
 }
 
+function initialSetFrom(element: DastInitialSetElement, value: DastNode): DastNode {
+  const namegroup: string | readonly string[] =
+    (element as DastInitialSetElementSingle).name ??
+    (element as DastInitialSetElementMany).names;
+  return DastInitialSet.make(namegroup, value);
+}
+
 function make(mDestinationDefinitions: DastLetDeclation[],
               mInteriorBuild: DastBuild,
               mElement: DastInitialSetElement): DastBuild
@@ -35,6 +42,7 @@ function make(mDestinationDefinitions: DastLetDeclation[],
       return setErrorFn(mInteriorBuild.error);
     }
 
+
     mDestinationDefinitions.push({ ...mElement, value });
     const namegroup: string | readonly string[] =
       (mElement as DastInitialSetElementSingle).name ??
@@ -45,4 +53,4 @@ function make(mDestinationDefinitions: DastLetDeclation[],
   return freeze({ error, mergeWith, node });
 }
 
-export const DastInitialSetBuild = freeze({ make });
+export const DastInitialSetBuild = freeze({ make, initialSetFrom });

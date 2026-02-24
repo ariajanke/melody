@@ -1,3 +1,4 @@
+import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers } from '../helpers';
 import { Token } from '../token';
 
@@ -48,13 +49,14 @@ export const OperatorDefinitions = freeze({
       if (sFullListing) return sFullListing;
       const { binary, unary } = OperatorDefinitions.operandRelationships;
       const call = Token.kCallToken.content();
+      const asgn = FunctionNamingSchema.kAssignmentOperator;
       return sFullListing =
         [
           { representation: 'let', operandRelation: unary  },
           { representation: ','  , operandRelation: binary },
           { representation: 'is' , operandRelation: binary },
           { representation: '='  , operandRelation: binary },
-          { representation: ':=' , operandRelation: binary },
+          { representation: asgn , operandRelation: binary },
           { representation: '+'  , operandRelation: binary },
           { representation: '-'  , operandRelation: binary },
           { representation: '*'  , operandRelation: binary },

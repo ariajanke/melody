@@ -153,7 +153,7 @@ describeNamed({ DastBuild }, () => {
         ...DastVisitor.makeDefaultingToContinue(),
         visitFunctionDefinition(defs: DastLetDeclations, _1: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect(defs[0].dependeeNames).toEqual(['a']);
+          expect(defs[0].dependeeNames).toEqual(['.a']);
         }
       });
       expect(verifyHit()).toBeTruthy();

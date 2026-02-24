@@ -1,4 +1,5 @@
-import { DastBuild, DastNode } from '../dast_build';
+import { DastBuild } from '../dast_build';
+import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers, StandardError } from '../helpers';
 import { DastBuildBase } from './dast_build_base';
 import { DastNode_ } from './dast_node';
@@ -13,32 +14,45 @@ function make
    mArgsBuild: DastBuild)
 {
   const { error, setErrorFn } = StandardError.make();
-  const node = memoize((): DastNode | undefined => {
-    let mCall = mCallBuild.node();
-    if (!mCall)
-      { return setErrorFn(mCallBuild.error); }
-    let mReceiver = mReceiverBuild.node();
-    if (!mReceiver)
-      { return setErrorFn(mReceiverBuild.error); }
+  const callNode = memoize(() =>
+    mCallBuild.node() ?? setErrorFn(mCallBuild.error));
 
-    if (mCall.asString() === ':=') {
-      const { nameTarget, interior, error } = ReceiverAssignmentStripping.
-        make(mReceiver);
-      const nameTarget_ = nameTarget();
-      const interior_ = interior();
-      if (!nameTarget_ || !interior_) {
-        return setErrorFn(error);
-      }
-      mCall = DastNode_.makeFringe(nameTarget_);
-      mReceiver = interior_;
-    }
+  const receiverNode = memoize(() =>
+    mReceiverBuild.node() ?? setErrorFn(mReceiverBuild.error));
 
-    const mArgs = mArgsBuild.node();
-    if (!mArgs)
-      { return setErrorFn(mArgsBuild.error); }
+  const argsNode = memoize(() =>
+    mArgsBuild.node() ?? setErrorFn(mArgsBuild.error));
 
-    return DastCall.make(mCall, mReceiver, mArgs);
+  const assignmentStripping = memoize((): ReceiverAssignmentStripping | undefined => {
+    const callNode_ = callNode();
+    const receiverNode_ = receiverNode();
+    const isAssignmentOperator =
+      callNode_?.asString() === FunctionNamingSchema.kAssignmentOperator;
+    if (callNode_ && receiverNode_ && isAssignmentOperator)
+      { return ReceiverAssignmentStripping.make(receiverNode_); }
+    return undefined;
   });
+
+  const nodeAsAnAssignment = (() => {
+    if (!assignmentStripping())
+      { return undefined; }
+
+    const { nameTarget, interior, error } = assignmentStripping()!;
+    if (!(nameTarget() ?? interior()))
+      { return setErrorFn(error); }
+
+    const fringe = DastNode_.makeFringe(nameTarget()!);
+    return DastCall.make(fringe, interior()!, argsNode()!);
+  });
+
+  const nodeAsACall = (() => {
+    if (!(callNode() ?? receiverNode() ?? argsNode()))
+      { return undefined; }
+
+    return DastCall.make(callNode()!, receiverNode()!, argsNode()!);
+  });
+
+  const node = memoize(() => nodeAsAnAssignment() ?? nodeAsACall());
 
   return freeze({
     ...DastBuildBase.defaultImplementations(),

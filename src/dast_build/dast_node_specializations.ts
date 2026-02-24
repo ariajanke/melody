@@ -18,19 +18,28 @@ export const DastFunctionDefintion = freeze({
     const inst = freeze({
       ...DastNodeBase.make(),
       visit: <T>(visitor: DastVisitor_<T>): T =>
-        // check() && 
         visitor.visitFunctionDefinition(defs, nodes)
     });
-    // idk how the heck the following could happen
     check();
     return inst;
   }
 });
 
+interface DastTupleNode extends DastNode {
+  detuplify(): Readonly<DastNode[]>;
+};
+
 export const DastTuple = freeze({
-  make(nodes: DastNode[]) {
+  detuplify(node: DastNode): Readonly<DastNode[]> | undefined {
+    if ('detuplify' in node) {
+      return (node as DastTupleNode).detuplify();
+    }
+    return undefined;
+  },
+  make(nodes: DastNode[]): DastTupleNode {
     return freeze({
       ...DastNodeBase.make(),
+      detuplify: () => nodes,
       visit: <T>(visitor: DastVisitor_<T>): T =>
         visitor.visitTuple(nodes)
     });

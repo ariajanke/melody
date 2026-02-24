@@ -1,5 +1,5 @@
+import { DastNode } from '../../dast_build';
 import { Helpers, FinishingMemoization, StandardError } from '../../helpers';
-import { IastNode } from '../../iast_node';
 import { LetNameGlob, LetNamesSplitter } from './let_names_splitter';
 
 const { freeze, memoize } = Helpers;
@@ -23,7 +23,7 @@ export const LetNamesCollector = freeze({
   make(mNames: string[],
        mOperator: string,
        mDependeeNames: readonly string[],
-       mArgsNode: IastNode)
+       mArgsNode: DastNode)
   {
     const { beforeFinish, memoizedFinish } = FinishingMemoization.make();
     const inst = freeze({
