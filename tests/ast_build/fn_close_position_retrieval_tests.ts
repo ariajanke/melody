@@ -3,12 +3,12 @@ import { TokenRange } from '../../src/token_range';
 import { Token } from '../../src/token';
 import {
   FnClosePositionRetrieval
-} from '../../src/ast_build/fn_close_position_retrieval';
+} from '../../src/iast_build/fn_close_position_retrieval';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ FnClosePositionRetrieval }, () => {
-  const make = (...tokenStrings: string[]) => {
+  const make = (...tokenStrings: string[]): FnClosePositionRetrieval => {
     const { makeFromStringOnly } = Token.forTesting;
     const range = TokenRange.makeStartingRange(tokenStrings.map(makeFromStringOnly));
     const open = range.startToken();
@@ -43,5 +43,12 @@ describeNamed({ FnClosePositionRetrieval }, () => {
 
     it('is the correct position', () =>
       expect(closePosition()).toEqual(4));
+  });
+  describe('fn \\n fn \\n x \\n ~ \\n y \\n ~', () => {
+    const { closePosition } =
+      make('fn', '\n', 'fn', '\n', 'x', '\n', '~', '\n', 'y', '\n', '~');
+
+    it('is the correct position', () =>
+      expect(closePosition()).toEqual(10));
   });
 });

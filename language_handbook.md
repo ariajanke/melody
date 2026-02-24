@@ -141,7 +141,7 @@ callTwice(fn
 ```
 (Mind my disappointment)
 
-### [not implemented] Function Let
+### [planned] Function Let
 ```melody
 let a = 5
 let b := 1
@@ -154,11 +154,58 @@ puts(c) # 7
 Shortcut for defining an accessor like function. A restriction is that the function must not take any parameters.
 
 ### The "Context" Type
-A "Context" Type is the current scope as a sort of implicit "table" of functions. In similar vein as "binding" in Ruby, or "this" in JavaScript. In fact it is the very first true user defined type!
+A "Context" Type is the current scope as a sort of implicit "table" of functions. It is the stack frame for the function currently being run. It is the very first true user defined type!
 
-Any function that does not have an explicit receiver, implicitly has the "Context" as its receiver.
+Any function that does not have an explicit receiver, implicitly has the current "Context" as its receiver.
 
-### [mostly unimplemented feature] Tables
+#### Variables accross Stack Frames
+In context has another special function `&gt;parent&lt;`. This returns a reference to the parent context.
+
+The `&gt;parent&lt;` function allows contexts to access variables defined outside of them.
+
+Consider:
+```melody
+let a = 5
+let f = fn puts(a)
+
+f()
+```
+
+This becomes:
+```melody
+let a = 5
+let f = fn (<parent> is <RootContext>)
+  let a = <parent>.a
+  puts(a)
+~
+f()
+```
+The above illustrates that the parent is essentially a hidden parameter (the receiver to be precise).
+
+##### Sibling Function Case
+
+Consider:
+```melody
+let a = 5
+let f = fn puts(a)
+let g = fn f()
+```
+
+This becomes:
+```melody
+let a = 5
+let f = fn (<parent> is <RootContext>)
+  let a = <parent>.a
+  puts(a)
+~
+let g = fn (<parent> is <RootContext>)
+  let f = <parent>.f
+  f()
+~
+```
+This follows the exact same logic for variable access. The only difference is how `f`'s function index is reached. Instead of simple value retrieval, we need to go through the parent (like a table) to get it.
+
+### [partial] Tables
 Much like its predecessor C, a "table" is a sort of inline declared struct. Each member key is converted into an index (much like C), whose values maybe accessed by sending a message (like Ruby) to the table.
 
 Believe it or not, you've already seen a version of this with the "Context". Instead of let declarations, you have name and value pairs.
@@ -175,95 +222,74 @@ puts(t.a)
 
 Tables are exactly like tuples, except they also have explicit names. They are not mutable by default (":=" needs to be used for that specific member). Should be easier to implement when "Context" types are working.
 
-### [unimplemented feature] Function definition (with params)
+### [planned] Function Definition with Parameters
 ```melody
 let f = fn (a is Integer) a*2
 ```
-At the current stage, functions do not accept nor return anything. An "is" expression maybe followed by
 
-### [complex example] The "Psuedo-Class"
+#### Required Support
+Melody will need a basic layered intepretation/compilation. "Integer" here while a type, is also a name for an accessor function. Here `is` when used in this fashion expects that the accessor `.Integer` is immediately evulable. Without that, Melody has no way of knowing how big everything needs to be.
+
+However, once in place you'd be able to do something like:
 ```melody
-let Rectangle = fn (a is type Numeric)
-  let klass = table
-    new = fn (left_ is a, top_ is a, width_ is a, height_ is a)
-      table
-        # each line is taken as a let
-        left := left_
-        top := top_
-        width := width_
-        height := height_
-        right fn left + width
-        bottom fn top + height
-      ~ 
+let MyType = table
+  new = fn (x is Integer, y is Integer)
+    table
+      x := x
+      y := y
     ~
-    # self referential uses of variables will be difficult
-    # additionally "FunctionType(...)" will need to support reflection
-    type = klass.new.returns
   ~
+  type = MyType.new.returns
 ~
-let IntRectangle = Rectangle(Integer)
-let r = IntRectangle.new(1, 2, 3, 4)
-puts(r.right)
+
+let printMyType = fn (instance is MyType) puts(instance.x, instance.y)
+
+let mt = MyType.new(1, 2)
+printMyType(mt)
+```
+Here `is` will look up `MyType.type`. How do we know this is immediately evulable? Implicit type-meta functions (explained later) leading from that call all the way to that transformed returned table, from `new`'s type-meta function's return.
+
+### [planned] Function Definition with Returns
+What gets returned by a function is determined the same way as in Ruby. Since there are no guard clauses in this simple language, that means the last expression only.
+
+```melody
+let f = fn
+  1
+  2 # <- this is the return value
+~
+
+puts(f()) # 2
 ```
 
-### [mostly unimplemented] The Reference
+Most languages will return exactly the type of that expression. Melody is a bit different. When a table or function is returned, if there are any "lets" that get escaped, that return gets transformed.
+
+Consider:
+```melody
+let f = fn
+  let a = 1
+  let g = fn a
+
+  g
+~
+
+let h = f()
+```
+
+In the above example, `a` gets "escaped" due to `g` capturing it and being returned from `f`. As a consequence, Melody is forced to transform `g` into a closure. Its size grows (specifically a function index + integer).
+
+### [partial] The Reference
 The closest thing this language has to a "pointer". Reference span from "smart" to "raw" pointers. The big difference with them and especially "raw" pointers, is that they are subject to a variety of tight rules that prevent dangling.
 
 In Melody's current incarnation, the only existing reference is the current context accessor function (i.e. ".&gt;context&lt;"). This accessor is not intented for use by the programmer, but rather is intented as a building block for other language features. One such example: making variables accessible to child functions [not yet implemented].
 
-### [planned] Arrays
-Since Melody can be compiled down to WASM, we can import C functions (like malloc/free). Much like arrays, low level support for its syntax is needed.
+## [planned] Self-Support Needs
+If we're going to have the ideal goal of Melody supporting itself, we'll need sophisticated language features.
 
-```melody
-# C++ for all its faults has solutions for copy/move/usw
-let Clib = System.loadclib('libc').forFunctions('malloc', 'free', 'memcpy')
-let CppLikeArrayFns = Referential.via(Clib.malloc, Clib.free)
-let Array = fn (a is type Object)
-  # we can allow for shallow copies, much like JavaScript (for sake of simplicity)
-  # space_type contains alignment and size information fo "a"
-  # CppLikeArrayFns.newFor returns a reference counted "shared_ptr"
-  let buf := CppLikeArrayFns.newFor(10, a.space_type)
-  let idx := 0
-
-  let reallocate = fn
-    let newSize = idx * 2
-    let newBuf = CppLikeArrayFns.newFor(newSize, a.space_type)
-    # memcpy is a sort of a primitive "move"
-    Something.
-  ~
-
-  let klass = table
-    new = fn
-      table
-        push = fn (x is a)
-          (idx >= 10).then(reallocate)
-          buf.set(idx, x)
-          idx := idx + 1
-        ~
-      ~
-    ~
-  ~
-~
-
-# ":=" means "reassignable", but what about mutability generally? this isn't meant to be "const" like JavaScript, "=" is meant for hard, and deep immutability
-let ex := Array(Integer).new()
-ex.push(1)
-ex.push(2)
-# in current Melody, this creates a shallow copy
-let ex2 := ex
-
-```
-
-(What advanced features are being assumed here? this is not a garbage collected language. But we can use shared_ptr like functionality)
-
-## [planned] Self-support needs
-- arbitrary look ups
+Including:
+- arbitrary look up tables
 - arrays
-- references
-
-trait adaptation, take class N and convert it into another object such that mappings for function calls matches the actual function's implementation. though with reflective capabilities enumerating functions and constructing a new type that functions as the adapter
-
-to take it back to earth, just having the tokenizer written this language would be a major feat
+- heap references
+- the "adaptive" reference
 
 # Definitions
 
@@ -272,28 +298,8 @@ An inspecific "Type" which represents a contract.
 
 Two directions of support... one for traits the other for generics.
 
-### [planned] Trait like
-```melody
-let anyAdder = fn (a is any Numeric, b is any Numeric) a + b
-# thus enabling:
-anyAdder(1, 2)
-anyAdder(1.5, 2.5)
-```
-
-### [planned] Generic like
-```melody
-let Point = fn (a is type Numeric)
-  fn (x is a, y is a) (x, y)
-
-# thus enabling:
-const pt = Point(Integer)(1, 2)
-```
-
-#### The difficulty here
-In the trait like example, "a" is substituted with a value of a specific type. In the generic like example, "a" is substituted for the actual type of the argument. The issue here is two seperate treatments from the same syntax.
-
 ## Representation
-Any kind of reference/pointer to a instance of a Type.
+Any kind of reference/pointer/value to a instance of a Type.
 
 ## Type (Object)
 Well defined, has an exact size in bytes. It has specific set of methods

@@ -1,37 +1,56 @@
-// RETAIN
-// rationale: globals maybe a thing at some point, but I need to understand
-
 import { Helpers } from '../helpers';
-import { WasmFunctionBody } from './wasm_function_body';
-import { TypesAware, WasmHelpers, WasmType } from './wasm_helpers';
+import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 
 const { encodeVaruint32 } = WasmHelpers;
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 const { asCode } = TypesAware;
 
-function construct() {
+const kMutable = 1,
+      kImmutable = 0,
+      kGlobalSectionId = 0x06,
+      kStackPointerLocation = 0;
+
+// RETAIN
+kImmutable;
+
+const { i32Const, functionEnd } = TypesAware.opCodes();
+
+export interface WasmGlobalsSection {
+  finish(): Readonly<number[]>;
+};
+
+function construct(): WasmGlobalsSection {
+  const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   const mCode: number[] = [];
-  const mNumberOfGlobals = 0;
-  function pushGlobal(mutable: number, type: WasmType, initialValue: number) {
-    const fbody = WasmFunctionBody.make().pushI32Const(initialValue);
-    mCode.push(asCode(type), mutable, ...fbody.finish());
-    return inst;
+  let mNumberOfGlobals = 0;
+
+  function pushStackPointer(): void {
+    resetFinishedCode();
+    // NOTE calls for varsint32 encoding, but 0 -> [0]
+    const kInitialStackPointerValue = 0;
+    const fcode = [i32Const, kInitialStackPointerValue, functionEnd];
+    
+    mCode.push(asCode(TypesAware.types().i32), kMutable, ...fcode);
+    ++mNumberOfGlobals;
   }
+  
   const inst = freeze({
-    pushWritableGlobal: (type: WasmType, initialValue: number) =>
-      pushGlobal(1, type, initialValue),
-    finish() {
-      const numGlobs = encodeVaruint32(mNumberOfGlobals);
-      return [
-        0x06,
-        ...encodeVaruint32(numGlobs.length + mCode.length),
-        ...numGlobs,
-        ...mCode
-      ];
-    }
+    finish: () =>
+      trackFinished(() => {
+        pushStackPointer();
+        const numGlobals = encodeVaruint32(mNumberOfGlobals);
+        return [
+          kGlobalSectionId,
+          ...encodeVaruint32(numGlobals.length + mCode.length),
+          ...numGlobals,
+          ...mCode
+        ];
+      })
   });
   return inst;
 }
 
-export const WasmGlobalsSection = freeze({ make: construct });
-export type WasmGlobalsSection = ReturnType<typeof construct>;
+export const WasmGlobalsSection = freeze({
+  instance: memoize(construct),
+  kStackPointerLocation
+});

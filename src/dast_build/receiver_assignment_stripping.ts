@@ -1,4 +1,4 @@
-import { DastLetDeclations, DastNode } from '../dast_build';
+import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
 import { Token } from '../token';
@@ -31,7 +31,7 @@ export const ReceiverAssignmentStripping = freeze({
         { setErrorMessage(`Invalid assignment call target`); },
       visitInitialSet(_0: readonly string[] | string, _1: DastNode)
         { setErrorMessage(`Invalid assignment initial set target`); },
-      visitFunctionDefinition(_0: DastLetDeclations, _1: Readonly<DastNode[]>)
+      visitFunctionDefinition(_0: DastFunctionNameMappings, _1: Readonly<DastNode[]>)
         { setErrorMessage(`Invalid assignment function definition target`); }
     });
 

@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 import { WasmImportsSection } from './wasm_imports_section';
 
@@ -14,27 +14,33 @@ const preface = memoize((): readonly number[] =>
     ...elementSectionStarterBlurb()
   ]);
 
-function make() {
+export interface WasmElementsSection {
+  setFunctionCount(n: number): WasmElementsSection;
+  setStartingIndexFrom(importsSection: WasmImportsSection): WasmElementsSection;
+  finish(): Readonly<number[]>;
+};
+
+function make(): WasmElementsSection {
   const { encodeVaruint32 } = WasmHelpers;
   const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   let mFunctionCount = 0;
   let mStartingIndex: number | undefined = undefined;
 
-  function setFunctionCount(n: number) {
+  function setFunctionCount(n: number): WasmElementsSection {
     resetFinishedCode();
     mFunctionCount = n;
     return inst;
   }
 
-  function setStartingIndexFrom(importsSection: WasmImportsSection) {
+  function setStartingIndexFrom(importsSection: WasmImportsSection): WasmElementsSection {
     resetFinishedCode();
     mStartingIndex = importsSection.functionCount();
     return inst;
   }
 
-  const finish = () => trackFinished(() => {
+  const finish = (): Readonly<number[]> => trackFinished(() => {
     if (mStartingIndex === undefined) {
-      throw new Error('Starting index not set for elements section');
+      raise('Starting index not set for elements section');
     }
     const mIndexList = Array.
       from({ length: mFunctionCount }, (_, i) => i + mStartingIndex!);
@@ -56,4 +62,3 @@ function make() {
 }
 
 export const WasmElementsSection = freeze({ make });
-export type WasmElementsSection = ReturnType<typeof WasmElementsSection.make>;

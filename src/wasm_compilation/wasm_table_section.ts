@@ -6,7 +6,12 @@ const { freeze } = Helpers;
 const kSectionCode = 0x04;
 const kFuncRefType = 0x70;
 
-function make() {
+export interface WasmTableSection {
+  setFunctionCount(n: number): this;
+  finish(): Readonly<number[]>;
+};
+
+function make(): WasmTableSection {
   const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   const { encodeVaruint32 } = WasmHelpers;
 
@@ -36,4 +41,3 @@ function make() {
 }
 
 export const WasmTableSection = freeze({ make });
-export type WasmTableSection = ReturnType<typeof WasmTableSection.make>;

@@ -1,20 +1,29 @@
-import { Helpers } from '../helpers';
-import { FinisherHelpers, WasmHelpers } from './wasm_helpers';
-import { type WasmFunctionBody } from './wasm_function_body';
+import { Helpers, raise } from '../helpers';
+import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 
 const { freeze } = Helpers;
 
 const kCodeSectionId = 0x0A;
 
-function make() {
+export interface WasmCodeSection {
+  pushFunctionBody(bytecode: Readonly<number[]>): this;
+  finish(): Readonly<number[]>
+};
+
+function make(): WasmCodeSection {
   const mCode: number[] = [];
   let mFunctionCount = 0;
   const { encodeVaruint32 } = WasmHelpers;
   const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   const inst = freeze({
-    pushFunctionBody(functionBody: WasmFunctionBody) {
+    pushFunctionBody(bytecode: Readonly<number[]>): WasmCodeSection {
+      if (TypesAware.opCodes().functionEnd !==
+          bytecode[bytecode.length - 1])
+      {
+        raise('bytecode must describe a function body ');
+      }
       resetFinishedCode();
-      mCode.push(...functionBody.finish());
+      mCode.push(...bytecode);
       mFunctionCount += 1;
       return inst;
     },
@@ -34,4 +43,3 @@ function make() {
 }
 
 export const WasmCodeSection = freeze({ make });
-export type WasmCodeSection = ReturnType<typeof WasmCodeSection.make>;

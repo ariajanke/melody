@@ -5,13 +5,18 @@ const { freeze } = Helpers;
 
 const kExportsSectionId = 0x07;
 
-function make() {
+export interface WasmExportsSection {
+  pushFunction(name: string, functionIdx: number): WasmExportsSection;
+  finish(): Readonly<number[]>;
+};
+
+function make(): WasmExportsSection {
   const mCode: number[] = [];
   let mNumberOfExports = 0;
   const { encodeVaruint32, convertStringToNumbers, externalKinds } = WasmHelpers;
   const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   const inst = freeze({
-    pushFunction(name: string, functionIdx: number) {
+    pushFunction(name: string, functionIdx: number): WasmExportsSection {
       resetFinishedCode();
       mCode.push(
         ...encodeVaruint32(name.length),
@@ -22,7 +27,7 @@ function make() {
       mNumberOfExports += 1;
       return inst;
     },
-    finish() {
+    finish(): Readonly<number[]> {
       return trackFinished(() => {
         const exportsCount = encodeVaruint32(mNumberOfExports);
         return [
@@ -38,5 +43,3 @@ function make() {
 }
 
 export const WasmExportsSection = freeze({ make });
-export type WasmExportsSection =
-  ReturnType<typeof WasmExportsSection.make>;

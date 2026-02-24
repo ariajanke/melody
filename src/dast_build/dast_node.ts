@@ -4,7 +4,7 @@ import { DastVisitor_ } from './dast_visitor';
 
 const { freeze, memoize, makeCounter } = Helpers;
 
-export const DastNodeBase = (() => {
+export const DastNodeBase = ((): Readonly<{ make: () => DastNode }> => {
   const counter = makeCounter();
   const asStringDefault = (): string | undefined => undefined;
   function visit<T>(_0: DastVisitor_<T>): T

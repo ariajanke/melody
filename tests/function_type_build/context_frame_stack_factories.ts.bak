@@ -1,0 +1,29 @@
+import { DastNode } from '../../src/dast_build';
+import { FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
+import { ReceiverResolution } from '../../src/function_type_build/context_build';
+import { ContextFrameSnapshot } from '../../src/function_type_build/context_frame_stack';
+import { Helpers, raise } from '../../src/helpers';
+
+const { freeze, memoize, makeCounter } = Helpers;
+
+const nameCounter = makeCounter();
+
+export const TestContextFrameSnapshot = freeze({
+  makeBase: (): ContextFrameSnapshot => freeze({
+    receiverResolution(): ReceiverResolution
+      { raise('uh oh'); },
+    referenceType(): ObjectType
+      { raise('uh oh'); },
+    aggregateType(): ObjectType | 'not ready'
+      { raise('uh oh'); },
+    uniqueName: memoize((): string => `name(${nameCounter()})`),
+    intoBuildFor(_0: DastNode): FunctionTypeBuild
+      { raise('uh oh'); }
+  })
+});
+
+export const TestContextFrameStack = freeze({
+  make() {
+
+  }
+})

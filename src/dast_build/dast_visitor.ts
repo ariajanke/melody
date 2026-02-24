@@ -1,6 +1,6 @@
 import { Helpers } from '../helpers';
 import type {
-  DastLetDeclations,
+  DastFunctionNameMappings,
   DastNode,
   ReseatableDastVisitor
 } from '../dast_build';
@@ -10,11 +10,16 @@ const { freeze } = Helpers;
 export interface DastVisitor_<ResultType = void> {
   visitString(v: string): ResultType;
   visitInteger(v: string): ResultType;
+  /// Fringe name strings will exclude there "." preface e.g. "a" instead of
+  /// ".a"
   visitFringe(v: string): ResultType;
   visitTuple(nodes: Readonly<DastNode[]>): ResultType;
+  /// callNames can be "puts", "a:="
   visitCall(callName: DastNode, receiver: DastNode, args: DastNode): ResultType;
-  visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): ResultType;
-  visitFunctionDefinition(orderedDefs: DastLetDeclations, nodes: Readonly<DastNode[]>):
+  visitInitialSet(namesDefined: Readonly<string[]> | string, node: DastNode): ResultType;
+  visitFunctionDefinition(
+    nameMappings: DastFunctionNameMappings,
+    nodes: Readonly<DastNode[]>):
     ResultType;
 }
 
@@ -33,10 +38,13 @@ function makeDefaultingToContinue(): ReseatableDastVisitor {
     visitTuple(nodes: Readonly<DastNode[]>) {
       nodes.forEach((v: DastNode) => v.visit(inst));
     },
-    visitInitialSet(_0: readonly string[] | string, node: DastNode) {
+    visitInitialSet(_0: Readonly<string[]> | string, node: DastNode) {
       node.visit(inst);
     },
-    visitFunctionDefinition(_0: DastLetDeclations, nodes: Readonly<DastNode[]>) {
+    visitFunctionDefinition(
+      _0: DastFunctionNameMappings,
+      nodes: Readonly<DastNode[]>)
+    {
       nodes.forEach((v: DastNode) => v.visit(inst));
     },
     setInstRef(newInst: ReseatableDastVisitor): ReseatableDastVisitor {

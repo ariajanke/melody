@@ -1,14 +1,14 @@
 import { TestHelpers, ReachPoint } from '../test_helpers';
 import { Token } from '../../src/token';
 import { TokenRange } from '../../src/token_range';
-import { TreePartBuild, type BuildSink } from '../../src/ast_build/tree_part_build';
+import { BuildStateAddition, TreePartBuild, type BuildSink } from '../../src/iast_build/tree_part_build';
 import { type IastNode } from '../../src/iast_node';
 
 const { describeNamed } = TestHelpers;
 
 // TPB handles how to break the code up and that's it
 describeNamed({ TreePartBuild }, () => {
-  const make = (tokens: string[]) =>
+  const make = (tokens: string[]): TreePartBuild =>
     TreePartBuild.
       make(TokenRange.
            makeStartingRange(tokens.map(Token.forTesting.makeFromStringOnly)));
@@ -30,12 +30,12 @@ describeNamed({ TreePartBuild }, () => {
       pushNode?: (node: IastNode) => BuildSink,
       pushNewLine?: () => BuildSink
     }): BuildSink => {
-      pushPart ??= (_0: TreePartBuild) => inst;
-      pushStatement ??= () => inst;
-      popStatement ??= (_0: (node: IastNode) => IastNode | undefined) => inst;
-      pushToken ??= (_0: Token, _1: string) => inst;
-      pushNode ??= (_0: IastNode) => inst;
-      pushNewLine ??= () => inst;
+      pushPart ??= (_0: TreePartBuild): BuildSink => inst;
+      pushStatement ??= (): BuildSink => inst;
+      popStatement ??= (_0: (node: IastNode) => IastNode | undefined): BuildSink => inst;
+      pushToken ??= (_0: Token, _1: string): BuildSink => inst;
+      pushNode ??= (_0: IastNode): BuildSink => inst;
+      pushNewLine ??= (): BuildSink => inst;
       const inst: BuildSink = Object.freeze({
         pushPart,
         pushStatement,
@@ -51,7 +51,8 @@ describeNamed({ TreePartBuild }, () => {
 
   describe('starting with fringe tokens', () => {
     describe('fringe alone pushes a single node', () => {
-      const build = () => make(['a']).build();
+      const build = (): BuildStateAddition | undefined =>
+        make(['a']).build();
 
       it('is not an error', () => {
         expect(build()).toBeDefined();
@@ -72,7 +73,8 @@ describeNamed({ TreePartBuild }, () => {
     });
 
     describe('fringe to (tuple) grouping', () => {
-      const build = () => make(['a', '(', ')']).build();
+      const build = (): BuildStateAddition | undefined =>
+        make(['a', '(', ')']).build();
 
       it('is not an error', () => {
         expect(build()).toBeDefined();
@@ -97,7 +99,8 @@ describeNamed({ TreePartBuild }, () => {
 
   describe('starting with grouping tokens', () => {
     describe('crossing a new line', () => {
-      const build = () => make(['(', '\n', ')']).build();
+      const build = (): BuildStateAddition | undefined =>
+        make(['(', '\n', ')']).build();
 
       it('is not an error', () => {
         expect(build()).toBeDefined();
@@ -135,7 +138,8 @@ describeNamed({ TreePartBuild }, () => {
 
   describe('begins with an operator', () => {
     describe('crossing a new line', () => {
-      const build = () => make(['not', '\n', 'a']).build();
+      const build = (): BuildStateAddition | undefined =>
+        make(['not', '\n', 'a']).build();
 
       it('is not an error', () => {
         const addition = build();

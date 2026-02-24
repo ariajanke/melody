@@ -1,5 +1,9 @@
-import { FunctionRegistryBuild } from './function_registry_build';
+import { DastBuild } from './dast_build';
+import { FunctionDefinitionRegistry } from './function_definition_registry';
+import { FunctionTypeBuild } from './function_type_build';
 import { Helpers } from './helpers';
+import { IastBuild } from './iast_build';
+import { Tokenization } from './tokenization';
 import { WasmCompilation, WasmImports } from './wasm_compilation';
 
 const { freeze, memoize } = Helpers;
@@ -16,22 +20,51 @@ function make(mSource: string,
 {
   let mError: string | undefined = undefined;
 
-  const compile = memoize(() => {
-    const build = FunctionRegistryBuild.make(mSource);
-    const { functionRegistry, stringPool } = build;
-    if (!functionRegistry() || !stringPool()) {
-      mError = build.error();
+  const astBuild = memoize(() => {
+    const tokenization = Tokenization.make();
+    const tokenRange = tokenization.tokenize(mSource);
+    
+    return IastBuild.make(tokenRange);
+  });
+
+  const dastBuild = memoize(() => {
+    const iast = astBuild().build();
+    if (!iast) {
+      mError = `Failed to build IAST: ${astBuild().errors().map(e => e.message).join(', ')}`;
+      return undefined;
+    }
+    return DastBuild.make(iast);
+  });
+
+  const functionRegistry = memoize(() => {
+    if (!dastBuild()) {
+      return undefined;
+    }
+    const rootNode = dastBuild()!.node();
+    if (!rootNode) {
+      mError = dastBuild()!.error().message;
       return undefined;
     }
 
-    const wasmCompilation = WasmCompilation.make(stringPool()!, mInjections);
-    functionRegistry()!.forEach(wasmCompilation.incorporate);
-    wasmCompilation.makeEntryPoint(build.rootIndexEmission()!);
-    return wasmCompilation;
+    const functionRegistry_ = FunctionDefinitionRegistry.make();
+    const ftypeBuild = FunctionTypeBuild.make(rootNode, functionRegistry_);
+    if (!ftypeBuild.functionType()) {
+      mError = ftypeBuild.error().message;
+      return undefined;
+    }
+
+    return functionRegistry_;
   });
 
-  const byteCode = () => compile()?.byteCode();
-  const importsObject = () => compile()?.importObject();
+  const compile = memoize(() => {
+    if (!functionRegistry())
+      { return undefined; }
+
+    return WasmCompilation.make(functionRegistry()!, mInjections);
+  });
+
+  const byteCode = (): Uint8Array | undefined => compile()?.byteCode();
+  const importsObject = (): WasmImports | undefined => compile()?.importObject();
 
   return freeze({
     byteCode,

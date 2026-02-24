@@ -1,5 +1,5 @@
 import { TestHelpers } from '../test_helpers';
-import { ClosePositionRetrieval } from '../../src/ast_build/close_position_retrieval';
+import { ClosePositionRetrieval } from '../../src/iast_build/close_position_retrieval';
 import { TokenRange } from '../../src/token_range';
 import { Token } from '../../src/token';
 

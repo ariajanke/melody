@@ -1,36 +1,46 @@
 import { CodeWriter } from './code_writer';
 import { DastNode } from './dast_build';
+import { FunctionDefinitionRegistry } from './function_definition_registry';
+import { FunctionTypeBase } from './function_type_build/function_type_base';
 import { FunctionTypeBuildVisitor } from './function_type_build/function_type_build_visitor';
-import { TupleObjectFactory } from './function_type_build/tuple_type';
-import { FunctionTypeRegistry } from './function_type_registry';
+import { TupleObjectFactory } from './function_type_build/tuple_type_factory';
 import { Helpers, StandardErrorMessage } from './helpers';
-import { StringPoolBuilder } from './string_pool';
 
 const { freeze, memoize } = Helpers;
-
-export interface CodeFragment {
-  emit(writer: CodeWriter): void;
-};
 
 export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;
-  emit(writer: CodeWriter): CodeWriter | undefined;
+  /// A name of another function on the parent object type. Which is used as
+  /// the actual receiver for this
+  /// function type. If no such name is provided, then the actual receiver is
+  /// the DAST indicated receiver.
+  receiver(): ObjectType;
+
+  simpleEmit(writer: CodeWriter): void;
+
+  emit(receiverFtype: FunctionType,
+       parameterFtype: FunctionType,
+       writer: CodeWriter): void;
+
   uid(): symbol;
 };
 
-export interface FunctionAbility {
-  evaluableNow(): boolean;
-};
+export const FunctionType = FunctionTypeBase;
 
 export interface ObjectType {
+  /// Display name only, no semantic use.
   name(): string;
+
   lookUp(operation: string | symbol): FunctionLookUpTable | undefined;
+
+  /// If this is a tuple, it maybe "detuplified". By definition there are no
+  /// single member tuples.
   detuplify(): Readonly<ObjectType[]> | undefined;
   uid(): symbol;
+
   sizeInBytes(): number;
   sizeInStackItems(): number;
-  stackCleanUp(): FunctionType;
 };
 
 export interface MutableObjectType extends ObjectType {
@@ -39,6 +49,11 @@ export interface MutableObjectType extends ObjectType {
 
 export interface FunctionLookUpTable {
   byParameters(type: ObjectType): FunctionType | undefined;
+  // this for tracking where an original delegation is?
+  // commonReceiverByAll(): ObjectType | undefined;
+  // TODO rm me, only needed by attributes creation so far...
+  // list(): Readonly<FunctionType[]>;
+  uniqueFunctionType(): FunctionType | undefined;
 };
 
 export interface FunctionTypeBuild {
@@ -47,12 +62,11 @@ export interface FunctionTypeBuild {
 };
 
 function make(mRoot: DastNode,
-              mStringPoolBuilder: StringPoolBuilder,
-              mFunctionRegistry: FunctionTypeRegistry)
+              mFunctionRegistry?: FunctionDefinitionRegistry)
   : FunctionTypeBuild
 {
-  const mVisitor = FunctionTypeBuildVisitor.
-    make(mStringPoolBuilder, mFunctionRegistry);
+  mFunctionRegistry ??= FunctionDefinitionRegistry.make();
+  const mVisitor = FunctionTypeBuildVisitor.make(mFunctionRegistry);
   const mBuild = memoize(() => mRoot.visit(mVisitor));
 
   return freeze({
@@ -63,5 +77,5 @@ function make(mRoot: DastNode,
 
 export const FunctionTypeBuild = freeze({
   make,
-  emptyTupleType: TupleObjectFactory.emptyTuple
+  emptyTupleType: TupleObjectFactory.emptyTuple,
 });

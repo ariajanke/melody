@@ -1,35 +1,31 @@
 import { CodeWriter } from '../code_writer';
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers } from '../helpers';
-import { StringPoolBuilder } from '../string_pool';
-import { ConstantStringType, IntegerType } from './builtin_type';
+import { IntegerType } from './integer_type';
+import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
-import { TupleObjectFactory } from './tuple_type';
+import { ConstantStringType } from './builtin_type_base';
+import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 
-const { freeze, memoize } = Helpers;
-
-function makeFunctionType
-  (mRepresentation: number, mType: ObjectType): FunctionType
-{
-  return freeze({
-    parameters(): ObjectType { return TupleObjectFactory.emptyTuple(); },
-    returns(): ObjectType { return mType; },
-    emit(writer: CodeWriter) {
-      return writer.pushRepresentation(mRepresentation);
-    },
-    uid: memoize(Symbol)
-  });
-}
+const { freeze } = Helpers;
 
 const klass = freeze({
-  make(mRepresentation: number, mType: ObjectType): FunctionTypeBuild {
-    return FunctionTypeBuildBase.makeSuccessFromType(makeFunctionType(mRepresentation, mType));
-  },
+  makeSuccessFromType: (ftype: FunctionType): FunctionTypeBuild =>
+    FunctionTypeBuildBase.makeSuccessFromType(ftype),
   makeForInteger: (int_: string) =>
-    klass.make(Number(int_), IntegerType.instance()),
-  makeForString: (string_: string, stringPoolBuilder: StringPoolBuilder) => {
-    const rep = stringPoolBuilder.append(string_.slice(1, -1));
-    return klass.make(rep, ConstantStringType.instance());
+    klass.makeSuccessFromType(freeze({
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      returns: IntegerType.instance,
+      simpleEmit: (writer: CodeWriter) =>
+        writer.pushInteger(Number(int_))
+    })),
+  makeForString: (string_: string) => {
+    string_ = string_.slice(1, -1);
+    return klass.makeSuccessFromType(freeze({
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      returns: ConstantStringType.instance,
+      simpleEmit: (writer: CodeWriter) =>
+        writer.pushLiteralString(string_)
+    }));
   }
 });
 

@@ -1,11 +1,11 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import {
   TypesAware,
   type FuncImportDescription
 } from './wasm_helpers';
 import { WasmTypesSection } from './wasm_types_section';
 import { WasmImportsSection } from './wasm_imports_section';
-import { StringPool } from '../string_pool';
+import { StringPool } from './string_pool';
 
 const { freeze, memoize, makeCounter } = Helpers;
 
@@ -52,11 +52,25 @@ const descriptionsInIndexOrder = memoize(()
     .sort((a, b) => a.index - b.index);
 });
 
+export interface WasmBuiltinImportsCreation {
+  importObject(): Readonly<{
+    imports: {
+      printInteger(i: number): void;
+      printString(i: number): void;
+      askString: () => number;
+      askInteger: () => number;
+      }
+    }>,
+  typesSection(): WasmTypesSection;
+  importsSection(): WasmImportsSection;
+};
+
 function make
   (mStringPool: StringPool,
    mJsPrint: (s: string) => void,
    mJsAskInteger: () => number,
    mJsAskString: () => number)
+  : WasmBuiltinImportsCreation
 {
   const importObject = memoize(() => freeze({
     imports:
@@ -65,17 +79,15 @@ function make
           mJsPrint(i.toString());
         },
         printString(i: number) {
-          mJsPrint(mStringPool.reverseLookUp(i) ?? '<??UNKNOWN??>');
+          mJsPrint(mStringPool.mapToString(i) ?? '<??UNKNOWN??>');
         },
         askString: mJsAskString,
         askInteger: mJsAskInteger
       }
   }));
 
-  const getDescription = (name: string) =>
-    descriptions()[name] ?? (() => {
-      throw new Error(`no such "${name}"`);
-    })();
+  const getDescription = (name: string): FuncImportDescription =>
+    descriptions()[name] ?? raise(`no such "${name}"`);
 
   const typesSection = memoize(() => {
     let typeSec = WasmTypesSection.make();
@@ -94,7 +106,7 @@ function make
     descriptionsInIndexOrder().forEach(({ name, args, returns }) => {
       const index = typeSec.indexFor( args, returns );
       if (index === undefined) {
-        throw new Error(`Index for "${name}" not defined`);
+        raise(`Index for "${name}" not defined`);
       }
       imptSec = imptSec.pushFunction(index, 'imports', name);
     });
@@ -114,5 +126,3 @@ export const WasmBuiltinImportsCreation = freeze({
   descriptionsInIndexOrder,
   make
 });
-export type WasmBuiltinImportsCreation =
-  ReturnType<typeof WasmBuiltinImportsCreation.make>;

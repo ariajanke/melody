@@ -9,7 +9,7 @@ type KnownTypesTable = {
 
 const { freeze, memoize, makeCounter } = Helpers;
 
-const makeEmptyTable = () =>
+const makeEmptyTable = (): KnownTypesTable & { i32: undefined, func: undefined } =>
   ({ isFor: undefined, index: undefined, i32: undefined, func: undefined });
 
 const dividers: { [name: string]: { start: () => symbol } } = freeze({
@@ -23,14 +23,24 @@ const mapTypeToKey = (() => {
     cache[type] ??= Symbol();
 })();
 
-function make() {
+export interface TypeSignatureTracker {
+  indexFor
+    (parameters: Readonly<WasmType[]>, results: Readonly<WasmType[]>)
+    : number | undefined;
+  makeIndexFor
+    (parameters: Readonly<WasmType[]>, results: Readonly<WasmType[]>)
+    : number;
+};
+
+function make(): TypeSignatureTracker {
   const mKnownTypesTable: KnownTypesTable = makeEmptyTable();
   const mCounter = makeCounter();
 
   function seekTableSpecificList
     (typesTable: KnownTypesTable,
-      list: Readonly<WasmType[]>,
-      isFor: 'parameters' | 'results')
+     list: Readonly<WasmType[]>,
+     isFor: 'parameters' | 'results')
+    : KnownTypesTable
   {
     const next =
       typesTable[dividers[isFor].start()] ??= { isFor, index: undefined };
@@ -43,7 +53,10 @@ function make() {
     return typesTable;
   }
 
-  function seekTable(parameters: Readonly<WasmType[]>, results: Readonly<WasmType[]>) {
+  function seekTable
+    (parameters: Readonly<WasmType[]>, results: Readonly<WasmType[]>)
+    : KnownTypesTable
+  {
     const afterParams =
       seekTableSpecificList(mKnownTypesTable, parameters, 'parameters');
     return seekTableSpecificList(afterParams, results, 'results');
@@ -51,13 +64,12 @@ function make() {
 
   return freeze({
     indexFor:
-      (parameters: readonly WasmType[], results: readonly WasmType[]): number | undefined =>
+      (parameters: Readonly<WasmType[]>, results: Readonly<WasmType[]>): number | undefined =>
       seekTable(parameters, results).index,
     makeIndexFor:
-      (parameters: readonly WasmType[], results: readonly WasmType[]): number =>
+      (parameters: Readonly<WasmType[]>, results: Readonly<WasmType[]>): number =>
       seekTable(parameters, results).index ??= mCounter()
   });
 }
 
 export const TypeSignatureTracker = freeze({ make });
-export type TypeSignatureTracker = ReturnType<typeof make>;

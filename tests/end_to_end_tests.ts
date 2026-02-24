@@ -1,103 +1,99 @@
 import { Compiler } from '../src/compiler';
-import { Interpreter } from '../src/interpreter';
 import { WebSupport } from '../src/web_support';
+import { EndToEndHelpers, EntryPointGetter } from './end_to_end_helpers';
 
 describe('end-to-end', () => {
-  function compileFromSource
-    (source: string, printedStrings: string[]): Promise<void>
-  {
-    const compiler = Compiler.make(source, {
-      ...Compiler.defaultInjections(),
-      puts(str: string) {
-        printedStrings.push(str);
-      }
+  const {
+    compileFromSource,
+    makeExampleRunner,
+    errorHandler
+  } = EndToEndHelpers;
+  function makeMemoryFilledWith(num: number): WebAssembly.Memory {
+    const kWasmPageSizeInBytes = 65536 - 4; // wtf
+    const memory = new WebAssembly.Memory({
+      initial: 1,
+      maximum: 1,
     });
-    const { byteCode, importsObject, error } = compiler;
-    if (!byteCode() || !importsObject()) {
-      throw new Error(`Compilation failed: ${error()}`);
+    for (let i = 0; i < kWasmPageSizeInBytes; ++i) {
+      new DataView(memory.buffer).setInt32(i, num, true);
     }
-    return WebSupport.getEntryPoint(compiler).then(entry => { entry(0); });
+    return memory;
   }
+  describe('parent pointer sanity check', () => {
+    describe('with a compiler', () => {
+      const { getEntryPointWithMemory } = WebSupport.forTesting;
 
-  function interpretFromSource(source: string, printedStrings: string[]): Promise<void> {
-    const interpreter = Interpreter.make(source, {
-      ...Interpreter.defaultInjections(),
-      putsFunction(str: string) {
-        printedStrings.push(str);
-      }
-    });
-    return new Promise((resolve, _1) => {
-      interpreter.run();
-      resolve();
-    });
-  }
+      it('restores the stack pointer correctly', (done: () => void) => {
+        // this is double test :/
+        const aVal = 123;
+        const printedStrings: string[] = [];
+         const compiler = Compiler.make(`
+           let a := ${aVal}
+           puts('Hello world!')
+           puts(a)
+         `, {
+            ...Compiler.defaultInjections(),
+            puts(str: string) {
+              printedStrings.push(str);
+            }
+          });
+         const { byteCode } = compiler;
+         expect(byteCode()).toBeDefined();
+         const memory = makeMemoryFilledWith(200);
+         getEntryPointWithMemory(memory, compiler).
+           then(entry => {
+             entry(0);
+             const valueOfA = new DataView(memory.buffer).getInt32(0, true);
+             expect(valueOfA).toBe(aVal);
+             expect(printedStrings).toEqual(['Hello world!', `${aVal}`]);
+             done();
+           }).catch(errorHandler(done));
+      });
 
-  function handleError(err: unknown) {
-    throw err;
-  }
+      makeExampleRunner(compileFromSource)(`runs a simple load within a function`, `
+        let f = fn
+          let a = 10
+          puts(a)
+        ~
+        f()
+      `, ['10']);
+    });
+  });
 
   ([
     [compileFromSource, 'compiler'],
-    [interpretFromSource, 'interpreter']
   ] as [
-    (source: string, printedStrings: string[]) => Promise<void>,
+    EntryPointGetter,
     string
   ][]).forEach(([getEntryPoint, name]) => {
     describe(`with a ${name}`, () => {
-      it(`runs "Hello World!"`, (done: () => void) => {
-        const source = `
-          puts('Hello world!')
-        `;
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['Hello world!']);
-          done();
-        }).catch(handleError);
-      });
+      const doRun = makeExampleRunner(getEntryPoint);
 
-      it(`runs simple arithmetic`, (done: () => void) => {
-        const source = `
+      describe('basic functionality', () => {
+        doRun(`runs "Hello World!"`, `
+          puts('Hello world!')
+        `, ['Hello world!']);
+
+        doRun(`runs simple arithmetic`, `
           let a = 1 + 2 * 3
           let b = a - 4
           puts(a, b)
-        `;
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['7', '3']);
-          done();
-        }).catch(handleError);
-      });
-        
-      it(`runs function call`, (done: () => void) => {
-        const source = `
+        `, ['7', '3']);
+          
+        doRun(`runs function call`, `
           let f = fn
             puts('Hello world!')
           ~
           f()
-        `;
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['Hello world!']);
-          done();
-        }).catch(handleError);
-      });
+        `, ['Hello world!']);
 
-      it(`runs a simple load and store`, (done: () => void) => {
-        const source = `
+        doRun(`runs a simple load and store`, `
           let a := 10
           a := 5
           puts(a)
-        `;
-        
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['5']);
-          done();
-        }).catch(handleError);
-      });
+        `, ['5']);
 
-      it(`runs function object reassignment`, (done: () => void) => {
-        const source = `
+        doRun(`runs function object reassignment`, `
           let f := fn
             puts('Hello world!')
           ~
@@ -105,29 +101,96 @@ describe('end-to-end', () => {
             puts('Goodbye world!')
           ~
           f()
-        `;
-        // Something old Melody could not do!
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['Goodbye world!']);
-          done();
-        }).catch(handleError);
+        `, ['Goodbye world!']);
       });
 
-      // beyond old Melody's abilities out of scope for this PR
-      xit(`runs a function whose variable is out of local scope`, (done: () => void) => {
-        const source = `
+      describe('tuple trouble', () => {
+        doRun(`runs tuple assignment`, `
+          let (a, b) = (1, 2)
+          puts(a, b)
+        `, ['1', '2']);
+
+        doRun(`runs tuple assignment with expressions`, `
+          let (a, b) = (1 + 2, 3 * 4)
+          puts(a, b)
+        `, ['3', '12']);
+
+        doRun(`runs tuple assignment to a tuple`, `
+          let t = (1, 2)
+          let (a, b) = t
+          puts(a, b)
+        `, ['1', '2']);
+      });
+
+
+      describe('variable scope', () => {
+        doRun(`runs function that accesses parent's variable`, `
           let a = 10
           let f = fn
             puts(a)
           ~
           f()
-        `;
-        const printedStrings: string[] = [];
-        getEntryPoint(source, printedStrings).then(() => {
-          expect(printedStrings).toEqual(['10']);
-          done();
-        }).catch(handleError);
+        `, ['10']);
+
+        doRun(`runs function that accesses grandparent's variable`, `
+          let a = 10
+          let f1 = fn
+            let f1a = fn
+              puts(a)
+            ~
+            f1a()
+          ~
+          f1()
+        `, ['10']);
+
+        doRun(`runs function that indirectly accesses parent's variable`, `
+          let a = 10
+          let f1 = fn
+            puts(a)
+          ~
+          let f2 = fn
+            let a = 20
+            f1()
+          ~
+          f2()
+        `, ['10']);
+
+        doRun(`runs function that overrides parent's variable`, `
+          let a = 10
+          let f1 = fn
+            let a = 20
+            puts(a)
+          ~
+          f1()
+        `, ['20']);
+        doRun(`can perform a mutation cross frame`, `
+          let a := 5
+          let b = 1
+          let f1 = fn
+            let f2 = fn
+              a := 6
+            ~
+            f2()
+            puts(a)
+            a := 7
+          ~
+          f1()
+          puts(a)
+          `, ['6', '7']);
+        // doRun(`can perform a mutation cross frame`, `
+        //   let a := 5
+        //   let f1 = fn
+        //     let f2 = fn
+        //       a := 10
+        //     ~
+        //     let b = a
+        //     f2()
+        //     puts(a)
+        //     a := b
+        //   ~
+        //   f1()
+        //   puts(a)
+        //   `, ['10', '5']);
       });
     });
   });

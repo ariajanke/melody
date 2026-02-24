@@ -164,13 +164,6 @@ ADDR (in words) | VAR
 
 #### NOTES TO SELF
 
-Each function would need to carry its own captures (a keen observer has noticed the absence of "receiver" this name). Generalized function calls involving a receiver mount (along with the usual arguments) may be able to bridge this gap. If a receiver is not needed, the function will just "eat" it.
-
-We're going to solve tables and captures in one go, and it's really exciting. The "Context" is already a table, we're mounting that as the receiver of a child function call. We now have access to the parent's table.
-In x86 parlance, the context that gets passed is the "previous stack frame pointer", like the "sp" register.
-
-We try to accomplish a lot with as few primitives as possible. The underlying pattern of how tuples and tables are derived from the same idea of sequential layouts.
-
 ```melody
 let a = 10
 let f = fn
@@ -189,4 +182,228 @@ let f = fn
 ~
 
 f()
+```
+### [complex example] The "Psuedo-Class"
+```melody
+let Rectangle = fn (a is type Numeric)
+  let klass = table
+    new = fn (left_ is a, top_ is a, width_ is a, height_ is a)
+      table
+        # each line is taken as a let
+        left := left_
+        top := top_
+        width := width_
+        height := height_
+        right fn left + width
+        bottom fn top + height
+      ~ 
+    ~
+    # self referential uses of variables will be difficult
+    # additionally "FunctionType(...)" will need to support reflection
+    type = klass.new.returns
+  ~
+~
+let IntRectangle = Rectangle(Integer)
+let r = IntRectangle.new(1, 2, 3, 4)
+puts(r.right)
+```
+
+```
+let a = 10
+let f1 = fn
+  added <parent> = <root>
+  implied a = <parent>.a
+  puts(a)
+~
+let f2 = fn
+  # necessitated by "f3" needing "f1"
+  added <parent> = <root>
+  let f3 = fn
+    # says I need "f1", and therefore "<root>"
+    added <parent> = <f2>
+    implied <root> = <parent>.<root>
+    # <parent>.<root>
+    # okay
+    # <parent> = grab SP from param 0
+    # 
+    implied f1 = <root>.f1
+    f1() # <- this essentially/has to become "<root>.f1()"
+  ~
+  f3()
+~
+f2()
+```
+
+Mutual dependance
+```
+let f1 = fn (a is Integer)
+  f2(2 * a)
+~
+let f2 = fn (a is Integer)
+  (a < 10).
+    then(a).
+    else(fn f1(3 - a))
+~
+puts(f1(5)) # prints -14, completely valid
+```
+
+Add implied and parents
+```
+let f1 = fn (a is Integer)
+  let f2 = <parent>.f2
+  # only block if "f2"'s type cannot be finished
+  f2(2 * a)
+~
+let f2 = fn (a is Integer)
+  let f1 = <parent>.f1
+  (a < 10).
+    then(a).
+    else(fn # call me "f3"
+      let f1 = <parent>.f1 # essentially <parent>.<parent>.f1
+      f1(3 - a)
+    )
+~
+```
+
+Now consider that we drill down DFS style, with declarations being processed first.
+We start in `f3`. We have `f1` as a pending name. So generate an initial set and accessor for `<parent>`. The context for `f3` is not finished.
+
+We (somehow) have to go up to `f2`, and then just "add" a new pending name for `f1`. (Repeat until root?) We're still not done with `f3` yet. Note that `f1` might not be defined in `root` just yet! At a glance we already know what the definition for `f1` and `f2` are, but how?
+
+What do these functions look like in type-meta land?
+```
+let f1 = fn (a is type Numeric)
+  f2(2 * a) # (a = Integer).then(Integer)...
+~
+let f2 = fn (a is type Numeric)
+```
+
+For present day Melody:
+```
+# pendingNames: []
+let f1 = fn
+  # pendingNames: ['f2']
+  # go up to root
+  # "yup, '.f2' definitely exists"
+  # can't visit it (otherwise, boom goes the stack)
+  # can we "partially" visit it such that we can figure out
+  # the return/result type is?
+  f2()
+~
+let f2 = fn
+  # pendingNames: ['f1', '.f1']
+  # there's also the way in which things are called
+  # We drilled into f2, attempting a build, what exactly are we trying to do?
+  # Get the actual ftype for instruction emission, so we can call it. We don't have to know how to emit f1.
+  # How do I sneak the concept of "process-time constant" in here?
+  
+  f1()
+~
+```
+Should be valid (albiet useless and infinitely recursive).
+Breaks down into the difference between an Object type and a Function type.
+```
+# ".a", ".f", "f"
+let f = fn puts(a)
+let a = 5
+f()
+```
+We definitely need a "partial" build.
+Can I "partially" build "f" first, (that is move from a DFS to BFS style of processing?)
+That way the parent context is finished first.
+Now, what are the implications with layered processing goals, and type-meta functions?
+```
+let mytm_f = fn (n is type Numeric)
+  fn (a is n) a + 2
+~
+let mytm_g = fn (n is type Numeric)
+  n.new(5)
+~
+let my8 = mytm_f(Integer)(6)
+let my5 = mytm_g(Integer)
+```
+For layer 1 evaluate:
+- `mytm_f(Integer)`
+- `mytm_g(Integer)`
+Becomes layer 0 (never mind that all are PTC candidates)
+```
+let my8 = (fn (a is Integer) a + 2)(6)
+let my5 = Integer.new(5)
+```
+
+
+```
+let a = 10
+let f1 = fn
+  let f2 = fn
+    # <parent> = <f1>
+    # pending: ".a" with args "Tuple()"
+    puts(a)
+  ~
+  f2()
+~
+let f3 = fn
+  # <parent> = <root>
+  # pending: "f1"
+  f1()
+~
+f3()
+
+```
+
+```
+let f = fn puts('hello')
+
+# as we pass down "f" it will still need to be received by this context
+(askInteger() > 5).then(f)
+```
+
+### Entities??
+Essentially data sets that can be broken down by type into components.
+
+### Type constraints and transformations
+Type deduction based on constraints?
+
+Consider:
+
+```melody
+
+let pt = Vector2.new() # stack auto reference
+thing.push(pt, fn # pt gets pushed as some kind of reference... cv
+  # ...
+~)
+
+```
+### Generics Ideas
+
+decltype likes, specifically:
+```melody
+
+let t = Entity.new(start_ref, start_alloc)
+
+# t.Type is going to have to change how receiver works here
+# perhaps when it comes to judging whether something's evaluatable or not
+# there's a "receiver resolution" specific to explicit receivers
+# Can I evaluate the context of "t" for the ".Type" function?
+
+collection.reduce(t, fn (prev is t.Type, c is collection.MemberType)
+  let next_ref = next_ref_of(prev.get(start_ref.Type))
+  let next_alloc = next_alloc_od(prev.get(start_alloc.Type))
+  # order doesn't matter on the next line, remember it's an "Entity"
+  Entity.new(next_alloc, next_ref)
+~)
+```
+
+Unary as:
+```melody
+let f = fn ()
+  as Entity.underscored(
+    Goose.new(),
+    Cat.new
+  )
+  # "goose" becomes a pending name
+  # unary as will have to act as a modifier for the stack frame's type
+  goose.honk()
+  cat.meow()
+~
 ```

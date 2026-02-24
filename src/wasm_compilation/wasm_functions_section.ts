@@ -4,7 +4,12 @@ import { FinisherHelpers, WasmHelpers } from './wasm_helpers';
 const { freeze } = Helpers;
 const kFunctionsSectionId = 0x03;
 
-function make() {
+export interface WasmFunctionsSection {
+  pushSignatureFrom(n: number): this;
+  finish(): Readonly<number[]>;
+};
+
+function make(): WasmFunctionsSection {
   const mCode: number[] = [];
   let mNumberOfFunctions = 0;
   const { encodeVaruint32 } = WasmHelpers;
@@ -32,5 +37,3 @@ function make() {
 }
 
 export const WasmFunctionsSection = freeze({ make });
-export type WasmFunctionsSection =
-  ReturnType<typeof WasmFunctionsSection.make>;

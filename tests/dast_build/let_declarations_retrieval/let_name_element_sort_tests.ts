@@ -4,21 +4,19 @@ import {
 } from '../../../src/dast_build/let_declarations_retrieval/let_name_element_sort';
 import { LetNameElement }
   from '../../../src/dast_build/let_declarations_retrieval';
-import { IastNode } from '../../../src/iast_node';
-import { Token } from '../../../src/token';
+import { DastNode_ } from '../../../src/dast_build/dast_node';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ LetNameElementSort }, () => {
-  const makeFringe = (v: string) =>
-    IastNode.makeFringe(Token.forTesting.makeFromStringOnly(v));
-  function makeLetElementCommon() {
+  const { makeFringe } = DastNode_;
+  function makeLetElementCommon(): { operator: '=', value: DastNode_ } {
     return {
       operator: '=',
       value: makeFringe('...')
     };
   }
-  const toName = (el: LetNameElement) => {
+  const toName = (el: LetNameElement): string => {
     if ('name' in el)
       { return el.name; }
     throw new Error(`is a many names element (${el.names.join(',')})`);

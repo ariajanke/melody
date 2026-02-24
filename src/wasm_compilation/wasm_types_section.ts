@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import {
   FinisherHelpers,
   TypesAware,
@@ -12,7 +12,14 @@ const { asCode, asCodeArray } = TypesAware;
 
 const kTypesSectionCode = 0x1;
 
-function make() {
+interface WasmTypesSection_ {
+  pushFunction(arguments_: Readonly<WasmType[]>, returns: Readonly<WasmType[]>): this;
+  typeCount(): number;
+  indexFor: TypeSignatureTracker['indexFor'];
+  finish(): Readonly<number[]>;
+};
+
+function make(): WasmTypesSection_ {
   const mCode: number[] = [];
   let mTypeCount = 0;
   const mTypeSignatureTracker = TypeSignatureTracker.make();
@@ -30,7 +37,7 @@ function make() {
       // have to exclude known types?
       resetFinishedCode();
       if (arguments_.length > 255 || returns.length > 255) {
-        throw new Error('Too many arguments for WASM');
+        raise('Too many arguments for WASM');
       }
       if (mTypeSignatureTracker.indexFor(arguments_, returns) === undefined) {
         mCode.
@@ -63,4 +70,4 @@ function make() {
 }
 
 export const WasmTypesSection = freeze({ make });
-export type WasmTypesSection = ReturnType<typeof WasmTypesSection.make>;
+export type WasmTypesSection = WasmTypesSection_;

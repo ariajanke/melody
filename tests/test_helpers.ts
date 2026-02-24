@@ -25,8 +25,10 @@ export interface ReachPointCollection {
   verifyAllHit: () => boolean
 }
 
-export const ReachPoint = (() => {
-  function make() {
+export const ReachPoint = (()
+  : Readonly<{ make: () => ReachPoint, makeCollection: (size: number) => ReachPointCollection }> =>
+{
+  function make(): ReachPoint {
     return construct([0], 0);
   }
 
@@ -74,3 +76,18 @@ export const ReachPoint = (() => {
 
   return Object.freeze({ make, makeCollection });
 })();
+
+export const CallbackLocationMark = freeze({
+  make() {
+    let mMark: string | undefined = undefined;
+    return freeze({
+      mark: () => mMark,
+      markOnEntry(newMark: string, fn: () => void) {
+        const oldMark = mMark;
+        mMark = newMark;
+        fn();
+        mMark = oldMark;
+      }
+    });
+  }
+});

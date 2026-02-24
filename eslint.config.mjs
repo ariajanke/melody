@@ -18,7 +18,10 @@ export default [
         {
           argsIgnorePattern: '^_[0-9]+'
         }
-      ]
+      ],
+      // NOTE specifying a return type is not always desired or appropriate,
+      //      but they are sometimes, consider a "bypass" for those instances??
+      // '@typescript-eslint/explicit-function-return-type': 'error'
     },
   },
   pluginJs.configs.recommended,

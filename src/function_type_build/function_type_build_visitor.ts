@@ -1,78 +1,54 @@
-import { DastLetDeclations, DastNode, DastVisitor } from '../dast_build';
-import { FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { FunctionTypeRegistry } from '../function_type_registry';
+import {
+  DastFunctionNameMappings,
+  DastNode,
+  DastVisitor
+} from '../dast_build';
+import { FunctionTypeBuild } from '../function_type_build';
 import { Helpers } from '../helpers';
-import { StringPoolBuilder } from '../string_pool';
-import { CallFunctionTypeBuild } from './call_function_type_build';
-import { DastBuildCache } from './dast_build_cache';
+import { CallFunctionBuild } from './call_function_build';
+import { ContextFrameStack } from './context_frame_stack';
 import { FringeFunctionBuild } from './fringe_function_build';
-import { FunctionDefinitionBuild } from './function_definition_build';
-import { FunctionTypeBuildBase } from './function_type_build_base';
-import { InitialSetBuild } from './initial_set_build';
+import { DefinitionIndexFunctionBuild } from './definition_index_function_build';
 import { LiteralFunctionTypeBuild } from './literal_function_type_build';
-import { TupleFunctionTypeBuild } from './tuple_function_type_build';
+import { TupleFunctionBuild } from './tuple_function_build';
+import { FunctionDefinitionRegistry } from '../function_definition_registry';
+import { InitialSetFunctionBuild } from './initial_set_function_build';
 
 const { freeze } = Helpers;
 
-export type HoldContextTypeFunction =
-  <T>(getter: () => ObjectType, whileFn: () => T) => T;
-
 function make
-  (mStringPoolBuilder: StringPoolBuilder,
-   mFunctionRegistry: FunctionTypeRegistry)
+  (mFunctionRegistry: FunctionDefinitionRegistry)
   : DastVisitor<FunctionTypeBuild>
 {
-  const mBuildCache = DastBuildCache.
+  const mStackFrameStack = ContextFrameStack.
     make((node: DastNode) => node.visit(inst));
-  let mTopContextType: () => ObjectType = () => {
-    throw new Error('root node must be a function definition');
-  };
+  const { topFrame } = mStackFrameStack;
 
-  const mHoldAsContextType: HoldContextTypeFunction =
-    <T>(getter: () => ObjectType, whileFn: () => T): T =>
+  const visitFringe = (name: string): FunctionTypeBuild =>
+    FringeFunctionBuild.make(name, topFrame());
+
+  function visitCall
+    (callName: DastNode, receiver: DastNode, args: DastNode): FunctionTypeBuild
   {
-    const oldTopContextType = mTopContextType;
-    mTopContextType = getter;
-    const ret = whileFn();
-    mTopContextType = oldTopContextType;
-    return ret;
-  };
-
-  const visitFringe = (name: string) =>
-    FringeFunctionBuild.make(name, mTopContextType);
-
-  const visitString = (string_: string): FunctionTypeBuild => 
-    LiteralFunctionTypeBuild.makeForString(string_, mStringPoolBuilder);
-
-  function visitCall(callName: DastNode, receiver: DastNode, args: DastNode): FunctionTypeBuild {
-    return CallFunctionTypeBuild.
-      make(callName, 
-           receiver, 
-           args,
-           mBuildCache.checkCachedBuild);
+    return CallFunctionBuild.make(callName, receiver, args, topFrame());
   }
 
   function visitFunctionDefinition
-    (defs: DastLetDeclations, nodes: Readonly<DastNode[]>): FunctionTypeBuild
+    (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>): FunctionTypeBuild
   {
-    const defBuild = FunctionDefinitionBuild.
-      make(defs, nodes, mBuildCache.checkCachedBuild,
-           mHoldAsContextType);
-
-    const compositeFunctionType = defBuild.functionType();
-    if (!compositeFunctionType)
-      { return defBuild; }
-    const emissionFuncType = mFunctionRegistry.indexEmissionOf(compositeFunctionType);
-    return FunctionTypeBuildBase.makeSuccessFromType(emissionFuncType);
+    return DefinitionIndexFunctionBuild.
+      make(defs, nodes, mFunctionRegistry, mStackFrameStack);
   }
 
-  function visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): FunctionTypeBuild {
-    return InitialSetBuild.
-      make(namesDefined, mBuildCache.checkCachedBuild(node), mTopContextType);
+  function visitInitialSet
+    (namesDefined: readonly string[] | string,
+     node: DastNode): FunctionTypeBuild
+  {
+    return InitialSetFunctionBuild.make(namesDefined, node, topFrame());
   }
 
   const visitTuple = (nodes: Readonly<DastNode[]>): FunctionTypeBuild =>
-    TupleFunctionTypeBuild.make(nodes, mBuildCache.checkCachedBuild);
+    TupleFunctionBuild.make(nodes, topFrame().intoBuildFor);
   
   const inst = freeze({
     visitCall,
@@ -80,7 +56,7 @@ function make
     visitFunctionDefinition,
     visitInitialSet,
     visitInteger: LiteralFunctionTypeBuild.makeForInteger,
-    visitString,
+    visitString: LiteralFunctionTypeBuild.makeForString,
     visitTuple
   });
   return inst;

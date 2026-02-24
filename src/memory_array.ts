@@ -3,8 +3,8 @@ import { Helpers } from './helpers';
 const { freeze } = Helpers;
 
 const kWordSizeInBytes = 4;
-const kStackPointerLocation = 0;
-const kStartOfStack = kStackPointerLocation + kWordSizeInBytes;
+// const kStackPointerLocation = 0;
+// const kStartOfStack = kStackPointerLocation + kWordSizeInBytes;
 
 function construct(mSlotCapacity: number = 2048) {
   const mSlots = Array<number | undefined>(mSlotCapacity);
@@ -32,7 +32,7 @@ function construct(mSlotCapacity: number = 2048) {
 export const MemoryArray = freeze({
   make: () => construct(),
   kWordSizeInBytes,
-  kStackPointerLocation,
-  kStartOfStack
+  // kStackPointerLocation,
+  // kStartOfStack
 });
 export type MemoryArray = ReturnType<typeof construct>;
