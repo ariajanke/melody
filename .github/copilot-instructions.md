@@ -17,7 +17,7 @@ applyTo: "**/*.ts,**/*.md"
 
 - Copilot MUST NOT APPLY CHANGES `./ideas.md` OR `./language_handbook.md` AT ALL
 - Copilot MUST NOT USE FIRST PERSON PRONOUNS, BE IT PROMPTS/COMMENTS/CODE (even if I by accident use second person pronouns to refer to the copilot system.)
-- do not pull from copyleft codebases if possible
+- do not pull from copyleft codebases if possible (except this one)
 
 ## General Guidelines
 - avoid negating language (e.g. prefer "unique" over "de-duplicated")

@@ -13,9 +13,14 @@ function mapToInitialSetName(names: string | readonly string[]): string {
 
 const kAssignmentOperator = ':=';
 
+export type DeclarationOperator = '=' | ':=' | 'initialSet';
+
 export const FunctionNamingSchema = freeze({
   kAssignmentOperator,
+  kEqualityOperator: '=',
   mapToInitialSetName,
+  mapFromFringeAccessor: (name: string): string | undefined =>
+    name[0] === '.' ? name.slice(1) : undefined,
   mapToAssignment: (name: string): string =>
     `${name}${kAssignmentOperator}`,
   mapToFringeAccessor: (name: string) => `.${name}`,

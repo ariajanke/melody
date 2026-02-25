@@ -1,11 +1,14 @@
 import { Helpers } from '../helpers';
 import type {
-  DastLetDeclarations,
+  DastFunctionNameMappings,
   DastNode,
   ReseatableDastVisitor
 } from '../dast_build';
+// import { DeclarationOperator } from '../function_naming_schema';
 
 const { freeze } = Helpers;
+
+
 
 export interface DastVisitor_<ResultType = void> {
   visitString(v: string): ResultType;
@@ -15,10 +18,12 @@ export interface DastVisitor_<ResultType = void> {
   visitCall(callName: DastNode, receiver: DastNode, args: DastNode): ResultType;
   visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): ResultType;
   visitFunctionDefinition(
-    orderedDefs: DastLetDeclarations,
-    usedNames: Readonly<string[]>,
+    nameMappings: DastFunctionNameMappings,
     nodes: Readonly<DastNode[]>):
     ResultType;
+  // visitFunctionDefinition(
+
+  // )
 }
 
 function visitFringe(_0: string) {}
@@ -40,8 +45,7 @@ function makeDefaultingToContinue(): ReseatableDastVisitor {
       node.visit(inst);
     },
     visitFunctionDefinition(
-      _0: DastLetDeclarations,
-      _1: Readonly<string[]>,
+      _0: DastFunctionNameMappings,
       nodes: Readonly<DastNode[]>)
     {
       nodes.forEach((v: DastNode) => v.visit(inst));

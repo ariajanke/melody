@@ -1,5 +1,5 @@
 import { CallBackObjectHold } from '../call_back_object_hold';
-import { DastBuild, DastLetDeclaration, DastNode } from '../dast_build';
+import { DastBuild, DastLetDeclarationMap, DastNode } from '../dast_build';
 import { StandardError } from '../helpers';
 import { IastNode } from '../iast_node';
 import { Helpers } from '../helpers';
@@ -11,10 +11,10 @@ const { freeze, memoize } = Helpers;
 function make
   (mNodes: Readonly<IastNode[]>,
    mIntoDastBuild: (node: IastNode) => DastBuild,
-   mObjectHolder: CallBackObjectHold<DastLetDeclaration[]>
+   mObjectHolder: CallBackObjectHold<DastLetDeclarationMap>
   ): DastBuild
 {
-  const mDeclarations: DastLetDeclaration[] = [];
+  const mDeclarations: DastLetDeclarationMap = {};
 
   const { error, setErrorFn } = StandardError.make();
   const { withHeldObject, currentObject } = mObjectHolder;
@@ -42,14 +42,26 @@ function make
     return collector.names();
   });
 
+  const pendingNames_ = memoize(() => {
+    const pendingNames: { [name: string]: true } = {};
+    usedNames().forEach(name => {
+      // screens out names that are already declared
+      if (!currentObject()[name]) {
+        pendingNames[name] = true;
+      }
+    });
+    return pendingNames;
+  });
+
   const node = memoize(() => {
     // NOTE order of operations is important here
     const declarations = finishedDeclarations();
     const nodes = finishedNodes();
+    const pendingNames = pendingNames_();
     if (!nodes || !declarations)
       { return undefined; }
     return DastFunctionDefintion.
-      make(declarations, usedNames(), [...nodes]);
+      make({ declarations, pendingNames }, [...nodes]);
   });
 
   return freeze({ error, node });

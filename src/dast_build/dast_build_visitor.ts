@@ -1,6 +1,6 @@
 import {
   DastBuild,
-  DastLetDeclaration,
+  DastLetDeclarationMap,
   DastNode
 } from '../dast_build';
 import { Helpers, StandardError } from '../helpers';
@@ -29,15 +29,15 @@ const visitFringe = makeVisitFringe(DastNode_.makeFringe);
 
 function make() {
   const mDeclarationHolder = CallBackObjectHold.
-    make<DastLetDeclaration[]>('let declaration stack not set up yet');
+    make<DastLetDeclarationMap>('let declaration stack not set up yet');
   const { currentObject } = mDeclarationHolder;
-  
+  const intoDastBuild = (node: IastNode) => node.visit(inst);
   function visitLet(innerNode: IastNode) {
-    return DastLetBuild.make(innerNode, (node: IastNode) => node.visit(inst), currentObject);
+    return DastLetBuild.make(innerNode, intoDastBuild, currentObject);
   }
 
   function visitTuple(nodes: Readonly<IastNode[]>): DastBuild {
-    return DastTupleBuild.make(nodes, (node: IastNode) => node.visit(inst));
+    return DastTupleBuild.make(nodes, intoDastBuild);
   }
 
   function visitCall(callName: IastNode, receiver: IastNode, args: IastNode):
@@ -51,7 +51,7 @@ function make() {
 
   function visitFunctionDefinition(nodes: Readonly<IastNode[]>): DastBuild {
     return DastFunctionDefintionBuild.
-      make(nodes, (node: IastNode) => node.visit(inst), mDeclarationHolder);
+      make(nodes, intoDastBuild, mDeclarationHolder);
   }
 
   const inst: IastVisitor<DastBuild> = freeze({
