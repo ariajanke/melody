@@ -62,10 +62,32 @@ describeNamed({ ContextTypeBuilder }, () => {
 
   const { emptyTuple } = TupleObjectFactory;
 
+  function assertFunctionBuild(fbuild: FunctionTypeBuild): FunctionType {
+    const ftype = fbuild.functionType();
+    if (!ftype) {
+      throw new Error(`Failed to create function type: ${fbuild.error().message}`);
+    }
+    return ftype;
+  }
+
+  function addAccessorFor
+    (builder: ContextTypeBuilder, name: string, type: ObjectType): FunctionType
+  {
+    return assertFunctionBuild(builder.
+      addAccessor(mapToFringeAccessor(name), { variableName: name }, type));
+  }
+
+  function addModifierFor
+    (builder: ContextTypeBuilder, name: string, type: ObjectType): FunctionType
+  {
+    return assertFunctionBuild(builder.
+      addModifier(mapToAssignment(name), { variableName: name }, type));
+  }
+
   describe('addModifier', () => {
     it('creates function with taking and returning an integer', () => {
       const builder = ContextTypeBuilder.make();
-      const ftype = builder.addModifier('a', integerType());
+      const ftype = addModifierFor(builder, 'a', integerType());
 
       expect(ftype.parameters().uid()).toEqual(integerType().uid());
       expect(ftype.returns().uid()).toEqual(integerType().uid());
@@ -73,7 +95,7 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('emits correct instructions', () => {
       const builder = ContextTypeBuilder.make();
-      const ftype = builder.addModifier('a', integerType());
+      const ftype = addModifierFor(builder, 'a', integerType());
       const recordedCalls = collectCallsForFunctionType(ftype);
 
       expect(recordedCalls).toEqual([
@@ -87,7 +109,7 @@ describeNamed({ ContextTypeBuilder }, () => {
   describe('addAccessor', () => {
     it('creates function taking nothing, returning an integer', () => {
       const builder = ContextTypeBuilder.make();
-      const ftype = builder.addAccessor('a', integerType());
+      const ftype = addAccessorFor(builder, 'a', integerType());
 
       expect(ftype.parameters().uid()).toEqual(emptyTuple().uid());
       expect(ftype.returns().uid()).toEqual(integerType().uid());
@@ -95,7 +117,7 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('emits correct instructions', () => {
       const builder = ContextTypeBuilder.make();
-      const ftype = builder.addAccessor('a', integerType());
+      const ftype = addAccessorFor(builder, 'a', integerType());
       const recordedCalls = collectCallsForFunctionType(ftype);
 
       expect(recordedCalls).toEqual(['loadInteger']);
@@ -116,7 +138,7 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('creates function taking an integer, returning nothing', () => {
       const builder = ContextTypeBuilder.make();
-      const fbuild = builder.addInitialSet('a', ['a'], integerType());
+      const fbuild = builder.addInitialSet('<initSet>:(a)', ['a'], integerType());
       const ftype = fbuild.functionType()!;
 
       expect(ftype.parameters().uid()).toEqual(integerType().uid());
@@ -230,8 +252,8 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('tallies size in bytes correctly', () => {
       const builder = ContextTypeBuilder.make();
-      builder.addModifier('a', integerType());
-      builder.addModifier('b', integerType());
+      addModifierFor(builder, 'a', integerType());
+      addModifierFor(builder, 'b', integerType());
 
       const contextType = builder.objectType();
       expect(contextType.sizeInBytes()).toEqual(8);
@@ -239,7 +261,7 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('has correct look up name for modifier', () => {
       const builder = ContextTypeBuilder.make();
-      builder.addModifier(testFunctionName, integerType());
+      addModifierFor(builder, testFunctionName, integerType());
 
       const lookUpTable =
         lookUpOnObject(builder, mapToAssignment(testFunctionName));      
@@ -249,7 +271,7 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('has correct look up name for accessor', () => {
       const builder = ContextTypeBuilder.make();
-      builder.addAccessor(testFunctionName, integerType());
+      addAccessorFor(builder, testFunctionName, integerType());
 
       const lookUpTable = 
         lookUpOnObject(builder, mapToFringeAccessor(testFunctionName));

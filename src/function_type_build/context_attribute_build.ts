@@ -25,13 +25,10 @@ const ContextAttributeTypeBuild = freeze({
       }
       const asTupleTypes = mBasedOn.detuplify();
       if (!asTupleTypes) {
-        // set an error
-
         return setErrorMessage(
           `Expected tuple type for variable "${mAttr.variableName}" with tupleRank, got non-tuple type "${mBasedOn.name()}"`);
       }
       if (asTupleTypes.length <= mAttr.tupleRank) {
-        // set an error
         return setErrorMessage(
           `Tuple rank ${mAttr.tupleRank} out of bounds for variable "${mAttr.variableName}" with type "${mBasedOn.name()}"`);
       }
@@ -84,6 +81,7 @@ export const ContextModifierBuild = freeze({
         FunctionNamingSchema.mapToFringeAccessor(variableName);
       const ftype = mInProgressType.lookUp(fringeName)?.byParameters(emptyTuple());
       if (!ftype) {
+        
         throw new Error(`Cannot find fringe accessor "${fringeName}" for variable "${variableName}"`);
       }
       return ftype;

@@ -58,16 +58,20 @@ function make(mElement: LetNameElement) {
     }
     // nice overhead jackass
     variableNamesWithRank((name: string, tupleRank: number | undefined) => {
-      mDastLetDeclarationMap[mapToAssignment(name)] =
-        { value, tupleRank, functionKind: 'assignment' };
+      mDastLetDeclarationMap[mapToAssignment(name)] = {
+        value,
+        assignment: { tupleRank, variableName: name }
+      };
     });
     return mDastLetDeclarationMap;
   });
 
   const fringeAccessorNames = memoize((): DastDeclarationMap => {
     variableNamesWithRank((name: string, tupleRank: number | undefined) => {
-      mDastLetDeclarationMap[mapToFringeAccessor(name)] =
-        { value, tupleRank, functionKind: 'accessor' };
+      mDastLetDeclarationMap[mapToFringeAccessor(name)] = {
+        value,
+        accessor: { tupleRank, variableName: name }
+      };
     });
     return mDastLetDeclarationMap;
   });
@@ -79,9 +83,10 @@ function make(mElement: LetNameElement) {
     if (initSetName) {
       mDastLetDeclarationMap[initSetName] = {
         value,
-        functionKind: 'initialSet',
-        variableNames: variableNames(),
-        dependeeNames
+        initialSet: {
+          variableNames: variableNames()!,
+          dependeeNames
+        }
       };
     }
     return mDastLetDeclarationMap;

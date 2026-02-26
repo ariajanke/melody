@@ -49,8 +49,6 @@ describeNamed({ DastBuild }, () => {
   }
 
   function namesOfDefs(defs: DastFunctionNameMappings) {
-    // return defs.map(def => (def as DastLetDeclarationSingle)?.name ??
-    //                        (def as DastLetDeclarationMany)?.names.join(','));
     return Object.keys(defs.declaredNames);
   }
 
@@ -119,9 +117,9 @@ describeNamed({ DastBuild }, () => {
         visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
           const initSet = defs.declaredNames['<initSet>:(a)'];
-          expect(initSet?.functionKind).toEqual('initialSet');
-          expect(initSet?.variableNames).toEqual(['a']);
-          expect(initSet?.dependeeNames).toEqual([]);
+          expect(initSet?.initialSet).toBeDefined();
+          expect(initSet?.initialSet?.variableNames).toEqual(['a']);
+          expect(initSet?.initialSet?.dependeeNames).toEqual([]);
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -133,7 +131,7 @@ describeNamed({ DastBuild }, () => {
         ...DastVisitor.makeDefaultingToContinue(),
         visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect(defs.declaredNames['.a']?.functionKind).toEqual('accessor');
+          expect(defs.declaredNames['.a']?.accessor).toBeDefined();
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -189,8 +187,9 @@ describeNamed({ DastBuild }, () => {
         ...DastVisitor.makeDefaultingToContinue(),
         visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect(defs.declaredNames['<initSet>:(b)']?.dependeeNames).
-            toEqual(['.a']);
+          const initialSet = defs.declaredNames['<initSet>:(b)']?.initialSet;
+          expect(initialSet).toBeDefined();
+          expect(initialSet?.dependeeNames).toEqual(['.a']);
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -227,7 +226,7 @@ describeNamed({ DastBuild }, () => {
           ...DastVisitor.makeDefaultingToContinue(),
           visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
             hitsAtExactly(1);
-            const initSet = defs.declaredNames[`<initSet>:(${name})`];
+            const initSet = defs.declaredNames[`<initSet>:(${name})`]?.initialSet;
             expect(initSet?.variableNames).toEqual([name]);
           }
         });
@@ -248,8 +247,9 @@ describeNamed({ DastBuild }, () => {
         ...DastVisitor.makeDefaultingToContinue(),
         visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect(defs.declaredNames['<initSet>:(a,b)']?.dependeeNames).
-            toEqual(['.t']);
+          const initialSet = defs.declaredNames['<initSet>:(a,b)']?.initialSet;
+          expect(initialSet).toBeDefined();
+          expect(initialSet?.dependeeNames).toEqual(['.t']);
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -281,7 +281,8 @@ describeNamed({ DastBuild }, () => {
             const accessor = defs.declaredNames[`.${name}`];
             expect(accessor).toBeDefined();
             expect(accessor?.value.asString()).toEqual('t');
-            expect(accessor?.tupleRank).toEqual(name === 'a' ? 0 : 1);
+            expect(accessor?.accessor).toBeDefined();
+            expect(accessor?.accessor?.tupleRank).toEqual(name === 'a' ? 0 : 1);
           }
         });
         expect(verifyHit()).toBeTruthy();

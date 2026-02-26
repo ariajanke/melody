@@ -4,8 +4,11 @@ const { freeze } = Helpers;
 
 const kInitialSetNamePrefix = '<initSet>:';
 
-function mapToInitialSetName(names: string | readonly string[]): string {
+function mapToInitialSetName(names: string | readonly string[]): string {  
   if (typeof names === 'string') {
+    if (names.indexOf(kInitialSetNamePrefix) === 0) {
+      throw new Error(`Unexpected initial set name "${names}"`);
+    }
     return `${kInitialSetNamePrefix}(${names})`;
   }
   return mapToInitialSetName(names.join(','));

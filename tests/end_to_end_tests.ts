@@ -17,39 +17,39 @@ describe('end-to-end', () => {
     describe(`with a ${name}`, () => {
       const doRun = makeExampleRunner(getEntryPoint);
 
-      xdescribe('basic functionality', () => {
+      describe('basic functionality', () => {
         doRun(`runs "Hello World!"`, `
           puts('Hello world!')
         `, ['Hello world!']);
 
-        doRun(`runs simple arithmetic`, `
-          let a = 1 + 2 * 3
-          let b = a - 4
-          puts(a, b)
-        `, ['7', '3']);
+        // doRun(`runs simple arithmetic`, `
+        //   let a = 1 + 2 * 3
+        //   let b = a - 4
+        //   puts(a, b)
+        // `, ['7', '3']);
           
-        doRun(`runs function call`, `
-          let f = fn
-            puts('Hello world!')
-          ~
-          f()
-        `, ['Hello world!']);
+        // doRun(`runs function call`, `
+        //   let f = fn
+        //     puts('Hello world!')
+        //   ~
+        //   f()
+        // `, ['Hello world!']);
 
-        doRun(`runs a simple load and store`, `
-          let a := 10
-          a := 5
-          puts(a)
-        `, ['5']);
+        // doRun(`runs a simple load and store`, `
+        //   let a := 10
+        //   a := 5
+        //   puts(a)
+        // `, ['5']);
 
-        doRun(`runs function object reassignment`, `
-          let f := fn
-            puts('Hello world!')
-          ~
-          f := fn
-            puts('Goodbye world!')
-          ~
-          f()
-        `, ['Goodbye world!']);
+        // doRun(`runs function object reassignment`, `
+        //   let f := fn
+        //     puts('Hello world!')
+        //   ~
+        //   f := fn
+        //     puts('Goodbye world!')
+        //   ~
+        //   f()
+        // `, ['Goodbye world!']);
       });
 
       xdescribe('tuple trouble', () => {

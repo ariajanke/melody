@@ -1,7 +1,6 @@
 import { DastBuildVisitor } from './dast_build/dast_build_visitor';
 import { DastNode_ } from './dast_build/dast_node';
 import { DastVisitor_ } from './dast_build/dast_visitor';
-import { ContextFunctionGroup } from './function_naming_schema';
 import { Helpers, StandardErrorMessage } from './helpers';
 import { IastNode } from './iast_node';
 
@@ -27,27 +26,27 @@ export const DastVisitor = DastVisitor_;
 
 // export type DastLetDeclaration =
 //   DastLetDeclarationSingle | DastLetDeclarationMany;
-export interface DastLetDeclaration {
-  functionKind: ContextFunctionGroup;
+// export interface DastLetDeclaration {
+//   functionKind: ContextFunctionGroup;
 
-  // it seems that value can't always be here
-  // (e.g. for let (a, b) = t)
-  // alternatively it's value could be the nth member of some tuple on an initialSet
-  value: DastNode;
-  tupleRank?: number;
+//   // it seems that value can't always be here
+//   // (e.g. for let (a, b) = t)
+//   // alternatively it's value could be the nth member of some tuple on an initialSet
+//   value: DastNode;
+//   tupleRank?: number;
 
-  variableNames: Readonly<string[]>;
+//   variableNames: Readonly<string[]>;
   
-  // defined if functionKind is 'initialSet'
-  dependeeNames?: Readonly<string[]>;  
-};
+//   // defined if functionKind is 'initialSet'
+//   dependeeNames?: Readonly<string[]>;  
+// };
 
 export interface DastAttributeDeclaration {
   tupleRank?: number;
   variableName: string;
 };
 
-export interface DastLetDeclarationN {
+export interface DastLetDeclaration {
   // functionKind: ContextFunctionGroup;
 
   // it seems that value can't always be here

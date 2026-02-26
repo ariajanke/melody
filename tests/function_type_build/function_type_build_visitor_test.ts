@@ -17,13 +17,15 @@ describeNamed({ FunctionTypeBuildVisitor }, () => {
     const fInitialSetNode = DastInitialSet.make('f', nestedFuncNode);
     const declaredNames: DastDeclarationMap = {
       ['.f']: {
-        functionKind: 'accessor',
+        accessor: { variableName: 'f' },
         value: nestedFuncNode
       },
       ['<initSet>:(f)']: {
-        functionKind: 'initialSet',
         value: nestedFuncNode,
-        variableNames: ['f']
+        initialSet: {
+          variableNames: ['f'],
+          dependeeNames: []
+        }
       }
     };
     const fdefs = { pendingNames: {}, declaredNames };
