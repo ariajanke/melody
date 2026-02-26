@@ -29,6 +29,8 @@ function make
       map(build => build.node() ?? setErrorFn(build.error));
     if (!nodes || nodes.some((n: DastNode | undefined) => !n))
       { return undefined; }
+    // I should force a raise ffs
+    pendingNames_();
     return nodes as DastNode[];
   });
 
