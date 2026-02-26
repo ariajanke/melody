@@ -1,6 +1,6 @@
 import { CallBackObjectHold } from '../call_back_object_hold';
 import {
-  DastLetDeclarations,
+  DastFunctionNameMappings,
   DastNode,
   DastVisitor
 } from '../dast_build';
@@ -48,7 +48,7 @@ function make
   }
 
   function visitFunctionDefinition
-    (defs: DastLetDeclarations, _1: Readonly<string[]>, nodes: Readonly<DastNode[]>): FunctionTypeBuild
+    (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>): FunctionTypeBuild
   {
     const defBuild = FunctionDefinitionBuild.
       make(defs, nodes, mBuildCache.checkCachedBuild,

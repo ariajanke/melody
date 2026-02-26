@@ -7,6 +7,8 @@ import { Helpers, StandardError } from '../helpers';
 
 const { freeze, memoize } = Helpers;
 
+// builds the whole "let a := stuff"
+// after "<initSet>:(a)" has been added
 export const InitialSetBuild = freeze({
   make(mNamesDefined: readonly string[] | string, 
        mArgsBuild: FunctionTypeBuild,

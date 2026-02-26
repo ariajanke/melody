@@ -1,3 +1,4 @@
+import { DastDeclarationMap } from '../../src/dast_build';
 import { DastFunctionDefintion, DastInitialSet } from '../../src/dast_build/dast_node_specializations';
 import { FunctionType } from '../../src/function_type_build';
 import { FunctionTypeBuildVisitor } from '../../src/function_type_build/function_type_build_visitor';
@@ -11,17 +12,23 @@ describeNamed({ FunctionTypeBuildVisitor }, () => {
   it('creates exactly two function types for a nested function definition', () => {
     const registry = FunctionTypeRegistry.make();
     const visitor = FunctionTypeBuildVisitor.make(StringPoolBuilder.make(), registry);
-    const nestedFuncNode = DastFunctionDefintion.make([], [], []);
-    const defs = [
-      {
-        name: 'f',
-        operator: '=',
-        dependeeNames: [],
-        value: nestedFuncNode
-      }
-    ];
+    const nestedFuncNode = DastFunctionDefintion.
+      make({ pendingNames: {}, declaredNames: {} }, []);
     const fInitialSetNode = DastInitialSet.make('f', nestedFuncNode);
-    const root = DastFunctionDefintion.make(defs, [], [fInitialSetNode]);
+    const declaredNames: DastDeclarationMap = {
+      ['.f']: {
+        functionKind: 'accessor',
+        value: nestedFuncNode
+      },
+      ['<initSet>:(f)']: {
+        functionKind: 'initialSet',
+        value: nestedFuncNode,
+        variableNames: ['f']
+      }
+    };
+    const fdefs = { pendingNames: {}, declaredNames };
+    
+    const root = DastFunctionDefintion.make(fdefs, [fInitialSetNode]);
     root.visit(visitor);
     const { verifyHit, hitsAtExactly } = ReachPoint.make();
     registry.forEach((_0: FunctionType, _1: FunctionType) => {

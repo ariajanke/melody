@@ -2,13 +2,13 @@ import { Helpers, StandardError } from '../helpers';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { ContextBuild } from './context_build';
 import { FunctionSequenceStackCleanUp } from './function_sequence_stack_clean_up';
-import { DastLetDeclarations, DastNode } from '../dast_build';
+import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { HoldContextTypeFunction } from './function_type_build_visitor';
 
 const { freeze, memoize } = Helpers;
 
 function make
-  (mDefs: DastLetDeclarations,
+  (mDefs: DastFunctionNameMappings,
    mNodes: Readonly<DastNode[]>,
    // last two params are tightly coupled, guh
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,
@@ -20,7 +20,7 @@ function make
   return freeze({
     functionType: memoize(() => {
       const contextBuild = ContextBuild.
-        make(mDefs,
+        make(mDefs.declaredNames,
              mIntoFunctionTypeBuild,
              mHoldAsContextType);
       
@@ -31,9 +31,16 @@ function make
 
       // NOTE remember, memoization
       const getContextType = contextBuild.contextType as () => ObjectType;
+      
       return mHoldAsContextType(getContextType, () => {
-        const cleanUpBuild = FunctionSequenceStackCleanUp.
-          make(mNodes.map(mIntoFunctionTypeBuild));
+        
+        // const contextType = contextBuild.contextType();
+        // if (!contextType) {
+        //   return setErrorFn(contextBuild.error);
+        // }
+
+        const subBuilds = mNodes.map(mIntoFunctionTypeBuild);
+        const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
         const compositeFunctionType = cleanUpBuild.functionType();
         if (!compositeFunctionType)
           { return setErrorFn(cleanUpBuild.error); }

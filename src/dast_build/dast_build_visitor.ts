@@ -1,7 +1,7 @@
 import {
   DastBuild,
-  DastLetDeclarationMap,
-  DastNode
+  DastNode,
+  WritableDastDeclarationMap
 } from '../dast_build';
 import { Helpers, StandardError } from '../helpers';
 import { IastNode, IastVisitor } from '../iast_node';
@@ -29,7 +29,7 @@ const visitFringe = makeVisitFringe(DastNode_.makeFringe);
 
 function make() {
   const mDeclarationHolder = CallBackObjectHold.
-    make<DastLetDeclarationMap>('let declaration stack not set up yet');
+    make<WritableDastDeclarationMap>('let declaration stack not set up yet');
   const { currentObject } = mDeclarationHolder;
   const intoDastBuild = (node: IastNode) => node.visit(inst);
   function visitLet(innerNode: IastNode) {

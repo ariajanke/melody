@@ -106,7 +106,7 @@ describeNamed({ ContextTypeBuilder }, () => {
     function createSampleTupleFunctionBuild(names = ['a', 'b']): FunctionTypeBuild {
       const builder = ContextTypeBuilder.make();
       const tupleType = integerPairType();
-      return builder.addInitialSet(names, tupleType);
+      return builder.addInitialSet(mapToInitialSetName(names), names, tupleType);
     }
     
     function createSampleTupleFunctionType(): FunctionType {
@@ -116,7 +116,7 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('creates function taking an integer, returning nothing', () => {
       const builder = ContextTypeBuilder.make();
-      const fbuild = builder.addInitialSet('a', integerType());
+      const fbuild = builder.addInitialSet('a', ['a'], integerType());
       const ftype = fbuild.functionType()!;
 
       expect(ftype.parameters().uid()).toEqual(integerType().uid());
@@ -259,7 +259,10 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('has correct look up name for single initial set', () => {
       const builder = ContextTypeBuilder.make();
-      builder.addInitialSet(testFunctionName, integerType());
+      builder.
+        addInitialSet(mapToInitialSetName(testFunctionName),
+                      [testFunctionName],
+                      integerType());
 
       const lookUpTable =
         lookUpOnObject(builder, mapToInitialSetName(testFunctionName)); 
@@ -269,7 +272,11 @@ describeNamed({ ContextTypeBuilder }, () => {
 
     it('has correct look up name for tuple initial set', () => {
       const builder = ContextTypeBuilder.make();
-      builder.addInitialSet(['a', 'b'], integerPairType());
+      const names = ['a', 'b'];
+      builder.
+        addInitialSet(mapToInitialSetName(names),
+                      names,
+                      integerPairType());
 
       const lookUpTable =
         lookUpOnObject(builder, mapToInitialSetName(['a', 'b'])); 

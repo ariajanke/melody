@@ -3,9 +3,9 @@ import { Token } from '../src/token';
 import { IastNode } from '../src/iast_node';
 import {
   DastBuild,
-  DastLetDeclarationMany,
-  DastLetDeclarations,
-  DastLetDeclarationSingle,
+  
+  
+  DastFunctionNameMappings,
   DastNode,
   DastVisitor,
   ReseatableDastVisitor
@@ -48,6 +48,12 @@ describeNamed({ DastBuild }, () => {
     return makeFunctionDefinition([makeLetDeclation(innerNode)]);
   }
 
+  function namesOfDefs(defs: DastFunctionNameMappings) {
+    // return defs.map(def => (def as DastLetDeclarationSingle)?.name ??
+    //                        (def as DastLetDeclarationMany)?.names.join(','));
+    return Object.keys(defs.declaredNames);
+  }
+
   describe('For fragment with a function defintion but no let declarations', () => {
     // equivalent to:
     // let b = fn a
@@ -60,20 +66,16 @@ describeNamed({ DastBuild }, () => {
     ]));
     const visitDnode = makeVisitDNode(root);
 
-    function namesOfDefs(defs: DastLetDeclarations) {
-      return defs.map(def => (def as DastLetDeclarationSingle)?.name ??
-                             (def as DastLetDeclarationMany)?.names.join(','));
-    }
-
     it('visits a function definition twice', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       
       let depth = 0;
       visitDnode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, nodes: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) {
           if (depth === 0) {
-            expect(namesOfDefs(defs)).toEqual(['b']);
+            expect(namesOfDefs(defs).sort()).
+              toEqual(['.b', '<initSet>:(b)']);
           } else if (depth === 1) {
             expect(namesOfDefs(defs)).toEqual([]);
           } else {
@@ -82,9 +84,9 @@ describeNamed({ DastBuild }, () => {
           // once: top level function definition with "b"
           // once      : nested function definition on "nodes" side
           // once again: nested function definition on "defs" side
-          hitsAtExactly(3);
+          hitsAtExactly(2);
           ++depth;
-          defs[0]?.value?.visit(this);
+          defs.declaredNames['b']?.value?.visit(this);
           nodes.forEach(node => node.visit(this));
           --depth;
         }
@@ -114,19 +116,53 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDnode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect(defs.length).toEqual(1);
-          const def = defs[0];
-          expect(def.dependeeNames.length).toEqual(0);
-          expect(def.operator).toEqual('=');
-          expect((def as DastLetDeclarationSingle).name).toEqual('a');
+          const initSet = defs.declaredNames['<initSet>:(a)'];
+          expect(initSet?.functionKind).toEqual('initialSet');
+          expect(initSet?.variableNames).toEqual(['a']);
+          expect(initSet?.dependeeNames).toEqual([]);
         }
       });
       expect(verifyHit()).toBeTruthy();
     });
-    // do defs contain an "a"
-    // does this def contain no dependee names?
+
+    it('contains a definition for an accessor', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      visitDnode({
+        ...DastVisitor.makeDefaultingToContinue(),
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+          hitsAtExactly(1);
+          expect(defs.declaredNames['.a']?.functionKind).toEqual('accessor');
+        }
+      });
+      expect(verifyHit()).toBeTruthy();
+    });
+
+    it('does not contain a definition for an assignment', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      visitDnode({
+        ...DastVisitor.makeDefaultingToContinue(),
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+          hitsAtExactly(1);
+          expect(defs.declaredNames['a:=']).toBeUndefined();
+        }
+      });
+      expect(verifyHit()).toBeTruthy();
+    });
+    
+    it('has a definition whose value is "1"', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      visitDnode({
+        ...DastVisitor.makeDefaultingToContinue(),
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+          hitsAtExactly(1);
+          const initSet = defs.declaredNames['<initSet>:(a)'];
+          expect(initSet?.value.asString()).toEqual('1');
+        }
+      });
+      expect(verifyHit()).toBeTruthy();
+    });
   });
 
   describe('For fragment "let b = a + 1"', () => {
@@ -139,9 +175,9 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _1: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect((defs[0] as DastLetDeclarationSingle).name).toEqual('b');
+          expect(defs.declaredNames['.b']).toBeDefined();
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -151,9 +187,10 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect(defs[0].dependeeNames).toEqual(['.a']);
+          expect(defs.declaredNames['<initSet>:(b)']?.dependeeNames).
+            toEqual(['.a']);
         }
       });
       expect(verifyHit()).toBeTruthy();
@@ -171,38 +208,31 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect(defs.length).toEqual(2);
+          expect(defs.declaredNames['<initSet>:(a)']).toBeDefined();
+          expect(defs.declaredNames['<initSet>:(b)']).toBeDefined();
         }
       });
       expect(verifyHit()).toBeTruthy();
     });
 
-    it('seperate definitions contains correct names', () => {
-      const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      visitDNode({
-        ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
-          hitsAtExactly(1);
-          const names = defs.map(def => (def as DastLetDeclarationSingle)?.name).sort();
-          expect(names).toEqual(['a', 'b']);
-        }
-      });
-      expect(verifyHit()).toBeTruthy();
-    });
-
-    it('contains seperate initial sets', () => {
-      const namesFound: string[] = [];
-      visitDNode({
-        ...DastVisitor.makeDefaultingToContinue(),
-        visitInitialSet(names: readonly string[] | string, _1: DastNode) {
-          if (typeof names === 'string') {
-            namesFound.push(names);
+    [
+      'a',
+      'b'
+    ].forEach((name: string) => {
+      it(`initial set for "${name}" contains the variable name for itself`, () => {
+        const { hitsAtExactly, verifyHit } = ReachPoint.make();
+        visitDNode({
+          ...DastVisitor.makeDefaultingToContinue(),
+          visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+            hitsAtExactly(1);
+            const initSet = defs.declaredNames[`<initSet>:(${name})`];
+            expect(initSet?.variableNames).toEqual([name]);
           }
-        }
+        });
+        expect(verifyHit()).toBeTruthy();
       });
-      expect(namesFound.sort()).toEqual(['a', 'b']);
     });
   });
 
@@ -212,32 +242,50 @@ describeNamed({ DastBuild }, () => {
       makeTopNodes(makeCall(makeToken('='), abtuple, makeFringe('t'))));
     const visitDNode = makeVisitDNode(root);
 
-    it('contains two seperate definitions', () => {
+    it('contains an initial set which depends on "t"', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
           hitsAtExactly(1);
-          expect((defs[0] as DastLetDeclarationMany).names.length).toEqual(2);
+          expect(defs.declaredNames['<initSet>:(a,b)']?.dependeeNames).
+            toEqual(['.t']);
         }
       });
       expect(verifyHit()).toBeTruthy();
     });
 
-    it('contains a single initial set', () => {
-      const namesFound: string[] = [];
-      const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      visitDNode({
-        ...DastVisitor.makeDefaultingToContinue(),
-        visitInitialSet(names: readonly string[] | string, _1: DastNode) {
-          hitsAtExactly(1);
-          if (typeof names === 'object') {
-            namesFound.push(...names);
+    [
+      'a',
+      'b'
+    ].forEach((name: string) => {
+      it(`contains an accessor for "${name}"`, () => {
+        const { hitsAtExactly, verifyHit } = ReachPoint.make();
+        visitDNode({
+          ...DastVisitor.makeDefaultingToContinue(),
+          visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+            hitsAtExactly(1);
+            expect(defs.declaredNames[`.${name}`]).toBeDefined();
           }
-        }
+        });
+        expect(verifyHit()).toBeTruthy();
       });
-      expect(namesFound.sort()).toEqual(['a', 'b']);
-      expect(verifyHit()).toBeTruthy();
+
+      // must be rewritten for new schema in case of tuple
+      it(`contains accessor ".${name}" whose node and rank is correct`, () => {
+        const { hitsAtExactly, verifyHit } = ReachPoint.make();
+        visitDNode({
+          ...DastVisitor.makeDefaultingToContinue(),
+          visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+            hitsAtExactly(1);
+            const accessor = defs.declaredNames[`.${name}`];
+            expect(accessor).toBeDefined();
+            expect(accessor?.value.asString()).toEqual('t');
+            expect(accessor?.tupleRank).toEqual(name === 'a' ? 0 : 1);
+          }
+        });
+        expect(verifyHit()).toBeTruthy();
+      });
     });
   });
 
@@ -254,11 +302,41 @@ describeNamed({ DastBuild }, () => {
       const names: string[] = [];
       visitDNode({
         ...DastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(defs: DastLetDeclarations, _1: Readonly<string[]>, _2: Readonly<DastNode[]>) {
-          names.push(...defs.map(def => (def as DastLetDeclarationSingle).name));
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+
+          names.push(...Object.keys(defs.declaredNames));
         }
       });
-      expect(names).toEqual(['a', 'b']);
+      expect(names.sort()).
+        toEqual(['.a', '.b', '<initSet>:(a)', '<initSet>:(b)'].sort());
+    });
+  });
+
+  describe('For let declaration with a function', () => {
+    const root = memoize(() =>
+      makeTopNodes(makeCall(makeToken('='), makeFringe('f'),
+        makeFunctionDefinition([]))));
+    const visitDNode = makeVisitDNode(root);
+
+    it('contains an initial set which depends on the function definition', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      visitDNode({
+        ...DastVisitor.makeDefaultingToContinue(),
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+          hitsAtExactly(1);
+          // we don't expect to see if in the defs, why?
+          // because this is a kind of thing to show up when the context is
+          // actually built, consider the following case:
+          // let f = fn g
+          // let h = f
+          // ^ note that it's not obvious at DAST time that "h" is a function
+          // in this case, when we visit the function definition for g, we won't
+          expect(defs.declaredNames['f']).toBeUndefined();
+          expect(defs.declaredNames['.f']).toBeDefined();
+          expect(defs.declaredNames['<initSet>:(f)']).toBeDefined();
+        }
+      });
+      expect(verifyHit()).toBeTruthy();
     });
   });
 });

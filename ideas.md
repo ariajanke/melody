@@ -190,3 +190,27 @@ let f = fn
 
 f()
 ```
+### [complex example] The "Psuedo-Class"
+```melody
+let Rectangle = fn (a is type Numeric)
+  let klass = table
+    new = fn (left_ is a, top_ is a, width_ is a, height_ is a)
+      table
+        # each line is taken as a let
+        left := left_
+        top := top_
+        width := width_
+        height := height_
+        right fn left + width
+        bottom fn top + height
+      ~ 
+    ~
+    # self referential uses of variables will be difficult
+    # additionally "FunctionType(...)" will need to support reflection
+    type = klass.new.returns
+  ~
+~
+let IntRectangle = Rectangle(Integer)
+let r = IntRectangle.new(1, 2, 3, 4)
+puts(r.right)
+```

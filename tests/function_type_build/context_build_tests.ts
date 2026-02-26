@@ -1,8 +1,8 @@
 import { CodeWriter } from '../../src/code_writer';
-import { DastLetDeclaration, DastLetDeclarations } from '../../src/dast_build';
+import { DastDeclarationMap, WritableDastDeclarationMap } from '../../src/dast_build';
 import { DastNode_ } from '../../src/dast_build/dast_node';
 import { DastTuple } from '../../src/dast_build/dast_node_specializations';
-import { FunctionNamingSchema } from '../../src/function_naming_schema';
+import { ContextFunctionGroup, FunctionNamingSchema } from '../../src/function_naming_schema';
 import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
 import { IntegerType } from '../../src/function_type_build/builtin_type';
 import { ContextBuild } from '../../src/function_type_build/context_build';
@@ -34,7 +34,7 @@ describeNamed({ ContextBuild }, () => {
         (callDict['addAccessor'] ??= []).push(name);
         return dummyFtype;
       },
-      addInitialSet(name: string | readonly string[], _1: ObjectType)
+      addInitialSet(name: string, _1: Readonly<string[]>, _2: ObjectType)
         : FunctionTypeBuild
       {
         (callDict['addInitialSet'] ??= []).push(mapToInitialSetName(name));
@@ -77,7 +77,7 @@ describeNamed({ ContextBuild }, () => {
   });
 
   const makeContextBuild =
-    (callDict: { [name: string]: string[] }, defs: DastLetDeclarations) =>
+    (callDict: { [name: string]: string[] }, defs: DastDeclarationMap) =>
   ContextBuild.make(
     defs,
     turnIntoFTypeBuild,
@@ -85,34 +85,121 @@ describeNamed({ ContextBuild }, () => {
     makeContextBuilder(callDict)
   );
 
-  function singleX(operator: string): DastLetDeclaration {
-    return {
-      name: 'x',
-      operator,
-      value: makeInteger('1'),
-      dependeeNames: []
+  function integerFor(name: string): DastNode_ {
+    const kMap: { [name: string]: string } = {
+      'x': '1',
+      'y': '2'
     };
+    return makeInteger(kMap[name] ?? (() => { throw new Error(`Unknown name ${name}`); })());
   }
+
+  function singleFor(name: string, functionKind: ContextFunctionGroup): DastDeclarationMap {
+    const value = integerFor(name);
+    const dependeeNames: string[] = [];
+    const rv: WritableDastDeclarationMap = {
+      [FunctionNamingSchema.mapToFringeAccessor(name)]: {
+        value,
+        functionKind: 'accessor',
+        dependeeNames
+      },
+      [FunctionNamingSchema.mapToInitialSetName(name)]: {
+        value,
+        functionKind: 'initialSet',
+        variableNames: [name],
+        dependeeNames
+      }
+    };
+    if (functionKind === 'assignment') {
+      rv[FunctionNamingSchema.mapToAssignment(name)] = {
+        value,
+        functionKind: 'assignment',
+        dependeeNames
+      };
+    }
+    return rv;
+  }
+
+  // function singleX(functionKind: ContextFunctionGroup): DastDeclarationMap {
+  //   const value = makeInteger('1');
+  //   const dependeeNames: string[] = [];
+  //   const rv: WritableDastDeclarationMap = {
+  //     // I hate this :(
+  //     // but we need a structure that is easy to process
+  //     '.x': {
+  //       // dependeeNames,
+  //       value,
+  //       functionKind: 'accessor'
+  //     },
+  //     '<initSet>:(x)': {
+  //       dependeeNames,
+  //       value,
+  //       functionKind: 'initialSet',
+  //       variableNames: ['x']
+  //     },
+  //   };
+  //   if (functionKind === 'assignment') {
+  //     rv['x:='] = {
+  //       // dependeeNames,
+  //       value,
+  //       functionKind: 'assignment'
+  //     };
+  //   }
+  //   return rv;
+  //   // return {
+  //   //   name: 'x',
+  //   //   operator,
+  //   //   value: makeInteger('1'),
+  //   //   dependeeNames: []
+  //   // };
+  // }
 
   function makeContextBuildWithSingleX
-    (operator: string, callDict: { [name: string]: string[] })
+    (operator: ContextFunctionGroup, callDict: { [name: string]: string[] })
   {
-    return makeContextBuild(callDict, [singleX(operator)]);
+    return makeContextBuild(callDict, singleFor('x', operator));
   }
 
-  function makeValidPair(operator: string): DastLetDeclaration {
-    return {
-      names: ['x', 'y'],
-      operator,
-      value: makePair('1', '2'),
-      dependeeNames: []
-    };
+  function makeValidPair(operator: ContextFunctionGroup): DastDeclarationMap {
+    const pair = makePair('1', '2');
+    const forX = DastTuple.detuplify(pair)![0];
+    const forY = DastTuple.detuplify(pair)![1];
+    const rv: WritableDastDeclarationMap = {};
+    ([
+      ['x', forX],
+      ['y', forY]
+    ] as [string, DastNode_][]).forEach(([name, node]) => {
+      rv[FunctionNamingSchema.mapToFringeAccessor(name)] = {
+        value: node,
+        functionKind: 'accessor',
+        dependeeNames: []
+      };
+      rv[FunctionNamingSchema.mapToInitialSetName(name)] = {
+        value: node,
+        functionKind: 'initialSet',
+        variableNames: [name],
+        dependeeNames: []
+      };
+      if (operator === 'assignment') {
+        rv[`${name}:=`] = {
+          value: node,
+          functionKind: 'assignment',
+          dependeeNames: []
+        };
+      }
+    });
+    return rv;
+    // return {
+    //   names: ['x', 'y'],
+    //   operator,
+    //   value: makePair('1', '2'),
+    //   dependeeNames: []
+    // };
   }
 
-  describe('handling of ":=" operator', () => {
+  describe('handling of assignments', () => {
     it('defines a modifier, accessor, and initial set', () => {
       const callDict: { [name: string]: string[] } = {};
-      const contextBuild = makeContextBuildWithSingleX(':=', callDict);
+      const contextBuild = makeContextBuildWithSingleX('assignment', callDict);
 
       contextBuild.contextType();
       expect(callDict).toEqual({
@@ -125,15 +212,16 @@ describeNamed({ ContextBuild }, () => {
 
     it('defines functions for mutliple variables', () => {
       const callDict: { [name: string]: string[] } = {};
-      const contextBuild = makeContextBuild(callDict, [
-        singleX(':='),
-        {
-          name: 'y',
-          operator: ':=',
-          value: makeInteger('1'),
-          dependeeNames: []
-        }
-      ]);
+      const contextBuild = makeContextBuild(callDict, {
+        ...singleFor('x', 'assignment'),
+        ...singleFor('y', 'assignment')
+        // {
+        //   name: 'y',
+        //   operator: ':=',
+        //   value: makeInteger('1'),
+        //   dependeeNames: []
+        // }
+      });
       contextBuild.contextType();
       expect(callDict).toEqual({
         addDirectLookUp: ['puts'],
@@ -145,9 +233,9 @@ describeNamed({ ContextBuild }, () => {
 
     it('defines functions for tuple named definitions', () => {
       const callDict: { [name: string]: string[] } = {};
-      const contextBuild = makeContextBuild(callDict, [
-        makeValidPair(':=')
-      ]);
+      const contextBuild = makeContextBuild(callDict, 
+        makeValidPair('assignment')
+      );
       contextBuild.contextType();
       expect(callDict).toEqual({
         addDirectLookUp: ['puts'],
@@ -159,14 +247,15 @@ describeNamed({ ContextBuild }, () => {
 
     it('fails if tuple type does not match names', () => {
       const callDict: { [name: string]: string[] } = {};
-      const contextBuild = makeContextBuild(callDict, [
-        {
-          names: ['x'],
-          operator: ':=',
-          value: makePair('1', '2'),
-          dependeeNames: []
-        }
-      ]);
+      const contextBuild = makeContextBuild(callDict, {
+        [FunctionNamingSchema.mapToInitialSetName('t')]: 
+          {
+            functionKind: 'initialSet',
+            value: makePair('1', '2'),
+            variableNames: ['x', 'y', 'z'],
+            dependeeNames: []
+          }
+      });
       const result = contextBuild.contextType();
       expect(result).toBeUndefined();
       expect(contextBuild.error().message).
@@ -177,7 +266,7 @@ describeNamed({ ContextBuild }, () => {
   describe('handling of "=" operator', () => {
     it('defines a accessor, and initial set', () => {
       const callDict: { [name: string]: string[] } = {};
-      const contextBuild = makeContextBuildWithSingleX('=', callDict);
+      const contextBuild = makeContextBuildWithSingleX('accessor', callDict);
 
       contextBuild.contextType();
       expect(callDict).toEqual({
@@ -189,13 +278,13 @@ describeNamed({ ContextBuild }, () => {
 
     it('defines tuple named definitions', () => {
       const callDict: { [name: string]: string[] } = {};
-      const contextBuild = makeContextBuild(callDict, [
-        makeValidPair('=')
-      ]);
+      const contextBuild = makeContextBuild(callDict, 
+        makeValidPair('accessor')
+      );
       contextBuild.contextType();
       expect(callDict).toEqual({
         addDirectLookUp: ['puts'],
-        addAccessor: ['x', 'y'],
+        addAccessor: ['.x', '.y'],
         addInitialSet: ['<initSet>:(x,y)']
       });
     });

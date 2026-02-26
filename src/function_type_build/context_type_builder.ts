@@ -13,11 +13,23 @@ import { VariableTracker } from './variable_tracker';
 
 const { freeze, memoize } = Helpers;
 
+// export interface ContextTypeBuilder {
+//   addInitialSet(
+//     name: string | readonly string[], definedBy: ObjectType): FunctionTypeBuild;
+//   addModifier(name: string, definedBy: ObjectType): FunctionType;
+//   addAccessor(name: string, definedBy: ObjectType): FunctionType;
+//   addDirectLookUp(name: string, table: FunctionLookUpTable): ContextTypeBuilder;
+
+//   objectType(): ObjectType;
+// };
+
 export interface ContextTypeBuilder {
-  addInitialSet(
-    name: string | readonly string[], definedBy: ObjectType): FunctionTypeBuild;
-  addModifier(name: string, definedBy: ObjectType): FunctionType;
-  addAccessor(name: string, definedBy: ObjectType): FunctionType;
+  addInitialSet
+    (name: string,
+     brokenIntoVariables: Readonly<string[]>,
+     definedBy: ObjectType): FunctionTypeBuild;
+  addModifier(variableName: string, definedBy: ObjectType): FunctionType;
+  addAccessor(variableName: string, definedBy: ObjectType): FunctionType;
   addDirectLookUp(name: string, table: FunctionLookUpTable): ContextTypeBuilder;
 
   objectType(): ObjectType;
@@ -44,6 +56,9 @@ function make(): ContextTypeBuilder {
   }
 
   function addAccessor(name: string, definedBy: ObjectType): FunctionType {
+    if (FunctionNamingSchema.isAFringeAccessorName(name)) {
+      throw new Error(`Expected a variable name, got "${name}"`);
+    }
     const { type, accessIndex } = ensureVariablePresence(name, definedBy);
     const { emptyTuple } = TupleObjectFactory;
     const fType = ContextAttributeFactory.buildGetter(accessIndex, type);
@@ -84,7 +99,12 @@ function make(): ContextTypeBuilder {
       mLookUpTable[name] = table;
       return inst;
     },
+    // special names biting me in the ass :/
     addModifier(name: string, definedBy: ObjectType): FunctionType {
+      if (FunctionNamingSchema.isAnAssignmentName(name)) {
+        throw new Error(`Expected a variable name, got "${name}"`);
+      }
+
       addAccessor(name, definedBy);
       const { type, accessIndex } = ensureVariablePresence(name, definedBy);
       const getter = getterFor(name);
@@ -95,13 +115,21 @@ function make(): ContextTypeBuilder {
       return fType;
     },
     addAccessor,
-    addInitialSet(name: string | readonly string[], definedBy: ObjectType): FunctionTypeBuild {
-      const creation = InitialSetImplementation.make(name, definedBy, mVariableTracker);
+    // and we're going to unify the interface for this a bit
+    // making it no longer schema aware
+    addInitialSet(name: string, brokenInto: Readonly<string[]>, definedBy: ObjectType)
+      : FunctionTypeBuild
+    {
+      if (!FunctionNamingSchema.isAnInitialSetName(name)) {
+        throw new Error(`Expected an initial set name, got "${name}"`);
+      }
+      const creation = InitialSetImplementation.
+        make(brokenInto, definedBy, mVariableTracker);
       const ftype = creation.functionType();
       if (!ftype)
         { return creation; }
 
-      mLookUpTable[mapToInitialSetName(name)] = MutableFunctionTable.
+      mLookUpTable[name] = MutableFunctionTable.
         make().
         setDefinition(definedBy, ftype);
       return FunctionTypeBuildBase.makeSuccessFromType(ftype);

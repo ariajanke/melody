@@ -13,7 +13,7 @@ function mapToInitialSetName(names: string | readonly string[]): string {
 
 const kAssignmentOperator = ':=';
 
-export type DeclarationOperator = '=' | ':=' | 'initialSet';
+export type ContextFunctionGroup = 'initialSet' | 'assignment' | 'accessor';
 
 export const FunctionNamingSchema = freeze({
   kAssignmentOperator,
@@ -25,5 +25,9 @@ export const FunctionNamingSchema = freeze({
     `${name}${kAssignmentOperator}`,
   mapToFringeAccessor: (name: string) => `.${name}`,
   isAnInitialSetName: (name: string): boolean =>
-    name.indexOf(kInitialSetNamePrefix) === 0
+    name.indexOf(kInitialSetNamePrefix) === 0,
+  isAnAssignmentName: (name: string): boolean =>
+    name.endsWith(kAssignmentOperator),
+  isAFringeAccessorName: (name: string): boolean =>
+    name[0] === '.' && !name.endsWith(kAssignmentOperator)
 });

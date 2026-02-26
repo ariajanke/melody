@@ -30,7 +30,7 @@ export const DastNamesCollector = freeze({
   make(mScanBreadth: ScanOptions = 'full'): DastNamesCollector {
     const contextName = Token.kContextToken.content;
     const mNames: string[] = [];
-    const { mapToFringeAccessor } = FunctionNamingSchema;
+    const { mapToFringeAccessor, isAnAssignmentName } = FunctionNamingSchema;
 
     const mVisitor: DastVisitor<void> = freeze({
       visitFringe(v: string) {
@@ -43,7 +43,10 @@ export const DastNamesCollector = freeze({
       visitCall(callName: DastNode, receiver: DastNode, args: DastNode) {
         const name = callName.asString();
         if (name && receiver.asString() === contextName()) {
-          mNames.push(name, mapToFringeAccessor(name));
+          mNames.push(name);
+          if (!isAnAssignmentName(name)) {
+            mNames.push(mapToFringeAccessor(name));
+          }
         }
         
         receiver.visit(mVisitor);

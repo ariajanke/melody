@@ -1,7 +1,7 @@
 import { DastBuildVisitor } from './dast_build/dast_build_visitor';
 import { DastNode_ } from './dast_build/dast_node';
 import { DastVisitor_ } from './dast_build/dast_visitor';
-import { DeclarationOperator } from './function_naming_schema';
+import { ContextFunctionGroup } from './function_naming_schema';
 import { Helpers, StandardErrorMessage } from './helpers';
 import { IastNode } from './iast_node';
 
@@ -28,18 +28,48 @@ export const DastVisitor = DastVisitor_;
 // export type DastLetDeclaration =
 //   DastLetDeclarationSingle | DastLetDeclarationMany;
 export interface DastLetDeclaration {
-  // functionName: string; // e.g. <initSet>:(a) or, .a, a:=
-  intoVariableNames?: Readonly<string[]>; // e.g. for <initSet>:(a,b) -> [a, b], for <initSet>:(a) -> [a]
-  operator: DeclarationOperator;
-  dependeeNames: Readonly<string[]>;
+  functionKind: ContextFunctionGroup;
+
+  // it seems that value can't always be here
+  // (e.g. for let (a, b) = t)
+  // alternatively it's value could be the nth member of some tuple on an initialSet
   value: DastNode;
+  tupleRank?: number;
+  
+  // fields for initialSet
+  variableNames?: Readonly<string[]>; // e.g. for <initSet>:(a,b) -> [a, b], for <initSet>:(a) -> [a]
+  dependeeNames?: Readonly<string[]>;  
 };
 
-export interface DastLetDeclarationMap {
-  [functionName: string]: DastLetDeclaration;
-};
-export type DastLetDeclarationMaps = Readonly<DastLetDeclarationMap[]>;
+export interface DastLetDeclarationN {
+  // functionKind: ContextFunctionGroup;
 
+  // it seems that value can't always be here
+  // (e.g. for let (a, b) = t)
+  // alternatively it's value could be the nth member of some tuple on an initialSet
+  value: DastNode;
+  accessor?: {
+    tupleRank?: number;
+    variableName: string;
+  };
+  assignment?: {
+    tupleRank?: number;
+    variableName: string;
+  };
+  
+  // fields for initialSet
+  initialSet?: {
+    variableNames: Readonly<string[]>; // e.g. for <initSet>:(a,b) -> [a, b], for <initSet>:(a) -> [a]
+    dependeeNames: Readonly<string[]>;  
+  };
+};
+
+// export interface DastLetDeclarationMap {
+//   [functionName: string]: DastLetDeclaration;
+// };
+// export type DastLetDeclarationMaps = Readonly<DastLetDeclarationMap[]>;
+export type WritableDastDeclarationMap = { [functionName: string]: DastLetDeclaration };
+export type DastDeclarationMap = Readonly<WritableDastDeclarationMap>;
 export interface DastFunctionNameMappings {
   // name can represent a specific function name
   // we've decided the order of these things is important...
@@ -49,9 +79,31 @@ export interface DastFunctionNameMappings {
   //   dependeeNames: Readonly<string[]>;
   //   value: DastNode;
   // } | 'pending';
-  declarations: Readonly<DastLetDeclarationMap>;
+  // declarations: Readonly<DastLetDeclarationMap>;
+  // another thing that maps variable names to their respective functions
+  // the goal here is to make context building dead simple
+
+  // (let (a, b, ...) = t) evulates to a tuple
+  // (let a = t) evaluates to a fringe
+  // (let (a, b, ...) = (x, y, ...)) evaluates to a tuple
+
+  // <initSet>:(a,b,c) ->
+  //   
+
+  // declarations: Readonly<{
+  //   // var name to
+
+  //   [name: string]:  {
+  //     // its function name, e.g. <initSet>:(a) or .a or a:=
+      
+  //   } 
+  // }>;
+
+  declaredNames: DastDeclarationMap;
   pendingNames: Readonly<{ [name: string]: true }>;
 };
+
+
 // // Single declaration
 // {
 //   functionName: "<initSet>:(a)",

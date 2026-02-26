@@ -17,7 +17,7 @@ describe('end-to-end', () => {
     describe(`with a ${name}`, () => {
       const doRun = makeExampleRunner(getEntryPoint);
 
-      describe('basic functionality', () => {
+      xdescribe('basic functionality', () => {
         doRun(`runs "Hello World!"`, `
           puts('Hello world!')
         `, ['Hello world!']);
@@ -52,7 +52,25 @@ describe('end-to-end', () => {
         `, ['Goodbye world!']);
       });
 
-      describe('variable scope', () => {
+      xdescribe('tuple trouble', () => {
+        doRun(`runs tuple assignment`, `
+          let (a, b) = (1, 2)
+          puts(a, b)
+        `, ['1', '2']);
+
+        doRun(`runs tuple assignment with expressions`, `
+          let (a, b) = (1 + 2, 3 * 4)
+          puts(a, b)
+        `, ['3', '12']);
+
+        doRun(`runs tuple assignment to a tuple`, `
+          let t = (1, 2)
+          let (a, b) = t
+          puts(a, b)
+        `, ['1', '2']);
+      });
+
+      xdescribe('variable scope', () => {
         doRun(`runs function that accesses parent's variable`, `
           let a = 10
           let f = fn

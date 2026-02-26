@@ -1,7 +1,8 @@
-import { DastBuild, DastLetDeclarationMap } from '../dast_build';
+import { DastBuild, DastDeclarationMap, WritableDastDeclarationMap } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers, StandardError } from '../helpers';
 import { IastNode } from '../iast_node';
+import { DastTuple } from './dast_node_specializations';
 import { LetDeclarationsRetrieval, LetNameElement } from './let_declarations_retrieval';
 
 const { freeze, memoize } = Helpers;
@@ -9,6 +10,7 @@ const { freeze, memoize } = Helpers;
 // we'll have to name that old build to LetNameElementBuild
 const DastLetDeclarationBuild = freeze({
   make(mElement: LetNameElement) {
+    const { error, setErrorMessage } = StandardError.make();
     const { value, dependeeNames } = mElement;
     
     const {
@@ -18,49 +20,81 @@ const DastLetDeclarationBuild = freeze({
       kAssignmentOperator,
     } = FunctionNamingSchema;
 
-    const common = memoize(() => freeze({
-      dependeeNames,
-      value,
-      intoVariableNames:
-        (('name' in mElement) ?
-          [mElement.name] : mElement.names)
-    }));
+    const tupleCount = memoize(() => 
+      DastTuple.detuplify(mElement.value)?.length);
 
-    const mDastLetDeclarationMap: DastLetDeclarationMap = {};
+    const variableNames = memoize(() => {
+      if ('name' in mElement) {
+        return [mElement.name];
+      }
+      if (tupleCount() === undefined) {
+        // NOTE rhs maybe a single identifier, but may still be a tuple
+        //      e.g. let (a, b) = t, where t is a tuple
+        //      which we cannot know at DAST time
+        return mElement.names;
+      }
+      if (tupleCount() !== mElement.names.length) {
+        return setErrorMessage(`Tuple count (${tupleCount()}) does not match ` +
+                               `variable count (${mElement.names.length})`);
+      }
+      return mElement.names;
+    });
 
-    const intoVariableNames = () => common().intoVariableNames;
+    const variableNamesWithRank =
+      (fn: (name: string, idx: number | undefined) => void): void =>
+    {
+      variableNames()?.forEach((name: string, idx: number | undefined) => {
+        // a variable name has a rank in only one condition:
+        // when the value node is a tuple
+        idx = (tupleCount() || 'name' in mElement) ? undefined : idx;
+        fn(name, idx);
+      });
+    };
 
-    const assignmentNames = memoize((): DastLetDeclarationMap => {
+    type WritableDeclMap = WritableDastDeclarationMap;
+
+    const mDastLetDeclarationMap: WritableDeclMap = {};
+
+    const assignmentNames = memoize((): DastDeclarationMap => {
       if (mElement.operator !== kAssignmentOperator) {
         return mDastLetDeclarationMap;
       }
       // nice overhead jackass
-      intoVariableNames().forEach((name: string) => {
+      variableNamesWithRank((name: string, tupleRank: number | undefined) => {
         mDastLetDeclarationMap[mapToAssignment(name)] =
-          { ...common(), operator: ':=' };
+          { value, tupleRank, functionKind: 'assignment' };
       });
       return mDastLetDeclarationMap;
     });
 
-    const fringeAccessorNames = memoize((): DastLetDeclarationMap => {
-      intoVariableNames().
-      forEach((name: string) => {
+    const fringeAccessorNames = memoize((): DastDeclarationMap => {
+      variableNamesWithRank((name: string, tupleRank: number | undefined) => {
         mDastLetDeclarationMap[mapToFringeAccessor(name)] =
-          ({ ...common(), operator: '=' });
+          { value, tupleRank, functionKind: 'accessor' };
       });
       return mDastLetDeclarationMap;
     });
 
 
-    const initialSetName = memoize((): DastLetDeclarationMap => {
-      mDastLetDeclarationMap[mapToInitialSetName(intoVariableNames())] =
-        { ...common(), operator: 'initialSet' };
+    const initialSetName = memoize((): DastDeclarationMap => {
+      const initSetName =
+        variableNames() && mapToInitialSetName(variableNames()!);
+      if (initSetName) {
+        mDastLetDeclarationMap[initSetName] = {
+          value,
+          functionKind: 'initialSet',
+          variableNames: variableNames(),
+          dependeeNames
+        };
+      }
       return mDastLetDeclarationMap;
     });
 
     return freeze({
-      fullNames: memoize((): DastLetDeclarationMap =>
-        assignmentNames() && fringeAccessorNames() && initialSetName())
+      fullNames: memoize((): DastDeclarationMap | undefined =>
+        variableNames() && assignmentNames() && fringeAccessorNames() &&
+        initialSetName()),
+      error
     });
   }
 });
@@ -68,7 +102,7 @@ const DastLetDeclarationBuild = freeze({
 function make
   (mInnerNode: IastNode,
    mIntoDastBuild: (node: IastNode) => DastBuild,
-   mCurrentDeclarations: () => DastLetDeclarationMap): DastBuild
+   mCurrentDeclarations: () => WritableDastDeclarationMap): DastBuild
 {
   const mRetrieval = LetDeclarationsRetrieval.make(mInnerNode, mIntoDastBuild);
 
@@ -78,21 +112,27 @@ function make
 
   const declarationBuilds = memoize(() => {
     if (!elements())
-      { return []; }
-    return elements()?.map(element => DastLetDeclarationBuild.make(element).fullNames()) ?? [];
+      { return undefined; }
+    const rv = elements()?.map((element: LetNameElement) => {
+      const { fullNames, error } = DastLetDeclarationBuild.make(element);
+      return fullNames() ?? setErrorFn(error);
+    });
+    if (rv?.some((declarationMap) => !declarationMap))
+      { return undefined; }
+    return rv as DastDeclarationMap[];
   });
 
   const node = memoize(() => {
     if (!elements() || !dastNode()) {
       setErrorFn(mRetrieval.error);
       return undefined;
+    } else if (!declarationBuilds()) {
+      return undefined;
     }
 
     // I'm going to have to throw "order" away :(
-    elements()!.map((element: LetNameElement) => {
-      return DastLetDeclarationBuild.make(element).fullNames();
-    });
-    for (const declarationMap of  declarationBuilds()) {
+    
+    for (const declarationMap of declarationBuilds()!) {
       for (const name in declarationMap) {
         if (mCurrentDeclarations()[name]) {
           return setErrorMessage(`Duplicate declaration of "${name}"`);

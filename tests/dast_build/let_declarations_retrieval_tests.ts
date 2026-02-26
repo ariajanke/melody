@@ -110,7 +110,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     const elements = retrieval.elements();
     expect(elements?.length).toBe(1);
     expect([...elements![0].dependeeNames].sort()).
-      toEqual(['.x', 'f']);
+      toEqual(['.f', '.x', 'f'].sort());
   });
 
   it('captures a dependee resulting from an assignment', () => {

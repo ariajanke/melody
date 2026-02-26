@@ -1,5 +1,5 @@
 import { CallBackObjectHold } from '../call_back_object_hold';
-import { DastBuild, DastLetDeclarationMap, DastNode } from '../dast_build';
+import { DastBuild, DastNode, WritableDastDeclarationMap } from '../dast_build';
 import { StandardError } from '../helpers';
 import { IastNode } from '../iast_node';
 import { Helpers } from '../helpers';
@@ -11,10 +11,10 @@ const { freeze, memoize } = Helpers;
 function make
   (mNodes: Readonly<IastNode[]>,
    mIntoDastBuild: (node: IastNode) => DastBuild,
-   mObjectHolder: CallBackObjectHold<DastLetDeclarationMap>
+   mObjectHolder: CallBackObjectHold<WritableDastDeclarationMap>
   ): DastBuild
 {
-  const mDeclarations: DastLetDeclarationMap = {};
+  const mDeclarations: WritableDastDeclarationMap = {};
 
   const { error, setErrorFn } = StandardError.make();
   const { withHeldObject, currentObject } = mObjectHolder;
@@ -55,13 +55,13 @@ function make
 
   const node = memoize(() => {
     // NOTE order of operations is important here
-    const declarations = finishedDeclarations();
+    const declaredNames = finishedDeclarations();
     const nodes = finishedNodes();
     const pendingNames = pendingNames_();
-    if (!nodes || !declarations)
+    if (!nodes || !declaredNames)
       { return undefined; }
     return DastFunctionDefintion.
-      make({ declarations, pendingNames }, [...nodes]);
+      make({ declaredNames, pendingNames }, [...nodes]);
   });
 
   return freeze({ error, node });
