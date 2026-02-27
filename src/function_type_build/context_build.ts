@@ -13,6 +13,8 @@ export interface ContextBuild {
   error(): StandardErrorMessage;
 }
 
+// need a implied accessor method build
+
 function make
   (mDefs: DastDeclarationMap,
    mIntoFastBuild: (dnode: DastNode) => FunctionTypeBuild,

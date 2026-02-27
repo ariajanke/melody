@@ -73,6 +73,7 @@ export interface DastLetDeclaration {
 export type WritableDastDeclarationMap = { [functionName: string]: DastLetDeclaration };
 export type DastDeclarationMap = Readonly<WritableDastDeclarationMap>;
 export interface DastFunctionNameMappings {
+  name: string;
   declaredNames: DastDeclarationMap;
   pendingNames: Readonly<{ [name: string]: true }>;
 };

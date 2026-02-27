@@ -4,11 +4,8 @@ import type {
   DastNode,
   ReseatableDastVisitor
 } from '../dast_build';
-// import { DeclarationOperator } from '../function_naming_schema';
 
 const { freeze } = Helpers;
-
-
 
 export interface DastVisitor_<ResultType = void> {
   visitString(v: string): ResultType;
@@ -21,9 +18,6 @@ export interface DastVisitor_<ResultType = void> {
     nameMappings: DastFunctionNameMappings,
     nodes: Readonly<DastNode[]>):
     ResultType;
-  // visitFunctionDefinition(
-
-  // )
 }
 
 function visitFringe(_0: string) {}

@@ -5,8 +5,15 @@ import { IastNode } from '../iast_node';
 import { Helpers } from '../helpers';
 import { DastFunctionDefintion } from './dast_node_specializations';
 import { DastNamesCollector } from './dast_names_collector';
+import { FunctionNamingSchema } from '../function_naming_schema';
 
 const { freeze, memoize } = Helpers;
+
+const makeUniqueName = (() => {
+  let count = 0;
+  return () =>
+    FunctionNamingSchema.uniqueFrameNameFor(count++);
+})();
 
 function make
   (mNodes: Readonly<IastNode[]>,
@@ -63,7 +70,7 @@ function make
     if (!nodes || !declaredNames)
       { return undefined; }
     return DastFunctionDefintion.
-      make({ declaredNames, pendingNames }, [...nodes]);
+      make({ name: makeUniqueName(), declaredNames, pendingNames }, [...nodes]);
   });
 
   return freeze({ error, node });

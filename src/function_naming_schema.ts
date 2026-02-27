@@ -21,6 +21,7 @@ export type ContextFunctionGroup = 'initialSet' | 'assignment' | 'accessor';
 export const FunctionNamingSchema = freeze({
   kAssignmentOperator,
   kEqualityOperator: '=',
+  uniqueFrameNameFor(n: number): string { return `<frame:${n}>`; },
   mapToInitialSetName,
   mapFromFringeAccessor: (name: string): string | undefined =>
     name[0] === '.' ? name.slice(1) : undefined,

@@ -33,12 +33,6 @@ function make
       const getContextType = contextBuild.contextType as () => ObjectType;
       
       return mHoldAsContextType(getContextType, () => {
-        
-        // const contextType = contextBuild.contextType();
-        // if (!contextType) {
-        //   return setErrorFn(contextBuild.error);
-        // }
-
         const subBuilds = mNodes.map(mIntoFunctionTypeBuild);
         const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
         const compositeFunctionType = cleanUpBuild.functionType();

@@ -10,6 +10,7 @@ export const Helpers = Object.freeze({
   presenceAsserted,
   toNamedMap,
   verifyInTesting,
+  raise
 });
 
 export type StandardErrorMessage = Readonly<{ message: string }>;
@@ -46,8 +47,8 @@ export const StandardError = (() => {
 
     const sharedErrorInstance = (): StandardError =>
       mInst ??= freeze({
-          setErrorFn, setErrorMessage, error, sharedErrorInstance, hasErrorSet
-        });
+        setErrorFn, setErrorMessage, error, sharedErrorInstance, hasErrorSet
+      });
 
     return sharedErrorInstance();
   }
@@ -175,3 +176,8 @@ function toNamedMap<StringUnion extends string>
 // // const coolThing3 = (hello: string): { hello: string } | undefined => ({ hello });
 
 // // const res = anyFailed(coolThing, coolThing2) ?? coolThing3('hi');
+
+// melody will not have exceptions! hell no!
+// but there still maybe a "throw my hands up" kind of function (ala std::terminate)
+function raise<T>(message: string): T
+  { throw new Error(message); }

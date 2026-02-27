@@ -214,3 +214,65 @@ let IntRectangle = Rectangle(Integer)
 let r = IntRectangle.new(1, 2, 3, 4)
 puts(r.right)
 ```
+
+```
+let a = 10
+let f1 = fn
+  added <parent> = <root>
+  implied a = <parent>.a
+  puts(a)
+~
+let f2 = fn
+  added <parent> = <root>
+  let f3 = fn
+    # says I need "f1", and therefore "<root>"
+    added <parent> = <f2>
+    implied <root> = <parent>.<root>
+    implied f1 = <root>.f1
+    f1() # <- this essentially/has to become "<root>.f1()"
+  ~
+  f3()
+~
+f2()
+```
+
+### Melody "Heaven"
+Essentially "idealized" Melody, representing the "greatest" vision of what the language could be. Imagining Melody implementing itself.
+```melody
+# consider a `src/dast_build/dast_let_build.mldy`
+let Helpers = load('helpers')
+let StandardError = load('standard_error')
+let IastNode = load('iast_node')
+let table
+  DastBuild,
+  WritableDastDeclarationMap
+~ = load('dast_build')
+let DastDeclarationMap = load('dast_declaration_map')
+
+let table freeze, memoize ~ = Helpers
+
+# IastNode, and Fn are "adaptive interfaces"
+let new = fn (
+  mInnerNode is IastNode,
+  mIntoDastBuild is Fn(IastNode)(DastBuild),
+  mCurrentDeclarations is Fn()(WritableDastDeclarationMap))
+
+  # Either((LetElements, DastNode), StandardError)
+  let mRetrieval = LetDeclarationRetrieval.new(mInnerNode, mIntoDastBuild)
+  let table error, setErrorFn, setErrorMessage ~ = StandardError.new()
+  let table elements, dastNode ~ = mRetrieval
+
+  # I want "here are things I do on left", but also
+  mRetrieval.chain_left(fn (elements, node)
+    elements.map(fn (element)
+      DastLetDeclarationBuild.new(element)
+    )
+  )
+  # expected isn't a bad way to go either...
+
+  # heck this function returns an either too!
+~
+
+# similar to Lua returning a table at the end of a file
+return table new ~
+```
