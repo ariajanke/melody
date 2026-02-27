@@ -2,10 +2,18 @@ import { Helpers } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { MemoryArray } from '../memory_array';
+import { CodeWriter } from '../code_writer';
 
 const { freeze } = Helpers;
 
-function make(mFunctionBody: WasmFunctionBody = WasmFunctionBody.make()) {
+export interface WasmFunctionCodeWriter extends CodeWriter {
+  toFunctionBody(): WasmFunctionBody;
+};
+
+function make
+  (mFunctionBody: WasmFunctionBody = WasmFunctionBody.make())
+  : WasmFunctionCodeWriter
+{
   const getImportFuncIndex = (name: string) => {
     const { descriptions } = WasmBuiltinImportsCreation;
     const desc = descriptions()[name];
@@ -20,15 +28,20 @@ function make(mFunctionBody: WasmFunctionBody = WasmFunctionBody.make()) {
     return inst;
   };
   function getAddrOnTop(offset: number) {
-    if (mFunctionBody.localCount() < 1)
-      { mFunctionBody.pushLocal(); }
-    // get addr at top of stack
+    pushStackPointer();
     mFunctionBody.
-      pushI32Const(MemoryArray.kStackPointerLocation).
-      pushI32Load().
       pushI32Const(offset + MemoryArray.kStartOfStack).
       pushI32Add();
   }
+  function pushStackPointer() {
+    if (mFunctionBody.localCount() < 1)
+      { mFunctionBody.pushLocal(); }
+    mFunctionBody.
+      pushI32Const(MemoryArray.kStackPointerLocation).
+      pushI32Load();
+    return inst;
+  }
+
   const inst = freeze({
     pushRepresentation(i: number) {
       if (i < 0) {
@@ -91,10 +104,10 @@ function make(mFunctionBody: WasmFunctionBody = WasmFunctionBody.make()) {
       }
       mFunctionBody.callIndirect(n);
       return inst;
-    }
+    },
+    pushStackPointer
   });
   return inst;
 }
 
 export const WasmFunctionCodeWriter = freeze({ make });
-export type WasmFunctionCodeWriter = ReturnType<typeof WasmFunctionCodeWriter.make>;

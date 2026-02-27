@@ -22,37 +22,37 @@ describe('end-to-end', () => {
           puts('Hello world!')
         `, ['Hello world!']);
 
-        // doRun(`runs simple arithmetic`, `
-        //   let a = 1 + 2 * 3
-        //   let b = a - 4
-        //   puts(a, b)
-        // `, ['7', '3']);
+        doRun(`runs simple arithmetic`, `
+          let a = 1 + 2 * 3
+          let b = a - 4
+          puts(a, b)
+        `, ['7', '3']);
           
-        // doRun(`runs function call`, `
-        //   let f = fn
-        //     puts('Hello world!')
-        //   ~
-        //   f()
-        // `, ['Hello world!']);
+        doRun(`runs function call`, `
+          let f = fn
+            puts('Hello world!')
+          ~
+          f()
+        `, ['Hello world!']);
 
-        // doRun(`runs a simple load and store`, `
-        //   let a := 10
-        //   a := 5
-        //   puts(a)
-        // `, ['5']);
+        doRun(`runs a simple load and store`, `
+          let a := 10
+          a := 5
+          puts(a)
+        `, ['5']);
 
-        // doRun(`runs function object reassignment`, `
-        //   let f := fn
-        //     puts('Hello world!')
-        //   ~
-        //   f := fn
-        //     puts('Goodbye world!')
-        //   ~
-        //   f()
-        // `, ['Goodbye world!']);
+        doRun(`runs function object reassignment`, `
+          let f := fn
+            puts('Hello world!')
+          ~
+          f := fn
+            puts('Goodbye world!')
+          ~
+          f()
+        `, ['Goodbye world!']);
       });
 
-      xdescribe('tuple trouble', () => {
+      describe('tuple trouble', () => {
         doRun(`runs tuple assignment`, `
           let (a, b) = (1, 2)
           puts(a, b)

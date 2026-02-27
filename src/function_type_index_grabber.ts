@@ -30,7 +30,8 @@ export const FunctionTypeIndexGrabber = freeze({
       subtractIntegers: oops,
       loadInteger(_0: number) { oops(); },
       storeInteger(_0: number) { oops(); },
-      indirectCall(_0: number) { oops(); }
+      indirectCall(_0: number) { oops(); },
+      pushStackPointer: oops
     });
 
     const inst = freeze({

@@ -38,6 +38,7 @@ const StackTallyBase = freeze({
       pushRepresentation: (_0: number) => incrementCount(),
       storeInteger: decrementCount,
       subtractIntegers: decrementCount,
+      pushStackPointer: incrementCount
     });
 
     return freeze({

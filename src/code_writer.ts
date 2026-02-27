@@ -2,7 +2,9 @@ export interface CodeWriter {
   addIntegers(): CodeWriter;
   askInteger(): CodeWriter;
   askString(): CodeWriter;
+  
   drop(): CodeWriter;
+  // will have to set SP
   indirectCall(signatureIndex: number): CodeWriter;
   loadInteger(offset: number): CodeWriter;
   multiplyIntegers(): CodeWriter;
@@ -11,4 +13,6 @@ export interface CodeWriter {
   pushRepresentation(num: number): CodeWriter;
   storeInteger(offset: number): CodeWriter;
   subtractIntegers(): CodeWriter;
+
+  pushStackPointer(): CodeWriter;
 };

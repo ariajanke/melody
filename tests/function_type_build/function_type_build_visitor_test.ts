@@ -13,7 +13,7 @@ describeNamed({ FunctionTypeBuildVisitor }, () => {
     const registry = FunctionTypeRegistry.make();
     const visitor = FunctionTypeBuildVisitor.make(StringPoolBuilder.make(), registry);
     const nestedFuncNode = DastFunctionDefintion.
-      make({ pendingNames: {}, declaredNames: {} }, []);
+      make({ name: '', pendingNames: {}, declaredNames: {} }, []);
     const fInitialSetNode = DastInitialSet.make('f', nestedFuncNode);
     const declaredNames: DastDeclarationMap = {
       ['.f']: {
@@ -28,7 +28,7 @@ describeNamed({ FunctionTypeBuildVisitor }, () => {
         }
       }
     };
-    const fdefs = { pendingNames: {}, declaredNames };
+    const fdefs = { name: '', pendingNames: {}, declaredNames };
     
     const root = DastFunctionDefintion.make(fdefs, [fInitialSetNode]);
     root.visit(visitor);

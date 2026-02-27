@@ -1,7 +1,9 @@
+import { CodeWriter } from '../code_writer';
 import { DastAttributeDeclaration } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { FunctionLookUpTable, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers } from '../helpers';
+import { MemoryArray } from '../memory_array';
 import { Token } from '../token';
 import { BuiltinTypeBase } from './builtin_type';
 import { ContextAccessorBuild, ContextModifierBuild } from './context_attribute_build';
@@ -85,11 +87,47 @@ function make(): ContextTypeBuilder {
     return creation;
   }
 
+  const referenceType = memoize((): ObjectType => {
+    const inst = freeze({
+      ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
+      name: () => `Reference(${Token.kContextToken.content()})`,
+      lookUp(operation: string | symbol): FunctionLookUpTable | undefined
+        { return objectType().lookUp(operation); },
+      sizeInBytes: () => MemoryArray.kWordSizeInBytes,
+      sizeInStackItems: () => 1,
+    });
+    return inst;
+  });
+
+  const referenceGetter = memoize((): FunctionType => {
+    const ftype = freeze({
+      parameters: () => TupleObjectFactory.emptyTuple(),
+      returns: () => referenceType(),
+      emit(codeWriter: CodeWriter) {
+        return codeWriter.pushStackPointer();
+      },
+      uid: memoize(Symbol)
+    });
+    return ftype;
+  });
+
+  const addContext = memoize(() => {
+    mLookUpTable[Token.kContextToken.content()] = {
+      byParameters(type: ObjectType) {
+        if (type.uid() === TupleObjectFactory.emptyTuple().uid()) {
+          return referenceGetter();
+        }
+        return undefined;
+      }
+    };
+  });
+
   const objectType = memoize(() => {
     const {
       talliedSizeInBytes,
       talliedSizeInItems
     } = mVariableTracker;
+    addContext();
     const inst = freeze({
       ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
       name: Token.kContextToken.content,

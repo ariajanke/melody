@@ -2,6 +2,7 @@ import { DastLetDeclaration, DastNode } from '../dast_build';
 import { Helpers, StandardError } from '../helpers';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { ContextTypeBuilder } from './context_type_builder';
+import { Token } from '../token';
 
 const { freeze, memoize } = Helpers;
 
@@ -28,8 +29,13 @@ function make
     if (mDef.assignment) {
       return addModifier(mFunctionName, mDef.assignment, type);
     } else if (mDef.accessor) {
+      const callLookUp = type.lookUp(Token.kCallToken.content());
+      if (callLookUp) {
+        mBuilder.addDirectLookUp(mDef.accessor.variableName, callLookUp);
+      }
       return addAccessor(mFunctionName, mDef.accessor, type);
     } else if (mDef.initialSet) {
+      
       return addInitialSet(mFunctionName, mDef.initialSet.variableNames, type);
     }
 

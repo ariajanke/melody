@@ -10,7 +10,8 @@ export const Helpers = Object.freeze({
   presenceAsserted,
   toNamedMap,
   verifyInTesting,
-  raise
+  raise,
+  // makeSet
 });
 
 export type StandardErrorMessage = Readonly<{ message: string }>;
@@ -179,5 +180,7 @@ function toNamedMap<StringUnion extends string>
 
 // melody will not have exceptions! hell no!
 // but there still maybe a "throw my hands up" kind of function (ala std::terminate)
-function raise<T>(message: string): T
+function raise(message: string): never
   { throw new Error(message); }
+
+// function makeSet<T>(): Set<T> { return new Set<T>(); }

@@ -97,6 +97,10 @@ function make
       mProgramCounter =
         mCallStack.popReturnPoint(mStack.count()) ??
         mCode.length; 
+    },
+    pushStackPointer() {
+      mStack.push(mStack.count());
+      mProgramCounter += 1;
     }
   };
 

@@ -25,8 +25,14 @@ function make
   const { error, setErrorFn } = StandardError.make();
   const mInProgressType = mBuilder.objectType;
 
+
+
   const contextType = memoize((): ObjectType | undefined => {
     mBuilder.addDirectLookUp('puts', PutsFunctionLookUpTable.instance());
+    // getting the current context, just grab the current value of SP
+    // preceding every call we'll have to update it
+    //
+
 
     return mHoldAsContextType(mInProgressType, () => {
       for (const functionName in mDefs) {

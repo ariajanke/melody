@@ -32,7 +32,9 @@ function interpretFromSource(source: string, printedStrings: string[]): Promise<
     }
   });
   return new Promise((resolve, _1) => {
-    interpreter.run();
+    if (!interpreter.run()) {
+      throw new Error(`Interpretation failed: ${interpreter.error()}`);
+    }
     resolve();
   });
 }
