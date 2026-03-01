@@ -113,7 +113,7 @@ function make(): ContextTypeBuilder {
   });
 
   const addContext = memoize(() => {
-    mLookUpTable[Token.kContextToken.content()] = {
+    mLookUpTable[FunctionNamingSchema.kContextName] = {
       byParameters(type: ObjectType) {
         if (type.uid() === TupleObjectFactory.emptyTuple().uid()) {
           return referenceGetter();
@@ -123,12 +123,36 @@ function make(): ContextTypeBuilder {
     };
   });
 
+  // const parentGetter = memoize((): FunctionType => {
+  //   const ftype = freeze({
+  //     parameters: () => TupleObjectFactory.emptyTuple(),
+  //     returns: () => 'idk lol',
+  //     emit(codeWriter: CodeWriter) {
+  //       codeWriter.loadInteger(ContextTypeReservations.kParentAccessIndex);
+  //       return codeWriter;
+  //     },
+  //     uid: memoize(Symbol)
+  //   });
+  //   return ftype;
+  // });
+
+  // const addParent = memoize(() => {
+  //   mLookUpTable[FunctionNamingSchema.kParentName] = {
+  //     byParameters(type: ObjectType) {
+  //       if (type.uid() === TupleObjectFactory.emptyTuple().uid()) {
+  //         return parentGetter();
+  //       }
+  //       return undefined;
+  //     }
+  //   };
+  // });
   const objectType = memoize(() => {
     const {
       talliedSizeInBytes,
       talliedSizeInItems
     } = mVariableTracker;
     addContext();
+    // addParent();
     const inst = freeze({
       ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
       name: Token.kContextToken.content,

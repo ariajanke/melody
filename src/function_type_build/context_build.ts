@@ -13,7 +13,7 @@ export interface ContextBuild {
   error(): StandardErrorMessage;
 };
 
-const kParentContextName = '<parent>';
+// const kParentContextName = '<parent>';
 
 // need a implied accessor method build
 
@@ -27,7 +27,7 @@ function make
   const { error, setErrorFn } = StandardError.make();
   const mInProgressType = mBuilder.objectType;
 
-  mBuilder.addInitialSet()
+  // mBuilder.addInitialSet()
 
 
   const contextType = memoize((): ObjectType | undefined => {

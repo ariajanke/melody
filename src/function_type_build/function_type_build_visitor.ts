@@ -44,7 +44,7 @@ function make
       make(callName,
            receiver,
            args,
-           currentObject,
+           currentObject().sizeInBytes,
            mBuildCache.checkCachedBuild);
   }
 

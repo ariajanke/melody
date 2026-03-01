@@ -67,6 +67,8 @@ function make(mStringPool: StringPool,
 
   const { importObject } = mImportsCreation;
   const byteCode = memoize(() => {
+    mImportsSection.pushMemory('js', 'memory');
+
     mElementSection.setFunctionCount(mFunctionCount);
     mTableSection.setFunctionCount(mFunctionCount);
     const nums: number[] = [];
@@ -75,7 +77,7 @@ function make(mStringPool: StringPool,
     nums.push(...mImportsSection.finish());
     nums.push(...mFunctionsSection.finish());
     nums.push(...mTableSection.finish());
-    nums.push(...mMemorySection.finish());
+    // nums.push(...mMemorySection.finish());
     nums.push(...mGlobalsSection.finish());
     nums.push(...mExportsSection.finish());
     nums.push(...mElementSection.finish());

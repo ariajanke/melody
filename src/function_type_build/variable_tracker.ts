@@ -1,5 +1,6 @@
+import { ContextTypeReservations } from '../context_type_reservations';
 import { ObjectType } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { Token } from '../token';
 
 const { freeze } = Helpers;
@@ -15,10 +16,14 @@ export interface VariableTracker {
   talliedSizeInItems(): number;
 };
 
+const { kParentAccessIndex, kReservedBytesForParent } = ContextTypeReservations;
+const kStartingByteOffset = kReservedBytesForParent;
+const kStartingItemCount = kStartingByteOffset / kReservedBytesForParent;
+
 export const VariableTracker = freeze({
   make() {
-    let mByteOffset = 0;
-    let mItemCount = 0;
+    let mByteOffset = kStartingByteOffset;
+    let mItemCount = kStartingItemCount;
     const mVarTable: { [name: string]: VarTypeInfo | undefined } = {};
     const { kContextToken } = Token;
 
@@ -27,20 +32,27 @@ export const VariableTracker = freeze({
     {
       const info = mVarTable[name];
       if (info && info.type.uid() !== objectType.uid()) {
-        throw new Error(`Type mismatch between "${info.type.name()}" ` +
-                        `and "${objectType.name()}"`);
+        // throw new Error(`Type mismatch between "${info.type.name()}" ` +
+        //                 `and "${objectType.name()}"`);
+        raise(`Type mismatch between "${info.type.name()}" ` +
+              `and "${objectType.name()}"`);
       }
       if (info)
         { return info; }
 
+      if (name === kContextToken.content()) {
+        raise(`this name is reserved for context access`);
+      }
+
       // test me: <context> does not increase size
       // why does this break the compiler?
-      const isContext = name === kContextToken.content();
-      const accessIndex = isContext ? 0 : mByteOffset;
-      if (!isContext) {
+      // const isContext = name === kContextToken.content();
+      // const accessIndex = isContext ? 0 : mByteOffset;
+      const accessIndex = mByteOffset;
+      // if (!isContext) {
         mByteOffset += objectType.sizeInBytes();
         mItemCount += objectType.sizeInStackItems();
-      }
+      // }
 
       return (mVarTable[name] = {
         type: objectType,

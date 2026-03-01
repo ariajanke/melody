@@ -8,16 +8,6 @@ interface InterpretedCodeWriter extends CodeWriter {
   code(): readonly (string | number)[];
 }
 
-// const checkOnce = (() => {
-//   let hasBeenCalled = false;
-//   return (s1: Readonly<string[]>, s2: Readonly<string[]>) => {
-//     if (hasBeenCalled) { return; }
-//     hasBeenCalled = true;
-//     const full = [...s1, ...s2];
-//     Obj
-//   }
-// })();
-
 function construct2(): InterpretedCodeWriter {
   const mCode: (string | number)[] = [];
 
@@ -30,7 +20,9 @@ function construct2(): InterpretedCodeWriter {
     'drop',
     'multiplyIntegers',
     'subtractIntegers',
-    'pushStackPointer'
+    'pushStackPointer',
+    'incrementStackPointer',
+    'storeParentStackPointer'
   ] as const satisfies (keyof CodeWriter)[];
 
   const kNumMethodNames = [
@@ -43,7 +35,11 @@ function construct2(): InterpretedCodeWriter {
   const writer: InterpretedCodeWriter = freeze(
     Object.assign(
     {
-      code: () => mCode
+      code: () => mCode,
+      forStackPointer(option: 'saveToLocal' | 'restoreToGlobal') {
+        mCode.push('forStackPointer', option);
+        return writer;
+      }
     },
     ...kMethodNames.map(name =>
       ({

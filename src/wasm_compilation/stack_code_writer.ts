@@ -1,11 +1,14 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { CodeWriter } from '../code_writer';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmGlobalsSection } from './wasm_globals_section';
+import { ContextTypeReservations } from '../context_type_reservations';
 
 const { memoize, freeze, makeCounter } = Helpers;
 
 const counter = makeCounter();
+const kParentPointerParamIndex = counter();
+const kParameterCount = kParentPointerParamIndex + 1;
 const kSwapLocalIndex = counter();
 const kStackPointerLocalIndex = counter();
 const kLocalsCount = counter();
@@ -15,9 +18,10 @@ function make
    mGetWriter: () => CodeWriter) 
 {
   const stackPointerLocation = memoize(() => WasmGlobalsSection.kStackPointerLocation);
+  const { kParentAccessIndex } = ContextTypeReservations;
 
   const ensureLocalsPresent = memoize(() => {
-    while (mFunctionBody.localCount() < kLocalsCount) {
+    while (mFunctionBody.localCount() < (kLocalsCount - kParameterCount)) {
       mFunctionBody = mFunctionBody.pushLocal();
     }
   });
@@ -36,8 +40,8 @@ function make
   };
 
   function storeInteger(offset: number) {
-    if (offset === 0) {
-      throw new Error('Offset 0 is reserved for storing the parent frame stack pointer');
+    if (offset === kParentAccessIndex) {
+      raise(`Offset ${kParentAccessIndex} is reserved for storing the parent frame stack pointer`);
     }
     ensureLocalsPresent();
 
@@ -70,7 +74,7 @@ function make
     ensureLocalsPresent();
     mFunctionBody.
       getGlobal(stackPointerLocation()).
-      getLocal(kStackPointerLocalIndex).
+      getLocal(kParentPointerParamIndex).
       pushI32Store();
     return mGetWriter();
   }

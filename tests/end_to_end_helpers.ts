@@ -64,5 +64,6 @@ function makeExampleRunner
 export const EndToEndHelpers = freeze({
   compileFromSource,
   interpretFromSource,
-  makeExampleRunner
+  makeExampleRunner,
+  errorHandler
 });

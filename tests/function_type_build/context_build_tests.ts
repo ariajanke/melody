@@ -180,12 +180,6 @@ describeNamed({ ContextBuild }, () => {
       const contextBuild = makeContextBuild(callDict, {
         ...singleFor('x', 'assignment'),
         ...singleFor('y', 'assignment')
-        // {
-        //   name: 'y',
-        //   operator: ':=',
-        //   value: makeInteger('1'),
-        //   dependeeNames: []
-        // }
       });
       contextBuild.contextType();
       expect(callDict).toEqual({

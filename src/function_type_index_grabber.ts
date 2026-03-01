@@ -1,12 +1,12 @@
 import { CodeWriter } from './code_writer';
 import { FunctionType } from './function_type_build';
-import { Helpers } from './helpers';
+import { Helpers, raise } from './helpers';
 
 const { freeze } = Helpers;
 
-function oops(): never {
-  throw new Error('This code writer exist purely to grab indices, this maybe misused');
-}
+const oops = (() => {
+  raise('This code writer exist purely to grab indices, this maybe misused');
+}) as unknown as () => CodeWriter;
 
 export interface FunctionTypeIndexGrabber {
   grabFrom(functionType: FunctionType): number;
@@ -28,10 +28,13 @@ export const FunctionTypeIndexGrabber = freeze({
       drop: oops,
       multiplyIntegers: oops,
       subtractIntegers: oops,
-      loadInteger(_0: number) { oops(); },
-      storeInteger(_0: number) { oops(); },
-      indirectCall(_0: number) { oops(); },
-      pushStackPointer: oops
+      loadInteger: (_0: number) => oops(),
+      storeInteger: (_0: number) => oops(),
+      indirectCall: (_0: number) => oops(),
+      pushStackPointer: oops,
+      incrementStackPointer: oops,
+      storeParentStackPointer: oops,
+      forStackPointer: (_0: 'saveToLocal' | 'restoreToGlobal') => oops()
     });
 
     const inst = freeze({

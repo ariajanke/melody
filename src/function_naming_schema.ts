@@ -1,4 +1,4 @@
-import { Helpers } from './helpers';
+import { Helpers, raise } from './helpers';
 
 const { freeze } = Helpers;
 
@@ -7,11 +7,18 @@ const kInitialSetNamePrefix = '<initSet>:';
 function mapToInitialSetName(names: string | readonly string[]): string {  
   if (typeof names === 'string') {
     if (names.indexOf(kInitialSetNamePrefix) === 0) {
-      throw new Error(`Unexpected initial set name "${names}"`);
+      raise(`Unexpected initial set name "${names}"`);
     }
     return `${kInitialSetNamePrefix}(${names})`;
   }
   return mapToInitialSetName(names.join(','));
+}
+
+function mapToInternalName(name: string): string {
+  if (name[0] === '<' || name.endsWith('>')) {
+    raise(`Unexpected internal name "${name}"`);
+  }
+  return `<${name}>`;
 }
 
 const kAssignmentOperator = ':=';
@@ -21,7 +28,10 @@ export type ContextFunctionGroup = 'initialSet' | 'assignment' | 'accessor';
 export const FunctionNamingSchema = freeze({
   kAssignmentOperator,
   kEqualityOperator: '=',
-  uniqueFrameNameFor(n: number): string { return `<frame:${n}>`; },
+  kContextName: mapToInternalName('context'),
+  kParentName: mapToInternalName('parent'),
+  uniqueFrameNameFor(n: number): string { return mapToInternalName(`frame:${n}`); },
+  mapToInternalName,
   mapToInitialSetName,
   mapFromFringeAccessor: (name: string): string | undefined =>
     name[0] === '.' ? name.slice(1) : undefined,

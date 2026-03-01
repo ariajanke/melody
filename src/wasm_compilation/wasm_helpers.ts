@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 
 const { freeze, memoize } = Helpers;
 
@@ -52,13 +52,18 @@ export const TypesAware = (() => {
   return class_;
 })();
 
+const kUnsignedInt32Max =  0xFFFFFFFF;
+const kSignedInt32Min   = -0x80000000;
+const kSignedInt32Max   =  0x7FFFFFFF;
+
 export const WasmHelpers = freeze({
   makeCounter() {
     let n = 0;
     return () => n++;
   },
   externalKinds: memoize(() => freeze({
-    func: 0
+    func: 0,
+    memory: 2,
   })),
   convertStringToNumbers(str: string) {
     const rv = Array<number>(str.length).
@@ -71,7 +76,60 @@ export const WasmHelpers = freeze({
     });
     return rv;
   },
+  encodeVarsint32(n: number): number[] {
+    // const rv: number[] = [];
+    // if (n === 0)
+    //   return [0];
+    // const isNegative = n < 0;
+    // while (n !== 0) {
+    //   // const kEndBitMask = 128;
+    //   const rem  = n % 128;
+    //   const next = Math.floor(n / 128);
+    //   const useExt = isNegative ? next !== -1 : next !== 0;
+    //   const ext  = useExt ? 128 : 0;
+    //   rv.push(rem + ext);
+    //   n = next;
+    // }
+    // if (rv.length > 5) {
+    //   raise('Too large');
+    // }
+    // return rv;
+
+    // n = Math.abs(n);
+    // const kNegNegativeMask = 0x80000000;
+    // if (n === kNegNegativeMask) {
+    //   raise('Not supporting min negative integer');
+    // }
+    // if (n < kSignedInt32Min || n > kSignedInt32Max) {
+    //   raise('not a 32 bit signed integer');
+    // }
+    
+    // const negMask = isNegative ? kNegNegativeMask : 0;
+    // if (kNegNegativeMask > Number.MAX_SAFE_INTEGER) {
+    //   raise('Get better javascript lol');
+    // }
+    
+    // n += negMask;
+    // // negatives... leading bit of 1, invert everything else
+    // while (n > 0) {
+    //   // n = ~n; in a sane language I would just flip like this
+    //   const rem  = n % 128;
+    //   const next = Math.floor(n / 128);
+    //   const ext  = next > 0 ? 128 : 0;
+
+    //   if (rem === 0)
+    //     { raise('I failed'); }
+    //   rv.push((128 - rem) + ext);
+    //   n = next;
+    // }
+
+    // return rv;
+  },
   encodeVaruint32(n: number): number[] {
+
+    if (n < 0 || n > kUnsignedInt32Max) {
+      raise('n must be in in [0 (2^32 - 1)]');
+    }
     const rv: number[] = [];
     if (n === 0)
       return [0];

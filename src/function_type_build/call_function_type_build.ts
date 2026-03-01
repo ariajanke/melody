@@ -1,7 +1,7 @@
 import { CodeWriter } from '../code_writer';
 import { DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
 import { StackSafetyChecker } from './stack_safety_checker';
 import { TupleObjectFactory } from './tuple_type';
@@ -18,7 +18,7 @@ function make
   (mCallName: DastNode,
    mReceiver: DastNode,
    mArgs: DastNode,
-   mGetCurrentContext: () => ObjectType,
+   mGetContextSizeInBytes: () => number,
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
   : FunctionTypeBuild
 {
@@ -91,7 +91,7 @@ function make
       returns: () => callFunctionType()!.returns(),
       emit(writer: CodeWriter) {
         writer.
-          pushRepresentation( mGetCurrentContext().sizeInBytes() ).
+          pushRepresentation( mGetContextSizeInBytes() ).
           incrementStackPointer();
         receiver()!.emit(writer);
         args()!.emit(writer);

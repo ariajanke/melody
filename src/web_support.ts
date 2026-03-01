@@ -15,7 +15,29 @@ function getEntryPointOnInst(instance: WebAssembly.Instance | undefined) {
   }
 }
 
+async function getEntryPointWithMemory
+  (memory: WebAssembly.Memory,
+   compiler: Compiler): Promise<(dummyReceiver: number) => void>
+{
+  const importsObject = {
+    ...compiler.importsObject(),
+    js: { memory }
+  }  as WebAssembly.Imports;
+
+  const byteCode = compiler.byteCode();
+  if (!byteCode) {
+    throw new Error(`Failed to compile Melody source: ${compiler.error()}`);
+  }
+  const result = await WebAssembly.instantiate(byteCode, importsObject);
+  if ('instance' in result) {
+    const res = result as unknown as WebAssembly.WebAssemblyInstantiatedSource;
+    return getEntryPointOnInst(res.instance);
+  }
+  return getEntryPointOnInst(result); 
+}
+
 export const WebSupport = freeze({
+  forTesting: { getEntryPointWithMemory },
   async getEntryPoint(compiler: Compiler) {
     const memory = new WebAssembly.Memory({
       initial: 1024,
@@ -23,21 +45,7 @@ export const WebSupport = freeze({
     });
     for (let i = 0; i < 5000; ++i)
       new DataView(memory.buffer).setInt32(i*4, 4);
-    const byteCode = compiler.byteCode();
-    if (!byteCode) {
-      throw new Error(`Failed to compile Melody source: ${compiler.error()}`);
-    }
-    const result = await WebAssembly.
-      instantiate(byteCode,
-                  {
-                    ...compiler.importsObject(),
-                    js: { mem: memory }
-                  } as WebAssembly.Imports);
-    if ('instance' in result) {
-      const res = result as unknown as WebAssembly.WebAssemblyInstantiatedSource;
-      return getEntryPointOnInst(res.instance);
-    }
-    return getEntryPointOnInst(result);    
+   return getEntryPointWithMemory(memory, compiler);
   }
 });
 

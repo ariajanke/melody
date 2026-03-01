@@ -46,7 +46,7 @@ export const Token = (() => {
 
   const kBlankToken: Token = makeSpecialToken('');
   const kCallToken : Token = makeSpecialToken('call');
-  const kContextToken: Token = makeSpecialToken('<context>');
+  const kContextToken: Token = makeSpecialToken(FunctionNamingSchema.kContextName);
   const kAsnOp = FunctionNamingSchema.kAssignmentOperator;
 
   const tokenTypeOf = (() => {

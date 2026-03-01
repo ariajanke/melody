@@ -10,8 +10,6 @@ export const Helpers = Object.freeze({
   presenceAsserted,
   toNamedMap,
   verifyInTesting,
-  raise,
-  // makeSet
 });
 
 export type StandardErrorMessage = Readonly<{ message: string }>;
@@ -58,22 +56,22 @@ export interface StandardErrorCollection {
   errors: () => Readonly<StandardErrorMessage[]>;
 };
 
-export const StandardErrorCollection = (() => {
-  const { freeze } = Helpers;
+// export const StandardErrorCollection = (() => {
+//   const { freeze } = Helpers;
 
-  function make() {
-    const mErrors: StandardErrorMessage[] = [];
-    function addErrorMessage(message: string): undefined
-      { mErrors.push({ message }); }
-    function addErrorFn(fn: StandardErrorFn): undefined
-      { addError(fn()); }
-    function errors(): Readonly<StandardErrorMessage[]>
-      { return mErrors; }
-    return freeze({ addErrorFn, errors });
-  }
+//   function make() {
+//     const mErrors: StandardErrorMessage[] = [];
+//     function addErrorMessage(message: string): undefined
+//       { mErrors.push({ message }); }
+//     function addErrorFn(fn: StandardErrorFn): undefined
+//       { addError(fn()); }
+//     function errors(): Readonly<StandardErrorMessage[]>
+//       { return mErrors; }
+//     return freeze({ addErrorFn, errors });
+//   }
 
-  return freeze({ make });
-})();
+//   return freeze({ make });
+// })();
 
 export const FinishingMemoization = (() => {
   const kUninitializedGuard = (): void => {
@@ -178,5 +176,5 @@ function toNamedMap<StringUnion extends string>
 
 // melody will not have exceptions! hell no!
 // but there still maybe a "throw my hands up" kind of function (ala std::terminate)
-function raise(message: string): never
+export function raise(message: string): never
   { throw new Error(message); }

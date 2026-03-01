@@ -29,6 +29,7 @@ const {
   drop,
   indirectCall,
   functionEnd,
+  i32Const
 } = TypesAware.opCodes();
 
 function make() {
@@ -75,10 +76,10 @@ function make() {
     },
     pushI32Const(constant: number) {
       verifyStackIncrement(1);
-      if (constant < 0 || constant > 2000000000) {
+      if (constant < 0 || constant > 128) {
         throw new Error(`Value ${constant} not supported for i32 const`);
       }
-      return pushCode(0x41, ...encodeVaruint32(constant));
+      return pushCode(i32Const, ...encodeVaruint32(constant));
     },
     pushI32Add: () => {
       verifyStackIncrement(-1);

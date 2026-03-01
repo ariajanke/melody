@@ -90,7 +90,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
   const receiver = () => makeSampleDastNode_('receiver', emptyTuple(), receiverType(), 0);
   const args = () => makeSampleDastNode_('args', emptyTuple(), integerType(), argsEmissions());
   const makeBuild = (fn: (node: DastNode) => FunctionTypeBuild) =>
-    () => CallFunctionTypeBuild.make(call(), receiver(), args(), fn);
+    () => CallFunctionTypeBuild.make(call(), receiver(), args(), () => 4, fn);
 
   const makeSampleLookUpTable =
     (emittedNames: string[], rep: string): FunctionLookUpTable =>

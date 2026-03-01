@@ -38,7 +38,10 @@ const StackTallyBase = freeze({
       pushRepresentation: (_0: number) => incrementCount(),
       storeInteger: decrementCount,
       subtractIntegers: decrementCount,
-      pushStackPointer: incrementCount
+      pushStackPointer: incrementCount,
+      incrementStackPointer: decrementCount,
+      storeParentStackPointer: () => mInternalWriter,
+      forStackPointer: (_0: 'saveToLocal' | 'restoreToGlobal') => mInternalWriter
     });
 
     return freeze({

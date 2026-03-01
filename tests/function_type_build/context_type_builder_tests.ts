@@ -305,5 +305,24 @@ describeNamed({ ContextTypeBuilder }, () => {
       expect(lookUpTable).toBeDefined();
       expect(lookUpTable!.byParameters(integerPairType())).toBeDefined();
     });
+
+    it('has special function `<context>` defined', () => {
+      const builder = ContextTypeBuilder.make();
+      const lookUpTable = lookUpOnObject(builder, '<context>');
+      expect(lookUpTable.byParameters(emptyTuple())).toBeDefined();
+    });
+
+    it('has special function `<context>` which gets the current stack pointer', () => {
+      const builder = ContextTypeBuilder.make();
+      const lookUpTable = lookUpOnObject(builder, '<context>');
+      const contextFunction = lookUpTable.byParameters(emptyTuple());
+      const recordedCalls = collectCallsForFunctionType(contextFunction!);
+      expect(recordedCalls).toEqual(['pushStackPointer']);
+    });
+
+    it('has special function `<parent> defined', () => {
+      
+    });
+    it('has special function `<parent>` which gets the parent pointer from offset 0');
   });
 });

@@ -1,9 +1,5 @@
-// RETAIN
-// rationale: globals maybe a thing at some point, but I need to understand
-
 import { Helpers } from '../helpers';
-import { WasmFunctionBody } from './wasm_function_body';
-import { FinisherHelpers, TypesAware, WasmHelpers, WasmType } from './wasm_helpers';
+import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 
 const { encodeVaruint32 } = WasmHelpers;
 const { freeze, memoize } = Helpers;
@@ -14,30 +10,35 @@ const kMutable = 1,
       kGlobalSectionId = 0x06,
       kStackPointerLocation = 0;
 
+// RETAIN
+kImmutable;
+
+const { i32Const, functionEnd } = TypesAware.opCodes();
+
 function construct() {
   const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   const mCode: number[] = [];
-  const mNumberOfGlobals = 0;
-  function pushGlobal(mutable: boolean, type: WasmType, initialValue: number) {
-    resetFinishedCode();
-    const fbody = WasmFunctionBody.make().pushI32Const(initialValue);
-    const mutableCode = mutable ? kMutable : kImmutable;
-    mCode.push(asCode(type), mutableCode, ...fbody.finish());
-    return inst;
-  }
+  let mNumberOfGlobals = 0;
+
   function pushStackPointer() {
-    return pushGlobal(true, TypesAware.types().i32, 0);
+    resetFinishedCode();
+    // NOTE calls for varsint32 encoding, but 0 -> [0]
+    const kInitialStackPointerValue = 0;
+    const fcode = [i32Const, kInitialStackPointerValue, functionEnd];
+    
+    mCode.push(asCode(TypesAware.types().i32), kMutable, ...fcode);
+    ++mNumberOfGlobals;
   }
   
   const inst = freeze({
     finish: () =>
       trackFinished(() => {
         pushStackPointer();
-        const numGlobs = encodeVaruint32(mNumberOfGlobals);
+        const numGlobals = encodeVaruint32(mNumberOfGlobals);
         return [
           kGlobalSectionId,
-          ...encodeVaruint32(numGlobs.length + mCode.length),
-          ...numGlobs,
+          ...encodeVaruint32(numGlobals.length + mCode.length),
+          ...numGlobals,
           ...mCode
         ];
       })

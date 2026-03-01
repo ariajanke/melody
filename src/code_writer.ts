@@ -28,18 +28,37 @@ export interface CodeWriter {
 
   /// back and forth between local and global SP
   /// Stack Effect: [] -> []
+  /// WASM:
+  ///   for 'saveToLocal':
+  ///     global.get $gSP
+  ///     local.set $lSP
+  ///   for 'restoreToGlobal':
+  ///     local.get $lSP
+  ///     global.set $gSP
   forStackPointer(option: 'saveToLocal' | 'restoreToGlobal'): CodeWriter;
 
-  // fixed offset (0) from SP
-  // Stack Effect: [] -> []
+  /// fixed offset (0) from SP
+  /// Stack Effect: [] -> []
+  /// WASM:
+  ///  global.get $gSP
+  ///  local.get $param0
+  ///  i32.store
   storeParentStackPointer(): CodeWriter;
 
   /// Increments the stack pointer with the top of the stack
+  /// Expectation: must first call pushRepresentation with current frame size
   /// Stack Effect: [i32] -> []
+  /// WASM:
+  ///   global.get $gSP
+  ///   i32.add
+  ///   global.set $gSP
   incrementStackPointer(): CodeWriter;
 
   /// Pushes the current stack pointer onto the stack
+  /// Essential for `<context>`
   /// Stack Effect: [] -> [i32]
+  /// WASM:
+  ///   global.get $gSP
   pushStackPointer(): CodeWriter;
 
   // /// From absolute address, into loaded value on top
