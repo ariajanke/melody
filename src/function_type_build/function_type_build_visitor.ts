@@ -41,9 +41,10 @@ function make
 
   function visitCall(callName: DastNode, receiver: DastNode, args: DastNode): FunctionTypeBuild {
     return CallFunctionTypeBuild.
-      make(callName, 
-           receiver, 
+      make(callName,
+           receiver,
            args,
+           currentObject,
            mBuildCache.checkCachedBuild);
   }
 

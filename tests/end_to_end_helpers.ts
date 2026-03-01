@@ -42,6 +42,7 @@ function interpretFromSource(source: string, printedStrings: string[]): Promise<
 function errorHandler(done: () => void) {
   return (err: unknown) => {
     done();
+    fail(err);
     throw err;
   };
 }

@@ -1,26 +1,27 @@
-import { DastBuild, DastNode, DastVisitor } from '../dast_build';
+import { DastBuild, DastFunctionNameMappings, DastNode, DastVisitor } from '../dast_build';
 import { Helpers, StandardError } from '../helpers';
 
 const { freeze, memoize } = Helpers;
 
 function makeForDebug(root: DastNode): DastBuild {
   const mFrameNames: { [name: string]: true } = {};
-  const { error, setErrorFn } = StandardError.make();
-  const mVisitor: DastVisitor<true | undefined> = freeze({
+  const { error, setErrorMessage } = StandardError.make();
+  const mVisitor: DastVisitor<boolean> = freeze({
     visitFunctionDefinition(nameMappings: DastFunctionNameMappings,
                             nodes: Readonly<DastNode[]>)
     {
       if (mFrameNames[nameMappings.name]) {
-        return setErrorFn(`duplicate frame name: ${nameMappings.name}`);
+        setErrorMessage(`duplicate frame name: ${nameMappings.name}`);
+        return false;
       }
       mFrameNames[nameMappings.name] = true;
-      nodes.forEach((n: DastNode) => n.visit(mVisitor));
       for (const pendingName in nameMappings.pendingNames) {
         if (!nameMappings.declaredNames[pendingName])
           { continue; }
-        return setErrorFn(`pending name ${pendingName} is also in declared names for frame ${nameMappings.name}`);
+        setErrorMessage(`pending name ${pendingName} is also in declared names for frame ${nameMappings.name}`);
+        return false;
       }
-      return true;
+      return nodes.every(n => n.visit(mVisitor));
     },
     visitCall(callName: DastNode, receiver: DastNode, args: DastNode) { 
       return callName.visit(mVisitor) &&
@@ -31,18 +32,16 @@ function makeForDebug(root: DastNode): DastBuild {
     visitInteger() { return true; },
     visitString() { return true; },
     visitTuple(nodes: Readonly<DastNode[]>) {
-      return nodes.reduce<boolean>((b: boolean, n: DastNode) => b && n.visit(mVisitor), true);
-      return true;
+      return nodes.every(n => n.visit(mVisitor));
     },
     visitInitialSet(_0: readonly string[] | string, node: DastNode) {
-      node.visit(mVisitor);
-      return true;
+      return node.visit(mVisitor);
     }
 
   });
   return freeze({
-    node: () => root,
-    error: () => 'no error'
+    node: memoize(() => root.visit(mVisitor) ? root : undefined),
+    error
   });
 }
 

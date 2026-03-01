@@ -11,6 +11,7 @@ import { WasmFunctionCodeWriter }
   from './wasm_compilation/wasm_function_code_writer';
 import { WasmFunctionsSection }
   from './wasm_compilation/wasm_functions_section';
+import { WasmGlobalsSection } from './wasm_compilation/wasm_globals_section';
 import { TypesAware } from './wasm_compilation/wasm_helpers';
 import { WasmMemorySection } from './wasm_compilation/wasm_memory_section';
 import { WasmTableSection } from './wasm_compilation/wasm_table_section';
@@ -61,6 +62,7 @@ function make(mStringPool: StringPool,
     make().
     setStartingIndexFrom(mImportsSection);
   const mCodeSection = WasmCodeSection.make();
+  const mGlobalsSection = WasmGlobalsSection.instance();
   let mFunctionCount = 0;
 
   const { importObject } = mImportsCreation;
@@ -74,6 +76,7 @@ function make(mStringPool: StringPool,
     nums.push(...mFunctionsSection.finish());
     nums.push(...mTableSection.finish());
     nums.push(...mMemorySection.finish());
+    nums.push(...mGlobalsSection.finish());
     nums.push(...mExportsSection.finish());
     nums.push(...mElementSection.finish());
     nums.push(...mCodeSection.finish());

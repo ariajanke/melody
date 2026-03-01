@@ -3,35 +3,50 @@
 
 import { Helpers } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
-import { TypesAware, WasmHelpers, WasmType } from './wasm_helpers';
+import { FinisherHelpers, TypesAware, WasmHelpers, WasmType } from './wasm_helpers';
 
 const { encodeVaruint32 } = WasmHelpers;
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 const { asCode } = TypesAware;
 
+const kMutable = 1,
+      kImmutable = 0,
+      kGlobalSectionId = 0x06,
+      kStackPointerLocation = 0;
+
 function construct() {
+  const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   const mCode: number[] = [];
   const mNumberOfGlobals = 0;
-  function pushGlobal(mutable: number, type: WasmType, initialValue: number) {
+  function pushGlobal(mutable: boolean, type: WasmType, initialValue: number) {
+    resetFinishedCode();
     const fbody = WasmFunctionBody.make().pushI32Const(initialValue);
-    mCode.push(asCode(type), mutable, ...fbody.finish());
+    const mutableCode = mutable ? kMutable : kImmutable;
+    mCode.push(asCode(type), mutableCode, ...fbody.finish());
     return inst;
   }
+  function pushStackPointer() {
+    return pushGlobal(true, TypesAware.types().i32, 0);
+  }
+  
   const inst = freeze({
-    pushWritableGlobal: (type: WasmType, initialValue: number) =>
-      pushGlobal(1, type, initialValue),
-    finish() {
-      const numGlobs = encodeVaruint32(mNumberOfGlobals);
-      return [
-        0x06,
-        ...encodeVaruint32(numGlobs.length + mCode.length),
-        ...numGlobs,
-        ...mCode
-      ];
-    }
+    finish: () =>
+      trackFinished(() => {
+        pushStackPointer();
+        const numGlobs = encodeVaruint32(mNumberOfGlobals);
+        return [
+          kGlobalSectionId,
+          ...encodeVaruint32(numGlobs.length + mCode.length),
+          ...numGlobs,
+          ...mCode
+        ];
+      })
   });
   return inst;
 }
 
-export const WasmGlobalsSection = freeze({ make: construct });
+export const WasmGlobalsSection = freeze({
+  instance: memoize(construct),
+  kStackPointerLocation
+});
 export type WasmGlobalsSection = ReturnType<typeof construct>;

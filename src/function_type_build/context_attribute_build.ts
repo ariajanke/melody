@@ -19,7 +19,7 @@ const ContextAttributeTypeBuild = freeze({
   {
     const { error, setErrorMessage } = StandardError.make();
 
-    const objectType = memoize((): ObjectType | undefined =>{
+    const objectType = memoize((): ObjectType | undefined => {
       if (mAttr.tupleRank === undefined) {
         return mBasedOn;
       }
@@ -81,7 +81,7 @@ export const ContextModifierBuild = freeze({
         FunctionNamingSchema.mapToFringeAccessor(variableName);
       const ftype = mInProgressType.lookUp(fringeName)?.byParameters(emptyTuple());
       if (!ftype) {
-        
+
         throw new Error(`Cannot find fringe accessor "${fringeName}" for variable "${variableName}"`);
       }
       return ftype;

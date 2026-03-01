@@ -11,7 +11,9 @@ const { freeze, memoize } = Helpers;
 export interface ContextBuild {
   contextType(): ObjectType | undefined;
   error(): StandardErrorMessage;
-}
+};
+
+const kParentContextName = '<parent>';
 
 // need a implied accessor method build
 
@@ -25,6 +27,7 @@ function make
   const { error, setErrorFn } = StandardError.make();
   const mInProgressType = mBuilder.objectType;
 
+  mBuilder.addInitialSet()
 
 
   const contextType = memoize((): ObjectType | undefined => {

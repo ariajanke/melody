@@ -20,7 +20,6 @@ export interface StandardError {
   setErrorFn: (fn: StandardErrorFn) => undefined,
   setErrorMessage: (message: string) => undefined,
   error: () => StandardErrorMessage,
-  sharedErrorInstance: () => StandardError,
   hasErrorSet(): boolean
 };
 
@@ -28,12 +27,11 @@ export const StandardError = (() => {
   const { freeze } = Helpers;
 
   const kErrorNotSetFn: StandardErrorFn = (): StandardErrorMessage =>
-    { throw new Error('No error set, this method should not be called'); };
+    { raise('No error set, this method should not be called'); };
 
   function make(): StandardError {
     let mErrorFn = kErrorNotSetFn;
-    let mInst: StandardError | undefined = undefined;
-
+    
     function setErrorFn(fn: StandardErrorFn): undefined
       { mErrorFn = fn; }
 
@@ -46,12 +44,32 @@ export const StandardError = (() => {
     function hasErrorSet(): boolean
       { return mErrorFn !== kErrorNotSetFn; }
 
-    const sharedErrorInstance = (): StandardError =>
-      mInst ??= freeze({
-        setErrorFn, setErrorMessage, error, sharedErrorInstance, hasErrorSet
-      });
+    return freeze({
+      setErrorFn, setErrorMessage, error, hasErrorSet
+    });
+  }
 
-    return sharedErrorInstance();
+  return freeze({ make });
+})();
+
+export interface StandardErrorCollection {
+  addErrorFn: (fn: StandardErrorFn) => undefined;
+  addError: (message: string) => undefined;
+  errors: () => Readonly<StandardErrorMessage[]>;
+};
+
+export const StandardErrorCollection = (() => {
+  const { freeze } = Helpers;
+
+  function make() {
+    const mErrors: StandardErrorMessage[] = [];
+    function addErrorMessage(message: string): undefined
+      { mErrors.push({ message }); }
+    function addErrorFn(fn: StandardErrorFn): undefined
+      { addError(fn()); }
+    function errors(): Readonly<StandardErrorMessage[]>
+      { return mErrors; }
+    return freeze({ addErrorFn, errors });
   }
 
   return freeze({ make });
@@ -158,29 +176,7 @@ function toNamedMap<StringUnion extends string>
   return Object.assign({}, ...temp) as { [name in StringUnion]: StringUnion };
 }
 
-// const kYes = 'yes';
-
-// type FalibleFunction<Type> = () => Type | undefined;
-// type FalibleFunctions<Types extends unknown[]> =
-//   FalibleFunction<Types[number]>[];
-// function anyFailed<ReturnTypes extends unknown[]>
-//   (...fns: FalibleFunctions<ReturnTypes>): 'yes' | undefined
-// {
-//   for (const fn of fns) {
-//     if (fn() === undefined) { return kYes; }
-//   }
-//   return undefined;
-// }
-
-// // const coolThing = (): number | undefined => 42;
-// // const coolThing2 = (): string | '' | undefined => 'hello';
-// // const coolThing3 = (hello: string): { hello: string } | undefined => ({ hello });
-
-// // const res = anyFailed(coolThing, coolThing2) ?? coolThing3('hi');
-
 // melody will not have exceptions! hell no!
 // but there still maybe a "throw my hands up" kind of function (ala std::terminate)
 function raise(message: string): never
   { throw new Error(message); }
-
-// function makeSet<T>(): Set<T> { return new Set<T>(); }

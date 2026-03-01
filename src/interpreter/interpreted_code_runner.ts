@@ -98,8 +98,20 @@ function make
         mCallStack.popReturnPoint(mStack.count()) ??
         mCode.length; 
     },
+    forStackPointer: (() => {
+      let local = 0;
+      return (option: 'saveToLocal' | 'restoreToGlobal') => {
+        if (option === 'saveToLocal') {
+          ;
+        } else {
+          ;
+        }
+        mProgramCounter += 1;
+      };
+    })(),
+
     pushStackPointer() {
-      mStack.push(mStack.count());
+      // mStack.push(mStack.count());
       mProgramCounter += 1;
     }
   };

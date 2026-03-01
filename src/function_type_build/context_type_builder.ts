@@ -104,6 +104,7 @@ function make(): ContextTypeBuilder {
       parameters: () => TupleObjectFactory.emptyTuple(),
       returns: () => referenceType(),
       emit(codeWriter: CodeWriter) {
+        // as in preface a call...
         return codeWriter.pushStackPointer();
       },
       uid: memoize(Symbol)

@@ -11,6 +11,19 @@ function make
   const { error, setErrorFn } = StandardError.make();
   const { emptyTuple } = TupleObjectFactory;
 
+  const prefaceFunctionType = memoize((): FunctionType => {
+    const { emptyTuple } = TupleObjectFactory;
+
+    return freeze({
+      parameters: () => emptyTuple(),
+      returns: () => emptyTuple(),
+      emit: (codeWriter: CodeWriter) =>
+        codeWriter.storeParentStackPointer().forStackPointer('saveToLocal'),
+      uid: memoize(Symbol)
+    });
+  });
+
+
   function functionTypeSequence() {
     return mBuildSequence.
       map((build: FunctionTypeBuild) => {
@@ -24,7 +37,7 @@ function make
         acc.push(ftype, ftype.returns().stackCleanUp());
 
         return acc;
-      }, [] as FunctionType[] | undefined); 
+      }, [prefaceFunctionType()] as FunctionType[] | undefined); 
   }
 
   const functionType = memoize(() => {

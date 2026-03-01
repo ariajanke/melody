@@ -3,6 +3,7 @@ import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 
 const { freeze } = Helpers;
 
+
 function localCountIntoCode(count: number) {
   const { encodeVaruint32 } = WasmHelpers;
   const { asCode } = TypesAware;
@@ -28,8 +29,6 @@ const {
   drop,
   indirectCall,
   functionEnd,
-  getLocal,
-  setLocal
 } = TypesAware.opCodes();
 
 function make() {
@@ -49,6 +48,21 @@ function make() {
     mCode.push(...code);
     return inst;
   };
+
+  function makeAttr
+    (by: keyof ReturnType<typeof TypesAware.opCodes>)
+  {
+    const stackDelta = by.slice(0, 3) === 'set' ? -1 : 1;
+    const scope = by.slice(3);
+    const opCode = TypesAware.opCodes()[by];
+    return (idx: number) => {
+      verifyStackIncrement(stackDelta);
+      if (idx < 0 || idx > 255) {
+        throw new Error(`Invalid/Unsupported ${scope} index ${idx}`);
+      }
+      return pushCode(opCode, idx);
+    };
+  }
 
   const inst = freeze({
     prependCode(extraCode: number[]) {
@@ -102,20 +116,10 @@ function make() {
     pushDrop() {
       return pushCode(drop);
     },
-    setLocal(idx: number) {
-      verifyStackIncrement(-1);
-      if (idx < 0 || idx > 255) {
-        throw new Error(`Invalid/Unsupported local index ${idx}`);
-      }
-      return pushCode(setLocal, idx);
-    },
-    getLocal(idx: number) {
-      verifyStackIncrement(1);
-      if (idx < 0 || idx > 255) {
-        throw new Error(`Invalid/Unsupported local index ${idx}`);
-      }
-      return pushCode(getLocal, idx);
-    },
+    setLocal: makeAttr('setLocal'),
+    getLocal: makeAttr('getLocal'),
+    setGlobal: makeAttr('setGlobal'),
+    getGlobal: makeAttr('getGlobal'),
     callIndirect(typeIdx: number) {
       verifyStackIncrement(-1);
       return pushCode(indirectCall, ...encodeVaruint32(typeIdx), 0);

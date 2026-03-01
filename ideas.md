@@ -228,6 +228,10 @@ let f2 = fn
     # says I need "f1", and therefore "<root>"
     added <parent> = <f2>
     implied <root> = <parent>.<root>
+    # <parent>.<root>
+    # okay
+    # <parent> = grab SP from param 0
+    # 
     implied f1 = <root>.f1
     f1() # <- this essentially/has to become "<root>.f1()"
   ~
@@ -235,6 +239,13 @@ let f2 = fn
 ~
 f2()
 ```
+
+Parent and current contexts are not necessarily sequential (i.e. not necesarily by the difference in the size of the current context, that is there maybe a gap, e.g. the sibling call case).
+
+TODOS
+- [ ] initial set for parent context on context builder
+- [ ] a complete ftype which sets up that parent context
+  - this will also update 
 
 ### Melody "Heaven"
 Essentially "idealized" Melody, representing the "greatest" vision of what the language could be. Imagining Melody implementing itself.

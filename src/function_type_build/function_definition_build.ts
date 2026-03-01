@@ -17,33 +17,31 @@ function make
   : FunctionTypeBuild
 {
   const { error, setErrorFn } = StandardError.make();
-  return freeze({
-    functionType: memoize(() => {
-      const contextBuild = ContextBuild.
-        make(mDefs.declaredNames,
-             mIntoFunctionTypeBuild,
-             mHoldAsContextType);
-      
-      const contextType = contextBuild.contextType();
-      if (!contextType) {
-        return setErrorFn(contextBuild.error);
-      }
-
-      // NOTE remember, memoization
-      const getContextType = contextBuild.contextType as () => ObjectType;
-      
-      return mHoldAsContextType(getContextType, () => {
-        const subBuilds = mNodes.map(mIntoFunctionTypeBuild);
-        const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
-        const compositeFunctionType = cleanUpBuild.functionType();
-        if (!compositeFunctionType)
-          { return setErrorFn(cleanUpBuild.error); }
-
-        return compositeFunctionType;
-      });
-    }),
-    error
+  const contextType = memoize(() => {
+    const contextBuild = ContextBuild.
+      make(mDefs.declaredNames,
+           mIntoFunctionTypeBuild,
+           mHoldAsContextType);
+    
+    return contextBuild.contextType() ?? setErrorFn(contextBuild.error);
   });
+
+  const functionType = memoize(() => {
+    if (!contextType())
+      { return undefined; }
+    
+    return mHoldAsContextType(contextType as () => ObjectType, () => {
+      const subBuilds = mNodes.map(mIntoFunctionTypeBuild);
+      const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
+      const compositeFunctionType = cleanUpBuild.functionType();
+      if (!compositeFunctionType)
+        { return setErrorFn(cleanUpBuild.error); }
+
+      return compositeFunctionType;
+    });
+  });
+
+  return freeze({ functionType, error });
 }
 
 export const FunctionDefinitionBuild = freeze({ make });

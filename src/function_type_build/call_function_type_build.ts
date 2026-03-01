@@ -1,7 +1,7 @@
 import { CodeWriter } from '../code_writer';
 import { DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { FunctionType, FunctionTypeBuild } from '../function_type_build';
+import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
 import { StackSafetyChecker } from './stack_safety_checker';
 import { TupleObjectFactory } from './tuple_type';
@@ -18,6 +18,7 @@ function make
   (mCallName: DastNode,
    mReceiver: DastNode,
    mArgs: DastNode,
+   mGetCurrentContext: () => ObjectType,
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
   : FunctionTypeBuild
 {
@@ -89,6 +90,9 @@ function make
       parameters: emptyTuple,
       returns: () => callFunctionType()!.returns(),
       emit(writer: CodeWriter) {
+        writer.
+          pushRepresentation( mGetCurrentContext().sizeInBytes() ).
+          incrementStackPointer();
         receiver()!.emit(writer);
         args()!.emit(writer);
         // NOTE
@@ -102,6 +106,7 @@ function make
         // need function index for user defined functions
         optionalIndexAccessor()?.emit(writer);
         callFunctionType()!.emit(writer);
+        writer.forStackPointer('restoreToGlobal');
         return writer;
       },
       uid: memoize(Symbol)

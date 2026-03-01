@@ -11,6 +11,8 @@ export type FuncImportDescription = {
 const kOpCodes = freeze({
   getLocal    : 0x20,
   setLocal    : 0x21,
+  getGlobal   : 0x23,
+  setGlobal   : 0x24,
   i32Add      : 0x6A,
   i32Subtract : 0x6B,
   i32Multiply : 0x6C,

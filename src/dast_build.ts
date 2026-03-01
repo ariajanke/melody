@@ -1,7 +1,8 @@
 import { DastBuildVisitor } from './dast_build/dast_build_visitor';
 import { DastNode_ } from './dast_build/dast_node';
+import { DastValidator } from './dast_build/dast_validator';
 import { DastVisitor_ } from './dast_build/dast_visitor';
-import { Helpers, StandardErrorMessage } from './helpers';
+import { Helpers, StandardError, StandardErrorMessage } from './helpers';
 import { IastNode } from './iast_node';
 
 const { freeze, memoize } = Helpers;
@@ -91,12 +92,21 @@ export interface DastBuild {
 
 export const DastBuild = freeze({
   make(root: IastNode) {
+    const { error, setErrorFn } = StandardError.make();
+
     const mVisitor = DastBuildVisitor.make();
     const build = memoize((): DastBuild => root.visit(mVisitor));
+    const builtNode = memoize(() =>
+      build().node() ?? setErrorFn(build().error));
 
-    return freeze({
-      node: () => build().node(),
-      error: () => build().error()
+    const node = memoize(() => {
+      const node = builtNode();
+      if (!node) { return undefined; }
+
+      const validator = DastValidator.make(node);
+      return validator.node() ?? setErrorFn(validator.error);
     });
+
+    return freeze({ node, error });
   }
 });

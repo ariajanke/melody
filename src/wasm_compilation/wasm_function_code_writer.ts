@@ -1,10 +1,44 @@
 import { Helpers } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
-import { MemoryArray } from '../memory_array';
 import { CodeWriter } from '../code_writer';
+import { StackCodeWriter } from './stack_code_writer';
 
 const { freeze } = Helpers;
+
+// this could preface the function: (an initial set)
+// <parent> SP (passed as parameter, to be set in memory)
+//   storeParentStackPointer()
+//   WASM:
+//     global.get $gSP
+//     local.get $param0
+//     i32.store
+//     
+// <context> SP = (current) SP (local, possibly used for receiver later)
+//   forStackPointerOnLocal('saveToLocal')
+//   WASM:
+//     global.get $gSP
+//     local.set $lSP
+//
+// bump SP up <- but this is important for the next frame
+//   pushRepresentation(size of current frame).
+//     incrementStackPoint()...?
+//   WASM:
+//     const.i32 (size of current frame)
+//     global.get $gSP
+//     i32.add
+//     global.set $gSP
+// within function call:
+//   push receiver (whatever is the relevant context)
+//   push arguments
+//   (optional call index)
+//   direct/indirect call
+// bump SP down
+//   forStackPointerOnLocal('restoreToGlobal')
+//   WASM:
+//     local.get $lSP
+//     global.set $gSP
+
 
 export interface WasmFunctionCodeWriter extends CodeWriter {
   toFunctionBody(): WasmFunctionBody;
@@ -22,27 +56,15 @@ function make
     }
     return desc.index;
   };
+
   const pushFunctionCall = (name: string) => {
     const idx = getImportFuncIndex(name);
     mFunctionBody = mFunctionBody.pushFunctionCall(idx);
     return inst;
   };
-  function getAddrOnTop(offset: number) {
-    pushStackPointer();
-    mFunctionBody.
-      pushI32Const(offset + MemoryArray.kStartOfStack).
-      pushI32Add();
-  }
-  function pushStackPointer() {
-    if (mFunctionBody.localCount() < 1)
-      { mFunctionBody.pushLocal(); }
-    mFunctionBody.
-      pushI32Const(MemoryArray.kStackPointerLocation).
-      pushI32Load();
-    return inst;
-  }
 
   const inst = freeze({
+    ...StackCodeWriter.make(mFunctionBody, (): CodeWriter => inst),
     pushRepresentation(i: number) {
       if (i < 0) {
         throw new Error('Negative integers not implemented');
@@ -64,20 +86,6 @@ function make
     },
     multiplyIntegers() {
       mFunctionBody.pushI32Multiply();
-      return inst;
-    },
-    loadInteger: (offset: number) => {
-      getAddrOnTop(offset);
-      mFunctionBody.pushI32Load();
-      return inst;
-    },
-    storeInteger: (offset: number) => {
-      if (mFunctionBody.localCount() < 1)
-        { mFunctionBody.pushLocal(); }
-      mFunctionBody.setLocal(0);
-      getAddrOnTop(offset);
-      mFunctionBody.getLocal(0);
-      mFunctionBody.pushI32Store();
       return inst;
     },
     printString: () =>
@@ -105,7 +113,6 @@ function make
       mFunctionBody.callIndirect(n);
       return inst;
     },
-    pushStackPointer
   });
   return inst;
 }
