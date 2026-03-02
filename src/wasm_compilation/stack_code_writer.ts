@@ -28,7 +28,7 @@ function make
 
   function pushSpPlusOffset(offset: number) {
     mFunctionBody.
-      getGlobal(stackPointerLocation()).
+      getLocal(kStackPointerLocalIndex).
       pushI32Const(offset).
       pushI32Add();
   }
@@ -88,7 +88,7 @@ function make
   }
 
   function pushStackPointer() {
-    mFunctionBody.getGlobal(stackPointerLocation());
+    mFunctionBody.getLocal(kParentPointerParamIndex);
     return mGetWriter();
   }
 

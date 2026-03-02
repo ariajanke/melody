@@ -35,7 +35,7 @@ const {
 function make() {
   let mCode: number[] = [];
   let mLocalCount = 0, mStackCount = 0;
-  const { encodeVaruint32 } = WasmHelpers;
+  const { encodeVaruint32, encodeVarsint32 } = WasmHelpers;
   const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   function verifyStackIncrement(amount: number) {
     mStackCount += amount;
@@ -76,10 +76,7 @@ function make() {
     },
     pushI32Const(constant: number) {
       verifyStackIncrement(1);
-      if (constant < 0 || constant > 128) {
-        throw new Error(`Value ${constant} not supported for i32 const`);
-      }
-      return pushCode(i32Const, ...encodeVaruint32(constant));
+      return pushCode(i32Const, ...encodeVarsint32(constant));
     },
     pushI32Add: () => {
       verifyStackIncrement(-1);

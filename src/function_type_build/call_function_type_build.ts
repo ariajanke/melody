@@ -2,7 +2,7 @@ import { CodeWriter } from '../code_writer';
 import { DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
-import { Helpers, StandardError } from '../helpers';
+import { Helpers, StandardError, raise } from '../helpers';
 import { StackSafetyChecker } from './stack_safety_checker';
 import { TupleObjectFactory } from './tuple_type';
 
@@ -90,6 +90,10 @@ function make
       parameters: emptyTuple,
       returns: () => callFunctionType()!.returns(),
       emit(writer: CodeWriter) {
+        const contextSize = mGetContextSizeInBytes();
+        if (contextSize < 0) {
+          raise(`Context size cannot be negative, got ${contextSize}`);
+        }
         writer.
           pushRepresentation( mGetContextSizeInBytes() ).
           incrementStackPointer();

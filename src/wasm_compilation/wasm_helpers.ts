@@ -56,6 +56,10 @@ const kUnsignedInt32Max =  0xFFFFFFFF;
 const kSignedInt32Min   = -0x80000000;
 const kSignedInt32Max   =  0x7FFFFFFF;
 
+if (kUnsignedInt32Max > Number.MAX_SAFE_INTEGER) {
+  raise('Get better javascript lol');
+}
+
 export const WasmHelpers = freeze({
   makeCounter() {
     let n = 0;
@@ -77,56 +81,22 @@ export const WasmHelpers = freeze({
     return rv;
   },
   encodeVarsint32(n: number): number[] {
-    // const rv: number[] = [];
-    // if (n === 0)
-    //   return [0];
-    // const isNegative = n < 0;
-    // while (n !== 0) {
-    //   // const kEndBitMask = 128;
-    //   const rem  = n % 128;
-    //   const next = Math.floor(n / 128);
-    //   const useExt = isNegative ? next !== -1 : next !== 0;
-    //   const ext  = useExt ? 128 : 0;
-    //   rv.push(rem + ext);
-    //   n = next;
-    // }
-    // if (rv.length > 5) {
-    //   raise('Too large');
-    // }
-    // return rv;
+    if (n < kSignedInt32Min || n > kSignedInt32Max)
+      { raise('not a 32 bit signed integer'); }
 
-    // n = Math.abs(n);
-    // const kNegNegativeMask = 0x80000000;
-    // if (n === kNegNegativeMask) {
-    //   raise('Not supporting min negative integer');
-    // }
-    // if (n < kSignedInt32Min || n > kSignedInt32Max) {
-    //   raise('not a 32 bit signed integer');
-    // }
-    
-    // const negMask = isNegative ? kNegNegativeMask : 0;
-    // if (kNegNegativeMask > Number.MAX_SAFE_INTEGER) {
-    //   raise('Get better javascript lol');
-    // }
-    
-    // n += negMask;
-    // // negatives... leading bit of 1, invert everything else
-    // while (n > 0) {
-    //   // n = ~n; in a sane language I would just flip like this
-    //   const rem  = n % 128;
-    //   const next = Math.floor(n / 128);
-    //   const ext  = next > 0 ? 128 : 0;
-
-    //   if (rem === 0)
-    //     { raise('I failed'); }
-    //   rv.push((128 - rem) + ext);
-    //   n = next;
-    // }
-
-    // return rv;
+    if (n < 0) {
+      n = kUnsignedInt32Max - Math.abs(n);
+    }
+    const gv = WasmHelpers.encodeVaruint32(n);
+    // NOTE if the seventh bit is set, we must extend the rv by one more byte so
+    //      WASM doesn't interpret it as a negative number
+    if (gv[gv.length - 1] > 0b00111111) {
+      gv[gv.length - 1] += 0b10000000;
+      gv.push(0);
+    }
+    return gv;
   },
   encodeVaruint32(n: number): number[] {
-
     if (n < 0 || n > kUnsignedInt32Max) {
       raise('n must be in in [0 (2^32 - 1)]');
     }
