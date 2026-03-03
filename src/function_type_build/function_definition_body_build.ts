@@ -16,6 +16,11 @@ function make
   )
   : FunctionTypeBuild
 {
+  // now we can accumulate names
+  // we can pass a parent into here
+  // then just declare our "implied" functions
+  // and boom we have our "captured" variables
+
   const { error, setErrorFn } = StandardError.make();
   const contextType = memoize(() => {
     const contextBuild = ContextBuild.
@@ -27,10 +32,10 @@ function make
   });
 
   const functionType = memoize(() => {
-    if (!contextType())
-      { return undefined; }
-    
     return mHoldAsContextType(contextType as () => ObjectType, () => {
+      if (!contextType())
+        { return undefined; }
+
       const subBuilds = mNodes.map(mIntoFunctionTypeBuild);
       const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
       const compositeFunctionType = cleanUpBuild.functionType();

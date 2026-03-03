@@ -14,6 +14,36 @@ import { VariableTracker } from './variable_tracker';
 
 const { freeze, memoize } = Helpers;
 
+// ok rule here: keep DAST nodes OUT of this abstraction
+interface ContextObjectType extends ObjectType {
+  intoFactoryStage(): ContextFactoryStage;
+};
+
+interface ContextFunctionTypeBuild extends FunctionTypeBuild {
+  intoFactoryStage(): ContextFactoryStage;
+};
+
+interface ContextFactoryStage {
+  intoModifierBuild
+    (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
+    : ContextFunctionTypeBuild;
+  intoAccessorBuild
+    (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
+    : ContextFunctionTypeBuild;
+  intoInitialSetBuild
+    (name: string, variableNames: Readonly<string[]>, basedOn: ObjectType)
+    : ContextFunctionTypeBuild;
+  intoDirectLookUp(name: string, lookUpTable: FunctionLookUpTable)
+    : ContextFactoryStage;
+  intoObjectType(): ContextObjectType;
+};
+
+const ContextFactoryStage = freeze({
+  make(): ContextFactoryStage {
+
+  }
+});
+
 export interface ContextTypeBuilder {
   addModifier(name: string, attr: DastAttributeDeclaration, basedOn: ObjectType): FunctionTypeBuild;
   addAccessor(name: string, attr: DastAttributeDeclaration, basedOn: ObjectType): FunctionTypeBuild;
