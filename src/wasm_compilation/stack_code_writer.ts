@@ -100,7 +100,7 @@ function make
     incrementStackPointer,
     pushStackPointer
   });
-  return inst;// satisfies { [funcName in keyof CodeWriter]: CodeWriter[funcName] };
+  return inst;
 }
 
 export const StackCodeWriter = freeze({ make, kLocalsCount });

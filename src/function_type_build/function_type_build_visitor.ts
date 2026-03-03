@@ -11,12 +11,10 @@ import { StringPoolBuilder } from '../string_pool';
 import { CallFunctionTypeBuild } from './call_function_type_build';
 import { DastBuildCache } from './dast_build_cache';
 import { FringeFunctionBuild } from './fringe_function_build';
-import { FunctionDefinitionBuild } from './function_definition_build';
-import { FunctionTypeBuildBase } from './function_type_build_base';
+import { FunctionDefinitionIndexBuild } from './function_definition_index_build';
 import { InitialSetBuild } from './initial_set_build';
 import { LiteralFunctionTypeBuild } from './literal_function_type_build';
 import { TupleFunctionTypeBuild } from './tuple_function_type_build';
-// ;-;
 
 const { freeze } = Helpers;
 
@@ -51,15 +49,8 @@ function make
   function visitFunctionDefinition
     (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>): FunctionTypeBuild
   {
-    const defBuild = FunctionDefinitionBuild.
-      make(defs, nodes, mBuildCache.checkCachedBuild,
-           withHeldObject);
-
-    const compositeFunctionType = defBuild.functionType();
-    if (!compositeFunctionType)
-      { return defBuild; }
-    const emissionFuncType = mFunctionRegistry.indexEmissionOf(compositeFunctionType);
-    return FunctionTypeBuildBase.makeSuccessFromType(emissionFuncType);
+    return FunctionDefinitionIndexBuild.
+      make(defs, nodes, mBuildCache.checkCachedBuild, withHeldObject, mFunctionRegistry);
   }
 
   function visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): FunctionTypeBuild {

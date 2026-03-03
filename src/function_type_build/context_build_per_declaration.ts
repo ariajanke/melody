@@ -1,5 +1,5 @@
 import { DastLetDeclaration, DastNode } from '../dast_build';
-import { Helpers, StandardError } from '../helpers';
+import { Helpers, StandardError, raise } from '../helpers';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { ContextTypeBuilder } from './context_type_builder';
 import { Token } from '../token';
@@ -15,6 +15,11 @@ function make
   const { error, setErrorFn } = StandardError.make();
 
   const typeForDef = memoize((): ObjectType | undefined => {
+    // we know what this is when value is a function definition
+    // we don't know for non-definitions
+    // each node on a DAST represents both a function and object type
+    // generally the relation between the function and object types
+    // for a node is that the return type of that function type is the object
     const fbuild = mIntoFastBuild(mDef.value);
     return fbuild.functionType()?.returns() ?? setErrorFn(fbuild.error);
   });
@@ -40,8 +45,8 @@ function make
     }
 
     // NOTE: this suggests that the declaration is malformed
-    throw new Error(`Expected either "assignment", "accessor", or "initialSet" field for ` +
-                    `declaration of "${mFunctionName}"`);
+    raise(`Expected either "assignment", "accessor", or "initialSet" field for ` +
+          `declaration of "${mFunctionName}"`);
   });
 
   const functionType = memoize(() => {

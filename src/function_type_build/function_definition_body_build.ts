@@ -44,4 +44,4 @@ function make
   return freeze({ functionType, error });
 }
 
-export const FunctionDefinitionBuild = freeze({ make });
+export const FunctionDefinitionBodyBuild = freeze({ make });

@@ -17,65 +17,25 @@ export interface DastAttributeDeclaration {
 };
 
 export interface DastLetDeclaration {
-  // functionKind: ContextFunctionGroup;
-
-  // it seems that value can't always be here
-  // (e.g. for let (a, b) = t)
-  // alternatively it's value could be the nth member of some tuple on an initialSet
   value: DastNode;
-
-  // at least one of the following has to be defined
-
-  // there are four possible combinations of declarations:
-  
-  // let (a, b, ...) = t
-  // single initialSet: "<initSet>:(a,b,...)"
-  // three accessors: ".a", ".b", ...
-  // (possibly) three assignments: "a:=", "b:=", ...
-  // three variable names: "a", "b", ...
-  // tuple rank would be at play here
-  // for "a" its tuple rank is 0
-  // tell the context builder to look up tuple type's 0th member type
-  // to type deduce "a"
-
-  // let a = t
-  // single initialSet: "<initSet>:(a)"
-  // single accessor: ".a"
-  // (possibly) single assignment: "a:="
-  // single variable name: "a"
-
-  // let (a, b, ...) = (x, y, ...)
-  // single initialSet: "<initSet>:(a,b,...)"
-  // three accessors: ".a", ".b", ...
-  // (possibly) three assignments: "a:=", "b:=", ...
-  // three variable names: "a", "b", ...
-
-  // let a = (x, y, ...)
-  // single initialSet: "<initSet>:(a)"
-  // single accessor: ".a"
-  // (possibly) single assignment: "a:="
-  // single variable name: "a"
-
-  // for each
-  // every accessor and assignment has a single variable name
-  // in the case of a tupleRank, its type must be deduced at function type build time
-
 
   accessor?: DastAttributeDeclaration;
   assignment?: DastAttributeDeclaration;
-  
-  // fields for initialSet
   initialSet?: {
-    variableNames: Readonly<string[]>; // e.g. for <initSet>:(a,b) -> [a, b], for <initSet>:(a) -> [a]
+    variableNames: Readonly<string[]>;
     dependeeNames: Readonly<string[]>;  
   };
 };
+
+// we build DFS style
+// having pending names mean... 
 
 export type WritableDastDeclarationMap = { [functionName: string]: DastLetDeclaration };
 export type DastDeclarationMap = Readonly<WritableDastDeclarationMap>;
 export interface DastFunctionNameMappings {
   name: string;
   declaredNames: DastDeclarationMap;
+  // can absolutely be either directly or indirectly (deeper) used
   pendingNames: Readonly<{ [name: string]: true }>;
 };
 

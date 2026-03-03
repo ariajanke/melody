@@ -154,11 +154,58 @@ puts(c) # 7
 Shortcut for defining an accessor like function. A restriction is that the function must not take any parameters.
 
 ### The "Context" Type
-A "Context" Type is the current scope as a sort of implicit "table" of functions. In similar vein as "binding" in Ruby, or "this" in JavaScript. In fact it is the very first true user defined type!
+A "Context" Type is the current scope as a sort of implicit "table" of functions. It is the stack frame for the function currently being run. It is the very first true user defined type!
 
-Any function that does not have an explicit receiver, implicitly has the "Context" as its receiver.
+Any function that does not have an explicit receiver, implicitly has the current "Context" as its receiver.
 
-### [mostly unimplemented feature] Tables
+#### Variables accross Stack Frames
+In context has another special function `&gt;parent&lt;`. This returns a reference to the parent context.
+
+The `&gt;parent&lt;` function allows contexts to access variables defined outside of them.
+
+Consider:
+```melody
+let a = 5
+let f = fn puts(a)
+
+f()
+```
+
+This becomes:
+```melody
+let a = 5
+let f = fn (<parent> is <RootContext>)
+  let a = <parent>.a
+  puts(a)
+~
+f()
+```
+The above illustrates that the parent is essentially a hidden parameter (the receiver to be precise).
+
+##### Sibling Function Case
+
+Consider:
+```melody
+let a = 5
+let f = fn puts(a)
+let g = fn f()
+```
+
+This becomes:
+```melody
+let a = 5
+let f = fn (<parent> is <RootContext>)
+  let a = <parent>.a
+  puts(a)
+~
+let g = fn (<parent> is <RootContext>)
+  let f = <parent>.f
+  f()
+~
+```
+This follows the exact same logic for variable access. The only difference is how `f`'s function index is reached. Instead of simple value retrieval, we need to go through the parent (like a table) to get it.
+
+### [partial] Tables
 Much like its predecessor C, a "table" is a sort of inline declared struct. Each member key is converted into an index (much like C), whose values maybe accessed by sending a message (like Ruby) to the table.
 
 Believe it or not, you've already seen a version of this with the "Context". Instead of let declarations, you have name and value pairs.

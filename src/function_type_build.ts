@@ -15,7 +15,10 @@ export interface CodeFragment {
 export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;
+  // this is why I wanted an "emitter"...
+  // sometimes I can't know what the code will look like
   emit(writer: CodeWriter): CodeWriter | undefined;
+  // not emit... but "value"? as in evulating it now
   uid(): symbol;
 };
 

@@ -71,6 +71,14 @@ describe('end-to-end', () => {
              done();
            }).catch(errorHandler(done));
       });
+
+      makeExampleRunner(compileFromSource)(`runs a simple load within a function`, `
+        let f = fn
+          let a = 10
+          puts(a)
+        ~
+        f()
+      `, ['10']);
     });
     
     describe('with an interpreter', () => {
