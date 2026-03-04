@@ -1,0 +1,58 @@
+import { FunctionNamingSchema } from '../function_naming_schema';
+import { FunctionType, ObjectType } from '../function_type_build';
+import { TupleObjectFactory } from '../function_type_build/tuple_type';
+import { DastAttributeDeclaration } from '../dast_build';
+import { VariableTracker } from './variable_tracker';
+import { Helpers, raise } from '../helpers';
+import { ContextAttributeFactory } from './context_attribute_factory';
+import { ContextFactoryStage, ContextFunctionTypeBuild, FunctionOpLookUp } from './context_factory_stage';
+import { ContextAttributeTypeBuild } from './context_attribute_build';
+import { MutableFunctionTable } from './mutable_function_table';
+
+const { freeze, memoize } = Helpers;
+
+export const ContextAccessorBuild = freeze({
+  make(mName: string,
+       mAttr: DastAttributeDeclaration,
+       mBasedOn: ObjectType,
+       mVariableTracker: VariableTracker,
+       mTable: FunctionOpLookUp): ContextFunctionTypeBuild
+  {
+    const { error, objectType } = ContextAttributeTypeBuild.make(mAttr, mBasedOn);
+    const { ensureVariablePresence } = mVariableTracker;
+
+    const variableType = objectType;
+
+    const builtFunctionType = memoize((): FunctionType | undefined => {
+      if (!variableType())
+        { return undefined; }
+
+      const { type, accessIndex } =
+        ensureVariablePresence(mAttr.variableName, variableType()!);
+      
+      return ContextAttributeFactory.buildGetter(accessIndex, type);
+    });
+
+    // on completing a build, we add to the look up table
+    const functionType = memoize(() => {
+      if (!FunctionNamingSchema.isAFringeAccessorName(mName)) {
+        raise(`Expected an accessor name, got "${mName}"`);
+      }
+
+      const ftype = builtFunctionType();
+      if (ftype) {
+        mTable[mName] = MutableFunctionTable.
+          make().
+          setDefinition(TupleObjectFactory.emptyTuple(), ftype);
+      }
+      return ftype;
+    });
+
+    return freeze({
+      functionType,
+      error,
+      intoFactoryStage: () =>
+        ContextFactoryStage.make(mVariableTracker, mTable)
+    });
+  }
+});

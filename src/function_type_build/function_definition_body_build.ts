@@ -24,7 +24,7 @@ function make
   const { error, setErrorFn } = StandardError.make();
   const contextType = memoize(() => {
     const contextBuild = ContextBuild.
-      make(mDefs.declaredNames,
+      make(mDefs,
            mIntoFunctionTypeBuild,
            mHoldAsContextType);
     

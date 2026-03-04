@@ -1,10 +1,11 @@
-import { DastDeclarationMap, DastNode } from '../dast_build';
+import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { ContextTypeBuilder } from './context_type_builder';
+// import { ContextTypeBuilder } from './context_factory_stage';
 import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { HoldContextTypeFunction } from './function_type_build_visitor';
 import { ContextBuildPerDeclaration } from './context_build_per_declaration';
+import { ContextFactoryStage } from './context_factory_stage';
 
 const { freeze, memoize } = Helpers;
 
@@ -18,38 +19,49 @@ export interface ContextBuild {
 // need a implied accessor method build
 
 function make
-  (mDefs: DastDeclarationMap,
+  (mDefs: DastFunctionNameMappings,
    mIntoFastBuild: (dnode: DastNode) => FunctionTypeBuild,
    mHoldAsContextType: HoldContextTypeFunction,
-   mBuilder = ContextTypeBuilder.make())
+   mStage = ContextFactoryStage.make())
   : ContextBuild
 {
   const { error, setErrorFn } = StandardError.make();
-  const mInProgressType = mBuilder.objectType;
+  
+  mStage.intoDirectLookUp('puts', PutsFunctionLookUpTable.instance());
 
-  // mBuilder.addInitialSet()
-
+  // two special functions:
+  // - <context>
+  // - <parent>
 
   const contextType = memoize((): ObjectType | undefined => {
-    mBuilder.addDirectLookUp('puts', PutsFunctionLookUpTable.instance());
-    // getting the current context, just grab the current value of SP
-    // preceding every call we'll have to update it
-    //
+    const contextObjectType = mStage.intoObjectType;
 
+    for (const pendingName in mDefs.pendingNames) {
+      // here, we'll need to build sort of "delegates" onto parent
+    }
 
-    return mHoldAsContextType(mInProgressType, () => {
-      for (const functionName in mDefs) {
-        // thankfully these builds are cached :)
-        const decl = mDefs[functionName];
+    for (const functionName in mDefs.declaredNames) {
+      const decl = mDefs.declaredNames[functionName];
+
+      // have to hold at each step, such that the context type can evolve
+      const newStage = mHoldAsContextType(contextObjectType, () => {
+        const build = mIntoFastBuild(decl.value);
+        if (!build.functionType())
+          { return setErrorFn(build.error); }
 
         const declaration = ContextBuildPerDeclaration.
-          make(functionName, decl, mIntoFastBuild, mBuilder);
+          selectBuildForDeclaration(functionName, decl, build.functionType()!, mStage);
         if (!declaration.functionType()) {
           return setErrorFn(declaration.error);
         }
-      }
-      return mInProgressType();
-    });
+
+        return declaration.intoFactoryStage();
+      });
+      if (!newStage)
+        { return undefined; }
+      // resets here is not great, trying to get closer to "functional" friendly
+      mStage = newStage;
+    }
   });
 
   return freeze({

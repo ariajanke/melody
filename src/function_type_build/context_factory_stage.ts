@@ -1,0 +1,307 @@
+import { ContextTypeReservations } from '../context_type_reservations';
+import { DastAttributeDeclaration } from '../dast_build';
+import { FunctionNamingSchema } from '../function_naming_schema';
+import { FunctionLookUpTable, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { Helpers } from '../helpers';
+import { Token } from '../token';
+import { BuiltinTypeBase } from './builtin_type';
+import { ContextAccessorBuild } from './context_accessor_build';
+import { ContextAttributeFactory } from './context_attribute_factory';
+import { ContextInitialSetBuild } from './context_initial_set_build';
+import { ContextModifierBuild } from './context_modifier_build';
+import { MutableFunctionTable } from './mutable_function_table';
+import { TupleObjectFactory } from './tuple_type';
+import { VariableTracker } from './variable_tracker';
+
+const { freeze, memoize } = Helpers;
+
+// ok rule here: keep DAST nodes OUT of this abstraction
+export interface ContextObjectType extends ObjectType {
+  intoFactoryStage(): ContextFactoryStage;
+};
+
+export interface ContextFunctionTypeBuild extends FunctionTypeBuild {
+  intoFactoryStage(): ContextFactoryStage;
+};
+
+export interface ContextFactoryStage {
+  intoParentBuild(parentType: ObjectType): ContextFactoryStage;
+  intoModifierBuild
+    (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
+    : ContextFunctionTypeBuild;
+  intoAccessorBuild
+    (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
+    : ContextFunctionTypeBuild;
+  intoInitialSetBuild
+    (name: string, variableNames: Readonly<string[]>, basedOn: ObjectType)
+    : ContextFunctionTypeBuild;
+  intoDirectLookUp(name: string, lookUpTable: FunctionLookUpTable)
+    : ContextFactoryStage;
+  intoObjectType(): ContextObjectType;
+};
+
+export type FunctionOpLookUp =
+  { [op: string | symbol]: FunctionLookUpTable | undefined };
+
+function make
+  (mVariableTracker = VariableTracker.make(),
+   mTable: FunctionOpLookUp = {})
+  : ContextFactoryStage
+{
+  // try and hide our "dirty laundry" here, we'll pass inst into constructors
+
+  function intoParentBuild
+    (parentType: ObjectType): ContextFactoryStage
+  {
+    const getParentRefFunc = parentType.
+      lookUp(FunctionNamingSchema.kContextName)?.
+      byParameters(TupleObjectFactory.emptyTuple());
+    const parentRefType = getParentRefFunc?.returns();
+    if (!getParentRefFunc || !parentRefType) {
+      throw new Error(`Cannot find context getter on parent type "${parentType.name()}"`);
+    }
+    const parentAccessFunc = ContextAttributeFactory.buildGetter(
+      ContextTypeReservations.kParentAccessIndex,
+      parentRefType);
+    mTable[FunctionNamingSchema.kParentName] = MutableFunctionTable.
+      make().
+      setDefinition(TupleObjectFactory.emptyTuple(), parentAccessFunc);
+    return inst;
+  }
+
+  function intoAccessorBuild
+    (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
+    : ContextFunctionTypeBuild
+  {
+    return ContextAccessorBuild.make(name, attr, basedOn, mVariableTracker, mTable);
+  }
+
+  function intoModifierBuild
+    (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
+    : ContextFunctionTypeBuild
+  {
+    // ffffuuuuu
+    const accessorBuild = ContextAccessorBuild.make(
+      FunctionNamingSchema.mapToFringeAccessor(attr.variableName),
+      attr,
+      basedOn,
+      mVariableTracker,
+      mTable
+    );
+    if (!accessorBuild.functionType()) {
+      return accessorBuild;
+    }
+
+    return ContextModifierBuild.make(name, attr, basedOn, mVariableTracker, mTable);
+  }
+
+  function intoInitialSetBuild
+    (name: string, variableNames: Readonly<string[]>, basedOn: ObjectType)
+    : ContextFunctionTypeBuild
+  {
+    return ContextInitialSetBuild.make(name, variableNames, basedOn, mVariableTracker, mTable);
+  }
+
+  function intoDirectLookUp(name: string, lookUpTable: FunctionLookUpTable)
+    : ContextFactoryStage
+  {
+    mTable[name] = lookUpTable;
+    return inst;
+  }
+
+  const intoObjectType = memoize((): ContextObjectType => {
+    const { talliedSizeInBytes, talliedSizeInItems } = mVariableTracker;
+    const objectType = freeze({
+      ...BuiltinTypeBase.defaultsWith((): ContextObjectType => objectType),
+      name: Token.kContextToken.content,
+      lookUp(operation: string | symbol): FunctionLookUpTable | undefined
+        { return mTable[operation]; },
+      sizeInBytes: () => talliedSizeInBytes(),
+      sizeInStackItems: () => talliedSizeInItems(),
+      intoFactoryStage: () => inst
+     });
+    return objectType;
+  });
+
+  const inst = freeze({
+    intoAccessorBuild,
+    intoModifierBuild,
+    intoInitialSetBuild,
+    intoDirectLookUp,
+    intoObjectType,
+    intoParentBuild
+   });
+
+  return inst;
+}
+
+export const ContextFactoryStage = freeze({ make });
+
+// --- OLD ---
+// const kStuff = false;
+// if (kStuff) {
+// interface ContextTypeBuilder {
+//   addModifier(name: string, attr: DastAttributeDeclaration, basedOn: ObjectType): FunctionTypeBuild;
+//   addAccessor(name: string, attr: DastAttributeDeclaration, basedOn: ObjectType): FunctionTypeBuild;
+//   addInitialSet(name: string, variableNames: Readonly<string[]>, basedOn: ObjectType)
+//     : FunctionTypeBuild;
+//   addDirectLookUp(name: string, lookUpTable: FunctionLookUpTable): ContextTypeBuilder;
+//   objectType(): ObjectType;
+// };
+
+// function make(): ContextTypeBuilder {
+//   const mVariableTracker = VariableTracker.make();
+
+//   const mLookUpTable:
+//     { [op: string | symbol]: FunctionLookUpTable | undefined } = {};
+
+//   const { emptyTuple } = TupleObjectFactory;
+
+//   function addAccessor
+//     (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType): FunctionTypeBuild
+//   {
+//     if (!FunctionNamingSchema.isAFringeAccessorName(name)) {
+//       throw new Error(`Expected an accessor name, got "${name}"`);
+//     }
+    
+//     const fbuild = ContextAccessorBuild.make(attr, basedOn, mVariableTracker);
+//     const { functionType } = fbuild;
+//     if (functionType()) {  
+//       mLookUpTable[name] = MutableFunctionTable.
+//         make().
+//         setDefinition(emptyTuple(), functionType()!);
+//     }
+//     return fbuild;
+//   }
+
+//   function addModifier
+//     (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType): FunctionTypeBuild
+//   {
+//     if (!FunctionNamingSchema.isAnAssignmentName(name)) {
+//       throw new Error(`Expected a modifier name, got "${name}"`);
+//     }
+//     const accName = FunctionNamingSchema.mapToFringeAccessor(attr.variableName);
+//     const accBuild = addAccessor(accName, attr, basedOn);
+//     if (!accBuild.functionType()) {
+//       return accBuild;
+//     }
+//     const fbuild = ContextModifierBuild.make(attr, basedOn, mVariableTracker, objectType());
+//     const { functionType } = fbuild;
+//     if (functionType()) {
+//       mLookUpTable[name] = MutableFunctionTable.
+//         make().
+//         setDefinition(functionType()!.parameters(), functionType()!);
+//     }
+//     return fbuild;
+//   }
+
+//   function addInitialSet
+//     (name: string, brokenInto: Readonly<string[]>, definedBy: ObjectType)
+//     : FunctionTypeBuild
+//   {
+//     if (!FunctionNamingSchema.isAnInitialSetName(name)) {
+//       throw new Error(`Expected an initial set name, got "${name}"`);
+//     }
+//     const creation = InitialSetImplementation.
+//       make(brokenInto, definedBy, mVariableTracker);
+//     const ftype = creation.functionType();
+//     if (ftype) {
+//       mLookUpTable[name] = MutableFunctionTable.
+//         make().
+//         setDefinition(definedBy, ftype);
+//     }
+//     return creation;
+//   }
+
+//   const referenceType = memoize((): ObjectType => {
+//     const inst = freeze({
+//       ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
+//       name: () => `Reference(${Token.kContextToken.content()})`,
+//       lookUp(operation: string | symbol): FunctionLookUpTable | undefined
+//         { return objectType().lookUp(operation); },
+//       sizeInBytes: () => MemoryArray.kWordSizeInBytes,
+//       sizeInStackItems: () => 1,
+//     });
+//     return inst;
+//   });
+
+//   const referenceGetter = memoize((): FunctionType => {
+//     const ftype = freeze({
+//       parameters: () => TupleObjectFactory.emptyTuple(),
+//       returns: () => referenceType(),
+//       emit(codeWriter: CodeWriter) {
+//         // as in preface a call...
+//         return codeWriter.pushStackPointer();
+//       },
+//       uid: memoize(Symbol)
+//     });
+//     return ftype;
+//   });
+
+//   const addContext = memoize(() => {
+//     mLookUpTable[FunctionNamingSchema.kContextName] = {
+//       byParameters(type: ObjectType) {
+//         if (type.uid() === TupleObjectFactory.emptyTuple().uid()) {
+//           return referenceGetter();
+//         }
+//         return undefined;
+//       }
+//     };
+//   });
+
+//   // const parentGetter = memoize((): FunctionType => {
+//   //   const ftype = freeze({
+//   //     parameters: () => TupleObjectFactory.emptyTuple(),
+//   //     returns: () => 'idk lol',
+//   //     emit(codeWriter: CodeWriter) {
+//   //       codeWriter.loadInteger(ContextTypeReservations.kParentAccessIndex);
+//   //       return codeWriter;
+//   //     },
+//   //     uid: memoize(Symbol)
+//   //   });
+//   //   return ftype;
+//   // });
+
+//   // const addParent = memoize(() => {
+//   //   mLookUpTable[FunctionNamingSchema.kParentName] = {
+//   //     byParameters(type: ObjectType) {
+//   //       if (type.uid() === TupleObjectFactory.emptyTuple().uid()) {
+//   //         return parentGetter();
+//   //       }
+//   //       return undefined;
+//   //     }
+//   //   };
+//   // });
+//   const objectType = memoize(() => {
+//     const {
+//       talliedSizeInBytes,
+//       talliedSizeInItems
+//     } = mVariableTracker;
+//     addContext();
+//     // addParent();
+//     const inst = freeze({
+//       ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
+//       name: Token.kContextToken.content,
+//       lookUp(operation: string | symbol): FunctionLookUpTable | undefined
+//         { return mLookUpTable[operation]; },
+//       sizeInBytes: () => talliedSizeInBytes(),
+//       sizeInStackItems: () => talliedSizeInItems()
+//     });
+//     return inst;
+//   });
+
+//   const inst = freeze({
+//     addDirectLookUp(name: string, table: FunctionLookUpTable): ContextTypeBuilder {
+//       mLookUpTable[name] = table;
+//       return inst;
+//     },
+//     addModifier,
+//     addAccessor,
+//     addInitialSet,
+//     objectType
+//   });
+//   return inst;
+// }
+
+// const ContextTypeBuilder = freeze({ make });
+// }

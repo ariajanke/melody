@@ -1,4 +1,4 @@
-import { DastDeclarationMap } from '../../src/dast_build';
+import { DastDeclarationMap, DastNode } from '../../src/dast_build';
 import { DastFunctionDefintion, DastInitialSet } from '../../src/dast_build/dast_node_specializations';
 import { FunctionType } from '../../src/function_type_build';
 import { FunctionTypeBuildVisitor } from '../../src/function_type_build/function_type_build_visitor';
@@ -11,7 +11,10 @@ const { describeNamed } = TestHelpers;
 describeNamed({ FunctionTypeBuildVisitor }, () => {
   it('creates exactly two function types for a nested function definition', () => {
     const registry = FunctionTypeRegistry.make();
-    const visitor = FunctionTypeBuildVisitor.make(StringPoolBuilder.make(), registry);
+    const visitor = FunctionTypeBuildVisitor.
+      make(StringPoolBuilder.make(),
+           registry,
+           (_0: DastNode) => ({}));
     const nestedFuncNode = DastFunctionDefintion.
       make({ name: '', pendingNames: {}, declaredNames: {} }, []);
     const fInitialSetNode = DastInitialSet.make('f', nestedFuncNode);

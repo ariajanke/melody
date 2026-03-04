@@ -1,4 +1,4 @@
-import { Helpers } from './helpers';
+import { Helpers, raise } from './helpers';
 
 const { freeze } = Helpers;
 
@@ -14,9 +14,8 @@ function make<HeldObjectType>
   (mNothingHeldWhat: string = 'held object not set yet')
 : CallBackObjectHold<HeldObjectType>
 {
-  let mHeldObjectGetter: () => HeldObjectType = () => {
-    throw new Error(mNothingHeldWhat);
-  };
+  let mHeldObjectGetter: () => HeldObjectType = () =>
+    raise(mNothingHeldWhat);
   const withHeldObject: CallBackObjectHold<HeldObjectType>['withHeldObject'] =
     <T>(getter: () => HeldObjectType, whileFn: () => T): T =>
   {

@@ -1,5 +1,6 @@
 import { CodeWriter } from './code_writer';
 import { DastNode } from './dast_build';
+import { AccumulatedPendingNameMap } from './function_type_build/accumulated_pending_name_map';
 import { FunctionTypeBuildVisitor } from './function_type_build/function_type_build_visitor';
 import { TupleObjectFactory } from './function_type_build/tuple_type';
 import { FunctionTypeRegistry } from './function_type_registry';
@@ -55,7 +56,9 @@ function make(mRoot: DastNode,
   : FunctionTypeBuild
 {
   const mVisitor = FunctionTypeBuildVisitor.
-    make(mStringPoolBuilder, mFunctionRegistry);
+    make(mStringPoolBuilder,
+         mFunctionRegistry,
+         AccumulatedPendingNameMap.make(mRoot));
   const mBuild = memoize(() => mRoot.visit(mVisitor));
 
   return freeze({

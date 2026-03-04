@@ -3,10 +3,10 @@ import { DastAttributeDeclaration, DastDeclarationMap, WritableDastDeclarationMa
 import { DastNode_ } from '../../src/dast_build/dast_node';
 import { DastTuple } from '../../src/dast_build/dast_node_specializations';
 import { ContextFunctionGroup, FunctionNamingSchema } from '../../src/function_naming_schema';
-import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
+import { FunctionLookUpTable, FunctionType, ObjectType } from '../../src/function_type_build';
 import { IntegerType } from '../../src/function_type_build/builtin_type';
 import { ContextBuild } from '../../src/function_type_build/context_build';
-import { ContextTypeBuilder } from '../../src/function_type_build/context_type_builder';
+import { ContextFactoryStage, ContextFunctionTypeBuild, ContextObjectType } from '../../src/function_type_build/context_factory_stage';
 import { TupleObjectFactory } from '../../src/function_type_build/tuple_type';
 import { Helpers, StandardError } from '../../src/helpers';
 import { TestHelpers } from '../test_helpers';
@@ -16,48 +16,103 @@ const { describeNamed } = TestHelpers;
 const { freeze, memoize } = Helpers;
 
 describeNamed({ ContextBuild }, () => {
-  const makeContextBuilder =
-    (callDict: { [name: string]: string[] }): ContextTypeBuilder =>
-  {
-    const sampleFBuild = freeze({
-      functionType(): FunctionType {
-        return {} as FunctionType;
-      },
-      error: StandardError.make().error
-    });
+  // const makeContextBuilder =
+  //   (callDict: { [name: string]: string[] }): ContextTypeBuilder =>
+  // {
+  //   const sampleFBuild = freeze({
+  //     functionType(): FunctionType {
+  //       return {} as FunctionType;
+  //     },
+  //     error: StandardError.make().error
+  //   });
+  //   const inst = freeze({
+  //     addDirectLookUp(name: string, _1: FunctionLookUpTable): ContextTypeBuilder {
+  //       (callDict['addDirectLookUp'] ??= []).push(name);
+  //       return {} as ContextTypeBuilder;
+  //     },
+  //     addModifier(name: string, _1: DastAttributeDeclaration, _2: ObjectType): FunctionTypeBuild {
+  //       (callDict['addModifier'] ??= []).push(name);
+  //       return sampleFBuild;
+  //     },
+  //     addAccessor(name: string, _1: DastAttributeDeclaration, _2: ObjectType): FunctionTypeBuild {
+  //       (callDict['addAccessor'] ??= []).push(name);
+  //       return sampleFBuild;
+  //     },
+  //     addInitialSet(name: string, _1: Readonly<string[]>, _2: ObjectType)
+  //       : FunctionTypeBuild
+  //     {
+  //       (callDict['addInitialSet'] ??= []).push(name);
+  //       return sampleFBuild;
+  //     },
+  //     objectType(): ObjectType {
+  //       return {
+  //         name: () => 'FromContextTypeBuilder',
+  //         lookUp(_0: string | symbol) { return undefined; },
+  //         detuplify: () => undefined,
+  //         uid: memoize(Symbol),
+  //         sizeInBytes: () => 0,
+  //         sizeInStackItems: () => 0,
+  //         stackCleanUp: () => ({}) as FunctionType
+  //       };
+  //     }
+  //   });
+  //   return inst;
+  // };
+  // all because I want to make a "mock"
+  function makeMockFactoryStage(callDict: { [name: string]: string[] }): ContextFactoryStage {
+    function makeSampleFTypeBuild(): ContextFunctionTypeBuild {
+      return freeze({
+        functionType(): FunctionType {
+          return {} as FunctionType;
+        },
+        error: StandardError.make().error,
+        intoFactoryStage(): ContextFactoryStage { return inst; }
+      });
+    }
     const inst = freeze({
-      addDirectLookUp(name: string, _1: FunctionLookUpTable): ContextTypeBuilder {
-        (callDict['addDirectLookUp'] ??= []).push(name);
-        return {} as ContextTypeBuilder;
+      intoParentBuild(_0: ObjectType): ContextFactoryStage {
+        return inst;
       },
-      addModifier(name: string, _1: DastAttributeDeclaration, _2: ObjectType): FunctionTypeBuild {
-        (callDict['addModifier'] ??= []).push(name);
-        return sampleFBuild;
+      intoDirectLookUp(name: string, _1: FunctionLookUpTable): ContextFactoryStage {
+        (callDict['intoDirectLookUp'] ??= []).push(name);
+        return inst;
       },
-      addAccessor(name: string, _1: DastAttributeDeclaration, _2: ObjectType): FunctionTypeBuild {
-        (callDict['addAccessor'] ??= []).push(name);
-        return sampleFBuild;
-      },
-      addInitialSet(name: string, _1: Readonly<string[]>, _2: ObjectType)
-        : FunctionTypeBuild
+      intoModifierBuild(
+        name: string, _1: DastAttributeDeclaration, _2: ObjectType
+      ): ContextFunctionTypeBuild
       {
-        (callDict['addInitialSet'] ??= []).push(name);
-        return sampleFBuild;
+        (callDict['intoModifierBuild'] ??= []).push(name);
+        return makeSampleFTypeBuild();
       },
-      objectType(): ObjectType {
+      intoAccessorBuild(
+        name: string, _1: DastAttributeDeclaration, _2: ObjectType
+      ): ContextFunctionTypeBuild
+      {
+        (callDict['intoAccessorBuild'] ??= []).push(name);
+        return makeSampleFTypeBuild();
+      },
+      intoInitialSetBuild(
+        name: string, _1: Readonly<string[]>, _2: ObjectType
+      ): ContextFunctionTypeBuild
+      {
+        (callDict['intoInitialSetBuild'] ??= []).push(name);
+        return makeSampleFTypeBuild();
+      },
+      intoObjectType(): ContextObjectType {
         return {
-          name: () => 'FromContextTypeBuilder',
+          name: () => 'FromContextFactoryStage',
           lookUp(_0: string | symbol) { return undefined; },
           detuplify: () => undefined,
           uid: memoize(Symbol),
           sizeInBytes: () => 0,
           sizeInStackItems: () => 0,
-          stackCleanUp: () => ({}) as FunctionType
+          stackCleanUp: () => ({}) as FunctionType,
+          intoFactoryStage() { return inst; }
         };
       }
     });
     return inst;
-  };
+  }
 
   const integerType = IntegerType.instance;
   const intPairTuple = memoize(() =>
@@ -85,10 +140,10 @@ describeNamed({ ContextBuild }, () => {
   const makeContextBuild =
     (callDict: { [name: string]: string[] }, defs: DastDeclarationMap) =>
   ContextBuild.make(
-    defs,
+    { declaredNames: defs, pendingNames: {}, name: 'test context' },
     turnIntoFTypeBuild,
     holder,
-    makeContextBuilder(callDict)
+    makeMockFactoryStage(callDict)
   );
 
   function integerFor(name: string): DastNode_ {
@@ -161,6 +216,8 @@ describeNamed({ ContextBuild }, () => {
     return rv;
   }
 
+  // less than half of this file is actual tests :/
+
   describe('handling of assignments', () => {
     it('defines a modifier, accessor, and initial set', () => {
       const callDict: { [name: string]: string[] } = {};
@@ -216,7 +273,8 @@ describeNamed({ ContextBuild }, () => {
               }
           }
       });
-      const contextBuild = ContextBuild.make(defs, turnIntoFTypeBuild, holder);
+      const fullDefs = { declaredNames: defs, pendingNames: {}, name: 'test context' };
+      const contextBuild = ContextBuild.make(fullDefs, turnIntoFTypeBuild, holder);
       const result = contextBuild.contextType();
       expect(result).toBeUndefined();
       expect(contextBuild.error().message).

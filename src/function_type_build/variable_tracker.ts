@@ -21,7 +21,7 @@ const kStartingByteOffset = kReservedBytesForParent;
 const kStartingItemCount = kStartingByteOffset / kReservedBytesForParent;
 
 export const VariableTracker = freeze({
-  make() {
+  make(): VariableTracker {
     let mByteOffset = kStartingByteOffset;
     let mItemCount = kStartingItemCount;
     const mVarTable: { [name: string]: VarTypeInfo | undefined } = {};
@@ -32,8 +32,6 @@ export const VariableTracker = freeze({
     {
       const info = mVarTable[name];
       if (info && info.type.uid() !== objectType.uid()) {
-        // throw new Error(`Type mismatch between "${info.type.name()}" ` +
-        //                 `and "${objectType.name()}"`);
         raise(`Type mismatch between "${info.type.name()}" ` +
               `and "${objectType.name()}"`);
       }
@@ -44,15 +42,9 @@ export const VariableTracker = freeze({
         raise(`this name is reserved for context access`);
       }
 
-      // test me: <context> does not increase size
-      // why does this break the compiler?
-      // const isContext = name === kContextToken.content();
-      // const accessIndex = isContext ? 0 : mByteOffset;
       const accessIndex = mByteOffset;
-      // if (!isContext) {
-        mByteOffset += objectType.sizeInBytes();
-        mItemCount += objectType.sizeInStackItems();
-      // }
+      mByteOffset += objectType.sizeInBytes();
+      mItemCount += objectType.sizeInStackItems();
 
       return (mVarTable[name] = {
         type: objectType,
