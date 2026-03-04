@@ -95,7 +95,7 @@ function make
           raise(`Context size cannot be negative, got ${contextSize}`);
         }
         writer.
-          pushRepresentation( mGetContextSizeInBytes() ).
+          pushRepresentation( contextSize ).
           incrementStackPointer();
         receiver()!.emit(writer);
         args()!.emit(writer);

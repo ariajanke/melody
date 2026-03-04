@@ -65,7 +65,7 @@ describe('end-to-end', () => {
          getEntryPointWithMemory(memory, compiler).
            then(entry => {
              entry(0);
-             const valueOfA = new DataView(memory.buffer).getInt32(4, true);
+             const valueOfA = new DataView(memory.buffer).getInt32(0, true);
              expect(valueOfA).toBe(aVal);
              expect(printedStrings).toEqual(['Hello world!', `${aVal}`]);
              done();

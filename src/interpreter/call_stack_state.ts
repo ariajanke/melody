@@ -29,6 +29,7 @@ export const CallStackState = freeze({
         // NOTE
         // indirect call will consume additionally the receiver and function index
         mStackSizeStack.push(currentStackSize);
+        console.log(`Pushing return point ${to} with expected stack size ${currentStackSize}`);
         mLocalStackPointers.push();
         return to;
       },

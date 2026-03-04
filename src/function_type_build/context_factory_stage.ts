@@ -53,15 +53,15 @@ const BlankContextType = freeze({
     : ObjectType
   {
     const referenceType = memoize((): ObjectType => {
-      const inst = freeze({
-        ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
+      const refType = freeze({
+        ...BuiltinTypeBase.defaultsWith((): ObjectType => refType),
         name: () => `Reference(${Token.kContextToken.content()})`,
         lookUp(operation: string | symbol): FunctionLookUpTable | undefined
           { return inst.lookUp(operation); },
         sizeInBytes: () => MemoryArray.kWordSizeInBytes,
         sizeInStackItems: () => 1,
       });
-      return inst;
+      return refType;
     });
 
     const referenceGetter = memoize((): FunctionType => freeze({

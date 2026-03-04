@@ -50,7 +50,7 @@ describeNamed({ InterpretedCodeRunner }, () => {
 
     const code = [
       ...entryFuncCode,
-      ...userFuncCode 
+      ...userFuncCode
     ];
     const { verifyHit, hitsAtExactly } = ReachPoint.make();
     const injections = {

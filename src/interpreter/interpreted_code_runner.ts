@@ -88,12 +88,15 @@ const CallMixin = freeze({
     const { stack } = mState;
     const mCallStack = CallStackState.make(mMakeStack);
     function indirectCall() {
-      const stackValue = mState.stack.pop();
+      const stackValue = stack.pop();
       const jumpTo = mIndexJumpTable[stackValue];
       if (jumpTo === undefined) {
-        throw new Error('Invalid function index for indirect call');
+        raise('Invalid function index for indirect call');
       }
       // +2, one after where we started from, and after the signature index
+      // idk what to do with the argument (to parent pointer)
+      stack.pop(); // pop receiver
+
       mCallStack.pushReturnPoint(mState.programCounter + 2, stack.count());
       mState.programCounter = jumpTo;
     }
@@ -139,37 +142,22 @@ function make
     code: mCode
   };
   const { stack: mStack } = mState;
-  // const mMemory = mInjections.makeMemory();
-  // const mStack = mInjections.makeStack(() => Infinity);
-  // const mCallStack = StackSafetyWatcher.make(mInjections.makeStack);
   const { putsFunction, makeAskIntegerFunction } = mInjections;
   const askIntegerFunction = makeAskIntegerFunction();
-  // const makeBinaryMathOp =
-  //   (op: (a: number, b: number) => number): () => void =>
-  // {
-  //   return (): void => {
-  //     const b = mStack.pop();
-  //     const a = mStack.pop();
-  //     mStack.push(op(a, b));
-  //     mProgramCounter += 1;
-  //   };
-  // };
-  // let mProgramCounter = 0;
-
+  
   const mCallMixins = CallMixin.make(mState, mIndexJumpTable, mInjections.makeStack);
 
   const mCodeRunner: CodeRunner = {
     ...StackPointerOperationsMixin.make(mState),
     ...AluMixin.make(mState),
-    ...mCallMixins.mixins, //CallMixin.make(mState, mIndexJumpTable, mInjections.makeStack),
-    // addIntegers: makeBinaryMathOp((a: number, b: number) => a + b),
+    ...mCallMixins.mixins,
     askInteger() {
       const input = askIntegerFunction();
       mStack.push(input);
       mState.programCounter += 1;
     },
     askString() {
-      throw new Error('askString not implemented in code runner');
+      raise('askString not implemented in code runner');
     },
     printString() {
       const a = mStack.pop();
@@ -185,55 +173,16 @@ function make
       mStack.pop();
       mState.programCounter += 1;
     },
-    // multiplyIntegers: makeBinaryMathOp((a: number, b: number) => a * b),
-    // subtractIntegers: makeBinaryMathOp((a: number, b: number) => a - b),
-    // loadInteger() {
-    //   const offset = mCode[mProgramCounter + 1] as number;
-    //   const value = mMemory.load(offset);
-    //   mStack.push(value);
-    //   mState.programCounter += 2;
-    // },
-    // storeInteger() {
-    //   const offset = mCode[mProgramCounter + 1] as number;
-    //   // NOTE
-    //   // a store apparently requies base then value be pushed in that order
-    //   // wasm side is meant to compensate for this
-    //   const value = mStack.pop();
-    //   mMemory.store(offset, value);
-    //   mState.programCounter += 2;
-    // },
     pushRepresentation() {
       const rep = mCode[mState.programCounter + 1] as number;
       mStack.push(rep);
       mState.programCounter += 2;
     },
-    // indirectCall() {
-    //   const stackValue = mStack.pop();
-    //   const jumpTo = mIndexJumpTable[stackValue];
-    //   if (jumpTo === undefined) {
-    //     throw new Error('Invalid function index for indirect call');
-    //   }
-    //   // +2, one after where we started from, and after the signature index
-    //   mCallStack.pushReturnPoint(mProgramCounter + 2, mStack.count());
-    //   mProgramCounter = jumpTo;
-    // },
-
-    // functionEnd() {
-    //   // TODO support multiple function signatures
-    //   //      the interpreter will have to start acting more like a WASM VM
-    //   //      when we had multiple signatures
-    //   mStack.pop();
-
-    //   mProgramCounter =
-    //     mCallStack.popReturnPoint(mStack.count()) ??
-    //     mCode.length; 
-    // },
-
   };
 
   function oops() {
     const instruction = mCode[mState.programCounter];
-    throw new Error(`Invalid instruction "${instruction}" at position ${mState.programCounter}`);
+    raise(`Invalid instruction "${instruction}" at position ${mState.programCounter}`);
   }
 
   function beginAt(functionIndex: number): void {
@@ -259,6 +208,7 @@ function make
       if (safety++ > 10000) {
         raise(`Safety limit exceeded in code runner, last instruction was "${instruction}" at position ${mState.programCounter}`);
       }
+      console.log(`Executed instruction "${instruction}" at position ${mState.programCounter}, stack has now ${mStack.count()} items`);
     }
     return true;
   }
