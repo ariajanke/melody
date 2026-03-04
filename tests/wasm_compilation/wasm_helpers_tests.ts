@@ -15,7 +15,7 @@ describeNamed({ WasmHelpers }, () => {
       [255, [255, 1]],
       [256, [128, 2]]
     ] as [number, number[]][]).forEach(([input, expected]) => {
-      it(`encodes ${input} as ${expected}`, () => {
+      it(`encodes ${input} as expected`, () => {
         expect(encodeVaruint32(input)).toEqual(expected);
       });
     });
@@ -32,12 +32,11 @@ describeNamed({ WasmHelpers }, () => {
       [0, [0]],
       [1, [1]],
       [-1, [254, 255, 255, 255, 15]],
-      // penultimate bit test
-      [127, [127, 0]],
+      [127, [255, 0]],
       [-128, [0b00001111, 0b11111111, 0b11111111, 0b11111110, 0b11111111].reverse()],
       [128, [128, 1]]
     ] as [number, number[]][]).forEach(([input, expected]) => {
-      it(`encodes ${input} as ${expected}`, () => {
+      it(`encodes ${input} as expected`, () => {
         expect(encodeVarsint32(input)).toEqual(expected);
       });
     });

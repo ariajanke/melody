@@ -5,6 +5,7 @@ const { freeze } = Helpers;
 export interface CallBackObjectHold<HeldObjectType> {
   withHeldObject: <ReturnType>(getter: () => HeldObjectType, whileFn: () => ReturnType) => ReturnType
   currentObject(): HeldObjectType;
+  optionalCurrentObject(): HeldObjectType | undefined;
 };
 
 export type WithHeldObjectFunction<HeldObjectType> =
@@ -14,8 +15,8 @@ function make<HeldObjectType>
   (mNothingHeldWhat: string = 'held object not set yet')
 : CallBackObjectHold<HeldObjectType>
 {
-  let mHeldObjectGetter: () => HeldObjectType = () =>
-    raise(mNothingHeldWhat);
+  let mHeldObjectGetter: () => HeldObjectType | undefined =
+    () => undefined;
   const withHeldObject: CallBackObjectHold<HeldObjectType>['withHeldObject'] =
     <T>(getter: () => HeldObjectType, whileFn: () => T): T =>
   {
@@ -28,7 +29,9 @@ function make<HeldObjectType>
 
   return freeze({
     withHeldObject,
-    currentObject: () => mHeldObjectGetter()
+    currentObject: () =>
+      mHeldObjectGetter() ?? raise(mNothingHeldWhat),
+    optionalCurrentObject: () => mHeldObjectGetter()
   });
 }
 

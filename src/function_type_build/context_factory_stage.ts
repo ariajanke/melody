@@ -1,8 +1,10 @@
+import { CodeWriter } from '../code_writer';
 import { ContextTypeReservations } from '../context_type_reservations';
 import { DastAttributeDeclaration } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { FunctionLookUpTable, FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { Helpers, raise } from '../helpers';
+import { MemoryArray } from '../memory_array';
 import { Token } from '../token';
 import { BuiltinTypeBase } from './builtin_type';
 import { ContextAccessorBuild } from './context_accessor_build';
@@ -43,6 +45,63 @@ export interface ContextFactoryStage {
 export type FunctionOpLookUp =
   { [op: string | symbol]: FunctionLookUpTable | undefined };
 
+// I need a place to build the actual context type
+// it needs the ability to reference itself
+const BlankContextType = freeze({
+  make(mVariableTracker: VariableTracker,
+       mTable: FunctionOpLookUp)
+    : ObjectType
+  {
+    const referenceType = memoize((): ObjectType => {
+      const inst = freeze({
+        ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
+        name: () => `Reference(${Token.kContextToken.content()})`,
+        lookUp(operation: string | symbol): FunctionLookUpTable | undefined
+          { return inst.lookUp(operation); },
+        sizeInBytes: () => MemoryArray.kWordSizeInBytes,
+        sizeInStackItems: () => 1,
+      });
+      return inst;
+    });
+
+    const referenceGetter = memoize((): FunctionType => freeze({
+      parameters: () => TupleObjectFactory.emptyTuple(),
+      returns: () => referenceType(),
+      emit(codeWriter: CodeWriter) {
+        return codeWriter.pushStackPointer();
+      },
+      uid: memoize(Symbol)
+    }));
+
+    const addContext = (() =>
+      mTable[FunctionNamingSchema.kContextName] = {
+        byParameters(type: ObjectType) {
+          if (type.uid() === TupleObjectFactory.emptyTuple().uid()) {
+            return referenceGetter();
+          }
+          return undefined;
+        }
+      });
+
+    const { talliedSizeInBytes, talliedSizeInItems } = mVariableTracker;
+
+    // return the "full" type
+    // you can look up the reference type, by:
+    // inst.lookUp(FunctionNamingSchema.kContextName)?.byParameters(TupleObjectFactory.emptyTuple()).returns();
+
+    const inst = freeze({
+      ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
+      name: Token.kContextToken.content,
+      lookUp(operation: string | symbol): FunctionLookUpTable | undefined
+        { return mTable[operation]; },
+      sizeInBytes: () => talliedSizeInBytes(),
+      sizeInStackItems: () => talliedSizeInItems()
+    });
+
+    return addContext() && inst;
+  }
+});
+
 function make
   (mVariableTracker = VariableTracker.make(),
    mTable: FunctionOpLookUp = {})
@@ -50,16 +109,22 @@ function make
 {
   // try and hide our "dirty laundry" here, we'll pass inst into constructors
 
+  // this declare "<parent>"
   function intoParentBuild
     (parentType: ObjectType): ContextFactoryStage
   {
-    const getParentRefFunc = parentType.
+    const parentRefType = parentType.
       lookUp(FunctionNamingSchema.kContextName)?.
-      byParameters(TupleObjectFactory.emptyTuple());
-    const parentRefType = getParentRefFunc?.returns();
-    if (!getParentRefFunc || !parentRefType) {
-      throw new Error(`Cannot find context getter on parent type "${parentType.name()}"`);
+      byParameters(TupleObjectFactory.emptyTuple())?.
+      returns();
+    if (!parentRefType) {
+      raise(`Cannot find context getter on parent type "${parentType.name()}"`);
     }
+    // the variable tracker gets bumped just fine
+    // but it maybe out of sync with the actual attribute functions
+    // so "uh oh" to that
+    mVariableTracker.
+      ensureVariablePresence(FunctionNamingSchema.kParentName, parentRefType);
     const parentAccessFunc = ContextAttributeFactory.buildGetter(
       ContextTypeReservations.kParentAccessIndex,
       parentRefType);
@@ -109,19 +174,11 @@ function make
     return inst;
   }
 
-  const intoObjectType = memoize((): ContextObjectType => {
-    const { talliedSizeInBytes, talliedSizeInItems } = mVariableTracker;
-    const objectType = freeze({
-      ...BuiltinTypeBase.defaultsWith((): ContextObjectType => objectType),
-      name: Token.kContextToken.content,
-      lookUp(operation: string | symbol): FunctionLookUpTable | undefined
-        { return mTable[operation]; },
-      sizeInBytes: () => talliedSizeInBytes(),
-      sizeInStackItems: () => talliedSizeInItems(),
-      intoFactoryStage: () => inst
-     });
-    return objectType;
-  });
+  const intoObjectType = memoize((): ContextObjectType => freeze({
+    // this will declare "<context>"
+    ...BlankContextType.make(mVariableTracker, mTable),
+    intoFactoryStage: () => inst
+  }));
 
   const inst = freeze({
     intoAccessorBuild,

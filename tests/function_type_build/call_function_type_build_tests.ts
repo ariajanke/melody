@@ -42,11 +42,6 @@ const DastNodeMaker = (() => {
                 writter.pushRepresentation(0);
               }
             }
-            //  else if (emissions < 0) {
-            //   for (let i = 0; i > emissions; --i) {
-            //     writter.drop();
-            //   }
-            // }
             return writter;
           },
           uid: memoize(Symbol)
@@ -110,6 +105,16 @@ describeNamed({ CallFunctionTypeBuild }, () => {
     });
   };
 
+  const makeSampleWriter = () => {
+    const inst = freeze({
+      pushRepresentation(_0: number): CodeWriter { return inst; },
+      incrementStackPointer(): CodeWriter { return inst; },
+      forStackPointer(_0: 'saveToLocal' | 'restoreToGlobal'): CodeWriter
+        { return inst; },
+    }) as CodeWriter;
+    return inst;
+  };
+
   function successfullyBuildsFtype(setup: () => void) {
     it('successfully builds an ftype', () => {
       setup();
@@ -149,7 +154,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
       const { functionType } = build();
       functionType();
       emitNames.length = 0;
-      functionType()!.emit({} as CodeWriter);
+      functionType()!.emit(makeSampleWriter());
       expect(emitNames).toEqual(['receiver', 'args', callNameStr()]);
     });
   });
@@ -179,7 +184,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
       expect(build.functionType()).toBeDefined();
       // NOTE functionType will call emits to check stack safety
       emitNames.length = 0;
-      build.functionType()!.emit({} as CodeWriter);
+      build.functionType()!.emit(makeSampleWriter());
       expect(emitNames).toEqual([
         'receiver', 'args', `.${callNameStr()}`, callNameStr()
       ]);

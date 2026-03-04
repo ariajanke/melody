@@ -83,16 +83,16 @@ function selectBuildForDeclaration
   const type = mValueFtype.returns();
 
   if (mDef.assignment) {
-    mStage.intoModifierBuild(mFunctionName, mDef.assignment, type);
+    return mStage.intoModifierBuild(mFunctionName, mDef.assignment, type);
   } else if (mDef.accessor) {
     const callLookUp = type.lookUp(Token.kCallToken.content());
     if (callLookUp) {
       mStage.
         intoDirectLookUp(mDef.accessor.variableName, callLookUp);
     }
-    mStage.intoAccessorBuild(mFunctionName, mDef.accessor, type);
+    return mStage.intoAccessorBuild(mFunctionName, mDef.accessor, type);
   } else if (mDef.initialSet) {    
-    mStage.intoInitialSetBuild(mFunctionName, mDef.initialSet.variableNames, type);
+    return mStage.intoInitialSetBuild(mFunctionName, mDef.initialSet.variableNames, type);
   }
 
   // NOTE: this suggests that the declaration is malformed

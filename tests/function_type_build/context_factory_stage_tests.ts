@@ -21,7 +21,10 @@ describeNamed({ ContextFactoryStage }, () => {
       'printInteger',
       'drop',
       'multiplyIntegers',
-      'subtractIntegers'
+      'subtractIntegers',
+      'storeParentStackPointer',
+      'incrementStackPointer',
+      'pushStackPointer'
     ] as const satisfies (keyof CodeWriter)[];
 
     const numMethodNames = [
@@ -33,7 +36,12 @@ describeNamed({ ContextFactoryStage }, () => {
     
     const writer: CodeWriter = freeze(
       Object.assign(
-      {},
+      {
+        forStackPointer(_0: 'saveToLocal' | 'restoreToGlobal'): CodeWriter {
+          calls.push('forStackPointer');
+          return writer;
+        }
+      },
       ...methodNames.map(name =>
         ({ [name]: (): CodeWriter => { calls.push(name); return writer; } })),
       ...numMethodNames.map(name =>
@@ -297,6 +305,7 @@ describeNamed({ ContextFactoryStage }, () => {
     });
 
     it('has special function `<context>` which gets the current stack pointer', () => {
+      
       const builder = ContextFactoryStage.make();
       const lookUpTable = lookUpOnObject(builder, '<context>');
       const contextFunction = lookUpTable.byParameters(emptyTuple());
@@ -304,10 +313,10 @@ describeNamed({ ContextFactoryStage }, () => {
       expect(recordedCalls).toEqual(['pushStackPointer']);
     });
 
-    it('has special function `<parent> defined', () => {
+    xit('has special function `<parent> defined', () => {
 
     });
-    it('has special function `<parent>` which gets the parent pointer from offset 0');
+    xit('has special function `<parent>` which gets the parent pointer from offset 0');
   });
 
   // ultimately not much changed

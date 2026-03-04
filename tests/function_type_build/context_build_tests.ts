@@ -143,6 +143,7 @@ describeNamed({ ContextBuild }, () => {
     { declaredNames: defs, pendingNames: {}, name: 'test context' },
     turnIntoFTypeBuild,
     holder,
+    undefined,
     makeMockFactoryStage(callDict)
   );
 
@@ -225,10 +226,10 @@ describeNamed({ ContextBuild }, () => {
 
       contextBuild.contextType();
       expect(callDict).toEqual({
-        addDirectLookUp: ['puts'],
-        addModifier: ['x:='],
-        addAccessor: ['.x'],
-        addInitialSet: ['<initSet>:(x)']
+        intoDirectLookUp: ['puts'],
+        intoModifierBuild: ['x:='],
+        intoAccessorBuild: ['.x'],
+        intoInitialSetBuild: ['<initSet>:(x)']
       });
     });
 
@@ -240,10 +241,10 @@ describeNamed({ ContextBuild }, () => {
       });
       contextBuild.contextType();
       expect(callDict).toEqual({
-        addDirectLookUp: ['puts'],
-        addModifier: ['x:=', 'y:='],
-        addAccessor: ['.x', '.y'],
-        addInitialSet: ['<initSet>:(x)', '<initSet>:(y)']
+        intoDirectLookUp: ['puts'],
+        intoModifierBuild: ['x:=', 'y:='],
+        intoAccessorBuild: ['.x', '.y'],
+        intoInitialSetBuild: ['<initSet>:(x)', '<initSet>:(y)']
       });
     });
 
@@ -254,10 +255,10 @@ describeNamed({ ContextBuild }, () => {
       );
       contextBuild.contextType();
       expect(callDict).toEqual({
-        addDirectLookUp: ['puts'],
-        addModifier: ['x:=', 'y:='],
-        addAccessor: ['.x', '.y'],
-        addInitialSet: ['<initSet>:(x,y)']
+        intoDirectLookUp: ['puts'],
+        intoModifierBuild: ['x:=', 'y:='],
+        intoAccessorBuild: ['.x', '.y'],
+        intoInitialSetBuild: ['<initSet>:(x,y)']
       });
     });
 
@@ -289,9 +290,9 @@ describeNamed({ ContextBuild }, () => {
 
       contextBuild.contextType();
       expect(callDict).toEqual({
-        addDirectLookUp: ['puts'],
-        addAccessor: ['.x'],
-        addInitialSet: ['<initSet>:(x)']
+        intoDirectLookUp: ['puts'],
+        intoAccessorBuild: ['.x'],
+        intoInitialSetBuild: ['<initSet>:(x)']
       });
     });
 
@@ -302,9 +303,9 @@ describeNamed({ ContextBuild }, () => {
       );
       contextBuild.contextType();
       expect(callDict).toEqual({
-        addDirectLookUp: ['puts'],
-        addAccessor: ['.x', '.y'],
-        addInitialSet: ['<initSet>:(x,y)']
+        intoDirectLookUp: ['puts'],
+        intoAccessorBuild: ['.x', '.y'],
+        intoInitialSetBuild: ['<initSet>:(x,y)']
       });
     });
   });

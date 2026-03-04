@@ -34,7 +34,7 @@ describeNamed({ FunctionTypeBuildVisitor }, () => {
     const fdefs = { name: '', pendingNames: {}, declaredNames };
     
     const root = DastFunctionDefintion.make(fdefs, [fInitialSetNode]);
-    root.visit(visitor);
+    root.visit(visitor).functionType();
     const { verifyHit, hitsAtExactly } = ReachPoint.make();
     registry.forEach((_0: FunctionType, _1: FunctionType) => {
       hitsAtExactly(2);

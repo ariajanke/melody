@@ -11,17 +11,18 @@ function make
   const { error, setErrorFn } = StandardError.make();
   const { emptyTuple } = TupleObjectFactory;
 
-  const prefaceFunctionType = memoize((): FunctionType => {
-    const { emptyTuple } = TupleObjectFactory;
+  // this has got to move
+  // const prefaceFunctionType = memoize((): FunctionType => {
+  //   const { emptyTuple } = TupleObjectFactory;
 
-    return freeze({
-      parameters: () => emptyTuple(),
-      returns: () => emptyTuple(),
-      emit: (codeWriter: CodeWriter) =>
-        codeWriter.storeParentStackPointer().forStackPointer('saveToLocal'),
-      uid: memoize(Symbol)
-    });
-  });
+  //   return freeze({
+  //     parameters: () => emptyTuple(),
+  //     returns: () => emptyTuple(),
+  //     emit: (codeWriter: CodeWriter) =>
+  //       codeWriter.storeParentStackPointer().forStackPointer('saveToLocal'),
+  //     uid: memoize(Symbol)
+  //   });
+  // });
 
 
   function functionTypeSequence() {
@@ -34,10 +35,16 @@ function make
               ftype: FunctionType | undefined): FunctionType[] | undefined =>
       {
         if (!acc || !ftype) { return undefined; }
-        acc.push(ftype, ftype.returns().stackCleanUp());
+
+        const rt = ftype.returns();
+        if (rt.uid() === TupleObjectFactory.emptyTuple().uid()) {
+          acc.push(ftype);
+        } else {
+          acc.push(ftype, ftype.returns().stackCleanUp());
+        }
 
         return acc;
-      }, [prefaceFunctionType()] as FunctionType[] | undefined); 
+      }, [] as FunctionType[] | undefined); 
   }
 
   const functionType = memoize(() => {

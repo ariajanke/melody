@@ -1,9 +1,9 @@
-import { FunctionTypeBuild } from '../function_type_build';
+import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers } from '../helpers';
 import { FunctionDefinitionBodyBuild } from './function_definition_body_build';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
-import { HoldContextTypeFunction } from './function_type_build_visitor';
 import { FunctionTypeRegistry } from '../function_type_registry';
+import { CallBackObjectHold } from '../call_back_object_hold';
 
 const { freeze, memoize } = Helpers;
 
@@ -12,12 +12,12 @@ function make
   (mDefs: DastFunctionNameMappings,
    mNodes: Readonly<DastNode[]>,
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,
-   mHoldAsContextType: HoldContextTypeFunction,
+   mHolder: CallBackObjectHold<ObjectType>,
    mFunctionRegistry: FunctionTypeRegistry)
   : FunctionTypeBuild
 {
   const defBuild = FunctionDefinitionBodyBuild.
-    make(mDefs, mNodes, mIntoFunctionTypeBuild, mHoldAsContextType);
+    make(mDefs, mNodes, mIntoFunctionTypeBuild, mHolder);
 
   const { error } = defBuild;
 

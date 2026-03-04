@@ -1,14 +1,16 @@
 import { ContextTypeReservations } from '../context_type_reservations';
+import { FunctionNamingSchema } from '../function_naming_schema';
 import { ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { Token } from '../token';
 
 const { freeze } = Helpers;
 
-export interface VarTypeInfo {
+interface WritableVarTypeInfo {
   type: ObjectType;
   accessIndex: number;
 };
+
+export type VarTypeInfo = Readonly<WritableVarTypeInfo>;
 
 export interface VariableTracker {
   ensureVariablePresence(name: string, objectType: ObjectType): VarTypeInfo;
@@ -17,15 +19,28 @@ export interface VariableTracker {
 };
 
 const { kParentAccessIndex, kReservedBytesForParent } = ContextTypeReservations;
-const kStartingByteOffset = kReservedBytesForParent;
-const kStartingItemCount = kStartingByteOffset / kReservedBytesForParent;
 
 export const VariableTracker = freeze({
   make(): VariableTracker {
-    let mByteOffset = kStartingByteOffset;
-    let mItemCount = kStartingItemCount;
-    const mVarTable: { [name: string]: VarTypeInfo | undefined } = {};
-    const { kContextToken } = Token;
+    let mByteOffset = 0;
+    let mItemCount = 0;
+    const mVarTable: { [name: string]: WritableVarTypeInfo | undefined } = {};
+
+    function handleAddingParent(objectType: ObjectType): VarTypeInfo {
+      if (mVarTable[FunctionNamingSchema.kParentName])
+        { raise('already have parent?!'); }
+
+      // NOTE all other variables have to be bumped
+      //      if there's a parent, that first slot must be for that parent
+      for (const name in mVarTable) {
+        mVarTable[name]!.accessIndex += kReservedBytesForParent;
+      }
+
+      return (mVarTable[FunctionNamingSchema.kParentName] = {
+        type: objectType,
+        accessIndex: kParentAccessIndex
+      });
+    }
 
     function ensureVariablePresence
       (name: string, objectType: ObjectType): VarTypeInfo
@@ -38,18 +53,18 @@ export const VariableTracker = freeze({
       if (info)
         { return info; }
 
-      if (name === kContextToken.content()) {
+      if (name === FunctionNamingSchema.kContextName) {
         raise(`this name is reserved for context access`);
       }
 
       const accessIndex = mByteOffset;
       mByteOffset += objectType.sizeInBytes();
       mItemCount += objectType.sizeInStackItems();
+      if (name === FunctionNamingSchema.kParentName) {
+        return handleAddingParent(objectType);
+      }
 
-      return (mVarTable[name] = {
-        type: objectType,
-        accessIndex
-      });
+      return (mVarTable[name] = { type: objectType, accessIndex });
     }
 
     return freeze({

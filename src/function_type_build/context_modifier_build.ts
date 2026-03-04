@@ -52,7 +52,7 @@ export const ContextModifierBuild = freeze({
       if (ftype) {
         mTable[mName] = MutableFunctionTable.
           make().
-          setDefinition(getter().parameters(), ftype);
+          setDefinition(variableType()!, ftype);
       }
       return ftype;
     });

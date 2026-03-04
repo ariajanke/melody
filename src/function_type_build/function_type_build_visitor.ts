@@ -30,8 +30,9 @@ function make
 {
   const mBuildCache = DastBuildCache.
     make((node: DastNode) => node.visit(inst));
-  const { withHeldObject, currentObject } = CallBackObjectHold.
+  const mHolder = CallBackObjectHold.
     make<ObjectType>('root node must be a function definition');
+  const { currentObject } = mHolder;
 
   const visitFringe = (name: string) =>
     FringeFunctionBuild.make(name, currentObject);
@@ -52,7 +53,7 @@ function make
     (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>): FunctionTypeBuild
   {
     return FunctionDefinitionIndexBuild.
-      make(defs, nodes, mBuildCache.checkCachedBuild, withHeldObject, mFunctionRegistry);
+      make(defs, nodes, mBuildCache.checkCachedBuild, mHolder, mFunctionRegistry);
   }
 
   function visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): FunctionTypeBuild {
