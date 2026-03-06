@@ -16,6 +16,8 @@ export interface DastLetDeclarationBuild {
   error(): StandardErrorMessage;
 }
 
+const { kAssignmentOperator, kEqualityOperator } = FunctionNamingSchema;
+
 function make
   (mCallName: IastNode,
    mReceiver: IastNode,
@@ -27,8 +29,8 @@ function make
 
   const callNameStr = memoize(() => {
     const callNameStr = mCallName.asString();
-    if (callNameStr !== '=' && // TODO use FunctionNamingSchema
-        callNameStr !== FunctionNamingSchema.kAssignmentOperator)
+    if (callNameStr !== kEqualityOperator &&
+        callNameStr !== kAssignmentOperator)
     {
       return setErrorMessage(`unexpected operator "${callNameStr}" in let declaration`);
     }

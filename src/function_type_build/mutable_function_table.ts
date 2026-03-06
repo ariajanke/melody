@@ -1,5 +1,5 @@
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 
 const { freeze } = Helpers;
 
@@ -14,7 +14,7 @@ export const MutableFunctionTable = freeze({
       setDefinition(forType: ObjectType, ft: FunctionType) {
         const uid = forType.uid();
         if (mMappings[uid]) {
-          throw new Error(`Parameter type "${forType.name()}" already taken`);
+          raise(`Parameter type "${forType.name()}" already taken`);
         }
         mMappings[uid] = ft;
         return inst;

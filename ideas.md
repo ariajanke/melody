@@ -330,3 +330,23 @@ Becomes layer 0 (never mind that all are PTC candidates)
 let my8 = (fn (a is Integer) a + 2)(6)
 let my5 = Integer.new(5)
 ```
+
+
+```
+let a = 10
+let f1 = fn
+  let f2 = fn
+    # <parent> = <f1>
+    # pending: ".a" with args "Tuple()"
+    puts(a)
+  ~
+  f2()
+~
+let f3 = fn
+  # <parent> = <root>
+  # pending: "f1"
+  f1()
+~
+f3()
+
+```

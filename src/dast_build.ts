@@ -18,7 +18,7 @@ export interface DastAttributeDeclaration {
 
 export interface DastLetDeclaration {
   value: DastNode;
-
+  
   accessor?: DastAttributeDeclaration;
   assignment?: DastAttributeDeclaration;
   initialSet?: {
@@ -36,6 +36,8 @@ export interface DastFunctionNameMappings {
   name: string;
   declaredNames: DastDeclarationMap;
   // can absolutely be either directly or indirectly (deeper) used
+  // no, I don't want to accumulate names
+  // just functions which can "query" context objects (like tables)
   pendingNames: Readonly<{ [name: string]: true }>;
 };
 

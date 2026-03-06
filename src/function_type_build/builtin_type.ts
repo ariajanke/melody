@@ -6,8 +6,8 @@ import {
 } from '../function_type_build';
 import { Helpers } from '../helpers';
 import { MemoryArray } from '../memory_array';
+import { FunctionTypeBase } from './function_type_base';
 import { MutableFunctionTable } from './mutable_function_table';
-import { TupleObjectFactory } from './tuple_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -43,10 +43,9 @@ export const BuiltinTypeBase = freeze({
     stackCleanUp: memoize((): FunctionType => {
       const emit = cleanUpEmitFor(getInst().sizeInStackItems());
       return freeze({
+        ...FunctionTypeBase.receivedByNone(),
         parameters: getInst,
-        returns: () => TupleObjectFactory.emptyTuple(),
         emit,
-        uid: memoize(Symbol)
       });
     })
   })
@@ -68,12 +67,13 @@ export const IntegerType = freeze({
     function mkOperation(writerFn: CodeWriterFnName): () => FunctionLookUpTable {
       return () => {
         const ftype = freeze({
+          // that would surpress the receiver (which could be a literal)
+          ...FunctionTypeBase.receivedByLexical(),
           parameters: () => inst,
           returns: () => inst,
           emit(writer: CodeWriter): CodeWriter {
             return writer[writerFn]();
-          },
-          uid: memoize(Symbol)
+          }
         });
         return MutableFunctionTable.make().setDefinition(inst, ftype);
       };

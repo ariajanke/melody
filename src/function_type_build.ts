@@ -16,10 +16,14 @@ export interface CodeFragment {
 export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;
-  // this is why I wanted an "emitter"...
-  // sometimes I can't know what the code will look like
-  emit(writer: CodeWriter): CodeWriter | undefined;
-  // not emit... but "value"? as in evulating it now
+  emit(writer: CodeWriter): void;
+
+  /// A name of another function on the object type, which contains this
+  /// function type. Which is used as the actual receiver for this
+  /// function type. If no such name is provided, then the actual receiver is
+  /// the lexical receiver.
+  // I need to be able to say "whatever is the lexical receiver is correct"
+  alternateReceiver(): string | undefined;
   uid(): symbol;
 };
 

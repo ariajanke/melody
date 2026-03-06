@@ -2,7 +2,7 @@ import { CodeWriter } from '../code_writer';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
 import { Helpers } from '../helpers';
 import { ConstantStringType, IntegerType } from './builtin_type';
-import { TupleObjectFactory } from './tuple_type';
+import { FunctionTypeBase } from './function_type_base';
 
 const { freeze, memoize } = Helpers;
 
@@ -41,14 +41,14 @@ function make(): FunctionLookUpTable {
     const validWritters = writters as readonly CodeWriterFuncName[];
 
     return freeze({
+      ...FunctionTypeBase.receivedByNone(),
       parameters: () => type,
-      returns: () => TupleObjectFactory.emptyTuple(),
       emit(writer: CodeWriter) {
         validWritters.forEach(name => writer[name]());
-        writer.drop();
+        // no longer needed, because of the actual receiver changed to none
+        // writer.drop();
         return writer;
-      },
-      uid: memoize(Symbol)
+      }
     });
   }
 

@@ -8,7 +8,6 @@ import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { FunctionTypeRegistry } from '../function_type_registry';
 import { Helpers } from '../helpers';
 import { StringPoolBuilder } from '../string_pool';
-import { AccumulatedPendingNameMap } from './accumulated_pending_name_map';
 import { CallFunctionTypeBuild } from './call_function_type_build';
 import { DastBuildCache } from './dast_build_cache';
 import { FringeFunctionBuild } from './fringe_function_build';
@@ -24,8 +23,7 @@ export type HoldContextTypeFunction =
 
 function make
   (mStringPoolBuilder: StringPoolBuilder,
-   mFunctionRegistry: FunctionTypeRegistry,
-   mNamesAccumulator: AccumulatedPendingNameMap)
+   mFunctionRegistry: FunctionTypeRegistry)
   : DastVisitor<FunctionTypeBuild>
 {
   const mBuildCache = DastBuildCache.

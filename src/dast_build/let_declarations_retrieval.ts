@@ -51,10 +51,6 @@ const CallLevelVisitor = (() => {
   });
 })();
 
-// export type NameExpressionValueMap = Readonly<{
-//   [name: string]: IastNode;
-// }>;
-
 function make
   (mNode: IastNode,
    mIntoDastBuild: (node: IastNode) => DastBuild)

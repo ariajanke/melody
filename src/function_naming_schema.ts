@@ -24,12 +24,13 @@ function mapToInternalName(name: string): string {
 const kAssignmentOperator = ':=';
 
 export type ContextFunctionGroup = 'initialSet' | 'assignment' | 'accessor';
-
+// starting to get fat
 export const FunctionNamingSchema = freeze({
   kAssignmentOperator,
   kEqualityOperator: '=',
   kContextName: mapToInternalName('context'),
   kParentName: mapToInternalName('parent'),
+  kNoneName: mapToInternalName('none'),
   uniqueFrameNameFor(n: number): string { return mapToInternalName(`frame:${n}`); },
   mapToInternalName,
   mapToInitialSetName,

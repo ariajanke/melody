@@ -3,8 +3,9 @@ import { FunctionType, ObjectType } from '../function_type_build';
 import { TupleObjectFactory } from './tuple_type';
 import { CodeWriter } from '../code_writer';
 import { MemoryArray } from '../memory_array';
+import { FunctionTypeBase } from './function_type_base';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
 
 const kBytesPerWord = MemoryArray.kWordSizeInBytes;
 
@@ -34,6 +35,7 @@ export const ContextAttributeFactory = freeze({
   kBytesPerWord,
   buildSetter(accessIndex: number, type: ObjectType, getter?: FunctionType): FunctionType {
     return freeze({
+      ...FunctionTypeBase.receivedByLexical(),
       parameters: () => type,
       returns: () => getter ? type : TupleObjectFactory.emptyTuple(),
       emit(writer: CodeWriter) {
@@ -46,21 +48,19 @@ export const ContextAttributeFactory = freeze({
 
         // NOTE reach for "name:=" setters
         return writer.drop() && getter.emit(writer);
-      },
-      uid: memoize(Symbol)
+      }
     });
   },
   buildGetter(accessIndex: number, type: ObjectType): FunctionType {
     return freeze({
-      parameters: () => TupleObjectFactory.emptyTuple(),
+      ...FunctionTypeBase.receivedByLexical(),
       returns: () => type,
       emit(writer: CodeWriter) {
         forEachWord(inReverseOrder, type, (additional: number) => {
           writer.loadInteger(accessIndex + additional*kBytesPerWord);
         });
         return writer;
-      },
-      uid: memoize(Symbol)
+      }
     });
   }
 });

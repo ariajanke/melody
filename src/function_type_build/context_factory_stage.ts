@@ -11,6 +11,7 @@ import { ContextAccessorBuild } from './context_accessor_build';
 import { ContextAttributeFactory } from './context_attribute_factory';
 import { ContextInitialSetBuild } from './context_initial_set_build';
 import { ContextModifierBuild } from './context_modifier_build';
+import { FunctionTypeBase } from './function_type_base';
 import { MutableFunctionTable } from './mutable_function_table';
 import { TupleObjectFactory } from './tuple_type';
 import { VariableTracker } from './variable_tracker';
@@ -65,23 +66,27 @@ const BlankContextType = freeze({
     });
 
     const referenceGetter = memoize((): FunctionType => freeze({
-      parameters: () => TupleObjectFactory.emptyTuple(),
+      ...FunctionTypeBase.receivedByNone(),
       returns: () => referenceType(),
       emit(codeWriter: CodeWriter) {
         return codeWriter.pushStackPointer();
-      },
-      uid: memoize(Symbol)
+      }
     }));
 
+    const noneGetter = memoize((): FunctionType => freeze({
+      ...FunctionTypeBase.receivedByNone(),
+      emit(_0: CodeWriter) {}
+    }));
+
+    const { emptyTuple } = TupleObjectFactory;
+
     const addContext = (() =>
-      mTable[FunctionNamingSchema.kContextName] = {
-        byParameters(type: ObjectType) {
-          if (type.uid() === TupleObjectFactory.emptyTuple().uid()) {
-            return referenceGetter();
-          }
-          return undefined;
-        }
-      });
+      mTable[FunctionNamingSchema.kContextName] = MutableFunctionTable.
+        make().setDefinition(emptyTuple(), referenceGetter()));
+
+    const addNone = (() =>
+      mTable[FunctionNamingSchema.kNoneName] = MutableFunctionTable.
+        make().setDefinition(emptyTuple(), noneGetter()));
 
     const { talliedSizeInBytes, talliedSizeInItems } = mVariableTracker;
 
@@ -98,7 +103,7 @@ const BlankContextType = freeze({
       sizeInStackItems: () => talliedSizeInItems()
     });
 
-    return addContext() && inst;
+    return addContext() && addNone() && inst;
   }
 });
 
@@ -175,7 +180,7 @@ function make
   }
 
   const intoObjectType = memoize((): ContextObjectType => freeze({
-    // this will declare "<context>"
+    // this will declare "<context>", and "<none>"
     ...BlankContextType.make(mVariableTracker, mTable),
     intoFactoryStage: () => inst
   }));

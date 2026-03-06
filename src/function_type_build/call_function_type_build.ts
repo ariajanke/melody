@@ -3,6 +3,7 @@ import { DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError, raise } from '../helpers';
+import { FunctionTypeBase } from './function_type_base';
 import { StackSafetyChecker } from './stack_safety_checker';
 import { TupleObjectFactory } from './tuple_type';
 
@@ -39,7 +40,7 @@ function make
     return callNameStr;
   });
 
-  const receiver = memoize(() => {
+  const lexicalReceiver = memoize(() => {
     const receiverBuild = mIntoFunctionTypeBuild(mReceiver);
     return receiverBuild.functionType() ?? setErrorFn(receiverBuild.error);
   });
@@ -50,34 +51,47 @@ function make
   });
 
   const callFunctionType = memoize(() => {
-    const freceiver = receiver();
-    const fargs = args();
-    if (!freceiver || !fargs) { return; }
+    const lexRec = lexicalReceiver();
+    if (!lexRec || !args()) { return; }
 
-    const callFunctionType = freceiver.
+    const callFunctionType = lexRec.
       returns().
       lookUp(callNameStr()!)?.
-      byParameters( fargs.returns() );
+      byParameters( args()!.returns() );
     if (!callFunctionType) {
       const msg =
         `cannot find function "${callNameStr()}" ` +
         `on receiver "${mReceiver.asString()}" ` +
-        `(type: "${freceiver.returns().name()}") ` +
+        `(type: "${lexRec.returns().name()}") ` +
         `for args "${mArgs.asString()}"`;
       return setErrorMessage(msg);
     }
     return callFunctionType;
   });
 
+  const actualReceiver = memoize(() => {
+    if (!callFunctionType())
+      { return undefined; }
+    const { alternateReceiver } = callFunctionType()!;
+    if (!alternateReceiver()) {
+      return lexicalReceiver();
+    }
+
+    return lexicalReceiver()?.
+      returns().
+      lookUp(alternateReceiver()!)?.
+      byParameters(emptyTuple());
+  });
+  
   const { emptyTuple } = TupleObjectFactory;
 
   const optionalIndexAccessor = memoize(() => {
-    if (!receiver())
-      { return undefined; }
-
     const indexAccessorName = FunctionNamingSchema.
       mapToFringeAccessor(callNameStr()!);
-    return receiver()!.returns().
+    // for delegates: if we define "f" on the current context
+    // we also define a ".f" 
+    return lexicalReceiver()?.
+      returns().
       lookUp(indexAccessorName)?.
       byParameters(emptyTuple());
   });
@@ -87,17 +101,19 @@ function make
       { return undefined; }
   
     const compositeFunctionType = freeze({
-      parameters: emptyTuple,
+      ...FunctionTypeBase.receivedByNone(),
       returns: () => callFunctionType()!.returns(),
       emit(writer: CodeWriter) {
         const contextSize = mGetContextSizeInBytes();
         if (contextSize < 0) {
           raise(`Context size cannot be negative, got ${contextSize}`);
         }
-        writer.
-          pushRepresentation( contextSize ).
-          incrementStackPointer();
-        receiver()!.emit(writer);
+        if (optionalIndexAccessor()) {
+          writer.
+            pushRepresentation( contextSize ).
+            incrementStackPointer();
+        }
+        actualReceiver()!.emit(writer);
         args()!.emit(writer);
         // NOTE
         // mechanics of call
@@ -110,10 +126,11 @@ function make
         // need function index for user defined functions
         optionalIndexAccessor()?.emit(writer);
         callFunctionType()!.emit(writer);
-        writer.forStackPointer('restoreToGlobal');
+        if (optionalIndexAccessor()) {
+          writer.forStackPointer('restoreToGlobal');
+        }
         return writer;
-      },
-      uid: memoize(Symbol)
+      }
     });
 
     if (kLogToConsole) {
