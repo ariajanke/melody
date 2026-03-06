@@ -115,6 +115,7 @@ function make
   // try and hide our "dirty laundry" here, we'll pass inst into constructors
 
   // this declare "<parent>"
+  // there's a difference between this and another context attr
   function intoParentBuild
     (parentType: ObjectType): ContextFactoryStage
   {

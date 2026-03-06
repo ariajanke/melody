@@ -1,6 +1,6 @@
 import { CodeWriter } from '../code_writer';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { ConstantStringType, IntegerType } from './builtin_type';
 import { FunctionTypeBase } from './function_type_base';
 
@@ -53,6 +53,7 @@ function make(): FunctionLookUpTable {
   }
 
   return freeze({
+    list: () => raise('Cannot list for "puts" functions'),
     byParameters(type: ObjectType): FunctionType | undefined {
       const found =
         mParameterMapping[type.uid()] ??=

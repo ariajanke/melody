@@ -1,6 +1,5 @@
 import { CodeWriter } from './code_writer';
 import { DastNode } from './dast_build';
-import { AccumulatedPendingNameMap } from './function_type_build/accumulated_pending_name_map';
 import { FunctionTypeBuildVisitor } from './function_type_build/function_type_build_visitor';
 import { TupleObjectFactory } from './function_type_build/tuple_type';
 import { FunctionTypeRegistry } from './function_type_registry';
@@ -9,9 +8,9 @@ import { StringPoolBuilder } from './string_pool';
 
 const { freeze, memoize } = Helpers;
 
-export interface CodeFragment {
-  emit(writer: CodeWriter): void;
-};
+// export interface CodeFragment {
+//   emit(writer: CodeWriter): void;
+// };
 
 export interface FunctionType {
   parameters(): ObjectType;
@@ -22,20 +21,27 @@ export interface FunctionType {
   /// function type. Which is used as the actual receiver for this
   /// function type. If no such name is provided, then the actual receiver is
   /// the lexical receiver.
-  // I need to be able to say "whatever is the lexical receiver is correct"
   alternateReceiver(): string | undefined;
   uid(): symbol;
 };
 
-export interface FunctionAbility {
-  evaluableNow(): boolean;
-};
+// TODO we're so far from PTCs its not even funny
+// export interface FunctionAbility {
+//   evaluableNow(): boolean;
+// };
 
 export interface ObjectType {
+  /// Display name only, no semantic use.
   name(): string;
+
   lookUp(operation: string | symbol): FunctionLookUpTable | undefined;
+
+  /// If this is a tuple, it maybe "detuplified". By definition there are no
+  /// single member tuples.
   detuplify(): Readonly<ObjectType[]> | undefined;
   uid(): symbol;
+
+  // sizing... do I really need "stackCleanUp"?
   sizeInBytes(): number;
   sizeInStackItems(): number;
   stackCleanUp(): FunctionType;
@@ -47,6 +53,7 @@ export interface MutableObjectType extends ObjectType {
 
 export interface FunctionLookUpTable {
   byParameters(type: ObjectType): FunctionType | undefined;
+  list(): Readonly<FunctionType[]>;
 };
 
 export interface FunctionTypeBuild {
@@ -61,8 +68,7 @@ function make(mRoot: DastNode,
 {
   const mVisitor = FunctionTypeBuildVisitor.
     make(mStringPoolBuilder,
-         mFunctionRegistry,
-         AccumulatedPendingNameMap.make(mRoot));
+         mFunctionRegistry);
   const mBuild = memoize(() => mRoot.visit(mVisitor));
 
   return freeze({

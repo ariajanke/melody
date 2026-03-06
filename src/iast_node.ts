@@ -44,6 +44,7 @@ export const IastVisitor = freeze({
   }
 });
 
+// IAST: Initial Abstract Syntax Tree
 export interface IastNode {
   asString: () => string,
   visit<T>(visitor: IastVisitor<T>): T

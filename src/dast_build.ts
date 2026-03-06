@@ -18,7 +18,7 @@ export interface DastAttributeDeclaration {
 
 export interface DastLetDeclaration {
   value: DastNode;
-  
+
   accessor?: DastAttributeDeclaration;
   assignment?: DastAttributeDeclaration;
   initialSet?: {
@@ -35,9 +35,14 @@ export type DastDeclarationMap = Readonly<WritableDastDeclarationMap>;
 export interface DastFunctionNameMappings {
   name: string;
   declaredNames: DastDeclarationMap;
-  // can absolutely be either directly or indirectly (deeper) used
-  // no, I don't want to accumulate names
-  // just functions which can "query" context objects (like tables)
+  // names used by this function, but declared elsewhere
+  // however there is a mid parent case:
+  // <root>:
+  //   declared: ['.a']
+  //   <f1>:
+  //     pending: ['<parent>']
+  //     <f2>:
+  //       pending: ['.a']
   pendingNames: Readonly<{ [name: string]: true }>;
 };
 
@@ -51,7 +56,10 @@ export interface DastBuild {
   node(): DastNode | undefined;
   error(): StandardErrorMessage;
 }
-
+// DAST: Declartive Abstract Syntax Tree
+// Fundamentally IAST -> DAST describes that creation of DAST. Its use is for
+// creating a tree which names are all laid out conviently for function type
+// building. Its schema is validated before finally returning.
 export const DastBuild = freeze({
   make(root: IastNode) {
     const { error, setErrorFn } = StandardError.make();

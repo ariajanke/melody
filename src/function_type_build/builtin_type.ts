@@ -67,7 +67,6 @@ export const IntegerType = freeze({
     function mkOperation(writerFn: CodeWriterFnName): () => FunctionLookUpTable {
       return () => {
         const ftype = freeze({
-          // that would surpress the receiver (which could be a literal)
           ...FunctionTypeBase.receivedByLexical(),
           parameters: () => inst,
           returns: () => inst,

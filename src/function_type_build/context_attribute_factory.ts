@@ -32,10 +32,9 @@ function forEachWord
 }
 
 export const ContextAttributeFactory = freeze({
-  kBytesPerWord,
   buildSetter(accessIndex: number, type: ObjectType, getter?: FunctionType): FunctionType {
     return freeze({
-      ...FunctionTypeBase.receivedByLexical(),
+      ...FunctionTypeBase.receivedByContext(),
       parameters: () => type,
       returns: () => getter ? type : TupleObjectFactory.emptyTuple(),
       emit(writer: CodeWriter) {
@@ -53,7 +52,7 @@ export const ContextAttributeFactory = freeze({
   },
   buildGetter(accessIndex: number, type: ObjectType): FunctionType {
     return freeze({
-      ...FunctionTypeBase.receivedByLexical(),
+      ...FunctionTypeBase.receivedByContext(),
       returns: () => type,
       emit(writer: CodeWriter) {
         forEachWord(inReverseOrder, type, (additional: number) => {
