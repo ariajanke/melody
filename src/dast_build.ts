@@ -61,11 +61,13 @@ export interface DastBuild {
 // creating a tree which names are all laid out conviently for function type
 // building. Its schema is validated before finally returning.
 export const DastBuild = freeze({
-  make(root: IastNode) {
+  make(mRoot: IastNode,
+       mVisitor = DastBuildVisitor.make())
+    : DastBuild
+  {
     const { error, setErrorFn } = StandardError.make();
 
-    const mVisitor = DastBuildVisitor.make();
-    const build = memoize((): DastBuild => root.visit(mVisitor));
+    const build = memoize((): DastBuild => mRoot.visit(mVisitor));
     const builtNode = memoize(() =>
       build().node() ?? setErrorFn(build().error));
 

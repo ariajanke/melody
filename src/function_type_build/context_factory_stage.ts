@@ -28,7 +28,7 @@ export interface ContextFunctionTypeBuild extends FunctionTypeBuild {
 };
 
 export interface ContextFactoryStage {
-  intoParentBuild(parentType: ObjectType): ContextFactoryStage;
+  intoParentBuild(frameName: string, parentType: ObjectType): ContextFactoryStage;
   intoModifierBuild
     (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
     : ContextFunctionTypeBuild;
@@ -117,7 +117,7 @@ function make
   // this declare "<parent>"
   // there's a difference between this and another context attr
   function intoParentBuild
-    (parentType: ObjectType): ContextFactoryStage
+    (frameName: string, parentType: ObjectType): ContextFactoryStage
   {
     const parentRefType = parentType.
       lookUp(FunctionNamingSchema.kContextName)?.
@@ -134,9 +134,10 @@ function make
     const parentAccessFunc = ContextAttributeFactory.buildGetter(
       ContextTypeReservations.kParentAccessIndex,
       parentRefType);
-    mTable[FunctionNamingSchema.kParentName] = MutableFunctionTable.
+    const ftable = MutableFunctionTable.
       make().
       setDefinition(TupleObjectFactory.emptyTuple(), parentAccessFunc);
+    mTable[frameName] = mTable[FunctionNamingSchema.kParentName] = ftable;
     return inst;
   }
 

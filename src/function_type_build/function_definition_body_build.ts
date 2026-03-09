@@ -7,6 +7,10 @@ import { FunctionNamingSchema } from '../function_naming_schema';
 import { TupleObjectFactory } from './tuple_type';
 import { CallBackObjectHold } from '../call_back_object_hold';
 import { CodeWriter } from '../code_writer';
+import { FunctionTypeBase } from './function_type_base';
+import { FunctionTypeBuildBase } from './function_type_build_base';
+import { DeclaredContextStack, WritableDeclaredContextStack } from './declared_context_stack';
+import { ContextFactoryStage } from './context_factory_stage';
 
 const { freeze, memoize } = Helpers;
 
@@ -15,10 +19,11 @@ function make
    mNodes: Readonly<DastNode[]>,
    // last two params are tightly coupled, guh
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,
-   mHolder: CallBackObjectHold<ObjectType>
+  //  mHolder: CallBackObjectHold<ObjectType>
+   mDeclaredContextStack: WritableDeclaredContextStack
    // pass in entire holder instead
   )
-  : FunctionTypeBuild
+  : FunctionTypeBuilds
 {
   // now we can accumulate names
   // we can pass a parent into here
@@ -29,53 +34,63 @@ function make
   const { error, setErrorFn } = StandardError.make();
   // grab the parent now! (if it exists)
   const parentContextType = mHolder.optionalCurrentObject();
-  const contextType = memoize(() => {
+  const contextInfo = memoize(() => {
     const contextBuild = ContextBuild.
       make(mDefs,
            mIntoFunctionTypeBuild,
            mHolder.withHeldObject,
            parentContextType);
     
-    return contextBuild.contextType() ?? setErrorFn(contextBuild.error);
+    return contextBuild.info() ?? setErrorFn(contextBuild.error);
   });
+  const contextType = () => contextInfo()?.contextType();
+  const contextPreface = () => contextInfo()?.preface();
 
-  const impliedInitialSetter = memoize((): FunctionTypeBuild => {
-    const { emptyTuple } = TupleObjectFactory;
+  // const impliedInitialSetter = memoize((): FunctionTypeBuild => {
+  //   const { emptyTuple } = TupleObjectFactory;
 
-    const parentGetter = contextType()?.
-      lookUp(FunctionNamingSchema.kParentName)?.
-      byParameters(emptyTuple());
+  //   const parentGetter = contextType()?.
+  //     lookUp(FunctionNamingSchema.kParentName)?.
+  //     byParameters(emptyTuple());
 
-    // we always want to set the local sp
-    const ftype: FunctionType = freeze({
-      parameters: () => emptyTuple(),
-      returns: () => emptyTuple(),
-      emit(writer: CodeWriter) {
-        writer.forStackPointer('saveToLocal');
-        // if such parent exists, we have to have an "initial set" for it
-        if (parentGetter) {
-          writer.storeParentStackPointer();
-        }
-        return writer;
-      },
-      uid: memoize(Symbol)
-    });
+  //   // we always want to set the local sp
+  //   const ftype: FunctionType = freeze({
+  //     ...FunctionTypeBase.receivedByContext(),
+  //     emit(writer: CodeWriter) {
+  //       writer.forStackPointer('saveToLocal');
+  //       // if such parent exists, we have to have an "initial set" for it
+  //       if (parentGetter) {
+  //         writer.storeParentStackPointer();
+  //       }
+  //       return writer;
+  //     }
+  //   });
 
-    return freeze({
-      functionType: () => ftype,
-      error: () => StandardError.make().error()
-    });
-  });
+  //   return freeze({
+  //     functionType: () => ftype,
+  //     error: () => StandardError.make().error()
+  //   });
+  // });
 
   const functionType = memoize(() => {
+    const fuck = (stage: ContextFactoryStage, parent?: ObjectType) => {
+      const contextBuild = ContextBuild.
+        make(mDefs,
+            mIntoFunctionTypeBuild,
+            stage.intoObjectType,
+            parent);
+      
+      return contextBuild.info() ?? setErrorFn(contextBuild.error);
+    };
+    return mDeclaredContextStack.withContextStage(mDefs, fuck);
     return mHolder.withHeldObject(contextType as () => ObjectType, () => {
       if (!contextType())
         { return undefined; }
 
       const subBuilds: FunctionTypeBuild[] = [];
-      if (impliedInitialSetter()?.functionType())
-        { subBuilds.push(impliedInitialSetter()!); }
-      subBuilds.push(...mNodes.map(mIntoFunctionTypeBuild));
+      subBuilds.
+        push(FunctionTypeBuildBase.makeSuccessFromType(contextPreface()!),
+             ...mNodes.map(mIntoFunctionTypeBuild));
       const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
       const compositeFunctionType = cleanUpBuild.functionType();
       if (!compositeFunctionType)

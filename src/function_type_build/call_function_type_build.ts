@@ -108,11 +108,7 @@ function make
         if (contextSize < 0) {
           raise(`Context size cannot be negative, got ${contextSize}`);
         }
-        if (optionalIndexAccessor()) {
-          writer.
-            pushRepresentation( contextSize ).
-            incrementStackPointer();
-        }
+
         actualReceiver()!.emit(writer);
         args()!.emit(writer);
         // NOTE
@@ -125,6 +121,12 @@ function make
         // the function is *always* expected to consume it's parameters
         // need function index for user defined functions
         optionalIndexAccessor()?.emit(writer);
+        // down here so our loads/stores stay sane
+        if (optionalIndexAccessor()) {
+          writer.
+            pushRepresentation( contextSize ).
+            incrementStackPointer();
+        }
         callFunctionType()!.emit(writer);
         if (optionalIndexAccessor()) {
           writer.forStackPointer('restoreToGlobal');

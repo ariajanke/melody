@@ -3,6 +3,8 @@ import { ContextFactoryStage, ContextFunctionTypeBuild } from './context_factory
 import { Helpers, raise, StandardError } from '../helpers';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { TupleObjectFactory } from './tuple_type';
+import { CodeWriter } from '../code_writer';
+import { FunctionTypeBase } from './function_type_base';
 
 const { freeze, memoize } = Helpers;
 
@@ -19,31 +21,72 @@ const InterveningFrameThing = freeze({
 function make
   (mPendingName: string,
    mStage: ContextFactoryStage,
-   mParentContextType?: ObjectType
+   mParentContextType: ObjectType,
+   // if name is found on (given) parent, how many times do I need to call <parent>?
+   mParentGet: FunctionType,
   // I need to track intervening frames
   )
   : ContextFunctionTypeBuild
 {
+  if (mParentGet.parameters().uid() !== TupleObjectFactory.emptyTuple().uid() ||
+      mParentGet.returns()?.uid() !== mParentContextType.uid() ||
+      mParentGet.returns().sizeInStackItems() !== 1)
+  {
+    raise('parent getter must return a reference to the parent context');
+  }
+  // here's my problem: I need to "switch" contexts for loads/stores generally
+  // and for "hopping"
+  // now what's the difference between global SP and local SP?
+  // the global SP, this "survives" indirect calls, it is the pointer of the current frame
+  // the local SP is for record keeping only
+
   const { error, setErrorMessage } = StandardError.make();
   const parentFunctionLookUp = memoize(() =>
-    mParentContextType?.lookUp(mPendingName));
+    mParentContextType.lookUp(mPendingName));
+
+  // should you need it, how to hop to here
+  const additionalHop = memoize(() => {
+    const toParentFtype = mParentContextType.
+      lookUp(FunctionNamingSchema.kParentName)?.
+      byParameters(TupleObjectFactory.emptyTuple());
+    if (!toParentFtype) {
+      raise('missing parent function');
+    }
+    freeze({
+      ...FunctionTypeBase.receivedByNone(),
+      returns: () => mParentContextType,
+      parameters: () => TupleObjectFactory.emptyTuple(),
+      emit(writer: CodeWriter) {
+        mParentGet.emit(writer);
+        // okay, parent pointer at the top
+        // set whatever the "active" SP is with that
+        // now repeat
+        const setGlobalSp;
+        toParentFtype.emit(writer);
+        // do this for n hops, then construct an initial set with this
+      }
+    });
+  });
 
   // for each ftype in parentFunctionLookUp,
   // map to appropriate ftypes
   // each ftype may have an "alternateReceiver"...
 
   parentFunctionLookUp()?.list().forEach((ftype: FunctionType) => {
-    if (!mParentContextType) {
-      raise('no');
-    }
+
+    // I need their names... (.name() is display only)
+    mParentContextType;
     // if we follow lexical, let's error out
-    let receivedBy = ftype.alternateReceiver();
+    const receivedBy = ftype.alternateReceiver();
     if (!receivedBy) {
       return setErrorMessage('not handling lexical only receiver');
+    } else if (receivedBy === FunctionNamingSchema.kParentName) {
+      raise('parent name should not be used');
+    } else if (receivedBy !== FunctionNamingSchema.kContextName) {
+      raise('can only handle on context');
     }
-    if (receivedBy === FunctionNamingSchema.kContextName) {
-      receivedBy = FunctionNamingSchema.kParentName;
-    }
+
+
     const obj = mStage.intoObjectType();
     const recFType = obj.lookUp(receivedBy)?.byParameters(TupleObjectFactory.emptyTuple());
     if (!recFType) {
@@ -61,7 +104,7 @@ function make
       // - needs to be emitted as part of the function body (for the context)
       // 
       // accessor:
-      // - just a dumb accessor, KISS
+      // - just accessor + SP switch and back, KISS
       obj.intoFactoryStage().intoAccessorBuild(receivedBy, )
     }
     // following we'll either have built that needed receiver or error out

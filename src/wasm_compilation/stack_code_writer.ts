@@ -28,7 +28,7 @@ function make
 
   function pushSpPlusOffset(offset: number) {
     mFunctionBody.
-      getLocal(kStackPointerLocalIndex).
+      getGlobal(stackPointerLocation()).
       pushI32Const(offset).
       pushI32Add();
   }
@@ -40,9 +40,6 @@ function make
   };
 
   function storeInteger(offset: number) {
-    // if (offset === kParentAccessIndex) {
-    //   raise(`Offset ${kParentAccessIndex} is reserved for storing the parent frame stack pointer`);
-    // }
     ensureLocalsPresent();
 
     mFunctionBody.setLocal(kSwapLocalIndex);

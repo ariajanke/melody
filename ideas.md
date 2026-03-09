@@ -350,3 +350,10 @@ let f3 = fn
 f3()
 
 ```
+
+```
+let f = fn puts('hello')
+
+# as we pass down "f" it will still need to be received by this context
+(askInteger() > 5).then(f)
+```

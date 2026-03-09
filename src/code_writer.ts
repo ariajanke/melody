@@ -19,6 +19,8 @@ export interface CodeWriter {
   multiplyIntegers(): CodeWriter;
   printInteger(): CodeWriter;
   printString(): CodeWriter;
+
+  /// Stack Effect: [] -> [i32]
   pushRepresentation(num: number): CodeWriter;
 
   /// Stores the top of the stack to SP + offset
@@ -53,6 +55,7 @@ export interface CodeWriter {
   ///   i32.add
   ///   global.set $gSP
   incrementStackPointer(): CodeWriter;
+  // I need to set the stack pointer directly
 
   /// Pushes the current stack pointer onto the stack
   /// Essential for `<context>`

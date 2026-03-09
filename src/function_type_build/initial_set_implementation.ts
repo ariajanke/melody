@@ -2,7 +2,7 @@ import { CodeWriter } from '../code_writer';
 import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
 import { ContextAttributeFactory } from './context_attribute_factory';
-import { TupleObjectFactory } from './tuple_type';
+import { FunctionTypeBase } from './function_type_base';
 import { VariableTracker } from './variable_tracker';
 
 const { freeze, memoize } = Helpers;
@@ -44,15 +44,14 @@ export const InitialSetImplementation = freeze({
       if (!setters())
         { return; }
       const ftype: FunctionType = freeze({
+        ...FunctionTypeBase.receivedByContext(),
         parameters: () => mDefinedBy,
-        returns: () => TupleObjectFactory.emptyTuple(),
         emit(writer: CodeWriter) {
           for (const setter of setters()!) {
             setter.emit(writer);
           }
           return writer;
-        },
-        uid: memoize(Symbol)
+        }
       });
       return ftype;
     });
