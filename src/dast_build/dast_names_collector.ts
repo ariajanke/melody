@@ -1,3 +1,4 @@
+import { BuiltinFunctionNames } from '../builtin_function_names';
 import { DastFunctionNameMappings, DastNode, DastVisitor } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers } from '../helpers';
@@ -11,14 +12,11 @@ export interface DastNamesCollector {
 };
 
 const visitLiteral = (_0: string) => {};
-const visitFunctionDefinition =
-  (_0: DastFunctionNameMappings,
-   _1: Readonly<DastNode[]>) => {};
 
-type ScanOptions = 'full' | 'excludeInitialSet';
+export type ScanOptions = 'forLetDependeeNames' | 'forFunctionDefinition';
 
 function initialSetVisitOn(opt: ScanOptions, visitor: () => DastVisitor<void>) {
-  if (opt === 'full') {
+  if (opt === 'forLetDependeeNames') {
     return (_names: readonly string[] | string, node: DastNode) => {
       node.visit(visitor());
     };
@@ -26,49 +24,63 @@ function initialSetVisitOn(opt: ScanOptions, visitor: () => DastVisitor<void>) {
   return (_0: Readonly<string[]> | string, _1: DastNode) => {};
 }
 
-export const DastNamesCollector = freeze({
-  make(mScanBreadth: ScanOptions = 'full'): DastNamesCollector {
-    const contextName = Token.kContextToken.content;
-    const mNames: string[] = [];
-    const { mapToFringeAccessor, isAnAssignmentName } = FunctionNamingSchema;
+function make(mScanBreadth: ScanOptions): DastNamesCollector {
+  const contextName = Token.kContextToken.content;
+  const mNames: string[] = [];
+  const {
+    mapToFringeAccessor, 
+    isAnAssignmentName,
+    kParentName
+  } = FunctionNamingSchema;
+  const { isBuiltinFunctionName } = BuiltinFunctionNames;
 
-    const mVisitor: DastVisitor<void> = freeze({
-      visitFringe(v: string) {
-        if (v === contextName())
-          { return; }
-        mNames.push(mapToFringeAccessor(v));
-      },
-      visitString: visitLiteral,
-      visitInteger: visitLiteral,
-      visitCall(callName: DastNode, receiver: DastNode, args: DastNode) {
-        const name = callName.asString();
-        if (name && receiver.asString() === contextName()) {
-          mNames.push(name);
-          if (!isAnAssignmentName(name)) {
-            mNames.push(mapToFringeAccessor(name));
-          }
+  const mVisitor: DastVisitor<void> = freeze({
+    visitFringe(v: string) {
+      if (v === contextName() || isBuiltinFunctionName(v))
+        { return; }
+      mNames.push(mapToFringeAccessor(v));
+    },
+    visitString: visitLiteral,
+    visitInteger: visitLiteral,
+    visitCall(callName: DastNode, receiver: DastNode, args: DastNode) {
+      const name = callName.asString();
+      if (name &&
+          receiver.asString() === contextName() &&
+          !isBuiltinFunctionName(name))
+      {
+        mNames.push(name);
+        if (!isAnAssignmentName(name)) {
+          mNames.push(mapToFringeAccessor(name));
         }
-        
-        receiver.visit(mVisitor);
-        args.visit(mVisitor);
-      },
-      visitTuple(inner: Readonly<DastNode[]>) {
-        inner.forEach(n => n.visit(mVisitor));
-      },
-      visitInitialSet: initialSetVisitOn(mScanBreadth, () => mVisitor),
-      // we should also net up descendent names as well
-      // make it stupid, just grab that collection and add it to the array
-      // but we want to screen out names declared
-      visitFunctionDefinition
-    });
+      }
+      
+      receiver.visit(mVisitor);
+      args.visit(mVisitor);
+    },
+    visitTuple(inner: Readonly<DastNode[]>)
+      { inner.forEach(n => n.visit(mVisitor)); },
+    visitInitialSet: initialSetVisitOn(mScanBreadth, () => mVisitor),
+    visitFunctionDefinition(defs: DastFunctionNameMappings, _1: Readonly<DastNode[]>) {
+      if (mScanBreadth === 'forFunctionDefinition' &&
+          Object.keys(defs.pendingNames).length > 0)
+      { mNames.push(kParentName); }
+      // NOTE DO NOT recurse further
+    }
+  });
 
-    const inst = freeze({
-      collectFromNode(node: DastNode) {
-        node.visit(mVisitor);
-        return inst;
-      },
-      names: () => mNames
-    });
-    return inst;
+  const inst = freeze({
+    collectFromNode(node: DastNode) {
+      node.visit(mVisitor);
+      return inst;
+    },
+    names: () => mNames
+  });
+  return inst;
+}
+
+export const DastNamesCollector = freeze({
+  make,
+  letDependeeNamesFor(node: DastNode): Readonly<string[]> | undefined {
+    return make('forLetDependeeNames').collectFromNode(node).names();
   }
 });

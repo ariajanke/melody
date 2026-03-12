@@ -10,6 +10,7 @@ import { CodeWriter } from '../code_writer';
 import { TupleObjectFactory } from './tuple_type';
 import { DeclaredContextStack } from './declared_context_stack';
 import { MutableFunctionTable } from './mutable_function_table';
+import { BuiltinFunctionNames } from '../builtin_function_names';
 
 const { freeze, memoize } = Helpers;
 
@@ -51,7 +52,8 @@ function make
 
   
   const addPuts = (() =>
-    mStage.intoDirectLookUp('puts', PutsFunctionLookUpTable.instance()));
+    mStage.intoDirectLookUp(BuiltinFunctionNames.kPuts,
+                            PutsFunctionLookUpTable.instance()));
   const hasParentGetter = memoize(() => {
     if (!mParentContextType) {
       if (Object.keys(mDefs.pendingNames).length > 0)

@@ -430,7 +430,7 @@ describeNamed({ DastBuild }, () => {
           }
         });
       visitDNode(visitor);
-       expect(verifyHit()).toBeTruthy();
+      expect(verifyHit()).toBeTruthy();
     });
 
     it('contains a "<parent>" pending name inside f1', () => {

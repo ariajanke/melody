@@ -1,3 +1,4 @@
+import { BuiltinFunctionNames } from '../builtin_function_names';
 import { CodeWriter } from '../code_writer';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
@@ -53,7 +54,8 @@ function make(): FunctionLookUpTable {
   }
 
   return freeze({
-    list: () => raise('Cannot list for "puts" functions'),
+    list: () =>
+      raise(`Cannot list for "${BuiltinFunctionNames.kPuts}" functions`),
     byParameters(type: ObjectType): FunctionType | undefined {
       const found =
         mParameterMapping[type.uid()] ??=

@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import {
   TypesAware,
   type FuncImportDescription
@@ -73,9 +73,7 @@ function make
   }));
 
   const getDescription = (name: string) =>
-    descriptions()[name] ?? (() => {
-      throw new Error(`no such "${name}"`);
-    })();
+    descriptions()[name] ?? raise(`no such "${name}"`);
 
   const typesSection = memoize(() => {
     let typeSec = WasmTypesSection.make();
@@ -94,7 +92,7 @@ function make
     descriptionsInIndexOrder().forEach(({ name, args, returns }) => {
       const index = typeSec.indexFor( args, returns );
       if (index === undefined) {
-        throw new Error(`Index for "${name}" not defined`);
+        raise(`Index for "${name}" not defined`);
       }
       imptSec = imptSec.pushFunction(index, 'imports', name);
     });

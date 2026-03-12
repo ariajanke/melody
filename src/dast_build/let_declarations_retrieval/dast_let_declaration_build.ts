@@ -53,7 +53,7 @@ function make
     if (!argNode)
       { return undefined; }
     // NOTE the *same* logic we use to net up call/fringe names everwhere else!
-    return DastNamesCollector.make().collectFromNode(argNode).names();
+    return DastNamesCollector.letDependeeNamesFor(argNode);
   });
 
   const elementsCollector = memoize(() => {

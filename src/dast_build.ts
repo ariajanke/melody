@@ -42,7 +42,7 @@ export interface DastFunctionNameMappings {
   //   <f1>:
   //     pending: ['<parent>']
   //     <f2>:
-  //       pending: ['.a']
+  //       pending: ['<parent>', '.a']
   pendingNames: Readonly<{ [name: string]: true }>;
 };
 

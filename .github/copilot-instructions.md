@@ -59,6 +59,8 @@ applyTo: "**/*.ts,**/*.md"
 - lines must be fewer than 120 characters
 - have the `make` function be the only thing that creates an instance of `MyAbstraction`
 - no "new" keyword, use either existing helpers/abstractions/utilities or basic JavaScript objects or build your own in the same style as the rest of the codebase
+- Avoid "parallel maintenance" - if a utility depends on a constant, that utility should be able to "update" itself as that constant changes (e.g. the function `isBuiltinFunctionName` in `src/builtin_function_names.ts`)
+- when creating string indexed dictionaries, they must be typed with 'undefined' as a possible value (e.g. `{ [key: string]: MyType | undefined }`)
 # Code Structure Guidelines
 - prefer one abstraction per file
 - abstractions ideally contain two functions: `outputThing` and `error`/`errors`

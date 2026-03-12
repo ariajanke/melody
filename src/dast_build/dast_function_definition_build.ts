@@ -36,8 +36,6 @@ function make
       map(build => build.node() ?? setErrorFn(build.error));
     if (!nodes || nodes.some((n: DastNode | undefined) => !n))
       { return undefined; }
-    // I should force a raise ffs
-    // pendingNames_();
     return nodes as DastNode[];
   });
 
@@ -46,9 +44,8 @@ function make
       finishedNodes() ? mDeclarations : undefined));
 
   const usedNames = memoize(() => {
-    const collector = DastNamesCollector.make('excludeInitialSet');
+    const collector = DastNamesCollector.make('forFunctionDefinition');
     finishedNodes()?.forEach(collector.collectFromNode);
-    // const message = finishedNodes() ?? error().message;
     return collector.names();
   });
 
