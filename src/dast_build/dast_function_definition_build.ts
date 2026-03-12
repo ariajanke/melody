@@ -37,7 +37,7 @@ function make
     if (!nodes || nodes.some((n: DastNode | undefined) => !n))
       { return undefined; }
     // I should force a raise ffs
-    pendingNames_();
+    // pendingNames_();
     return nodes as DastNode[];
   });
 
@@ -48,6 +48,7 @@ function make
   const usedNames = memoize(() => {
     const collector = DastNamesCollector.make('excludeInitialSet');
     finishedNodes()?.forEach(collector.collectFromNode);
+    // const message = finishedNodes() ?? error().message;
     return collector.names();
   });
 

@@ -10,7 +10,7 @@ import {
   DastVisitor,
   ReseatableDastVisitor
 } from '../src/dast_build';
-import { Helpers } from '../src/helpers';
+import { Helpers, StandardError } from '../src/helpers';
 
 const { describeNamed } = TestHelpers;
 const { memoize, freeze } = Helpers;
@@ -26,7 +26,8 @@ describeNamed({ DastBuild }, () => {
   const { makeCall, makeLetDeclation } = IastNode.forOperativeStatements;
   const { makeTuple } = IastNode.forLetDeclarationRetrievals;
   function intoDastNode(root: IastNode): DastNode {
-    const dbuild = DastBuild.make(root);
+    const dbuild = DastBuild.make(root, undefined, (root: DastNode) =>
+      freeze({ node: () => root, error: () => StandardError.make().error() }));
     const dnode = dbuild.node();
     if (!dnode) {
       throw new Error(dbuild.error().message);
@@ -348,6 +349,7 @@ describeNamed({ DastBuild }, () => {
         makeToken('='),
         makeFringe('f3'),
         makeFunctionDefinition([
+          // "puts" as a valid pending name?
           makeCall(makeToken('puts'),
                    makeFringe('<context>'),
                    makeFringe(`'hello from f3'`))

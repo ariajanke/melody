@@ -62,7 +62,8 @@ export interface DastBuild {
 // building. Its schema is validated before finally returning.
 export const DastBuild = freeze({
   make(mRoot: IastNode,
-       mVisitor = DastBuildVisitor.make())
+       mVisitor = DastBuildVisitor.make(),
+       mMakeValidator = DastValidator.make)
     : DastBuild
   {
     const { error, setErrorFn } = StandardError.make();
@@ -75,7 +76,7 @@ export const DastBuild = freeze({
       const node = builtNode();
       if (!node) { return undefined; }
 
-      const validator = DastValidator.make(node);
+      const validator = mMakeValidator(node);
       return validator.node() ?? setErrorFn(validator.error);
     });
 
