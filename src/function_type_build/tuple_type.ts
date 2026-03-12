@@ -1,6 +1,7 @@
 import { Helpers } from '../helpers';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
 import { CodeWriter } from '../code_writer';
+import { FunctionTypeBase } from './function_type_base';
 
 const { freeze, memoize } = Helpers;
 
@@ -28,15 +29,14 @@ const makeInstance =
       tallyUp((type: ObjectType) => type.sizeInStackItems())
     ),
     stackCleanUp: memoize((): FunctionType => freeze({
+      ...FunctionTypeBase.receivedByNone(),
       parameters: () => inst,
-      returns: () => klass.emptyTuple(),
       emit(writer: CodeWriter) {
         types.forEach((type: ObjectType) => {
           type.stackCleanUp().emit(writer);
         });
         return writer;
-      },
-      uid: memoize(Symbol)
+      }
     }))
   });
   return inst; 

@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { CodeWriter } from '../code_writer';
@@ -52,7 +52,7 @@ function make
     const { descriptions } = WasmBuiltinImportsCreation;
     const desc = descriptions()[name];
     if (!desc) { 
-      throw new Error(`"${name}" is mispelled or does not exist`);
+      raise(`"${name}" is mispelled or does not exist`);
     }
     return desc.index;
   };
@@ -63,15 +63,22 @@ function make
     return inst;
   };
 
-  const inst = freeze({
+  const inst: WasmFunctionCodeWriter = freeze({
     ...StackCodeWriter.make(mFunctionBody, (): CodeWriter => inst),
+    duplicateTop() {
+      const { kSwapTempLocalIndex } = StackCodeWriter;
+      mFunctionBody.
+        pushTeeLocal(kSwapTempLocalIndex).
+        getLocal(kSwapTempLocalIndex);
+      return inst;
+    },
     pushRepresentation(i: number) {
       if (i < 0) {
-        throw new Error('Negative integers not implemented');
+        raise('Negative integers not implemented');
       }
       const asHex = i.toString(16).padStart(8, '0');
       if (asHex.length > 8) {
-        throw new Error('Given number is too large');
+        raise('Given number is too large');
       }
       mFunctionBody.pushI32Const(i);
       return inst;
@@ -108,7 +115,7 @@ function make
     indirectCall(n: number) {
       // magic number!
       if (n !== 0) {
-        throw new Error('Other signatures are unimplemented');
+        raise('Other signatures are unimplemented');
       }
       mFunctionBody.callIndirect(n);
       return inst;

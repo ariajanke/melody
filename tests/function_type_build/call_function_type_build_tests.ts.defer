@@ -4,6 +4,7 @@ import { FunctionNamingSchema } from '../../src/function_naming_schema';
 import { FunctionLookUpTable, FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
 import { BuiltinTypeBase, IntegerType } from '../../src/function_type_build/builtin_type';
 import { CallFunctionTypeBuild } from '../../src/function_type_build/call_function_type_build';
+import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
 import { TupleObjectFactory } from '../../src/function_type_build/tuple_type';
 import { Helpers, StandardError } from '../../src/helpers';
 import { TestHelpers } from '../test_helpers';
@@ -33,6 +34,7 @@ const DastNodeMaker = (() => {
           uid: memoize(counter)
         });
         const ftype = freeze({
+          ...FunctionTypeBase.receivedByNone(),
           parameters: () => parameters,
           returns: () => returns,
           emit(writter: CodeWriter) {
@@ -43,8 +45,7 @@ const DastNodeMaker = (() => {
               }
             }
             return writter;
-          },
-          uid: memoize(Symbol)
+          }
         });
         mapping[inst.uid()] = freeze({
           functionType: () => ftype,

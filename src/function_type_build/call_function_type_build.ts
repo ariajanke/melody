@@ -125,7 +125,9 @@ function make
         if (optionalIndexAccessor()) {
           writer.
             pushRepresentation( contextSize ).
-            incrementStackPointer();
+            pushStackPointer().
+            addIntegers().
+            setStackPointer();
         }
         callFunctionType()!.emit(writer);
         if (optionalIndexAccessor()) {

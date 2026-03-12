@@ -26,6 +26,7 @@ export interface CodeWriter {
   /// Stores the top of the stack to SP + offset
   /// Stack Effect: [i32] -> []
   storeInteger(offset: number): CodeWriter;
+
   subtractIntegers(): CodeWriter;
 
   /// back and forth between local and global SP
@@ -47,15 +48,20 @@ export interface CodeWriter {
   ///  i32.store
   storeParentStackPointer(): CodeWriter;
 
-  /// Increments the stack pointer with the top of the stack
-  /// Expectation: must first call pushRepresentation with current frame size
+  // /// Increments the stack pointer with the top of the stack
+  // /// Expectation: must first call pushRepresentation with current frame size
+  // /// Stack Effect: [i32] -> []
+  // /// WASM:
+  // ///   global.get $gSP
+  // ///   i32.add
+  // ///   global.set $gSP
+  // incrementStackPointer(): CodeWriter;
+
+  /// Sets the stack pointer with the value at the current top of the stack
   /// Stack Effect: [i32] -> []
   /// WASM:
-  ///   global.get $gSP
-  ///   i32.add
   ///   global.set $gSP
-  incrementStackPointer(): CodeWriter;
-  // I need to set the stack pointer directly
+  setStackPointer(): CodeWriter;
 
   /// Pushes the current stack pointer onto the stack
   /// Essential for `<context>`
@@ -64,11 +70,10 @@ export interface CodeWriter {
   ///   global.get $gSP
   pushStackPointer(): CodeWriter;
 
-  // /// From absolute address, into loaded value on top
-  // /// Stack Effect: [i32] -> [i32]
-  // absoluteLoadInteger(): CodeWriter;
-
-  // /// raw store.i32 expects datum on top, then address
-  // /// Stack Effect: [i32, i32] -> []
-  // absoluteStoreInteger(): CodeWriter;
+  /// Duplicates the top of the stack
+  /// Stack Effect: [i32] -> [i32, i32]
+  /// WASM:
+  ///   local.tee $lTmpSwp
+  ///   local.get $lTmpSwp
+  duplicateTop(): CodeWriter;
 };

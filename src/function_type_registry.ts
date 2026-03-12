@@ -1,5 +1,10 @@
 import { CodeWriter } from './code_writer';
-import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from './function_type_build';
+import {
+  FunctionLookUpTable,
+  FunctionType,
+  FunctionTypeBuild,
+  ObjectType
+} from './function_type_build';
 import { Helpers } from './helpers';
 import { MemoryArray } from './memory_array';
 import { Token } from './token';
@@ -29,12 +34,10 @@ function make() {
   const { emptyTupleType } = FunctionTypeBuild;
   const callName = Token.kCallToken.content;
   const callFunction = memoize((): FunctionType => freeze({
-    parameters: () => emptyTupleType(),
-    returns: () => emptyTupleType(),
+    ...FunctionTypeBuild.makeBaseType(),
     emit(writer: CodeWriter) {
       return writer.indirectCall(kSignatureIndex);
-    },
-    uid: memoize(Symbol)
+    }
   }));
   const functionLookUpTable = memoize(() => freeze({
     [callName()]: freeze({
@@ -42,8 +45,9 @@ function make() {
         if (params.uid() !== emptyTupleType().uid())
           { return undefined; }
         return callFunction();
-      }
-    }),
+      },
+      list: memoize(() => [callFunction()])
+    }) satisfies FunctionLookUpTable,
     // make TS happy lol
     [Symbol()]: undefined
   }));
@@ -58,12 +62,11 @@ function make() {
       sizeInBytes: () => MemoryArray.kWordSizeInBytes,
       sizeInStackItems: () => 1,
       stackCleanUp: memoize((): FunctionType => freeze({
+        ...FunctionTypeBuild.makeBaseType(),
         parameters: () => objectType,
-        returns: () => emptyTupleType(),
         emit(writer: CodeWriter) {
           return writer.drop();
-        },
-        uid: memoize(Symbol)
+        }
       }))
     });
     return objectType;
@@ -72,12 +75,11 @@ function make() {
   function newIndexEmission(): FunctionType {
     const idx = mRegistryLength++;
     return freeze({
-      parameters: () => emptyTupleType(),
+      ...FunctionTypeBuild.makeBaseType(),
       returns: () => functionObjectType(),
       emit(writer: CodeWriter) {
         return writer.pushRepresentation(idx);
       },
-      uid: memoize(Symbol)
     });
   }
 

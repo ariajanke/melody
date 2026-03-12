@@ -2,6 +2,7 @@ import { CodeWriter } from '../code_writer';
 import { DastNode } from '../dast_build';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
+import { FunctionTypeBase } from './function_type_base';
 import { TupleObjectFactory } from './tuple_type';
 
 const { freeze, memoize } = Helpers;
@@ -34,15 +35,14 @@ function make
     if (!functionTypesFromNodes())
       { return; }
     return freeze({
-      parameters: () => TupleObjectFactory.emptyTuple(),
+      ...FunctionTypeBase.receivedByNone(),
       returns: memoize(() => TupleObjectFactory.
         make(functionTypesFromNodes()!.map(ft => ft.returns()))),
       emit(writer: CodeWriter) {
         reversedFunctionTypes()!.
           forEach((ft: FunctionType) => ft.emit(writer));
         return writer;
-      },
-      uid: memoize(Symbol)
+      }
     });
   });
   

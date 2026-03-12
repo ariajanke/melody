@@ -1,4 +1,4 @@
-import { Helpers } from './helpers';
+import { Helpers, raise } from './helpers';
 import { Token } from './token';
 
 const { freeze, memoize } = Helpers;
@@ -114,7 +114,7 @@ const IastFringe = freeze({
       case tokenTypes.integerLiteral:
         return <T>(v: IastVisitor<T>) => v.visitInteger(content());
       default:
-        throw new Error(`cannot build stringable node from token "${content()}"`);
+        raise(`cannot build stringable node from token "${content()}"`);
       }
     })();
     return freeze({ asString: content, visit });

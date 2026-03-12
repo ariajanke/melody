@@ -1,6 +1,7 @@
 import { CodeWriter } from '../code_writer';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
+import { FunctionTypeBase } from './function_type_base';
 import { TupleObjectFactory } from './tuple_type';
 
 const { freeze, memoize } = Helpers;
@@ -9,21 +10,6 @@ function make
   (mBuildSequence: readonly FunctionTypeBuild[]): FunctionTypeBuild
 {
   const { error, setErrorFn } = StandardError.make();
-  const { emptyTuple } = TupleObjectFactory;
-
-  // this has got to move
-  // const prefaceFunctionType = memoize((): FunctionType => {
-  //   const { emptyTuple } = TupleObjectFactory;
-
-  //   return freeze({
-  //     parameters: () => emptyTuple(),
-  //     returns: () => emptyTuple(),
-  //     emit: (codeWriter: CodeWriter) =>
-  //       codeWriter.storeParentStackPointer().forStackPointer('saveToLocal'),
-  //     uid: memoize(Symbol)
-  //   });
-  // });
-
 
   function functionTypeSequence() {
     return mBuildSequence.
@@ -50,16 +36,14 @@ function make
   const functionType = memoize(() => {
     const functionTypes = functionTypeSequence();
     return functionTypes && freeze({
-      parameters: () => emptyTuple(),
-      returns: () => emptyTuple(),
+      ...FunctionTypeBase.receivedByNone(),
       emit(writer: CodeWriter) {
         functionTypes.forEach((ft: FunctionType) => ft.emit(writer));
 
         // NOTE recall that the receiver is an argument for WASM
         //      so no clean up is needed
         return writer;
-      },
-      uid: memoize(Symbol)
+      }
     });
   });
 

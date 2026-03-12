@@ -1,5 +1,6 @@
 import { CodeWriter } from './code_writer';
 import { DastNode } from './dast_build';
+import { FunctionTypeBase } from './function_type_build/function_type_base';
 import { FunctionTypeBuildVisitor } from './function_type_build/function_type_build_visitor';
 import { TupleObjectFactory } from './function_type_build/tuple_type';
 import { FunctionTypeRegistry } from './function_type_registry';
@@ -79,5 +80,6 @@ function make(mRoot: DastNode,
 
 export const FunctionTypeBuild = freeze({
   make,
-  emptyTupleType: TupleObjectFactory.emptyTuple
+  emptyTupleType: TupleObjectFactory.emptyTuple,
+  makeBaseType: FunctionTypeBase.receivedByContext
 });

@@ -3,21 +3,20 @@ import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_bu
 import { Helpers } from '../helpers';
 import { StringPoolBuilder } from '../string_pool';
 import { ConstantStringType, IntegerType } from './builtin_type';
+import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
-import { TupleObjectFactory } from './tuple_type';
 
-const { freeze, memoize } = Helpers;
+const { freeze } = Helpers;
 
 function makeFunctionType
   (mRepresentation: number, mType: ObjectType): FunctionType
 {
   return freeze({
-    parameters(): ObjectType { return TupleObjectFactory.emptyTuple(); },
-    returns(): ObjectType { return mType; },
+    ...FunctionTypeBase.receivedByNone(),
+    returns: (): ObjectType => mType,
     emit(writer: CodeWriter) {
       return writer.pushRepresentation(mRepresentation);
-    },
-    uid: memoize(Symbol)
+    }
   });
 }
 

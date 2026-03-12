@@ -31,6 +31,7 @@ const StackPointerOperationsMixin = freeze({
       mState.programCounter += 1;
     }
     function pushStackPointer() {
+      raise('unimplemented');
       mState.programCounter += 1;
     }
     function loadInteger() {
@@ -38,6 +39,10 @@ const StackPointerOperationsMixin = freeze({
       const value = memory.load(offset + mState.stackPointer);
       stack.push(value);
       mState.programCounter += 2;
+    }
+    function setStackPointer() {
+      raise('unimplemented');
+      mState.programCounter += 1;
     }
 
     function storeInteger() {
@@ -55,7 +60,8 @@ const StackPointerOperationsMixin = freeze({
       incrementStackPointer,
       pushStackPointer,
       loadInteger,
-      storeInteger
+      storeInteger,
+      setStackPointer
      });
   }
 });
@@ -178,6 +184,11 @@ function make
       mStack.push(rep);
       mState.programCounter += 2;
     },
+    duplicateTop() {
+      const top = mStack.top();
+      mStack.push(top);
+      mState.programCounter += 1;
+    }
   };
 
   function oops() {

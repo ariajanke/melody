@@ -122,6 +122,7 @@ function make() {
       verifyStackIncrement(-1);
       return pushCode(indirectCall, ...encodeVaruint32(typeIdx), 0);
     },
+    pushTeeLocal: makeAttr('teeLocal'),
     finish() {
       return trackFinished(() => {
         // must begin with local decl count

@@ -34,6 +34,8 @@ export const FunctionTypeIndexGrabber = freeze({
       pushStackPointer: oops,
       incrementStackPointer: oops,
       storeParentStackPointer: oops,
+      duplicateTop: oops,
+      setStackPointer: oops,
       forStackPointer: (_0: 'saveToLocal' | 'restoreToGlobal') => oops()
     });
 

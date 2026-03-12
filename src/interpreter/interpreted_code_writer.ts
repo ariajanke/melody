@@ -21,8 +21,9 @@ function construct2(): InterpretedCodeWriter {
     'multiplyIntegers',
     'subtractIntegers',
     'pushStackPointer',
-    'incrementStackPointer',
-    'storeParentStackPointer'
+    'storeParentStackPointer',
+    'pushStackPointer',
+    'duplicateTop'
   ] as const satisfies (keyof CodeWriter)[];
 
   const kNumMethodNames = [

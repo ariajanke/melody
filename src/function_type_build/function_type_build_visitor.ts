@@ -1,4 +1,3 @@
-import { CallBackObjectHold } from '../call_back_object_hold';
 import {
   DastFunctionNameMappings,
   DastNode,
@@ -6,7 +5,7 @@ import {
 } from '../dast_build';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { FunctionTypeRegistry } from '../function_type_registry';
-import { Helpers, raise } from '../helpers';
+import { Helpers } from '../helpers';
 import { StringPoolBuilder } from '../string_pool';
 import { CallFunctionTypeBuild } from './call_function_type_build';
 import { DastBuildCache } from './dast_build_cache';
@@ -33,13 +32,10 @@ function make
 {
   const mBuildCache = DastBuildCache.
     make((node: DastNode) => node.visit(inst));
-  // const mHolder = CallBackObjectHold.
-  //   make<ObjectType>('root node must be a function definition');
-  // const { currentObject } = mHolder;
   const mDeclaredContextStack = DeclaredContextStack.make();
 
   const visitFringe = (name: string) =>
-    FringeFunctionBuild.make(name, mDeclaredContextStack.top);
+    FringeFunctionBuild.make(name, mDeclaredContextStack.topContext);
 
   const visitString = (string_: string): FunctionTypeBuild => 
     LiteralFunctionTypeBuild.makeForString(string_, mStringPoolBuilder);
@@ -49,7 +45,7 @@ function make
       make(callName,
            receiver,
            args,
-           mDeclaredContextStack.top().sizeInBytes,
+           mDeclaredContextStack.topContext().sizeInBytes,
            mBuildCache.checkCachedBuild);
   }
 
@@ -66,7 +62,9 @@ function make
 
   function visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): FunctionTypeBuild {
     return InitialSetBuild.
-      make(namesDefined, mBuildCache.checkCachedBuild(node), mDeclaredContextStack.top);
+      make(namesDefined,
+           mBuildCache.checkCachedBuild(node),
+           mDeclaredContextStack.topContext);
   }
 
   const visitTuple = (nodes: Readonly<DastNode[]>): FunctionTypeBuild =>

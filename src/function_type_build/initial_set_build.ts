@@ -2,8 +2,8 @@ import { CodeWriter } from '../code_writer';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { StackSafetyChecker } from './stack_safety_checker';
-import { TupleObjectFactory } from './tuple_type';
 import { Helpers, StandardError } from '../helpers';
+import { FunctionTypeBase } from './function_type_base';
 
 const { freeze, memoize } = Helpers;
 
@@ -18,7 +18,6 @@ export const InitialSetBuild = freeze({
     const { error, setErrorFn } = StandardError.make();
     const argsFType = memoize(() =>
       mArgsBuild.functionType() ?? setErrorFn(mArgsBuild.error));
-    const { emptyTuple } = TupleObjectFactory;
     const initialSetter = memoize(() => {
       if (!argsFType())
         { return; }
@@ -36,15 +35,13 @@ export const InitialSetBuild = freeze({
         { return; }
 
       const compositeFunctionType: FunctionType = freeze({
-        parameters: () => emptyTuple(),
-        returns: () => emptyTuple(),
+        ...FunctionTypeBase.receivedByContext(),
         emit(writer: CodeWriter) {
           // no "receiver"
           argsFType()!.emit(writer);
           initialSetter()!.emit(writer);
           return writer;
-        },
-        uid: memoize(Symbol)
+        }
       });
       StackSafetyChecker.make().check(compositeFunctionType);
       return compositeFunctionType;

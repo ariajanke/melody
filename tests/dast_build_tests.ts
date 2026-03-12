@@ -13,7 +13,7 @@ import {
 import { Helpers } from '../src/helpers';
 
 const { describeNamed } = TestHelpers;
-const { memoize } = Helpers;
+const { memoize, freeze } = Helpers;
 
 describeNamed({ DastBuild }, () => {
   // What's my goals with testing here?
@@ -337,6 +337,110 @@ describeNamed({ DastBuild }, () => {
           expect(defs.declaredNames['<initSet>:(f)']).toBeDefined();
         }
       });
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
+
+  describe('Cross function definition dependencies', () => {
+    // just verify the schema
+    const f3Let = () =>
+      makeLetDeclation(makeCall(
+        makeToken('='),
+        makeFringe('f3'),
+        makeFunctionDefinition([
+          makeCall(makeToken('puts'),
+                   makeFringe('<context>'),
+                   makeFringe(`'hello from f3'`))
+        ])));
+    const f2Let = () =>
+      makeLetDeclation(makeCall(
+        makeToken('='),
+        makeFringe('f2'),
+        makeFunctionDefinition([
+          makeCall(makeToken('puts'), makeFringe('<context>'), makeFringe('a'))
+        ])));
+    const f1Let = () =>
+      makeLetDeclation(makeCall(
+        makeToken('='),
+        makeFringe('f1'),
+        makeFunctionDefinition([
+          f2Let()
+        ])));
+    const aLet = () =>
+      makeLetDeclation(makeCall(
+        makeToken('='),
+        makeFringe('a'),
+        makeFringe('1')));
+    const root = memoize(() => makeFunctionDefinition([aLet(), f1Let(), f3Let()]));
+    const visitDNode = makeVisitDNode(root);
+    // we expect a "<parent>" in pending names for f1 and f2, but not for f3
+    function makeMarkThing() {
+      let mark_: string | undefined = undefined;
+      return freeze({
+        mark: () => mark_,
+        markOnEntry(newMark: string, fn: () => void) {
+          const oldMark = mark_;
+          mark_ = newMark;
+          fn();
+          mark_ = oldMark;
+        }
+      });
+    }
+    function makeMarkThingForVisitor
+      (testFn: (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) => void)
+    {
+      const { markOnEntry, mark } = makeMarkThing();
+      const visitor = freeze({
+        ...DastVisitor.makeDefaultingToContinue(),
+        visitInitialSet(namegroup: readonly string[] | string, node: DastNode) {
+          namegroup = typeof namegroup === 'string' ? namegroup : namegroup[0];
+          markOnEntry(namegroup, () => node.visit(visitor));
+        },
+        visitFunctionDefinition(defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) {
+          testFn(defs, nodes);
+          nodes.forEach((node: DastNode) => node.visit(visitor));
+        }
+      });
+      return freeze({ visitor, mark });
+    }
+
+    it('contains no "<parent>" pending name inside f3', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const { visitor, mark } = makeMarkThingForVisitor(
+        (defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) => {
+          if (mark() === 'f1') {
+            hitsAtExactly(1);
+            expect(defs.pendingNames['<parent>']).toBeUndefined();
+          }
+        });
+      visitDNode(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+
+    it('contains a "<parent>", and ".a" pending names inside f2', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const { visitor, mark } = makeMarkThingForVisitor(
+        (defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) => {
+          if (mark() === 'f2') {
+            hitsAtExactly(1);
+            expect(defs.pendingNames['<parent>']).toBeTruthy();
+            expect(defs.pendingNames['.a']).toBeTruthy();
+          }
+        });
+      visitDNode(visitor);
+       expect(verifyHit()).toBeTruthy();
+    });
+
+    it('contains a "<parent>" pending name inside f1', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const { visitor, mark } = makeMarkThingForVisitor(
+        (defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) => {
+          if (mark() === 'f1') {
+            hitsAtExactly(1);
+            expect(defs.pendingNames['<parent>']).toBeTruthy();
+          }
+        });
+      visitDNode(visitor);
       expect(verifyHit()).toBeTruthy();
     });
   });

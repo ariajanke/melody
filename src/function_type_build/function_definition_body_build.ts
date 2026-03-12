@@ -1,16 +1,11 @@
 import { Helpers, StandardError } from '../helpers';
 import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { ContextBuild } from './context_build';
-import { FunctionSequenceStackCleanUp } from './function_sequence_stack_clean_up';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
-import { FunctionNamingSchema } from '../function_naming_schema';
-import { TupleObjectFactory } from './tuple_type';
-import { CallBackObjectHold } from '../call_back_object_hold';
-import { CodeWriter } from '../code_writer';
-import { FunctionTypeBase } from './function_type_base';
-import { FunctionTypeBuildBase } from './function_type_build_base';
-import { DeclaredContextStack, WritableDeclaredContextStack } from './declared_context_stack';
+import { WritableDeclaredContextStack } from './declared_context_stack';
 import { ContextFactoryStage } from './context_factory_stage';
+import { FunctionTypeBuildBase } from './function_type_build_base';
+import { FunctionSequenceStackCleanUp } from './function_sequence_stack_clean_up';
 
 const { freeze, memoize } = Helpers;
 
@@ -23,7 +18,7 @@ function make
    mDeclaredContextStack: WritableDeclaredContextStack
    // pass in entire holder instead
   )
-  : FunctionTypeBuilds
+  : FunctionTypeBuild
 {
   // now we can accumulate names
   // we can pass a parent into here
@@ -33,18 +28,18 @@ function make
 
   const { error, setErrorFn } = StandardError.make();
   // grab the parent now! (if it exists)
-  const parentContextType = mHolder.optionalCurrentObject();
-  const contextInfo = memoize(() => {
-    const contextBuild = ContextBuild.
-      make(mDefs,
-           mIntoFunctionTypeBuild,
-           mHolder.withHeldObject,
-           parentContextType);
+  // const parentContextType = mHolder.optionalCurrentObject();
+  // const contextInfo = memoize(() => {
+  //   const contextBuild = ContextBuild.
+  //     make(mDefs,
+  //          mIntoFunctionTypeBuild,
+  //          mHolder.withHeldObject,
+  //          parentContextType);
     
-    return contextBuild.info() ?? setErrorFn(contextBuild.error);
-  });
-  const contextType = () => contextInfo()?.contextType();
-  const contextPreface = () => contextInfo()?.preface();
+  //   return contextBuild.info() ?? setErrorFn(contextBuild.error);
+  // });
+  // const contextType = () => contextInfo()?.contextType();
+  // const contextPreface = () => contextInfo()?.preface();
 
   // const impliedInitialSetter = memoize((): FunctionTypeBuild => {
   //   const { emptyTuple } = TupleObjectFactory;
@@ -72,33 +67,39 @@ function make
   //   });
   // });
 
-  const functionType = memoize(() => {
+  const contextInfo = memoize(() => {
     const fuck = (stage: ContextFactoryStage, parent?: ObjectType) => {
       const contextBuild = ContextBuild.
         make(mDefs,
-            mIntoFunctionTypeBuild,
-            stage.intoObjectType,
-            parent);
+             mIntoFunctionTypeBuild,
+             mDeclaredContextStack,
+             parent,
+             stage);
       
       return contextBuild.info() ?? setErrorFn(contextBuild.error);
     };
     return mDeclaredContextStack.withContextStage(mDefs, fuck);
-    return mHolder.withHeldObject(contextType as () => ObjectType, () => {
-      if (!contextType())
-        { return undefined; }
-
-      const subBuilds: FunctionTypeBuild[] = [];
-      subBuilds.
-        push(FunctionTypeBuildBase.makeSuccessFromType(contextPreface()!),
-             ...mNodes.map(mIntoFunctionTypeBuild));
-      const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
-      const compositeFunctionType = cleanUpBuild.functionType();
-      if (!compositeFunctionType)
-        { return setErrorFn(cleanUpBuild.error); }
-
-      return compositeFunctionType;
-    });
   });
+
+  const functionType = memoize((): FunctionType | undefined => {
+    // return mHolder.withHeldObject(contextType as () => ObjectType, () => {
+    if (!contextInfo())
+      { return undefined; }
+
+    const subBuilds: FunctionTypeBuild[] = [];
+    subBuilds.
+      push(FunctionTypeBuildBase.makeSuccessFromType(contextInfo()!.preface()),
+           ...mNodes.map(mIntoFunctionTypeBuild));
+    const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
+    const compositeFunctionType = cleanUpBuild.functionType();
+    if (!compositeFunctionType)
+      { return setErrorFn(cleanUpBuild.error); }
+
+    return compositeFunctionType;
+    // });
+  });
+
+  // const functionType = contextInfo()?.contextType
 
   return freeze({ functionType, error });
 }
