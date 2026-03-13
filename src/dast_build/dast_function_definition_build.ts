@@ -1,6 +1,6 @@
 import { CallBackObjectHold } from '../call_back_object_hold';
 import { DastBuild, DastNode, WritableDastDeclarationMap } from '../dast_build';
-import { StandardError } from '../helpers';
+import { StandardError, raise } from '../helpers';
 import { IastNode } from '../iast_node';
 import { Helpers } from '../helpers';
 import { DastFunctionDefintion } from './dast_node_specializations';
@@ -25,6 +25,7 @@ function make
 
   const { error, setErrorFn } = StandardError.make();
   const { withHeldObject, currentObject } = mObjectHolder;
+  const { kParentName } = FunctionNamingSchema;
 
   const nodeBuilds = memoize(() => mNodes.map(mIntoDastBuild));
 
@@ -51,12 +52,18 @@ function make
 
   const pendingNames_ = memoize(() => {
     const pendingNames: { [name: string]: true } = {};
+    const decl = finishedDeclarations();
+    if (!decl)
+      { raise('attempted to get pending names out of order'); }
     usedNames().forEach(name => {
-      // screens out names that are already declared
-      if (!currentObject()[name]) {
-        pendingNames[name] = true;
-      }
+      if (decl[name])
+        { return; }
+
+      pendingNames[name] = true;
     });
+    if (Object.keys(pendingNames).length > 0) {
+      pendingNames[kParentName] = true;
+    }
     return pendingNames;
   });
 
@@ -64,9 +71,10 @@ function make
     // NOTE order of operations is important here
     const declaredNames = finishedDeclarations();
     const nodes = finishedNodes();
-    const pendingNames = pendingNames_();
     if (!nodes || !declaredNames)
       { return undefined; }
+
+    const pendingNames = pendingNames_();
     return DastFunctionDefintion.
       make({ name: makeUniqueName(), declaredNames, pendingNames }, [...nodes]);
   });

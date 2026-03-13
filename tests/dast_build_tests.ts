@@ -410,9 +410,9 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const { visitor, mark } = makeMarkThingForVisitor(
         (defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) => {
-          if (mark() === 'f1') {
+          if (mark() === 'f3') {
             hitsAtExactly(1);
-            expect(defs.pendingNames['<parent>']).toBeUndefined();
+            expect(Object.keys(defs.pendingNames)).toEqual([]);
           }
         });
       visitDNode(visitor);

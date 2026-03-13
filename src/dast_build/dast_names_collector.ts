@@ -59,11 +59,15 @@ function make(mScanBreadth: ScanOptions): DastNamesCollector {
     },
     visitTuple(inner: Readonly<DastNode[]>)
       { inner.forEach(n => n.visit(mVisitor)); },
-    visitInitialSet: initialSetVisitOn(mScanBreadth, () => mVisitor),
+    visitInitialSet(_0: readonly string[] | string, node: DastNode) {
+      node.visit(mVisitor);
+    },
+    //: initialSetVisitOn(mScanBreadth, () => mVisitor),
     visitFunctionDefinition(defs: DastFunctionNameMappings, _1: Readonly<DastNode[]>) {
-      if (mScanBreadth === 'forFunctionDefinition' &&
-          Object.keys(defs.pendingNames).length > 0)
-      { mNames.push(kParentName); }
+      if (mScanBreadth === 'forLetDependeeNames')
+        { return; }
+      if (Object.keys(defs.pendingNames).length > 0)
+        { mNames.push(kParentName); }
       // NOTE DO NOT recurse further
     }
   });
