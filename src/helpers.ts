@@ -174,6 +174,10 @@ function toNamedMap<StringUnion extends string>
   return Object.assign({}, ...temp) as { [name in StringUnion]: StringUnion };
 }
 
+export const GenericSet = Object.freeze({
+  make<T>(): Set<T> { return new Set<T>(); }
+});
+
 // melody will not have exceptions! hell no!
 // but there still maybe a "throw my hands up" kind of function (ala std::terminate)
 export function raise(message: string): never

@@ -7,7 +7,7 @@ import {
   DastVisitor,
   ReseatableDastVisitor
 } from '../src/dast_build';
-import { Helpers, StandardError } from '../src/helpers';
+import { Helpers, StandardError, raise } from '../src/helpers';
 import { IastFragments } from './iast_fragments';
 
 const { describeNamed } = TestHelpers;
@@ -19,10 +19,6 @@ describeNamed({ DastBuild }, () => {
   //
   // test declaration presence
   // test initialSet presence
-  // const makeToken = Token.forTesting.makeFromStringOnly;
-  // const makeFringe = (v: string) => IastNode.makeFringe(makeToken(v));
-  // const { makeCall, makeLetDeclation } = IastNode.forOperativeStatements;
-  // const { makeTuple } = IastNode.forLetDeclarationRetrievals;
   const {
     makeLetEquals,
     makeFringe,
@@ -36,7 +32,7 @@ describeNamed({ DastBuild }, () => {
       freeze({ node: () => root, error: () => StandardError.make().error() }));
     const dnode = dbuild.node();
     if (!dnode) {
-      throw new Error(dbuild.error().message);
+      raise(dbuild.error().message);
     }
     return dnode;
   }
@@ -49,13 +45,7 @@ describeNamed({ DastBuild }, () => {
     };
   }
 
-  // const { makeFunctionDefinition } = IastNode;
-
-  // function makeTopNodes(innerNode: IastNode) {
-  //   return makeFunctionDefinition([makeLetDeclation(innerNode)]);
-  // }
-
-  function namesOfDefs(defs: DastFunctionNameMappings) {
+  function declaredNamesOf(defs: DastFunctionNameMappings) {
     return Object.keys(defs.declaredNames);
   }
 
@@ -71,27 +61,28 @@ describeNamed({ DastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       
       let depth = 0;
-      visitDnode({
+      const visitor = freeze({
         ...DastVisitor.makeDefaultingToContinue(),
         visitFunctionDefinition(defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) {
           if (depth === 0) {
-            expect(namesOfDefs(defs).sort()).
+            expect(declaredNamesOf(defs).sort()).
               toEqual(['.b', '<initSet>:(b)']);
           } else if (depth === 1) {
-            expect(namesOfDefs(defs)).toEqual([]);
+            expect(declaredNamesOf(defs)).toEqual([]);
           } else {
-            throw new Error('visited function definition at too great a depth');
+            raise('visited function definition at too great a depth');
           }
           // once: top level function definition with "b"
           // once      : nested function definition on "nodes" side
           // once again: nested function definition on "defs" side
           hitsAtExactly(2);
           ++depth;
-          defs.declaredNames['b']?.value?.visit(this);
-          nodes.forEach(node => node.visit(this));
+          defs.declaredNames['b']?.value?.visit(visitor);
+          nodes.forEach(node => node.visit(visitor));
           --depth;
         }
       });
+      visitDnode(visitor);
       expect(verifyHit()).toBeTruthy();
     });
   });
@@ -469,6 +460,46 @@ describeNamed({ DastBuild }, () => {
         });
       visitDNode(visitor);
       expect(verifyHit()).toBeTruthy();
+    });
+  });
+
+  describe('Cross function definition, <parent> spans multiple levels', () => {
+    const f3Let = () =>
+      makeLetEquals('f3',
+        makeFunctionDefinition(
+          makeFringe('a')
+        ));
+    const f2Let = () =>
+      makeLetEquals('f2',
+        makeFunctionDefinition(
+          f3Let()
+        ));
+    const f1Let = () =>
+      makeLetEquals('f1',
+        makeFunctionDefinition(
+          f2Let()
+        ));
+    const root = memoize(() => makeFunctionDefinition(letAEqual1(), f1Let()));
+    const visitDNode = makeVisitDNode(root);
+
+    [
+      'f1',
+      'f2',
+      'f3'
+    ].forEach((name: string) => {
+
+      it(`${name} has a "<parent>"`, () => {
+        const { hitsAtExactly, verifyHit } = ReachPoint.make();
+        const { visitor, mark } = makeMarkThingForVisitor(
+          (defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) => {
+            if (mark() === name) {
+              hitsAtExactly(1);
+              expect(defs.pendingNames['<parent>']).toBeTruthy();
+            }
+          });
+        visitDNode(visitor);
+        expect(verifyHit()).toBeTruthy();
+      });
     });
   });
 });

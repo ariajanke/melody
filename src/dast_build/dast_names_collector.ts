@@ -1,44 +1,51 @@
 import { BuiltinFunctionNames } from '../builtin_function_names';
 import { DastFunctionNameMappings, DastNode, DastVisitor } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { Helpers } from '../helpers';
+import { GenericSet, Helpers, raise } from '../helpers';
 import { Token } from '../token';
+import { CarriedNamesRegistry } from './carried_names_registry';
 
 const { freeze } = Helpers;
 
 export interface DastNamesCollector {
   collectFromNode(node: DastNode): DastNamesCollector;
-  names(): Readonly<string[]>;
+  names(): Readonly<Set<string>>;
+  descendentCarriedNames(): Readonly<Set<string>>;
 };
 
 const visitLiteral = (_0: string) => {};
 
 export type ScanOptions = 'forLetDependeeNames' | 'forFunctionDefinition';
 
-// function initialSetVisitOn(opt: ScanOptions, visitor: () => DastVisitor<void>) {
-//   if (opt === 'forLetDependeeNames') {
-//     return (_names: readonly string[] | string, node: DastNode) => {
-//       node.visit(visitor());
-//     };
-//   }
-//   return (_0: Readonly<string[]> | string, _1: DastNode) => {};
-// }
-
-function make(mScanBreadth: ScanOptions): DastNamesCollector {
+function make
+  (mScanBreadth: ScanOptions,
+   mCarriedNamesRegistry?: CarriedNamesRegistry
+  ): DastNamesCollector
+{
   const contextName = Token.kContextToken.content;
-  const mNames: string[] = [];
+  const mNames = GenericSet.make<string>();
+  const mDescendentCarriedNames = GenericSet.make<string>();
   const {
     mapToFringeAccessor, 
     isAnAssignmentName,
     kParentName
   } = FunctionNamingSchema;
   const { isBuiltinFunctionName } = BuiltinFunctionNames;
+  function checkForCarriesAndVisit(node: DastNode) {
+    const names = mCarriedNamesRegistry?.lookup(node);
+    if (names) {
+      for (const name of names) {
+        mDescendentCarriedNames.add(name);
+      }
+    }
+    node.visit(mVisitor);
+  }
 
   const mVisitor: DastVisitor<void> = freeze({
     visitFringe(v: string) {
       if (v === contextName() || isBuiltinFunctionName(v))
         { return; }
-      mNames.push(mapToFringeAccessor(v));
+      mNames.add(mapToFringeAccessor(v));
     },
     visitString: visitLiteral,
     visitInteger: visitLiteral,
@@ -48,25 +55,37 @@ function make(mScanBreadth: ScanOptions): DastNamesCollector {
           receiver.asString() === contextName() &&
           !isBuiltinFunctionName(name))
       {
-        mNames.push(name);
+        mNames.add(name);
         if (!isAnAssignmentName(name)) {
-          mNames.push(mapToFringeAccessor(name));
+          mNames.add(mapToFringeAccessor(name));
         }
       }
-      
-      receiver.visit(mVisitor);
-      args.visit(mVisitor);
+
+      checkForCarriesAndVisit(receiver);
+      checkForCarriesAndVisit(args);
     },
-    visitTuple(inner: Readonly<DastNode[]>)
-      { inner.forEach(n => n.visit(mVisitor)); },
+    visitTuple(inner: Readonly<DastNode[]>) {
+      inner.forEach(checkForCarriesAndVisit);
+    },
     visitInitialSet(_0: readonly string[] | string, node: DastNode) {
-      node.visit(mVisitor);
+      checkForCarriesAndVisit(node);
     },
     visitFunctionDefinition(defs: DastFunctionNameMappings, _1: Readonly<DastNode[]>) {
       if (mScanBreadth === 'forLetDependeeNames')
         { return; }
-      if (Object.keys(defs.pendingNames).length > 0)
-        { mNames.push(kParentName); }
+      // this gets *new* carried names
+      // that is these are names which are pending for a child function
+      // (but may still be declared)
+      if (!mCarriedNamesRegistry) {
+        raise('attempted to collect names without a registry for carried names');
+      }
+      Object.
+        keys(defs.pendingNames).
+        forEach((name: string) => {
+          if (name === kParentName)
+            { return; }
+          mDescendentCarriedNames.add(name);
+        });
       // NOTE DO NOT recurse further
     }
   });
@@ -76,14 +95,15 @@ function make(mScanBreadth: ScanOptions): DastNamesCollector {
       node.visit(mVisitor);
       return inst;
     },
-    names: () => mNames
+    names: () => mNames,
+    descendentCarriedNames: () => mDescendentCarriedNames
   });
   return inst;
 }
 
 export const DastNamesCollector = freeze({
   make,
-  letDependeeNamesFor(node: DastNode): Readonly<string[]> | undefined {
+  letDependeeNamesFor(node: DastNode): Readonly<Set<string>> | undefined {
     return make('forLetDependeeNames').collectFromNode(node).names();
   }
 });

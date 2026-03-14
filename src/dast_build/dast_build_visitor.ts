@@ -11,6 +11,7 @@ import { CallBackObjectHold } from '../call_back_object_hold';
 import { DastFunctionDefintionBuild } from './dast_function_definition_build';
 import { DastTupleBuild } from './dast_tuple_build';
 import { DastLetBuild } from './dast_let_build';
+import { CarriedNamesRegistry } from './carried_names_registry';
 
 const { freeze, memoize } = Helpers;
 
@@ -30,6 +31,7 @@ const visitFringe = makeVisitFringe(DastNode_.makeFringe);
 function make() {
   const mDeclarationHolder = CallBackObjectHold.
     make<WritableDastDeclarationMap>('let declaration stack not set up yet');
+  const mCarriedNamesRegistry = CarriedNamesRegistry.make();
   const { currentObject } = mDeclarationHolder;
   const intoDastBuild = (node: IastNode) => node.visit(inst);
   function visitLet(innerNode: IastNode) {
@@ -44,14 +46,14 @@ function make() {
     DastBuild
   {
     return DastCallBuild.
-      make(callName.visit(inst),
-           receiver.visit(inst),
-           args.visit(inst));
+      make(intoDastBuild(callName),
+           intoDastBuild(receiver),
+           intoDastBuild(args));
   }
 
   function visitFunctionDefinition(nodes: Readonly<IastNode[]>): DastBuild {
     return DastFunctionDefintionBuild.
-      make(nodes, intoDastBuild, mDeclarationHolder);
+      make(nodes, intoDastBuild, mDeclarationHolder, mCarriedNamesRegistry);
   }
 
   const inst: IastVisitor<DastBuild> = freeze({

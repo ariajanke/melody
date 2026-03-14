@@ -1,11 +1,12 @@
 import { CallBackObjectHold } from '../call_back_object_hold';
 import { DastBuild, DastNode, WritableDastDeclarationMap } from '../dast_build';
-import { StandardError, raise } from '../helpers';
+import { GenericSet, StandardError, raise } from '../helpers';
 import { IastNode } from '../iast_node';
 import { Helpers } from '../helpers';
 import { DastFunctionDefintion } from './dast_node_specializations';
 import { DastNamesCollector } from './dast_names_collector';
 import { FunctionNamingSchema } from '../function_naming_schema';
+import { CarriedNamesRegistry } from './carried_names_registry';
 
 const { freeze, memoize } = Helpers;
 
@@ -18,7 +19,8 @@ const makeUniqueName = (() => {
 function make
   (mNodes: Readonly<IastNode[]>,
    mIntoDastBuild: (node: IastNode) => DastBuild,
-   mObjectHolder: CallBackObjectHold<WritableDastDeclarationMap>
+   mObjectHolder: CallBackObjectHold<WritableDastDeclarationMap>,
+   mCarriedNamesRegistry: CarriedNamesRegistry
   ): DastBuild
 {
   // there are addition to pending and declared names "carried names"
@@ -45,10 +47,23 @@ function make
     withHeldObject(() => mDeclarations, () => 
       finishedNodes() ? mDeclarations : undefined));
 
-  const usedNames = memoize(() => {
-    const collector = DastNamesCollector.make('forFunctionDefinition');
+  const namesCollector = memoize(() => {
+    const collector = DastNamesCollector.
+      make('forFunctionDefinition', mCarriedNamesRegistry);
     finishedNodes()?.forEach(collector.collectFromNode);
-    return collector.names();
+    return collector;
+  });
+  
+  const carriedNames = memoize(() => {
+    const descNames = namesCollector().descendentCarriedNames();
+    const carriedNames = GenericSet.make<string>();
+    descNames.forEach((name: string) => {
+      if (finishedDeclarations()?.[name]) {
+        return;
+      }
+      carriedNames.add(name);
+    });
+    return carriedNames;
   });
 
   const pendingNames_ = memoize(() => {
@@ -56,15 +71,15 @@ function make
     const decl = finishedDeclarations();
     if (!decl)
       { raise('attempted to get pending names out of order'); }
-    usedNames().forEach(name => {
+    namesCollector().names().forEach(name => {
       if (decl[name])
         { return; }
 
       pendingNames[name] = true;
     });
-    if (Object.keys(pendingNames).length > 0) {
-      pendingNames[kParentName] = true;
-    }
+    if (carriedNames().size > 0 ||
+        Object.keys(pendingNames).length > 0)
+    { pendingNames[kParentName] = true; }
     return pendingNames;
   });
 
@@ -76,8 +91,10 @@ function make
       { return undefined; }
 
     const pendingNames = pendingNames_();
-    return DastFunctionDefintion.
+    const node = DastFunctionDefintion.
       make({ name: makeUniqueName(), declaredNames, pendingNames }, [...nodes]);
+    mCarriedNamesRegistry.register(node, carriedNames());
+    return node;
   });
 
   return freeze({ error, node });
