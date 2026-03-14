@@ -43,7 +43,7 @@ function make(mSource: string): FunctionRegistryBuild {
 
     const dast = dastBuild_.node();
     if (!dast) {
-      mError = `Failed to build DAST: ${dastBuild_.error()}`;
+      mError = `Failed to build DAST: ${dastBuild_.error().message}`;
       return undefined;
     }
 

@@ -15,14 +15,14 @@ const visitLiteral = (_0: string) => {};
 
 export type ScanOptions = 'forLetDependeeNames' | 'forFunctionDefinition';
 
-function initialSetVisitOn(opt: ScanOptions, visitor: () => DastVisitor<void>) {
-  if (opt === 'forLetDependeeNames') {
-    return (_names: readonly string[] | string, node: DastNode) => {
-      node.visit(visitor());
-    };
-  }
-  return (_0: Readonly<string[]> | string, _1: DastNode) => {};
-}
+// function initialSetVisitOn(opt: ScanOptions, visitor: () => DastVisitor<void>) {
+//   if (opt === 'forLetDependeeNames') {
+//     return (_names: readonly string[] | string, node: DastNode) => {
+//       node.visit(visitor());
+//     };
+//   }
+//   return (_0: Readonly<string[]> | string, _1: DastNode) => {};
+// }
 
 function make(mScanBreadth: ScanOptions): DastNamesCollector {
   const contextName = Token.kContextToken.content;
@@ -62,7 +62,6 @@ function make(mScanBreadth: ScanOptions): DastNamesCollector {
     visitInitialSet(_0: readonly string[] | string, node: DastNode) {
       node.visit(mVisitor);
     },
-    //: initialSetVisitOn(mScanBreadth, () => mVisitor),
     visitFunctionDefinition(defs: DastFunctionNameMappings, _1: Readonly<DastNode[]>) {
       if (mScanBreadth === 'forLetDependeeNames')
         { return; }

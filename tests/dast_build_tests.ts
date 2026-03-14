@@ -1,16 +1,14 @@
-import { ReachPoint, TestHelpers } from './test_helpers';
-import { Token } from '../src/token';
+import { CallbackLocationMark, ReachPoint, TestHelpers } from './test_helpers';
 import { IastNode } from '../src/iast_node';
 import {
   DastBuild,
-  
-  
   DastFunctionNameMappings,
   DastNode,
   DastVisitor,
   ReseatableDastVisitor
 } from '../src/dast_build';
 import { Helpers, StandardError } from '../src/helpers';
+import { IastFragments } from './iast_fragments';
 
 const { describeNamed } = TestHelpers;
 const { memoize, freeze } = Helpers;
@@ -21,10 +19,18 @@ describeNamed({ DastBuild }, () => {
   //
   // test declaration presence
   // test initialSet presence
-  const makeToken = Token.forTesting.makeFromStringOnly;
-  const makeFringe = (v: string) => IastNode.makeFringe(makeToken(v));
-  const { makeCall, makeLetDeclation } = IastNode.forOperativeStatements;
-  const { makeTuple } = IastNode.forLetDeclarationRetrievals;
+  // const makeToken = Token.forTesting.makeFromStringOnly;
+  // const makeFringe = (v: string) => IastNode.makeFringe(makeToken(v));
+  // const { makeCall, makeLetDeclation } = IastNode.forOperativeStatements;
+  // const { makeTuple } = IastNode.forLetDeclarationRetrievals;
+  const {
+    makeLetEquals,
+    makeFringe,
+    makeCall,
+    makeFunctionDefinition,
+    makeTuple,
+    letAEqual1
+  } = IastFragments;
   function intoDastNode(root: IastNode): DastNode {
     const dbuild = DastBuild.make(root, undefined, (root: DastNode) =>
       freeze({ node: () => root, error: () => StandardError.make().error() }));
@@ -43,11 +49,11 @@ describeNamed({ DastBuild }, () => {
     };
   }
 
-  const { makeFunctionDefinition } = IastNode;
+  // const { makeFunctionDefinition } = IastNode;
 
-  function makeTopNodes(innerNode: IastNode) {
-    return makeFunctionDefinition([makeLetDeclation(innerNode)]);
-  }
+  // function makeTopNodes(innerNode: IastNode) {
+  //   return makeFunctionDefinition([makeLetDeclation(innerNode)]);
+  // }
 
   function namesOfDefs(defs: DastFunctionNameMappings) {
     return Object.keys(defs.declaredNames);
@@ -56,13 +62,9 @@ describeNamed({ DastBuild }, () => {
   describe('For fragment with a function defintion but no let declarations', () => {
     // equivalent to:
     // let b = fn a
-    const root = memoize(() => makeFunctionDefinition([
-      makeLetDeclation(makeCall(
-        makeToken('='),
-        makeFringe('b'),
-        makeFunctionDefinition([makeFringe('a')]))
-      )
-    ]));
+    const root = memoize(() => makeFunctionDefinition(
+      makeLetEquals('b', makeFunctionDefinition(makeFringe('a')))
+    ));
     const visitDnode = makeVisitDNode(root);
 
     it('visits a function definition twice', () => {
@@ -95,8 +97,7 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('For fragment "let a = 1"', () => {
-    const root = memoize(() =>
-      makeTopNodes(makeCall(makeToken('='), makeFringe('a'), makeFringe('1'))));
+    const root = memoize(() => makeFunctionDefinition(letAEqual1()));
     const visitDnode = makeVisitDNode(root);
 
     it('hits initial set with correct name', () => {
@@ -165,9 +166,8 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('For fragment "let b = a + 1"', () => {
-    const ap1 = () => makeCall(makeToken('+'), makeFringe('a'), makeFringe('1'));
-    const root = memoize(() =>
-      makeTopNodes(makeCall(makeToken('='), makeFringe('b'), ap1())));
+    const ap1 = () => makeCall('+', 'a', '1');
+    const root = memoize(() => makeFunctionDefinition(makeLetEquals('b', ap1())));
     const visitDNode = makeVisitDNode(root);
 
     it('contains a definition for "b"', () => {
@@ -198,12 +198,11 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('For fragment "let (a, b) = (1, 2)"', () => {
-    const abtuple = makeTuple([makeFringe('a'), makeFringe('b')]);
-    const numtuple = makeTuple([makeFringe('1'), makeFringe('2')]);
+    const abtuple = () => makeTuple('a', 'b');
+    const numtuple = () => makeTuple('1', '2');
     const root = memoize(() =>
-      makeTopNodes(makeCall(makeToken('='), abtuple, numtuple)));
+      makeFunctionDefinition(makeLetEquals(abtuple(), numtuple())));
     const visitDNode = makeVisitDNode(root);
-
     it('contains two seperate definitions', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       visitDNode({
@@ -237,9 +236,9 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('For fragment "let (a, b) = t"', () => {
-    const abtuple = makeTuple([makeFringe('a'), makeFringe('b')]);
+    const abtuple = () => makeTuple('a', 'b');
     const root = memoize(() =>
-      makeTopNodes(makeCall(makeToken('='), abtuple, makeFringe('t'))));
+      makeFunctionDefinition(makeLetEquals(abtuple(), 't')));
     const visitDNode = makeVisitDNode(root);
 
     it('contains an initial set which depends on "t"', () => {
@@ -292,12 +291,8 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('For multiple lets', () => {
-    const aLet = () => makeCall(makeToken('='), makeFringe('a'), makeFringe('1'));
-    const bLet = () => makeCall(makeToken('='), makeFringe('b'), makeFringe('2'));
-    const root = memoize(() => IastNode.makeFunctionDefinition([
-      makeLetDeclation(aLet()),
-      makeLetDeclation(bLet())
-    ]));
+    const bLet = () => makeLetEquals('b', '2');
+    const root = memoize(() => makeFunctionDefinition(letAEqual1(), bLet()));
     const visitDNode = makeVisitDNode(root);
 
     it('contains both definitions', () => {
@@ -316,8 +311,7 @@ describeNamed({ DastBuild }, () => {
 
   describe('For let declaration with a function', () => {
     const root = memoize(() =>
-      makeTopNodes(makeCall(makeToken('='), makeFringe('f'),
-        makeFunctionDefinition([]))));
+      makeFunctionDefinition(makeLetEquals('f', makeFunctionDefinition())));
     const visitDNode = makeVisitDNode(root);
 
     it('contains an initial set which depends on the function definition', () => {
@@ -342,69 +336,45 @@ describeNamed({ DastBuild }, () => {
     });
   });
 
+  function makeMarkThingForVisitor
+    (testFn: (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) => void)
+  {
+    const { markOnEntry, mark } = CallbackLocationMark.make();
+    const visitor = freeze({
+      ...DastVisitor.makeDefaultingToContinue(),
+      visitInitialSet(namegroup: readonly string[] | string, node: DastNode) {
+        namegroup = typeof namegroup === 'string' ? namegroup : namegroup[0];
+        markOnEntry(namegroup, () => node.visit(visitor));
+      },
+      visitFunctionDefinition(defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) {
+        testFn(defs, nodes);
+        nodes.forEach((node: DastNode) => node.visit(visitor));
+      }
+    });
+    return freeze({ visitor, mark });
+  }
+
   describe('Cross function definition dependencies', () => {
     // just verify the schema
     const f3Let = () =>
-      makeLetDeclation(makeCall(
-        makeToken('='),
-        makeFringe('f3'),
-        makeFunctionDefinition([
-          // "puts" as a valid pending name?
-          makeCall(makeToken('puts'),
-                   makeFringe('<context>'),
-                   makeFringe(`'hello from f3'`))
-        ])));
+      makeLetEquals('f3',
+        makeFunctionDefinition(
+          makeCall('puts', '<context>', `'hello from f3'`)
+        ));
     const f2Let = () =>
-      makeLetDeclation(makeCall(
-        makeToken('='),
-        makeFringe('f2'),
-        makeFunctionDefinition([
-          makeCall(makeToken('puts'), makeFringe('<context>'), makeFringe('a'))
-        ])));
+      makeLetEquals('f2',
+        makeFunctionDefinition(
+          makeCall('puts', '<context>', 'a')
+        ));
     const f1Let = () =>
-      makeLetDeclation(makeCall(
-        makeToken('='),
-        makeFringe('f1'),
-        makeFunctionDefinition([
+      makeLetEquals('f1',
+        makeFunctionDefinition(
           f2Let()
-        ])));
-    const aLet = () =>
-      makeLetDeclation(makeCall(
-        makeToken('='),
-        makeFringe('a'),
-        makeFringe('1')));
-    const root = memoize(() => makeFunctionDefinition([aLet(), f1Let(), f3Let()]));
+        ));
+    const root = memoize(() =>
+      makeFunctionDefinition(letAEqual1(), f1Let(), f3Let()));
     const visitDNode = makeVisitDNode(root);
     // we expect a "<parent>" in pending names for f1 and f2, but not for f3
-    function makeMarkThing() {
-      let mark_: string | undefined = undefined;
-      return freeze({
-        mark: () => mark_,
-        markOnEntry(newMark: string, fn: () => void) {
-          const oldMark = mark_;
-          mark_ = newMark;
-          fn();
-          mark_ = oldMark;
-        }
-      });
-    }
-    function makeMarkThingForVisitor
-      (testFn: (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) => void)
-    {
-      const { markOnEntry, mark } = makeMarkThing();
-      const visitor = freeze({
-        ...DastVisitor.makeDefaultingToContinue(),
-        visitInitialSet(namegroup: readonly string[] | string, node: DastNode) {
-          namegroup = typeof namegroup === 'string' ? namegroup : namegroup[0];
-          markOnEntry(namegroup, () => node.visit(visitor));
-        },
-        visitFunctionDefinition(defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) {
-          testFn(defs, nodes);
-          nodes.forEach((node: DastNode) => node.visit(visitor));
-        }
-      });
-      return freeze({ visitor, mark });
-    }
 
     it('contains no "<parent>" pending name inside f3', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
@@ -440,6 +410,61 @@ describeNamed({ DastBuild }, () => {
           if (mark() === 'f1') {
             hitsAtExactly(1);
             expect(defs.pendingNames['<parent>']).toBeTruthy();
+          }
+        });
+      visitDNode(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+
+    it('does not contain a "<parent>" pending name at the top level', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const { visitor, mark } = makeMarkThingForVisitor(
+        (defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) => {
+          if (mark() === undefined) {
+            hitsAtExactly(1);
+            expect(defs.pendingNames['<parent>']).toBeUndefined();
+          }
+        });
+      visitDNode(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
+
+  describe('Cross function definition, <parent> propagation limitation', () => {
+    const f2Let = () =>
+      makeLetEquals('f2',
+        makeFunctionDefinition(
+          makeFringe('a')
+        ));
+    const f1Let = () =>
+      makeLetEquals('f1',
+        makeFunctionDefinition(
+          letAEqual1(), f2Let()
+        ));
+    const root = memoize(() => makeFunctionDefinition(f1Let()));
+    const visitDNode = makeVisitDNode(root);
+
+    it('f2 has a "<parent>" and ".a" pending names', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const { visitor, mark } = makeMarkThingForVisitor(
+        (defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) => {
+          if (mark() === 'f2') {
+            hitsAtExactly(1);
+            expect(defs.pendingNames['<parent>']).toBeTruthy();
+            expect(defs.pendingNames['.a']).toBeTruthy();
+          }
+        });
+      visitDNode(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+
+    it('f1 has no "<parent>" pending name', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const { visitor, mark } = makeMarkThingForVisitor(
+        (defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) => {
+          if (mark() === 'f1') {
+            hitsAtExactly(1);
+            expect(Object.keys(defs.pendingNames)).toEqual([]);
           }
         });
       visitDNode(visitor);

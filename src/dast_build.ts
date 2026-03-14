@@ -27,22 +27,19 @@ export interface DastLetDeclaration {
   };
 };
 
-// we build DFS style
-// having pending names mean... 
-
 export type WritableDastDeclarationMap = { [functionName: string]: DastLetDeclaration };
 export type DastDeclarationMap = Readonly<WritableDastDeclarationMap>;
 export interface DastFunctionNameMappings {
+  /// A unique name assigned to this function.
   name: string;
+
+  /// Any name which this function declares via a let statement.
   declaredNames: DastDeclarationMap;
-  // names used by this function, but declared elsewhere
-  // however there is a mid parent case:
-  // <root>:
-  //   declared: ['.a']
-  //   <f1>:
-  //     pending: ['<parent>']
-  //     <f2>:
-  //       pending: ['<parent>', '.a']
+
+  /// Pending names will contain all functions which are used, but neither
+  /// declared nor builtin. "<parent>" maybe indirectly used, if there are
+  /// pending names in a child function (even if this function has no pending
+  /// names of its own).
   pendingNames: Readonly<{ [name: string]: true }>;
 };
 

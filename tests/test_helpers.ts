@@ -74,3 +74,18 @@ export const ReachPoint = (() => {
 
   return Object.freeze({ make, makeCollection });
 })();
+
+export const CallbackLocationMark = freeze({
+  make() {
+    let mMark: string | undefined = undefined;
+    return freeze({
+      mark: () => mMark,
+      markOnEntry(newMark: string, fn: () => void) {
+        const oldMark = mMark;
+        mMark = newMark;
+        fn();
+        mMark = oldMark;
+      }
+    });
+  }
+});

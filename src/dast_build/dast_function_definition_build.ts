@@ -21,12 +21,13 @@ function make
    mObjectHolder: CallBackObjectHold<WritableDastDeclarationMap>
   ): DastBuild
 {
-  const mDeclarations: WritableDastDeclarationMap = {};
-
+  // there are addition to pending and declared names "carried names"
+  // these are names which necessitate a "<parent>" pending name, but do not
+  // need to be defined for the current context 
   const { error, setErrorFn } = StandardError.make();
   const { withHeldObject, currentObject } = mObjectHolder;
+  const mDeclarations: WritableDastDeclarationMap = {};  
   const { kParentName } = FunctionNamingSchema;
-
   const nodeBuilds = memoize(() => mNodes.map(mIntoDastBuild));
 
   const finishedNodes = memoize((): Readonly<DastNode[]> | undefined => {
