@@ -27,12 +27,6 @@ export interface ContextBuild {
 function make
   (mDefs: DastFunctionNameMappings,
    mIntoFTypeBuild: (dnode: DastNode) => FunctionTypeBuild,
-   // I may need a whole ass stack abstraction
-   // The problem is as I'm diving further up, those context types may yet be
-   // incomplete!
-  //  mHoldAsContextType: HoldContextTypeFunction,
-   // parent might not be finished yet
-   // but allow missing names, <parent> will be there (if needed)
    mStackThing: DeclaredContextStack,
    mParentContextType?: ObjectType,
    mStage = ContextFactoryStage.make())
@@ -40,17 +34,6 @@ function make
 {
   const { error, setErrorFn } = StandardError.make();
 
-  // for each pending name "a" do this:
-  // - find the context where "a" is declared up the stack
-  // - accumulate that context type
-  // - create a delegate on declaring context type for this context type
-  //
-  // for each context type we need up the stack:
-  // - create an initializer for it (i.e. compute the pointer ahead of time)
-  // - create an accessor for it (for "alternate" receivers)
-  // - the immediate parent is special
-
-  
   const addPuts = (() =>
     mStage.intoDirectLookUp(BuiltinFunctionNames.kPuts,
                             PutsFunctionLookUpTable.instance()));
@@ -103,7 +86,6 @@ function make
     for (const pendingName in mDefs.pendingNames) {
       if (pendingName === FunctionNamingSchema.kParentName)
         { continue; }
-      // const foundIn = mStackThing.findWhereDeclared(pendingName);
       const snapshot = mStackThing.contextForHop(mStackThing.hopCountFor(pendingName))!;
       const ancestorAccessor = mStage.intoObjectType().
         lookUp(snapshot.name())?.
@@ -281,7 +263,6 @@ function make
     // before hitting declared names make sure we have the basics
     // (parents and puts)
     addPuts() && preface() && delegatedFtypes();
-    // const contextObjectType = mStage.intoObjectType;
     for (const functionName in mDefs.declaredNames) {
       const decl = mDefs.declaredNames[functionName];
       const build = mIntoFTypeBuild(decl.value);
@@ -293,22 +274,6 @@ function make
       if (!declaration.functionType()) {
         return setErrorFn(declaration.error);
       }
-      // const newStage = mHoldAsContextType(contextObjectType, () => {
-      //   const build = mIntoFTypeBuild(decl.value);
-      //   if (!build.functionType())
-      //     { return setErrorFn(build.error); }
-
-      //   const declaration = ContextBuildPerDeclaration.
-      //     selectBuildForDeclaration(functionName, decl, build.functionType()!, mStage);
-      //   if (!declaration.functionType()) {
-      //     return setErrorFn(declaration.error);
-      //   }
-
-      //   return declaration.intoFactoryStage();
-      // });
-      // if (!newStage)
-      //   { return undefined; }
-      // mStage = newStage;
     }
     return mStage.intoObjectType();
   });

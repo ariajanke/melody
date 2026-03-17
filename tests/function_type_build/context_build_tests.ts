@@ -7,6 +7,8 @@ import { FunctionLookUpTable, FunctionType, ObjectType } from '../../src/functio
 import { IntegerType } from '../../src/function_type_build/builtin_type';
 import { ContextBuild } from '../../src/function_type_build/context_build';
 import { ContextFactoryStage, ContextFunctionTypeBuild, ContextObjectType } from '../../src/function_type_build/context_factory_stage';
+import { DeclaredContextStack } from '../../src/function_type_build/declared_context_stack';
+import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
 import { TupleObjectFactory } from '../../src/function_type_build/tuple_type';
 import { Helpers, StandardError } from '../../src/helpers';
 import { TestHelpers } from '../test_helpers';
@@ -70,7 +72,7 @@ describeNamed({ ContextBuild }, () => {
       });
     }
     const inst = freeze({
-      intoParentBuild(_0: ObjectType): ContextFactoryStage {
+      intoParentBuild(_0: string, _1: ObjectType): ContextFactoryStage {
         return inst;
       },
       intoDirectLookUp(name: string, _1: FunctionLookUpTable): ContextFactoryStage {
@@ -125,24 +127,23 @@ describeNamed({ ContextBuild }, () => {
   const turnIntoFTypeBuild = (node: DastNode_) => freeze({
     functionType(): FunctionType {
       return freeze({
-        parameters: TupleObjectFactory.emptyTuple,
+        ...FunctionTypeBase.receivedByLexical(),
         returns: memoize(() =>
           node.asString() === undefined ? intPairTuple() : integerType()),
-        emit: (writer: CodeWriter) => writer,
-        uid: memoize(Symbol)
+        emit: (writer: CodeWriter) => writer
       });
     },
     error: StandardError.make().error
   });
 
-  const holder =
-    <T>(_0: () => ObjectType, whileFn: () => T): T => whileFn();
+  // const holder =
+  //   <T>(_0: () => ObjectType, whileFn: () => T): T => whileFn();
   const makeContextBuild =
     (callDict: { [name: string]: string[] }, defs: DastDeclarationMap) =>
   ContextBuild.make(
     { declaredNames: defs, pendingNames: {}, name: 'test context' },
     turnIntoFTypeBuild,
-    holder,
+    DeclaredContextStack.make(),
     undefined,
     makeMockFactoryStage(callDict)
   );
@@ -224,7 +225,7 @@ describeNamed({ ContextBuild }, () => {
       const callDict: { [name: string]: string[] } = {};
       const contextBuild = makeContextBuildWithSingleX('assignment', callDict);
 
-      contextBuild.contextType();
+      contextBuild.info();//.contextType();
       expect(callDict).toEqual({
         intoDirectLookUp: ['puts'],
         intoModifierBuild: ['x:='],
@@ -239,7 +240,7 @@ describeNamed({ ContextBuild }, () => {
         ...singleFor('x', 'assignment'),
         ...singleFor('y', 'assignment')
       });
-      contextBuild.contextType();
+      contextBuild.info();//contextType();
       expect(callDict).toEqual({
         intoDirectLookUp: ['puts'],
         intoModifierBuild: ['x:=', 'y:='],
@@ -253,7 +254,7 @@ describeNamed({ ContextBuild }, () => {
       const contextBuild = makeContextBuild(callDict, 
         makeValidPair('assignment')
       );
-      contextBuild.contextType();
+      contextBuild.info();//contextType();
       expect(callDict).toEqual({
         intoDirectLookUp: ['puts'],
         intoModifierBuild: ['x:=', 'y:='],
@@ -275,8 +276,8 @@ describeNamed({ ContextBuild }, () => {
           }
       });
       const fullDefs = { declaredNames: defs, pendingNames: {}, name: 'test context' };
-      const contextBuild = ContextBuild.make(fullDefs, turnIntoFTypeBuild, holder);
-      const result = contextBuild.contextType();
+      const contextBuild = ContextBuild.make(fullDefs, turnIntoFTypeBuild, DeclaredContextStack.make());
+      const result = contextBuild.info();
       expect(result).toBeUndefined();
       expect(contextBuild.error().message).
         toEqual('Given tuple type is 2 parameter(s), but got 3 name(s)');
@@ -288,7 +289,7 @@ describeNamed({ ContextBuild }, () => {
       const callDict: { [name: string]: string[] } = {};
       const contextBuild = makeContextBuildWithSingleX('accessor', callDict);
 
-      contextBuild.contextType();
+      contextBuild.info();
       expect(callDict).toEqual({
         intoDirectLookUp: ['puts'],
         intoAccessorBuild: ['.x'],
@@ -301,7 +302,7 @@ describeNamed({ ContextBuild }, () => {
       const contextBuild = makeContextBuild(callDict, 
         makeValidPair('accessor')
       );
-      contextBuild.contextType();
+      contextBuild.info();
       expect(callDict).toEqual({
         intoDirectLookUp: ['puts'],
         intoAccessorBuild: ['.x', '.y'],

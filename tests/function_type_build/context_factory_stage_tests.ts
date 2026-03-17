@@ -1,11 +1,12 @@
 import { CodeWriter } from '../../src/code_writer';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
+import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
 import { ConstantStringType, IntegerType } from '../../src/function_type_build/builtin_type';
 import { ContextFactoryStage, ContextObjectType } from '../../src/function_type_build/context_factory_stage';
+import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
 import { PutsFunctionLookUpTable } from '../../src/function_type_build/puts_function_look_up_table';
 import { TupleObjectFactory } from '../../src/function_type_build/tuple_type';
-import { Helpers } from '../../src/helpers';
+import { Helpers, raise } from '../../src/helpers';
 import { TestHelpers } from '../test_helpers';
 
 const { describeNamed } = TestHelpers;
@@ -23,7 +24,7 @@ describeNamed({ ContextFactoryStage }, () => {
       'multiplyIntegers',
       'subtractIntegers',
       'storeParentStackPointer',
-      'incrementStackPointer',
+      'setStackPointer',
       'pushStackPointer'
     ] as const satisfies (keyof CodeWriter)[];
 
@@ -108,6 +109,8 @@ describeNamed({ ContextFactoryStage }, () => {
       const ftype = makeFTypeForA();
       const recordedCalls = collectCallsForFunctionType(ftype);
 
+      expect(ftype.alternateReceiver()).toEqual('<context>');
+
       expect(recordedCalls).toEqual([
         'storeInteger',
         'drop', // drops receiver
@@ -179,11 +182,11 @@ describeNamed({ ContextFactoryStage }, () => {
     });
 
     ([
-      [stringType(), ['printString', 'drop']],
-      [integerPairType(), ['printInteger', 'printInteger', 'drop']],
+      [stringType(), ['printString']],
+      [integerPairType(), ['printInteger', 'printInteger']],
       [
         TupleObjectFactory.make([stringType(), integerType()]),
-        ['printString', 'printInteger', 'drop']
+        ['printString', 'printInteger']
       ]
 
     ] as [ObjectType, string[]][]).forEach(([type, expectedCalls]) => {
@@ -202,16 +205,16 @@ describeNamed({ ContextFactoryStage }, () => {
 
     it('for an arbitrary name, successfully add look up', () => {
       const foundFType = memoize((): FunctionType => freeze({
-          parameters: () => emptyTuple(),
-          returns: () => integerType(),
-          emit: (cw: CodeWriter) => cw,
-          uid: memoize(Symbol)
+        ...FunctionTypeBase.receivedByLexical(),
+        returns: () => integerType(),
+        emit: (cw: CodeWriter) => cw
       }));
-      // const builder = ContextTypeBuilder.make();
+
       const stage = ContextFactoryStage.make();
-      const table = freeze({
+      const table: FunctionLookUpTable = freeze({
         byParameters: (_0: ObjectType): FunctionType | undefined => 
-          foundFType()
+          foundFType(),
+        list() { raise('no'); }
       });
       stage.intoDirectLookUp('a', table);
       const lookUpTable = stage.intoObjectType().lookUp('a');

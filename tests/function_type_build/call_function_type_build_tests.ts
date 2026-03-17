@@ -6,7 +6,7 @@ import { BuiltinTypeBase, IntegerType } from '../../src/function_type_build/buil
 import { CallFunctionTypeBuild } from '../../src/function_type_build/call_function_type_build';
 import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
 import { TupleObjectFactory } from '../../src/function_type_build/tuple_type';
-import { Helpers, StandardError } from '../../src/helpers';
+import { Helpers, raise, StandardError } from '../../src/helpers';
 import { TestHelpers } from '../test_helpers';
 
 const { describeNamed } = TestHelpers;
@@ -94,22 +94,23 @@ describeNamed({ CallFunctionTypeBuild }, () => {
     return freeze({
       byParameters(_0: ObjectType) {
         return freeze({
-          parameters: emptyTuple,
-          returns: emptyTuple,
+          ...FunctionTypeBase.receivedByLexical(),
           emit(writer: CodeWriter) {
             emittedNames.push(rep);
             return writer;
           },
-          uid: memoize(Symbol)
         });
-      }
+      },
+      list() { raise('no'); }
     });
   };
 
   const makeSampleWriter = () => {
     const inst = freeze({
       pushRepresentation(_0: number): CodeWriter { return inst; },
-      incrementStackPointer(): CodeWriter { return inst; },
+      pushStackPointer() { return inst; },
+      addIntegers() { return inst; },
+      setStackPointer() { return inst; },
       forStackPointer(_0: 'saveToLocal' | 'restoreToGlobal'): CodeWriter
         { return inst; },
     }) as CodeWriter;

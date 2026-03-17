@@ -76,10 +76,10 @@ export const DeclaredContextStack = freeze({
 
     function findWhereDeclared(pendingName: string): ObjectType {
       const idx = nameCacheLookup(pendingName);
-      if (idx !== undefined) {
-        return mStack[idx].referenceType();
+      if (idx === undefined) {
+        raise(`pending name "${pendingName}" is not declared in any context`);
       }
-      raise(`pending name "${pendingName}" is not declared in any context`);
+      return mStack[idx].referenceType();
     }
 
     function hopCountFor(pendingName: string): number {
@@ -87,23 +87,7 @@ export const DeclaredContextStack = freeze({
       if (idx === undefined) {
         raise(`pending name "${pendingName}" is not declared in any context`);
       }
-      // number of (additional) hops for:
-      // - current (undefined!)
-      // - parent (0)
-      // - grandparent (1)
-      // stack is structured like:
-      // [grandparent, parent, current]
-      // - hops   : [n, ..., 1, 0, undefined]
-      // - indices: [0, ..., n-1, n, n+1]
-      // so we can compute hops from indices like this:
-      // okay, if we have 2 contexts
-      // and pending name is in root
-      // then we need 0 additional hops (because it lives in the direct parent)
-      const toTop = (mStack.length - 1) - idx; // is in [0, n-1], where n is stack size
-      const additionalHops = toTop - 1;
-      if (additionalHops < 0)
-        { raise('oh no!'); }
-      return additionalHops;
+      return (mStack.length - 1) - idx;
     }
 
     function topContext() {
@@ -111,15 +95,9 @@ export const DeclaredContextStack = freeze({
     }
 
     function contextForHop(hop: number): ContextSnapshot | undefined {
-      if (hop === mStack.length) { return undefined; }
-      const idx = ((mStack.length - 1) - hop) + 1;
-      if (idx < 1) {
-        raise(`hop ${hop} is too high for stack of size ${mStack.length}`);
-      } else if (idx >= mStack.length) {
-        return undefined;
-      }
-
-      return mStack[mStack.length - 1 - idx];
+      const idx = mStack.length - 1 - hop;
+      if (idx < 0) { return undefined; }
+      return mStack[idx];
     }
 
     function withContextStage<T>
