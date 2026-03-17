@@ -67,8 +67,22 @@ function make
   //   });
   // });
 
-  const contextInfo = memoize(() => {
-    const fuck = (stage: ContextFactoryStage, parent?: ObjectType) => {
+  // const contextInfo = memoize(() => {
+  //   const fuck = (stage: ContextFactoryStage, parent?: ObjectType) => {
+  //     const contextBuild = ContextBuild.
+  //       make(mDefs,
+  //            mIntoFunctionTypeBuild,
+  //            mDeclaredContextStack,
+  //            parent,
+  //            stage);
+      
+  //     return contextBuild.info() ?? setErrorFn(contextBuild.error);
+  //   };
+  //   return mDeclaredContextStack.withContextStage(mDefs, fuck);
+  // });
+
+  const functionType = memoize((): FunctionType | undefined => {
+    const whatever = (stage: ContextFactoryStage, parent?: ObjectType) => {
       const contextBuild = ContextBuild.
         make(mDefs,
              mIntoFunctionTypeBuild,
@@ -76,30 +90,37 @@ function make
              parent,
              stage);
       
-      return contextBuild.info() ?? setErrorFn(contextBuild.error);
+      const contextInfo = contextBuild.info();
+      if (!contextInfo) 
+        { return setErrorFn(contextBuild.error); }
+
+      const subBuilds: FunctionTypeBuild[] = [];
+      subBuilds.
+        push(FunctionTypeBuildBase.makeSuccessFromType(contextInfo.preface()),
+            ...mNodes.map(mIntoFunctionTypeBuild));
+      const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
+      const compositeFunctionType = cleanUpBuild.functionType();
+      if (!compositeFunctionType)
+        { return setErrorFn(cleanUpBuild.error); }
+
+      return compositeFunctionType;
     };
-    return mDeclaredContextStack.withContextStage(mDefs, fuck);
+    return mDeclaredContextStack.withContextStage(mDefs, whatever);
+    
+    // if (!contextInfo())
+    //   { return undefined; }
+
+    // const subBuilds: FunctionTypeBuild[] = [];
+    // subBuilds.
+    //   push(FunctionTypeBuildBase.makeSuccessFromType(contextInfo()!.preface()),
+    //        ...mNodes.map(mIntoFunctionTypeBuild));
+    // const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
+    // const compositeFunctionType = cleanUpBuild.functionType();
+    // if (!compositeFunctionType)
+    //   { return setErrorFn(cleanUpBuild.error); }
+
+    // return compositeFunctionType;
   });
-
-  const functionType = memoize((): FunctionType | undefined => {
-    // return mHolder.withHeldObject(contextType as () => ObjectType, () => {
-    if (!contextInfo())
-      { return undefined; }
-
-    const subBuilds: FunctionTypeBuild[] = [];
-    subBuilds.
-      push(FunctionTypeBuildBase.makeSuccessFromType(contextInfo()!.preface()),
-           ...mNodes.map(mIntoFunctionTypeBuild));
-    const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
-    const compositeFunctionType = cleanUpBuild.functionType();
-    if (!compositeFunctionType)
-      { return setErrorFn(cleanUpBuild.error); }
-
-    return compositeFunctionType;
-    // });
-  });
-
-  // const functionType = contextInfo()?.contextType
 
   return freeze({ functionType, error });
 }

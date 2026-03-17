@@ -1,4 +1,4 @@
-import { DastDeclarationMap, DastNode } from '../../src/dast_build';
+import { DastDeclarationMap } from '../../src/dast_build';
 import { DastFunctionDefintion, DastInitialSet } from '../../src/dast_build/dast_node_specializations';
 import { FunctionType } from '../../src/function_type_build';
 import { FunctionTypeBuildVisitor } from '../../src/function_type_build/function_type_build_visitor';
@@ -13,8 +13,7 @@ describeNamed({ FunctionTypeBuildVisitor }, () => {
     const registry = FunctionTypeRegistry.make();
     const visitor = FunctionTypeBuildVisitor.
       make(StringPoolBuilder.make(),
-           registry,
-           (_0: DastNode) => ({}));
+           registry);
     const nestedFuncNode = DastFunctionDefintion.
       make({ name: '', pendingNames: {}, declaredNames: {} }, []);
     const fInitialSetNode = DastInitialSet.make('f', nestedFuncNode);

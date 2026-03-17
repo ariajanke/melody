@@ -55,7 +55,8 @@ function make
           receiver.asString() === contextName() &&
           !isBuiltinFunctionName(name))
       {
-        mNames.add(name);
+        // NOTE direct calls will still have a `.name`, they are just sort of
+        //      immediately evaluated
         if (!isAnAssignmentName(name)) {
           mNames.add(mapToFringeAccessor(name));
         }

@@ -487,7 +487,6 @@ describeNamed({ DastBuild }, () => {
       'f2',
       'f3'
     ].forEach((name: string) => {
-
       it(`${name} has a "<parent>"`, () => {
         const { hitsAtExactly, verifyHit } = ReachPoint.make();
         const { visitor, mark } = makeMarkThingForVisitor(

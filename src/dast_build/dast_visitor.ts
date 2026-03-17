@@ -13,7 +13,7 @@ export interface DastVisitor_<ResultType = void> {
   visitFringe(v: string): ResultType;
   visitTuple(nodes: Readonly<DastNode[]>): ResultType;
   visitCall(callName: DastNode, receiver: DastNode, args: DastNode): ResultType;
-  visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): ResultType;
+  visitInitialSet(namesDefined: Readonly<string[]> | string, node: DastNode): ResultType;
   visitFunctionDefinition(
     nameMappings: DastFunctionNameMappings,
     nodes: Readonly<DastNode[]>):
@@ -35,7 +35,7 @@ function makeDefaultingToContinue(): ReseatableDastVisitor {
     visitTuple(nodes: Readonly<DastNode[]>) {
       nodes.forEach((v: DastNode) => v.visit(inst));
     },
-    visitInitialSet(_0: readonly string[] | string, node: DastNode) {
+    visitInitialSet(_0: Readonly<string[]> | string, node: DastNode) {
       node.visit(inst);
     },
     visitFunctionDefinition(

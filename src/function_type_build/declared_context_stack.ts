@@ -111,6 +111,7 @@ export const DeclaredContextStack = freeze({
     }
 
     function contextForHop(hop: number): ContextSnapshot | undefined {
+      if (hop === mStack.length) { return undefined; }
       const idx = ((mStack.length - 1) - hop) + 1;
       if (idx < 1) {
         raise(`hop ${hop} is too high for stack of size ${mStack.length}`);
