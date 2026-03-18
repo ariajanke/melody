@@ -14,6 +14,11 @@ function make(): MutableFunctionTable {
   const mCompleteList: FunctionType[] = [];
 
   function setDefinition(forType: ObjectType, ft: FunctionType) {
+    // TODO remove "forType"
+    if (ft.parameters().uid() !== forType.uid()) {
+      raise(`Parameter type mismatch: expected "${forType.name()}", ` +
+            `got "${ft.parameters().name()}"`);
+    }
     mDirty = true;
     const uid = forType.uid();
     if (mMappings[uid]) {

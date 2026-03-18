@@ -1,5 +1,5 @@
 import { Helpers, StandardError } from '../helpers';
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { ContextBuild } from './context_build';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { WritableDeclaredContextStack } from './declared_context_stack';
@@ -82,12 +82,11 @@ function make
   // });
 
   const functionType = memoize((): FunctionType | undefined => {
-    const whatever = (stage: ContextFactoryStage, parent?: ObjectType) => {
+    const whatever = (stage: ContextFactoryStage) => {
       const contextBuild = ContextBuild.
         make(mDefs,
              mIntoFunctionTypeBuild,
              mDeclaredContextStack,
-             parent,
              stage);
       
       const contextInfo = contextBuild.info();

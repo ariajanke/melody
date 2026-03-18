@@ -28,7 +28,6 @@ function make
   (mDefs: DastFunctionNameMappings,
    mIntoFTypeBuild: (dnode: DastNode) => FunctionTypeBuild,
    mStackThing: DeclaredContextStack,
-   mParentContextType?: ObjectType,
    mStage = ContextFactoryStage.make())
   : ContextBuild
 {
@@ -37,8 +36,10 @@ function make
   const addPuts = (() =>
     mStage.intoDirectLookUp(BuiltinFunctionNames.kPuts,
                             PutsFunctionLookUpTable.instance()));
+  const parentContextSnapshot = memoize(() =>
+    mStackThing.contextForHop(1));
   const hasParentGetter = memoize(() => {
-    if (!mParentContextType) {
+    if (!parentContextSnapshot()) {
       if (Object.keys(mDefs.pendingNames).length > 0)
         { raise('DAST schema failure'); }
       return false;
@@ -48,8 +49,8 @@ function make
       { return false; }
 
     if (mDefs.pendingNames[FunctionNamingSchema.kParentName]) {
-      // NOTE parent intial setter is created up in body build
-      mStage.intoParentBuild(mDefs.name, mParentContextType);
+      const { name, contextType } = parentContextSnapshot()!;
+      mStage.intoParentBuild(name(), contextType());
     }
 
     return true;
@@ -87,6 +88,7 @@ function make
       if (pendingName === FunctionNamingSchema.kParentName)
         { continue; }
       const snapshot = mStackThing.contextForHop(mStackThing.hopCountFor(pendingName))!;
+      
       const ancestorAccessor = mStage.intoObjectType().
         lookUp(snapshot.name())?.
         byParameters(TupleObjectFactory.emptyTuple());
@@ -111,7 +113,7 @@ function make
           },
           uid: memoize(Symbol)
         });
-        const lookUp = MutableFunctionTable.make().setDefinition(snapshot.contextType(), delegationFunctionType);
+        const lookUp = MutableFunctionTable.make().setDefinition(ft.parameters(), delegationFunctionType);
         mStage.intoDirectLookUp(pendingName, lookUp);
       });
     }
@@ -171,6 +173,13 @@ function make
       { raise('need parent'); }
 
     const ancs = increasinglyDeepAncestorTypes();
+    if (ancs.length === 0) {
+      return freeze({
+        ...FunctionTypeBase.receivedByContext(),
+        emit: (writer: CodeWriter) => writer,
+        returns: TupleObjectFactory.emptyTuple
+      });
+    }
     const lastAncsUid = ancs[ancs.length - 1].type.uid();
     const hopEmissions = ancs.
       map((info: AncestorInfo) =>
@@ -211,10 +220,10 @@ function make
   };
   const increasinglyDeepAncestorTypes = memoize((): Readonly<AncestorInfo[]> => {
     const found: { [hops: number]: ObjectType | undefined } = {};
+    const parentUid = parentContextSnapshot()?.contextType().uid();
     mapNamesToParents().forEach(([name, parent]: [string, ObjectType]) => {
-      if (parent.uid() === mParentContextType?.uid()) {
-        return;
-      }
+      if (parent.uid() === parentUid)
+        { return; }
       found[mStackThing.hopCountFor(name)] = parent;
     });
 
@@ -248,7 +257,7 @@ function make
 
   const preface = memoize((): FunctionType => {
     return freeze({
-      ...FunctionTypeBase.receivedByContext(),
+      ...FunctionTypeBase.receivedByLexical(),
       emit(writer: CodeWriter) {
         saveLocalStackPointer().emit(writer);
         if (hasParentGetter()) {

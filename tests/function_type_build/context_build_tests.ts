@@ -136,15 +136,12 @@ describeNamed({ ContextBuild }, () => {
     error: StandardError.make().error
   });
 
-  // const holder =
-  //   <T>(_0: () => ObjectType, whileFn: () => T): T => whileFn();
   const makeContextBuild =
     (callDict: { [name: string]: string[] }, defs: DastDeclarationMap) =>
   ContextBuild.make(
     { declaredNames: defs, pendingNames: {}, name: 'test context' },
     turnIntoFTypeBuild,
     DeclaredContextStack.make(),
-    undefined,
     makeMockFactoryStage(callDict)
   );
 

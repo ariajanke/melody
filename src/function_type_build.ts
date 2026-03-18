@@ -9,10 +9,6 @@ import { StringPoolBuilder } from './string_pool';
 
 const { freeze, memoize } = Helpers;
 
-// export interface CodeFragment {
-//   emit(writer: CodeWriter): void;
-// };
-
 export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;

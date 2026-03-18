@@ -5,7 +5,7 @@ import {
 } from '../dast_build';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { FunctionTypeRegistry } from '../function_type_registry';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { StringPoolBuilder } from '../string_pool';
 import { CallFunctionTypeBuild } from './call_function_type_build';
 import { DastBuildCache } from './dast_build_cache';
@@ -34,8 +34,12 @@ function make
     make((node: DastNode) => node.visit(inst));
   const mDeclaredContextStack = DeclaredContextStack.make();
 
+  const topContext = () =>
+    mDeclaredContextStack.contextForHop(0)?.contextType() ??
+    raise('No current context!');
+
   const visitFringe = (name: string) =>
-    FringeFunctionBuild.make(name, mDeclaredContextStack.topContext);
+    FringeFunctionBuild.make(name, topContext);
 
   const visitString = (string_: string): FunctionTypeBuild => 
     LiteralFunctionTypeBuild.makeForString(string_, mStringPoolBuilder);
@@ -45,7 +49,7 @@ function make
       make(callName,
            receiver,
            args,
-           mDeclaredContextStack.topContext().sizeInBytes,
+           topContext().sizeInBytes,
            mBuildCache.checkCachedBuild);
   }
 
@@ -64,7 +68,7 @@ function make
     return InitialSetBuild.
       make(namesDefined,
            mBuildCache.checkCachedBuild(node),
-           mDeclaredContextStack.topContext);
+           topContext);
   }
 
   const visitTuple = (nodes: Readonly<DastNode[]>): FunctionTypeBuild =>

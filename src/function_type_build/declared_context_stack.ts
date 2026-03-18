@@ -45,7 +45,7 @@ export interface DeclaredContextStack {
   findWhereDeclared(pendingName: string): ObjectType;
   hopCountFor(pendingName: string): number;
   contextForHop(idx: number): ContextSnapshot | undefined;
-  topContext(): ObjectType;
+  // topContext(): ObjectType;
 };
 
 export interface WritableDeclaredContextStack extends DeclaredContextStack {
@@ -90,26 +90,23 @@ export const DeclaredContextStack = freeze({
       return (mStack.length - 1) - idx;
     }
 
-    function topContext() {
-      return mStack[mStack.length - 1]?.contextType() ?? raise(`I'm gay :/`);
-    }
+    // function topContext() {
+    //   return mStack[mStack.length - 1]?.contextType() ?? raise(`I'm gay :/`);
+    // }
 
     function contextForHop(hop: number): ContextSnapshot | undefined {
-      const idx = mStack.length - 1 - hop;
-      if (idx < 0) { return undefined; }
-      return mStack[idx];
+      return mStack[mStack.length - 1 - hop];
     }
 
     function withContextStage<T>
       (defs: DastFunctionNameMappings,
-       fn: (stage: ContextFactoryStage, parent?: ObjectType) => T): T
+       fn: (stage: ContextFactoryStage) => T): T
     {
       const stage = ContextFactoryStage.make();
       const incomplete = stage.intoObjectType();
-      const parent = mStack[mStack.length - 1]?.contextType();
       mStack.push(ContextSnapshot.make(incomplete, defs));
       mNameCacheThing = {};
-      const result = fn(stage, parent);
+      const result = fn(stage);
       mStack.pop();
       return result;
     }
@@ -119,7 +116,7 @@ export const DeclaredContextStack = freeze({
       hopCountFor,
       withContextStage,
       findWhereDeclared,
-      topContext
+      // topContext
     });
   }
 });
