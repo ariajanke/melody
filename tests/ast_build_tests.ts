@@ -1,4 +1,4 @@
-import { AstBuild } from '../src/ast_build';
+import { IastBuild } from '../src/iast_build';
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenRange } from '../src/token_range';
@@ -6,11 +6,12 @@ import { IastNode, IastVisitor } from '../src/iast_node';
 
 const { describeNamed } = TestHelpers;
 
-describeNamed({ AstBuild }, () => {
+describeNamed({ IastBuild }, () => {
   const makeToken = Token.forTesting.makeFromStringOnly;
 
   function makeBuildAst(tokens: () => Token[]) {
-    return () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens()));
+    return (): IastNode =>
+      IastBuild.buildFor(TokenRange.makeStartingRange(tokens()));
   }
 
   describe('builds a mutli-line ast', () => {
@@ -28,7 +29,7 @@ describeNamed({ AstBuild }, () => {
 
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(_0: IastNode, _1: IastNode, args: IastNode) {
+        visitCall(_0: IastNode, _1: IastNode, args: IastNode): void {
           points()[0].hitsAtExactly(2);
           args.visit(visitor);
         }
@@ -50,7 +51,7 @@ describeNamed({ AstBuild }, () => {
       
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(_0: IastNode, _1: IastNode, args: IastNode) {
+        visitCall(_0: IastNode, _1: IastNode, args: IastNode): void {
           hitsAtExactly(1);
           args.visit(visitor);
         }
@@ -69,13 +70,13 @@ describeNamed({ AstBuild }, () => {
       let vop = '<NOT SET>';
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
           vop = callName.asString();
           
           expect(Number(receiver.asString())).toEqual(2);
           args.visit(visitor);
         },
-        visitTuple(nodes: Readonly<IastNode[]>) {
+        visitTuple(nodes: Readonly<IastNode[]>): void {
           expect(nodes.length).toEqual(1);
           expect(Number(nodes[0].asString())).toEqual(2);
         }
@@ -95,15 +96,15 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitLet(innerNode: IastNode) {
+        visitLet(innerNode: IastNode): void {
           pt2.hitsAtExactly(1);
           innerNode.visit(visitor);
         },
-        visitFringe(identifier: string) {
+        visitFringe(identifier: string): void {
           expect(identifier).toEqual('a');
           pt3.hitsAtExactly(1);
         },
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
           foundOperators.push(callName.asString());
           pt1.hitsAtExactly(1);
 
@@ -125,7 +126,7 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
           foundOperators.push(callName.asString());
           receiver.visit(visitor);
           args.visit(visitor);
@@ -166,12 +167,12 @@ describeNamed({ AstBuild }, () => {
     });
   });
 
-  function includeAllNIdentifiers(astRes: () => IastNode, identifiers: string[]) {
+  function includeAllNIdentifiers(astRes: () => IastNode, identifiers: string[]): void {
     it(`includes all ${identifiers.length} identifiers, in correct order`, () => { 
       const identifiers: string[] = [];
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitFringe(str: string) {
+        visitFringe(str: string): void {
           identifiers.push(str);
         }
       });
@@ -182,7 +183,6 @@ describeNamed({ AstBuild }, () => {
       // order dependant
       expect(identifiers).toEqual(identifiers);
     });
-
   }
 
   describe('a + b + c', () => {
@@ -190,7 +190,8 @@ describeNamed({ AstBuild }, () => {
       makeToken('a'), makeToken('+'), makeToken('b'), makeToken('+'),
       makeToken('c')
     ];
-    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode =>
+      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
     includeAllNIdentifiers(buildAst, ['a', 'b', 'c']);
 
@@ -198,7 +199,7 @@ describeNamed({ AstBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(_0: IastNode, receiver: IastNode, args: IastNode) {
+        visitCall(_0: IastNode, receiver: IastNode, args: IastNode): void {
           hitsAtExactly(2);
           receiver.visit(visitor);
           args.visit(visitor);
@@ -223,7 +224,7 @@ describeNamed({ AstBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
           hitsAtExactly(1);
           expect(callName.asString()).toEqual(':=');
           receiver.visit(visitor);
@@ -249,7 +250,7 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, _2: IastNode) {
+        visitCall(callName: IastNode, _1: IastNode, _2: IastNode): void {
           hitsAtExactly(1);
           expect(callName.asString()).toEqual('askString');
         }
@@ -265,7 +266,7 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitTuple(nodes: Readonly<IastNode[]>) {
+        visitTuple(nodes: Readonly<IastNode[]>): void {
           hitsAtExactly(1);
           expect(nodes.length).toEqual(0);
         }
@@ -283,14 +284,15 @@ describeNamed({ AstBuild }, () => {
       makeToken('b'),
       makeToken(')'), makeToken('\n')
     ];
-    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode =>
+      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
     it('creates a function node', () => {
       const { verifyHit, hitsAtExactly } = ReachPoint.make();
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(_0: IastNode, _1: IastNode, _2: IastNode) {
+        visitCall(_0: IastNode, _1: IastNode, _2: IastNode): void {
           hitsAtExactly(1);
         }
       });
@@ -304,7 +306,7 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, _2: IastNode) {
+        visitCall(callName: IastNode, _1: IastNode, _2: IastNode): void {
           hitsAtExactly(1);
           expect(callName.asString()).toEqual('puts');
         }
@@ -320,7 +322,7 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitTuple(nodes: Readonly<IastNode[]>) {
+        visitTuple(nodes: Readonly<IastNode[]>): void {
           hitsAtExactly(1);
           expect(nodes.length).toEqual(2);
         }
@@ -339,14 +341,15 @@ describeNamed({ AstBuild }, () => {
       '~', '\n',
       'queue', '(', 'a', ')'
     ].map(makeToken);
-    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode =>
+      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
     it('has two references to variable "a"', () => {
       let aCount = 0;
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitFringe(v: string) {
+        visitFringe(v: string): void {
           if (v === 'a') {
             ++aCount;
           }
@@ -364,12 +367,12 @@ describeNamed({ AstBuild }, () => {
       let inLet = false;
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitLet(innerNode: IastNode) {
+        visitLet(innerNode: IastNode): void {
           inLet = true;
           innerNode.visit(visitor);
           inLet = false;
         },
-        visitCall(_0: IastNode, receiver: IastNode, _2: IastNode) {
+        visitCall(_0: IastNode, receiver: IastNode, _2: IastNode): void {
           if (!inLet) { return; }
 
           hitsAtExactly(1);
@@ -387,7 +390,7 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(_0: Readonly<IastNode[]>) {
+        visitFunctionDefinition(_0: Readonly<IastNode[]>): void {
           hitsAtExactly(1);
         }
       });
@@ -404,7 +407,7 @@ describeNamed({ AstBuild }, () => {
       const functionCalls: string[] = [];
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitFringe(v: string) {
+        visitFringe(v: string): void {
           // 'puts' and 'queue' will both hit context once
           if (v === '<context>') {
             pt2.hitsAtExactly(2);
@@ -413,7 +416,7 @@ describeNamed({ AstBuild }, () => {
           expect(v).toEqual('a');
           pt1.hitsAtExactly(2);
         },
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
           functionCalls.push(callName.asString());
           receiver.visit(visitor);
           args.visit(visitor);
@@ -427,16 +430,44 @@ describeNamed({ AstBuild }, () => {
     });
   });
 
+  describe('with nested function blocks', () => {
+    // regular case will see that close token
+    const tokens = [
+      'let', 'f1', '=', 'fn', '\n',
+      'let', 'f2', '=', 'fn', '\n',
+      '~', '\n',
+      '~', '\n',
+    ].map(makeToken);
+
+    const buildAst = (): IastNode =>
+      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    it('builds two nested function definitions', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      const rootNode = buildAst();
+      const visitor = ({
+        ...IastVisitor.makeDefaultingToContinue(),
+        visitFunctionDefinition(_0: Readonly<IastNode[]>): void {
+          hitsAtExactly(2);
+        }
+      });
+      visitor.setInstRef(visitor);
+
+      rootNode.visit(visitor);
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
+
   describe('single line ast', () => {
     let tokens: Token[] = [];
-    const buildAst = () => AstBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode =>
+      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
 
-    const expectFunctionsCalledInOrder = (...names: string[]) => {
+    const expectFunctionsCalledInOrder = (...names: string[]): void => {
       const gottenNames: string[] = [];
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
           gottenNames.push(callName.asString());
           receiver.visit(visitor);
           args.visit(visitor);
@@ -481,12 +512,12 @@ describeNamed({ AstBuild }, () => {
       });
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, _1: IastNode, args: IastNode): void {
           hitsAtExactly(2);
           fnnames.push(callName.asString());
           args.visit(visitor);
         },
-        visitTuple(nodes: Readonly<IastNode[]>) {
+        visitTuple(nodes: Readonly<IastNode[]>): void {
           const lastName = fnnames[fnnames.length - 1];
           expect(nodes.length).
             toEqual(kExpectArgumentCount[lastName]);
@@ -512,7 +543,7 @@ describeNamed({ AstBuild }, () => {
       let hitInteger = false;
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
           if (callName.asString() === 'puts') {
             pt3.hitsAtExactly(1);
             args.visit(visitor);
@@ -528,7 +559,7 @@ describeNamed({ AstBuild }, () => {
             expect(hitInteger).toBeTruthy();
           }
         },
-        visitInteger(_0: string) {
+        visitInteger(_0: string): void {
           hitInteger = true;
           pt1.hitsAtExactly(4);
         }
@@ -565,7 +596,7 @@ describeNamed({ AstBuild }, () => {
       let onArgs = false;
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, args: IastNode) {
+        visitCall(callName: IastNode, _1: IastNode, args: IastNode): void {
           if (onArgs) {
             pt2.hitsAtExactly(2);
             expect(callName.asString()).toEqual('askString');
@@ -593,7 +624,7 @@ describeNamed({ AstBuild }, () => {
       const pt1 = ReachPoint.make();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, _2: IastNode) {
+        visitCall(callName: IastNode, _1: IastNode, _2: IastNode): void {
           expect(callName.asString()).toEqual('puts');
           pt1.hitsAtExactly(1);
         }

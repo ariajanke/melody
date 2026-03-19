@@ -28,16 +28,21 @@ const CloseFunctionDefinitionBuild = freeze({
 
 export const StartFunctionDefinitionBuild = freeze({
   make: (mTokenRange: TokenRange, mFnToken: Token): TreePartBuild => {
+    
     const { closePosition } = FnClosePositionRetrieval.
-      make(mTokenRange, mFnToken);
+      make(mTokenRange.clone(), mFnToken);
     const { start, end, clone } = mTokenRange;
 
-    const inBlockRange = () => clone(start(), closePosition());
-    const afterBlockRange = () => clone(closePosition() + 1, end());
+    const inBlockRange = (): TokenRange =>
+      clone(start(), closePosition());
+    const afterBlockRange = (): TokenRange =>
+      clone(closePosition() + 1, end());
     
     return freeze({
       build: memoize((): BuildStateAddition | undefined => {
+        console.log(`making SFnD for ${mTokenRange.asString()}`);
         const afterPart = CloseFunctionDefinitionBuild.make(afterBlockRange());
+        console.log(`close position is ${closePosition()}`);
         const inBlockPart = TreePartBuild.make(inBlockRange());
         return BuildStateAddition.make((sink: BuildSink) => {
           sink.pushBlock().pushPart(afterPart).pushPart(inBlockPart);

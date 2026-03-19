@@ -1,7 +1,7 @@
 import { TestHelpers, ReachPoint } from '../test_helpers';
 import { Token } from '../../src/token';
 import { TokenRange } from '../../src/token_range';
-import { TreePartBuild, type BuildSink } from '../../src/ast_build/tree_part_build';
+import { TreePartBuild, type BuildSink } from '../../src/iast_build/tree_part_build';
 import { type IastNode } from '../../src/iast_node';
 
 const { describeNamed } = TestHelpers;

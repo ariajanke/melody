@@ -1,4 +1,4 @@
-import { AstBuild } from './ast_build';
+import { IastBuild } from './iast_build';
 import { DastBuild } from './dast_build';
 import { FunctionType, FunctionTypeBuild } from './function_type_build';
 import { FunctionTypeRegistry } from './function_type_registry';
@@ -24,7 +24,7 @@ function make(mSource: string): FunctionRegistryBuild {
     const tokenization = Tokenization.make();
     const tokenRange = tokenization.tokenize(mSource);
     
-    return AstBuild.make(tokenRange);
+    return IastBuild.make(tokenRange);
   });
 
   const dastBuild = memoize(() => {
