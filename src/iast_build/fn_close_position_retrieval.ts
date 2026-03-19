@@ -38,9 +38,16 @@ function make(mTokenRange: TokenRange, mGroupOpen: Token): FnClosePositionRetrie
     const beg = newLineAt();
     if (!beg)
       { return undefined; }
+    let depth = 0;
     for (let i = beg; i < end(); ++i) {
-      if (tokenAt(i).content() === '~')
-        return i;
+      const content = tokenAt(i).content();
+      if (content === 'fn')
+        { ++depth; }
+      else if (content === '~') {
+        if (depth === 0)
+          { return i; }
+        --depth;
+      }
     }
     return undefined;
   };

@@ -68,7 +68,7 @@ export const Token = (() => {
       tokenizationClass.tokenTypeOfNonKeyword(tokenContent);
   })();
 
-  function makeFromStringOnly(mContents: string) {
+  function makeFromStringOnly(mContents: string): Token {
     return construct(mContents, 0, 0);
   }
 

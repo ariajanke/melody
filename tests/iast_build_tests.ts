@@ -446,8 +446,9 @@ describeNamed({ IastBuild }, () => {
       const rootNode = buildAst();
       const visitor = ({
         ...IastVisitor.makeDefaultingToContinue(),
-        visitFunctionDefinition(_0: Readonly<IastNode[]>): void {
-          hitsAtExactly(2);
+        visitFunctionDefinition(nodes: Readonly<IastNode[]>): void {
+          hitsAtExactly(3); // including root
+          nodes.forEach(node => node.visit(visitor));
         }
       });
       visitor.setInstRef(visitor);

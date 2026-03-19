@@ -28,15 +28,8 @@ const PendingNameValidation = freeze({
 
     function visitFunctionDefinition
       (nameMappings: DastFunctionNameMappings,
-       nodes: Readonly<DastNode[]>)
+       nodes: Readonly<DastNode[]>): boolean
     {
-      if (nameMappings.pendingNames[FunctionNamingSchema.kParentName] &&
-          Object.keys(nameMappings.pendingNames).length === 1
-      ) {
-        setErrorMessage(`"<parent>" cannot be the only pending name for frame ${nameMappings.name}`);
-        return false;
-      }
-
       for (const name in nameMappings.pendingNames) {
         if (!isPendingNameValid(name))
           { return false; }
@@ -109,7 +102,7 @@ function makeForDebug(root: DastNode): DastBuild {
     }
   });
 
-  const validatedNode = (() =>
+  const validatedNode = ((): DastNode | undefined =>
     mValidation.node() ?? setErrorFn(mValidation.error));
 
   return freeze({

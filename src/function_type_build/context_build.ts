@@ -33,7 +33,7 @@ function make
 {
   const { error, setErrorFn } = StandardError.make();
 
-  const addPuts = (() =>
+  const addPuts = ((): ContextFactoryStage =>
     mStage.intoDirectLookUp(BuiltinFunctionNames.kPuts,
                             PutsFunctionLookUpTable.instance()));
   const parentContextSnapshot = memoize(() =>
@@ -89,8 +89,11 @@ function make
         { continue; }
       const snapshot = mStackThing.contextForHop(mStackThing.hopCountFor(pendingName))!;
       
-      const ancestorAccessor = mStage.intoObjectType().
-        lookUp(snapshot.name())?.
+      const ancestorAccessor = (mStage.intoObjectType().
+        lookUp(snapshot.name()) ??
+        // :(
+        mStage.intoObjectType().lookUp(FunctionNamingSchema.mapToFringeAccessor(snapshot.name()))
+      )?.
         byParameters(TupleObjectFactory.emptyTuple());
       if (!ancestorAccessor) {
         raise(`Missing ancestor accessor for "${pendingName}" ` +
@@ -125,6 +128,7 @@ function make
     return usedAncestorInfos().map((info: AncestorInfo) => {
       // accessors are harder, because the current build structure is built around the notion of tuples
       const { name } = info;
+      // seems highly irregular, but that's what we're doing with parent?
       const accessorName = FunctionNamingSchema.mapToFringeAccessor(name);
       const build = mStage.
         intoAccessorBuild(accessorName, { variableName: name }, info.type);
@@ -183,7 +187,7 @@ function make
     const lastAncsUid = ancs[ancs.length - 1].type.uid();
     const hopEmissions = ancs.
       map((info: AncestorInfo) =>
-      (writer: CodeWriter) => {
+      (writer: CodeWriter): void => {
         // NOTE current SP is set to this context! So calling this parent
         //      getter is a no brainer!
         info.type.
