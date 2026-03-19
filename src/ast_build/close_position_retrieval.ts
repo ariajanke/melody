@@ -27,6 +27,7 @@ export const ClosePositionRetrieval = freeze({
             { return idx; }
         }
       }
+      return undefined;
     };
 
     return freeze({

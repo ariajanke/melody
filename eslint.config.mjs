@@ -18,7 +18,8 @@ export default [
         {
           argsIgnorePattern: '^_[0-9]+'
         }
-      ]
+      ],
+      '@typescript-eslint/explicit-function-return-type': 'error'
     },
   },
   pluginJs.configs.recommended,

@@ -9,6 +9,7 @@ import {
 } from '../src/dast_build';
 import { Helpers, StandardError, raise } from '../src/helpers';
 import { IastFragments } from './iast_fragments';
+import { DastTuple } from '../src/dast_build/dast_node_specializations';
 
 const { describeNamed } = TestHelpers;
 const { memoize, freeze } = Helpers;
@@ -38,14 +39,14 @@ describeNamed({ DastBuild }, () => {
   }
 
   function makeVisitDNode(rootFn: () => IastNode) {
-    const dnode = () => intoDastNode(rootFn());
-    return (visitor: ReseatableDastVisitor) => {
+    const dnode = (): DastNode => intoDastNode(rootFn());
+    return (visitor: ReseatableDastVisitor): void => {
       visitor.setInstRef(visitor);
       dnode().visit(visitor);
     };
   }
 
-  function declaredNamesOf(defs: DastFunctionNameMappings) {
+  function declaredNamesOf(defs: DastFunctionNameMappings): string[] {
     return Object.keys(defs.declaredNames);
   }
 
@@ -157,7 +158,7 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('For fragment "let b = a + 1"', () => {
-    const ap1 = () => makeCall('+', 'a', '1');
+    const ap1 = (): IastNode => makeCall('+', 'a', '1');
     const root = memoize(() => makeFunctionDefinition(makeLetEquals('b', ap1())));
     const visitDNode = makeVisitDNode(root);
 
@@ -189,8 +190,8 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('For fragment "let (a, b) = (1, 2)"', () => {
-    const abtuple = () => makeTuple('a', 'b');
-    const numtuple = () => makeTuple('1', '2');
+    const abtuple = (): IastNode => makeTuple('a', 'b');
+    const numtuple = (): IastNode => makeTuple('1', '2');
     const root = memoize(() =>
       makeFunctionDefinition(makeLetEquals(abtuple(), numtuple())));
     const visitDNode = makeVisitDNode(root);
@@ -227,7 +228,7 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('For fragment "let (a, b) = t"', () => {
-    const abtuple = () => makeTuple('a', 'b');
+    const abtuple = (): IastNode => makeTuple('a', 'b');
     const root = memoize(() =>
       makeFunctionDefinition(makeLetEquals(abtuple(), 't')));
     const visitDNode = makeVisitDNode(root);
@@ -281,8 +282,45 @@ describeNamed({ DastBuild }, () => {
     });
   });
 
+  describe('For fragment "let t = (1, 2)"', () => {
+    const numtuple = (): IastNode => makeTuple('1', '2');
+    const root = memoize(() =>
+      makeFunctionDefinition(makeLetEquals('t', numtuple())));
+    const visitDNode = makeVisitDNode(root);
+
+    it('contains a definition for "t" which is a tuple', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      visitDNode({
+        ...DastVisitor.makeDefaultingToContinue(),
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+          hitsAtExactly(1);
+          const tDef = defs.declaredNames['.t'];
+          expect(tDef).toBeDefined();
+          expect(DastTuple.detuplify(tDef?.value)).toBeDefined();
+        }
+      });
+      expect(verifyHit()).toBeTruthy();
+    });
+
+    it('tuple decomposes into correct integer values', () => {
+      const { hitsAtExactly, verifyHit } = ReachPoint.make();
+      visitDNode({
+        ...DastVisitor.makeDefaultingToContinue(),
+        visitFunctionDefinition(defs: DastFunctionNameMappings, _2: Readonly<DastNode[]>) {
+          hitsAtExactly(1);
+          const tDef = defs.declaredNames['.t'];
+          const detupled = DastTuple.detuplify(tDef?.value);
+          expect(detupled).toBeDefined();
+          const strs = detupled?.map((n: DastNode) => n.asString());
+          expect(strs).toEqual(['1', '2']);
+        }
+      });
+      expect(verifyHit()).toBeTruthy();
+    });
+  });
+
   describe('For multiple lets', () => {
-    const bLet = () => makeLetEquals('b', '2');
+    const bLet = (): IastNode => makeLetEquals('b', '2');
     const root = memoize(() => makeFunctionDefinition(letAEqual1(), bLet()));
     const visitDNode = makeVisitDNode(root);
 
@@ -328,7 +366,8 @@ describeNamed({ DastBuild }, () => {
   });
 
   function makeMarkThingForVisitor
-    (testFn: (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) => void)
+    (testFn: (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>) => void):
+    { visitor: ReseatableDastVisitor; mark: () => string | undefined }
   {
     const { markOnEntry, mark } = CallbackLocationMark.make();
     const visitor = freeze({
@@ -347,17 +386,17 @@ describeNamed({ DastBuild }, () => {
 
   describe('Cross function definition dependencies', () => {
     // just verify the schema
-    const f3Let = () =>
+    const f3Let = (): IastNode =>
       makeLetEquals('f3',
         makeFunctionDefinition(
           makeCall('puts', '<context>', `'hello from f3'`)
         ));
-    const f2Let = () =>
+    const f2Let = (): IastNode =>
       makeLetEquals('f2',
         makeFunctionDefinition(
           makeCall('puts', '<context>', 'a')
         ));
-    const f1Let = () =>
+    const f1Let = (): IastNode =>
       makeLetEquals('f1',
         makeFunctionDefinition(
           f2Let()
@@ -422,12 +461,12 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('Cross function definition, <parent> propagation limitation', () => {
-    const f2Let = () =>
+    const f2Let = (): IastNode =>
       makeLetEquals('f2',
         makeFunctionDefinition(
           makeFringe('a')
         ));
-    const f1Let = () =>
+    const f1Let = (): IastNode =>
       makeLetEquals('f1',
         makeFunctionDefinition(
           letAEqual1(), f2Let()
@@ -464,17 +503,17 @@ describeNamed({ DastBuild }, () => {
   });
 
   describe('Cross function definition, <parent> spans multiple levels', () => {
-    const f3Let = () =>
+    const f3Let = (): IastNode =>
       makeLetEquals('f3',
         makeFunctionDefinition(
           makeFringe('a')
         ));
-    const f2Let = () =>
+    const f2Let = (): IastNode =>
       makeLetEquals('f2',
         makeFunctionDefinition(
           f3Let()
         ));
-    const f1Let = () =>
+    const f1Let = (): IastNode =>
       makeLetEquals('f1',
         makeFunctionDefinition(
           f2Let()

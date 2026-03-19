@@ -11,7 +11,7 @@ describe('end-to-end', () => {
     makeExampleRunner,
     errorHandler
   } = EndToEndHelpers;
-  function makeMemoryFilledWith(num: number) {
+  function makeMemoryFilledWith(num: number): WebAssembly.Memory {
     const kWasmPageSizeInBytes = 65536 - 4; // wtf
     const memory = new WebAssembly.Memory({
       initial: 1,
@@ -86,7 +86,7 @@ describe('end-to-end', () => {
       it('stores the parent pointer at the expected location', () => {
         const memory = MemoryArray.make();
         memory.store(0, 0);
-        const makeMemory = () => memory;
+        const makeMemory = (): MemoryArray => memory;
         
         const interpreter = Interpreter.make(source, {
           ...Interpreter.defaultInjections(),
@@ -106,7 +106,7 @@ describe('end-to-end', () => {
     EntryPointGetter,
     string
   ][]).forEach(([getEntryPoint, name]) => {
-    xdescribe(`with a ${name}`, () => {
+    describe(`with a ${name}`, () => {
       const doRun = makeExampleRunner(getEntryPoint);
 
       describe('basic functionality', () => {
@@ -163,7 +163,7 @@ describe('end-to-end', () => {
       });
 
 
-      xdescribe('variable scope', () => {
+      describe('variable scope', () => {
         doRun(`runs function that accesses parent's variable`, `
           let a = 10
           let f = fn

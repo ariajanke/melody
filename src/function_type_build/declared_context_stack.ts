@@ -45,7 +45,6 @@ export interface DeclaredContextStack {
   findWhereDeclared(pendingName: string): ObjectType;
   hopCountFor(pendingName: string): number;
   contextForHop(idx: number): ContextSnapshot | undefined;
-  // topContext(): ObjectType;
 };
 
 export interface WritableDeclaredContextStack extends DeclaredContextStack {
@@ -90,10 +89,6 @@ export const DeclaredContextStack = freeze({
       return (mStack.length - 1) - idx;
     }
 
-    // function topContext() {
-    //   return mStack[mStack.length - 1]?.contextType() ?? raise(`I'm gay :/`);
-    // }
-
     function contextForHop(hop: number): ContextSnapshot | undefined {
       return mStack[mStack.length - 1 - hop];
     }
@@ -115,8 +110,7 @@ export const DeclaredContextStack = freeze({
       contextForHop,
       hopCountFor,
       withContextStage,
-      findWhereDeclared,
-      // topContext
+      findWhereDeclared
     });
   }
 });

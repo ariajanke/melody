@@ -1,5 +1,5 @@
 import { DastNode } from '../../dast_build';
-import { StandardError, Helpers } from '../../helpers';
+import { StandardError, Helpers, StandardErrorMessage } from '../../helpers';
 import { DastTuple } from '../dast_node_specializations';
 
 const { freeze, memoize } = Helpers;
@@ -29,32 +29,32 @@ export type LetNameGlob = Readonly<{
   tupleNode: DastNode
 }>
 
-function construct(mGlob: LetNameGlob) {
+function construct(mGlob: LetNameGlob): LetNamesSplitter {
   const { error, setErrorMessage } = StandardError.make();
   const globCommon = freeze({
     operator: mGlob.operator,
     dependeeNames: mGlob.dependeeNames,
   });
   const mDetupledNodes = detuplify(mGlob.tupleNode);
-  const globAsSingle = () => {
-    if (!mDetupledNodes) {
-      return mGlob.tupleNode;
-    }
-    return mDetupledNodes[0];
-  };
+
+  // NOTE covered cases:
   // let a = 1
+  // let a = (1, 2, ...)
   const singleValueMapping = (): NameExpressionSingle => freeze({
     ...globCommon,
     name: mGlob.names[0],
-    value: globAsSingle(),
+    value: mGlob.tupleNode,
   });
 
+  // NOTE covers case:
   // let (a, b, ...) = t
   const singleToMany = (): NameExpressionSingleToMany => freeze({
     ...globCommon,
     names: mGlob.names,
     value: mGlob.tupleNode
   });
+
+  // NOTE covers case:
   // let (a, b, ...) = (1, 2, ...)
   const manyToMany = (): NameExpressionSingle[] => (mDetupledNodes?.
     map((node: DastNode, idx: number) => [mGlob.names[idx], node]) as [string, DastNode][]).
@@ -81,7 +81,7 @@ function construct(mGlob: LetNameGlob) {
   });
 }
 
-function makeEmpty() {
+function makeEmpty(): LetNamesSplitter {
   return freeze({
     elements: (): Readonly<LetNameElement[]> | undefined => [],
     error: () => StandardError.make().error(),
@@ -92,4 +92,8 @@ export const LetNamesSplitter = freeze({
   make: construct,
   makeEmpty: memoize(makeEmpty)
 });
-export type  LetNamesSplitter = ReturnType<typeof construct>;
+
+export interface LetNamesSplitter {
+  elements(): Readonly<LetNameElement[]> | undefined;
+  error(): StandardErrorMessage;
+};

@@ -3,7 +3,6 @@ import { Helpers } from '../helpers';
 import { FunctionDefinitionBodyBuild } from './function_definition_body_build';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionTypeRegistry } from '../function_type_registry';
-// import { CallBackObjectHold } from '../call_back_object_hold';
 import { WritableDeclaredContextStack } from './declared_context_stack';
 
 const { freeze, memoize } = Helpers;
@@ -13,7 +12,6 @@ function make
   (mDefs: DastFunctionNameMappings,
    mNodes: Readonly<DastNode[]>,
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,
-  //  mHolder: CallBackObjectHold<ObjectType>,
    mDeclaredContextStack: WritableDeclaredContextStack,
    mFunctionRegistry: FunctionTypeRegistry)
   : FunctionTypeBuild

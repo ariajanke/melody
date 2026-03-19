@@ -11,7 +11,11 @@ export type LetNameElement = LetNamesSplitter.LetNameElement;
 type DastLetDeclarationBuild = dldb.DastLetDeclarationBuild;
 const DastLetDeclarationBuild = dldb.DastLetDeclarationBuild;
 
-const CallLevelVisitor = (() => {
+type CallLevelVisitorConstructor =
+  (mIntoDastBuild: (node: IastNode) => DastBuild) =>
+  IastVisitor<DastLetDeclarationBuild>;
+
+const CallLevelVisitor = ((): { make: CallLevelVisitorConstructor } => {
   const { makeError } = DastLetDeclarationBuild;
   const visitLet = (_0: IastNode): DastLetDeclarationBuild =>
     makeError('no nested let declarations allowed');

@@ -229,7 +229,8 @@ function make
 
     const result: AncestorInfo[] = [];
     // NOTE skip the current context, and immediate parent
-    for (let i = 2; ; ++i) {
+    const kSkipCurrentAndParent = 2;
+    for (let i = kSkipCurrentAndParent; ; ++i) {
       const snapshot = mStackThing.contextForHop(i);
       if (!snapshot)
         { break; }

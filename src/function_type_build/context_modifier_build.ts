@@ -18,8 +18,10 @@ export const ContextModifierBuild = freeze({
        mVariableTracker: VariableTracker,
        mTable: FunctionOpLookUp): ContextFunctionTypeBuild
   {
-    // since we're just passing around the op table, we can just look up the accessor that way
-    const { error, objectType } = ContextAttributeTypeBuild.make(mAttr, mBasedOn);
+    const {
+      error,
+      objectType: variableType
+    } = ContextAttributeTypeBuild.make(mAttr, mBasedOn);
     const getter = memoize((): FunctionType => {
       const fringeName =
         FunctionNamingSchema.mapToFringeAccessor(mAttr.variableName);
@@ -29,8 +31,6 @@ export const ContextModifierBuild = freeze({
       }
       return ftype;
     });
-
-    const variableType = objectType;
 
     const builtFunctionType = memoize((): FunctionType | undefined => {
       if (!variableType())

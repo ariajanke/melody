@@ -46,8 +46,6 @@ function make(): FunctionLookUpTable {
       parameters: () => type,
       emit(writer: CodeWriter) {
         validWritters.forEach(name => writer[name]());
-        // no longer needed, because of the actual receiver changed to none
-        // writer.drop();
         return writer;
       }
     });

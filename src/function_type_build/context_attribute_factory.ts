@@ -9,13 +9,13 @@ const { freeze } = Helpers;
 
 const kBytesPerWord = MemoryArray.kWordSizeInBytes;
 
-function inPlainOrder(limit: number, fn: (idx: number) => void) {
+function inPlainOrder(limit: number, fn: (idx: number) => void): void {
   for (let i = 0; i < limit; ++i) {
     fn(i);
   }
 }
 
-function inReverseOrder(limit: number, fn: (idx: number) => void) {
+function inReverseOrder(limit: number, fn: (idx: number) => void): void {
   for (let i = limit - 1; i >= 0; --i) {
     fn(i);
   }
@@ -24,7 +24,7 @@ function inReverseOrder(limit: number, fn: (idx: number) => void) {
 function forEachWord
   (ordering: (limit: number, fn: (idx: number) => void) => void,
   varType: ObjectType,
-  fn: (offset: number) => void)
+  fn: (offset: number) => void): void
 {
   const additional = varType.sizeInBytes() % kBytesPerWord === 0 ? 0 : 1;
   const sizeInWords_ = (varType.sizeInBytes() / kBytesPerWord) + additional;
@@ -37,16 +37,16 @@ export const ContextAttributeFactory = freeze({
       ...FunctionTypeBase.receivedByContext(),
       parameters: () => type,
       returns: () => getter ? type : TupleObjectFactory.emptyTuple(),
-      emit(writer: CodeWriter) {
+      emit(writer: CodeWriter): void {
         forEachWord(inPlainOrder, type, (additional: number) => {
           writer.storeInteger(accessIndex + additional*kBytesPerWord);
         });
 
         if (!getter)
-          { return writer; }
+          { return; }
 
         // NOTE reach for "name:=" setters
-        return writer.drop() && getter.emit(writer);
+        writer.drop() && getter.emit(writer);
       }
     });
   },
@@ -54,11 +54,10 @@ export const ContextAttributeFactory = freeze({
     return freeze({
       ...FunctionTypeBase.receivedByContext(),
       returns: () => type,
-      emit(writer: CodeWriter) {
+      emit(writer: CodeWriter): void {
         forEachWord(inReverseOrder, type, (additional: number) => {
           writer.loadInteger(accessIndex + additional*kBytesPerWord);
         });
-        return writer;
       }
     });
   }
