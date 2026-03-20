@@ -31,30 +31,30 @@ const {
   i32Const
 } = TypesAware.opCodes();
 
-// interface WasmFunctionBody {
-//   prependCode(extraCode: number[]): WasmFunctionBody;
-//   prependCodeTo(wfb: WasmFunctionBody): WasmFunctionBody;
-//   pushI32Const(constant: number): WasmFunctionBody;
-//   pushI32Add(): WasmFunctionBody;
-//   pushI32Subtract(): WasmFunctionBody;
-//   pushI32Multiply(): WasmFunctionBody;
-//   pushI32Load(): WasmFunctionBody;
-//   pushI32Store(): WasmFunctionBody;
-//   pushFunctionCall(funcIdx: number): WasmFunctionBody;
-//   pushLocal(): WasmFunctionBody;
-//   localCount(): number;
-//   stackCount(): number;
-//   pushDrop(): WasmFunctionBody;
-//   setLocal(idx: number): WasmFunctionBody;
-//   getLocal(idx: number): WasmFunctionBody;
-//   setGlobal(idx: number): WasmFunctionBody;
-//   getGlobal(idx: number): WasmFunctionBody;
-//   callIndirect(typeIdx: number): WasmFunctionBody;
-//   pushTeeLocal(idx: number): WasmFunctionBody;
-//   finish(): number[];
-// };
+export interface WasmFunctionBody {
+  prependCode(extraCode: number[]): WasmFunctionBody;
+  prependCodeTo(wfb: WasmFunctionBody): WasmFunctionBody;
+  pushI32Const(constant: number): WasmFunctionBody;
+  pushI32Add(): WasmFunctionBody;
+  pushI32Subtract(): WasmFunctionBody;
+  pushI32Multiply(): WasmFunctionBody;
+  pushI32Load(): WasmFunctionBody;
+  pushI32Store(): WasmFunctionBody;
+  pushFunctionCall(funcIdx: number): WasmFunctionBody;
+  pushLocal(): WasmFunctionBody;
+  localCount(): number;
+  stackCount(): number;
+  pushDrop(): WasmFunctionBody;
+  setLocal(idx: number): WasmFunctionBody;
+  getLocal(idx: number): WasmFunctionBody;
+  setGlobal(idx: number): WasmFunctionBody;
+  getGlobal(idx: number): WasmFunctionBody;
+  callIndirect(typeIdx: number): WasmFunctionBody;
+  pushTeeLocal(idx: number): WasmFunctionBody;
+  finish(): Readonly<number[]>;
+};
 
-function make() {
+function make(): WasmFunctionBody {
   let mCode: number[] = [];
   let mLocalCount = 0, mStackCount = 0;
   const { encodeVaruint32, encodeVarsint32 } = WasmHelpers;
@@ -66,13 +66,9 @@ function make() {
     }
   }
 
-  const pushCode = (...code: number[]) => {
+  const pushCode = (...code: number[]): WasmFunctionBody => {
     resetFinishedCode();
     mCode.push(...code);
-    if (mCode.length >= 39) {
-      let i = 0;
-      ++i;
-    }
     return inst;
   };
 
@@ -170,4 +166,3 @@ function make() {
 }
 
 export const WasmFunctionBody = freeze({ make });
-export type WasmFunctionBody = ReturnType<typeof WasmFunctionBody.make>;

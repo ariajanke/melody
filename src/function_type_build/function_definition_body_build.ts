@@ -19,7 +19,7 @@ function make
   const { error, setErrorFn } = StandardError.make();
 
   const functionType = memoize((): FunctionType | undefined => {
-    const whatever = (stage: ContextFactoryStage) => {
+    const whatever = (stage: ContextFactoryStage): FunctionType | undefined => {
       const contextBuild = ContextBuild.
         make(mDefs,
              mIntoFunctionTypeBuild,

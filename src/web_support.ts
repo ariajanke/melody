@@ -6,7 +6,7 @@ import { Helpers } from './helpers';
 
 const { freeze, expose } = Helpers;
 
-function getEntryPointOnInst(instance: WebAssembly.Instance | undefined) {
+function getEntryPointOnInst(instance: WebAssembly.Instance | undefined): (dummyReceiver: number) => void {
   const exports = instance?.exports;
   if (exports && 'entry' in exports) {
     return exports.entry as (dummyReceiver: number) => void;
@@ -15,10 +15,18 @@ function getEntryPointOnInst(instance: WebAssembly.Instance | undefined) {
   }
 }
 
+function narrowToCompiler(compilerOrSource: Compiler | string): Compiler {
+  if (typeof compilerOrSource === 'string') {
+    return Compiler.make(compilerOrSource);
+  }
+  return compilerOrSource;
+}
+
 async function getEntryPointWithMemory
   (memory: WebAssembly.Memory,
-   compiler: Compiler): Promise<(dummyReceiver: number) => void>
+   compilerOrSource: Compiler | string): Promise<(dummyReceiver: number) => void>
 {
+  const compiler = narrowToCompiler(compilerOrSource);
   const importsObject = {
     ...compiler.importsObject(),
     js: { memory }
@@ -38,14 +46,14 @@ async function getEntryPointWithMemory
 
 export const WebSupport = freeze({
   forTesting: { getEntryPointWithMemory },
-  async getEntryPoint(compiler: Compiler) {
+  async getEntryPoint(compilerOrSource: Compiler | string) {
     const memory = new WebAssembly.Memory({
-      initial: 1024,
-      maximum: 1024,
+      initial: 1,
+      maximum: 1,
     });
     for (let i = 0; i < 5000; ++i)
       new DataView(memory.buffer).setInt32(i*4, 4);
-   return getEntryPointWithMemory(memory, compiler);
+   return getEntryPointWithMemory(memory, compilerOrSource);
   }
 });
 

@@ -1,6 +1,6 @@
 import { FunctionType } from './function_type_build';
 import { FunctionTypeIndexGrabber } from './function_type_index_grabber';
-import { Helpers } from './helpers';
+import { Helpers, raise } from './helpers';
 import { StringPool } from './string_pool';
 import { WasmBuiltinImportsCreation }
   from './wasm_compilation/wasm_builtin_imports_creation';
@@ -29,9 +29,9 @@ export interface WasmCompilation {
 }
 
 const defaultInjections = memoize(() => ({
-  puts: (s: string) => console.log(s),
-  askInteger: () => 42,
-  askString: () => 0
+  puts: (s: string): void => console.log(s),
+  askInteger: (): number => 42,
+  askString: (): number => 0
 }));
 
 const header = memoize((): readonly number[] => {
@@ -88,7 +88,7 @@ function make(mStringPool: StringPool,
   const mIndexGrabber = FunctionTypeIndexGrabber.make();
   function incorporate
     (implementation: FunctionType,
-     _1: FunctionType)
+     _1: FunctionType): void
   {
     const codeWriter = WasmFunctionCodeWriter.make();
     implementation.emit(codeWriter);
@@ -96,13 +96,14 @@ function make(mStringPool: StringPool,
     mTypesSection.pushFunction([i32], []);
     const typeIndex = mTypesSection.indexFor([i32], []);
     if (typeIndex === undefined) {
-      throw new Error('Failed to register type');
+      raise('Failed to register type');
     }
     mCodeSection.pushFunctionBody(codeWriter.toFunctionBody());
     mFunctionsSection.pushSignatureFrom(typeIndex);
     ++mFunctionCount;
   }
-  function makeEntryPoint(rootIndexEmission: FunctionType) {
+
+  function makeEntryPoint(rootIndexEmission: FunctionType): void {
     const index =
       mIndexGrabber.grabFrom(rootIndexEmission) +
       mImportsSection.functionCount();

@@ -13,7 +13,9 @@ function make(): MutableFunctionTable {
   let mDirty = false;
   const mCompleteList: FunctionType[] = [];
 
-  function setDefinition(forType: ObjectType, ft: FunctionType) {
+  function setDefinition
+    (forType: ObjectType, ft: FunctionType): MutableFunctionTable
+  {
     // TODO remove "forType"
     if (ft.parameters().uid() !== forType.uid()) {
       raise(`Parameter type mismatch: expected "${forType.name()}", ` +
@@ -28,7 +30,7 @@ function make(): MutableFunctionTable {
     return inst;
   }
 
-  function list() {
+  function list(): Readonly<FunctionType[]> {
     if (!mDirty)
       { return mCompleteList; }
 

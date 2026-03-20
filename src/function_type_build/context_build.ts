@@ -185,7 +185,6 @@ function make
         returns: TupleObjectFactory.emptyTuple
       });
     }
-    const lastAncsUid = ancs[ancs.length - 1].type.uid();
     const hopEmissions = ancs.
       map((info: AncestorInfo) =>
       (writer: CodeWriter): void => {
@@ -195,7 +194,7 @@ function make
           lookUp(FunctionNamingSchema.kParentName)?.
           byParameters(TupleObjectFactory.emptyTuple())!.
           emit(writer);
-        if (info.use === 'used' && info.type.uid() !== lastAncsUid) {
+        if (info.use === 'used') {
           writer.duplicateTop();
         }
         writer.setStackPointer();
