@@ -46,7 +46,8 @@ export const ContextAttributeFactory = freeze({
           { return; }
 
         // NOTE reach for "name:=" setters
-        writer.drop() && getter.emit(writer);
+        writer.drop();
+        getter.emit(writer);
       }
     });
   },

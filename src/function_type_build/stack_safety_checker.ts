@@ -1,6 +1,6 @@
 import { CodeWriter } from '../code_writer';
 import { FunctionType } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 
 const { freeze } = Helpers;
 
@@ -11,11 +11,11 @@ export interface StackSafetyChecker {
 const StackTallyBase = freeze({
   make() {
     let mInternalCount = 0;
-    const decrementCount = () => {
+    const decrementCount = (): CodeWriter => {
       --mInternalCount;
       return mInternalWriter;
     };
-    const incrementCount = () => {
+    const incrementCount = (): CodeWriter => {
       ++mInternalCount;
       return mInternalWriter;
     };
@@ -68,14 +68,14 @@ export const StackSafetyChecker = freeze({
         const { returns, parameters } = ftype;
         
         const delta = returns().sizeInStackItems() - parameters().sizeInStackItems();
-        if (count() !== delta) {
-          throw new Error(
-            `Stack safety check failed: expected ${delta} ` +
-            `items, but got ${count()}. (For function taking ` +
-            `"${ftype.parameters().name()}", returning ` +
-            `"${ftype.returns().name()}")`);
-        }
-        return inst;
+        if (count() === delta)
+          { return inst; }
+        
+        raise(
+          `Stack safety check failed: expected ${delta} ` +
+          `items, but got ${count()}. (For function taking ` +
+          `"${ftype.parameters().name()}", returning ` +
+          `"${ftype.returns().name()}")`);
       }
     });
     return inst;

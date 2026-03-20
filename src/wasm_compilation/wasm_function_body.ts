@@ -1,10 +1,9 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 
 const { freeze } = Helpers;
 
-
-function localCountIntoCode(count: number) {
+function localCountIntoCode(count: number): number[] {
   const { encodeVaruint32 } = WasmHelpers;
   const { asCode } = TypesAware;
 
@@ -32,21 +31,48 @@ const {
   i32Const
 } = TypesAware.opCodes();
 
+// interface WasmFunctionBody {
+//   prependCode(extraCode: number[]): WasmFunctionBody;
+//   prependCodeTo(wfb: WasmFunctionBody): WasmFunctionBody;
+//   pushI32Const(constant: number): WasmFunctionBody;
+//   pushI32Add(): WasmFunctionBody;
+//   pushI32Subtract(): WasmFunctionBody;
+//   pushI32Multiply(): WasmFunctionBody;
+//   pushI32Load(): WasmFunctionBody;
+//   pushI32Store(): WasmFunctionBody;
+//   pushFunctionCall(funcIdx: number): WasmFunctionBody;
+//   pushLocal(): WasmFunctionBody;
+//   localCount(): number;
+//   stackCount(): number;
+//   pushDrop(): WasmFunctionBody;
+//   setLocal(idx: number): WasmFunctionBody;
+//   getLocal(idx: number): WasmFunctionBody;
+//   setGlobal(idx: number): WasmFunctionBody;
+//   getGlobal(idx: number): WasmFunctionBody;
+//   callIndirect(typeIdx: number): WasmFunctionBody;
+//   pushTeeLocal(idx: number): WasmFunctionBody;
+//   finish(): number[];
+// };
+
 function make() {
   let mCode: number[] = [];
   let mLocalCount = 0, mStackCount = 0;
   const { encodeVaruint32, encodeVarsint32 } = WasmHelpers;
   const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
-  function verifyStackIncrement(amount: number) {
+  function verifyStackIncrement(amount: number): void {
     mStackCount += amount;
     if (mStackCount < 0) {
-      throw new Error('Trying to use an empty stack');
+      raise('Trying to use an empty stack');
     }
   }
 
   const pushCode = (...code: number[]) => {
     resetFinishedCode();
     mCode.push(...code);
+    if (mCode.length >= 39) {
+      let i = 0;
+      ++i;
+    }
     return inst;
   };
 
@@ -59,7 +85,7 @@ function make() {
     return (idx: number) => {
       verifyStackIncrement(stackDelta);
       if (idx < 0 || idx > 255) {
-        throw new Error(`Invalid/Unsupported ${scope} index ${idx}`);
+        raise(`Invalid/Unsupported ${scope} index ${idx}`);
       }
       return pushCode(opCode, idx);
     };

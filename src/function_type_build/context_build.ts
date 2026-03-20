@@ -11,6 +11,7 @@ import { TupleObjectFactory } from './tuple_type';
 import { DeclaredContextStack } from './declared_context_stack';
 import { MutableFunctionTable } from './mutable_function_table';
 import { BuiltinFunctionNames } from '../builtin_function_names';
+import { StackSafetyChecker } from './stack_safety_checker';
 
 const { freeze, memoize } = Helpers;
 
@@ -199,8 +200,8 @@ function make
         }
         writer.setStackPointer();
       });
-
-    return freeze({
+    StackSafetyChecker.make().check( parentGetter()! );
+    const ftype = freeze({
       ...FunctionTypeBase.receivedByContext(),
       emit: (writer: CodeWriter) => {
         parentGetter()!.emit(writer);
@@ -212,6 +213,8 @@ function make
       },
       returns: usedAncestorType,
     });
+    StackSafetyChecker.make().check( ftype );
+    return ftype;
   });
 
   // [['used', grand parent], ['unused', great grand parent], ...]
