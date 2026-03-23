@@ -8,6 +8,7 @@ import { ContextAttributeFactory } from './context_attribute_factory';
 import { ContextFactoryStage, ContextFunctionTypeBuild, FunctionOpLookUp } from './context_factory_stage';
 import { ContextAttributeTypeBuild } from './context_attribute_build';
 import { MutableFunctionTable } from './mutable_function_table';
+import { CodeWriter } from '../code_writer';
 
 const { freeze, memoize } = Helpers;
 
@@ -27,10 +28,19 @@ export const ContextAccessorBuild = freeze({
       if (!variableType())
         { return undefined; }
 
-      const { type, accessIndex } =
-        ensureVariablePresence(mAttr.variableName, variableType()!);
+      // const { type, accessIndex } =
+      //   ensureVariablePresence(mAttr.variableName, variableType()!);
       
-      return ContextAttributeFactory.buildGetter(accessIndex, type);
+      // return ContextAttributeFactory.buildGetter(accessIndex, type);
+      const info = ensureVariablePresence(mAttr.variableName, variableType()!);
+      return freeze({
+        ...ContextAttributeFactory.buildGetter(info.accessIndex, info.type),
+        emit(writer: CodeWriter): void {
+          // Re-read accessIndex from info at emit time, not from a closed-over value
+          ContextAttributeFactory.buildGetter(info.accessIndex, info.type)
+            .emit(writer);
+        }
+      });
     });
 
     // on completing a build, we add to the look up table

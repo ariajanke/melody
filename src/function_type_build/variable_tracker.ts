@@ -35,6 +35,9 @@ export const VariableTracker = freeze({
       for (const name in mVarTable) {
         mVarTable[name]!.accessIndex += kReservedBytesForParent;
       }
+      // NOW bump mByteOffset to account for the parent slot
+      mByteOffset += kReservedBytesForParent;
+      mItemCount += objectType.sizeInStackItems();
 
       return (mVarTable[FunctionNamingSchema.kParentName] = {
         type: objectType,
@@ -56,13 +59,16 @@ export const VariableTracker = freeze({
       if (name === FunctionNamingSchema.kContextName) {
         raise(`this name is reserved for context access`);
       }
+      if (name === FunctionNamingSchema.kParentName) {
+        return handleAddingParent(objectType);
+      }
 
       const accessIndex = mByteOffset;
       mByteOffset += objectType.sizeInBytes();
       mItemCount += objectType.sizeInStackItems();
-      if (name === FunctionNamingSchema.kParentName) {
-        return handleAddingParent(objectType);
-      }
+      // if (name === FunctionNamingSchema.kParentName) {
+      //   return handleAddingParent(objectType);
+      // }
 
       return (mVarTable[name] = { type: objectType, accessIndex });
     }

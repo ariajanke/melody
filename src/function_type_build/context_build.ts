@@ -12,6 +12,7 @@ import { DeclaredContextStack } from './declared_context_stack';
 import { MutableFunctionTable } from './mutable_function_table';
 import { BuiltinFunctionNames } from '../builtin_function_names';
 import { StackSafetyChecker } from './stack_safety_checker';
+import { AncestorInfo, ExtendedAncestorInfo, UsedAncestorCollection } from './used_ancestor_collection';
 
 const { freeze, memoize } = Helpers;
 
@@ -32,6 +33,8 @@ function make
    mStage = ContextFactoryStage.make())
   : ContextBuild
 {
+  const mUsedAncestorCollection = UsedAncestorCollection.
+    make(mStackThing, mDefs.pendingNames);
   const { error, setErrorFn } = StandardError.make();
 
   const addPuts = ((): ContextFactoryStage =>
@@ -125,14 +128,14 @@ function make
 
   const ancestorAccessors = memoize((): Readonly<FunctionType[]> => {
     if (!parentGetter())
-      { return []; }
-    return usedAncestorInfos().map((info: AncestorInfo) => {
+      { return []; }    
+    return mUsedAncestorCollection.ancestors().map((info: AncestorInfo) => {
       // accessors are harder, because the current build structure is built around the notion of tuples
-      const { name } = info;
       // seems highly irregular, but that's what we're doing with parent?
-      const accessorName = FunctionNamingSchema.mapToFringeAccessor(name);
+      const accessorName = FunctionNamingSchema.
+        mapToFringeAccessor(info.variableName);
       const build = mStage.
-        intoAccessorBuild(accessorName, { variableName: name }, info.type);
+        intoAccessorBuild(accessorName, info, info.type);
       if (!build.functionType()) {
         raise(`Ancestor accessor "${accessorName}" failed to build: ` +
               `"${build.error().message}"`);
@@ -145,9 +148,10 @@ function make
   const ancestorInitialSet = memoize((): FunctionType => {
     if (!parentGetter())
       { raise('need parent'); }
-    const names = usedAncestorAsNames();
+    const names = mUsedAncestorCollection.ancestorNames();
     const iSName = FunctionNamingSchema.mapToInitialSetName(names);
-    const build = mStage.intoInitialSetBuild(iSName, names, usedAncestorType());
+    const build = mStage.
+      intoInitialSetBuild(iSName, names, mUsedAncestorCollection.ancestorTupleType());
     if (!build.functionType()) {
       raise(`Ancestor initial set unexpectedly failed to build: ` +
             `"${build.error().message}"`);
@@ -163,21 +167,11 @@ function make
     });
   });
 
-  const usedAncestorInfos = memoize((): Readonly<AncestorInfo[]> =>
-    increasinglyDeepAncestorTypes().
-      filter((info: AncestorInfo) => info.use === 'used'));
-  const usedAncestorTypes = memoize((): Readonly<ObjectType[]> =>
-    usedAncestorInfos().map(info => info.type));
-  const usedAncestorAsNames = memoize((): Readonly<string[]> =>
-    usedAncestorInfos().map(info => info.name));
-  const usedAncestorType = memoize((): ObjectType =>
-    TupleObjectFactory.make(usedAncestorTypes()));
-
   const ancestorTupleEmission = memoize((): FunctionType => {
     if (!parentGetter())
       { raise('need parent'); }
 
-    const ancs = increasinglyDeepAncestorTypes();
+    const ancs = mUsedAncestorCollection.allAncestors(); // increasinglyDeepAncestorTypes();
     if (ancs.length === 0) {
       return freeze({
         ...FunctionTypeBase.receivedByContext(),
@@ -186,7 +180,7 @@ function make
       });
     }
     const hopEmissions = ancs.
-      map((info: AncestorInfo) =>
+      map((info: ExtendedAncestorInfo) =>
       (writer: CodeWriter): void => {
         // NOTE current SP is set to this context! So calling this parent
         //      getter is a no brainer!
@@ -210,56 +204,10 @@ function make
         // NOTE SP changed during pointer emision, so reset it
         writer.forStackPointer('restoreToGlobal');
       },
-      returns: usedAncestorType,
+      returns: mUsedAncestorCollection.ancestorTupleType //usedAncestorType,
     });
     StackSafetyChecker.make().check( ftype );
     return ftype;
-  });
-
-  // [['used', grand parent], ['unused', great grand parent], ...]
-  // and *every* parent up the chain, so hops are predictable here
-  // if we don't need a specific ancestor, we just omit it from our built tuple (on the WASM stack)
-  interface AncestorInfo {
-    use: 'used' | 'unused';
-    type: ObjectType;
-    name: string;
-  };
-  const increasinglyDeepAncestorTypes = memoize((): Readonly<AncestorInfo[]> => {
-    const found: { [hops: number]: ObjectType | undefined } = {};
-    const parentUid = parentContextSnapshot()?.contextType().uid();
-    mapNamesToParents().forEach(([name, parent]: [string, ObjectType]) => {
-      if (parent.uid() === parentUid)
-        { return; }
-      found[mStackThing.hopCountFor(name)] = parent;
-    });
-
-    const result: AncestorInfo[] = [];
-    // NOTE skip the current context, and immediate parent
-    const kSkipCurrentAndParent = 2;
-    for (let i = kSkipCurrentAndParent; ; ++i) {
-      const snapshot = mStackThing.contextForHop(i);
-      if (!snapshot)
-        { break; }
-      const { referenceType, name } = snapshot;
-      const use = found[i] ? 'used' : 'unused';
-      result.push({ use, type: referenceType(), name: name() });
-    }
-    return result;
-  });
-
-  const mapNamesToParents = memoize((): [string, ObjectType][] => {
-    if (Object.keys(mDefs.pendingNames).length === 0)
-      { return []; }
-
-    const found: [string, ObjectType][] = [];
-    for (const name in mDefs.pendingNames) {
-      if (name === FunctionNamingSchema.kParentName)
-        { continue; }
-      // let's focus on what we need here first, then make whatever supporting thing we need we write it
-      const foundIn: ObjectType = mStackThing.findWhereDeclared(name);
-      found.push([name, foundIn]);
-    }
-    return found;
   });
 
   const preface = memoize((): FunctionType => {

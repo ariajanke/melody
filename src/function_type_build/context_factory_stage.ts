@@ -80,11 +80,11 @@ const BlankContextType = freeze({
 
     const { emptyTuple } = TupleObjectFactory;
 
-    const addContext = (() =>
+    const addContext = ((): MutableFunctionTable =>
       mTable[FunctionNamingSchema.kContextName] = MutableFunctionTable.
         make().setDefinition(emptyTuple(), referenceGetter()));
 
-    const addNone = (() =>
+    const addNone = ((): MutableFunctionTable =>
       mTable[FunctionNamingSchema.kNoneName] = MutableFunctionTable.
         make().setDefinition(emptyTuple(), noneGetter()));
 
