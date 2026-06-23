@@ -1,6 +1,6 @@
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { ObjectType } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { ContextSnapshot, DeclaredContextStack } from './declared_context_stack';
 import { TupleObjectFactory } from './tuple_type';
 
@@ -20,6 +20,7 @@ export interface UsedAncestorCollection {
   ancestors(): Readonly<AncestorInfo[]>;
   ancestorNames(): Readonly<string[]>;
   ancestorTupleType(): ObjectType;
+  hasParentGetter(): boolean;
 };
 
 function make
@@ -32,6 +33,15 @@ function make
 
   const ancestors = memoize((): Readonly<AncestorInfo[]> => 
     allAncestors().filter(({ use }) => use === 'used'));
+
+  const hasParentGetter = memoize(() => {
+    if (!mStackThing.contextForHop(1)) {
+      if (Object.keys(mPendingNames).length > 0)
+        { raise('DAST schema failure'); }
+      return false;
+    }
+    return Object.keys(mPendingNames).length > 0;
+  });
 
   const allAncestors = memoize((): Readonly<ExtendedAncestorInfo[]> => {
     const found: { [hops: number]: ObjectType | undefined } = {};
@@ -80,7 +90,8 @@ function make
     allAncestors,
     ancestors,
     ancestorNames,
-    ancestorTupleType
+    ancestorTupleType,
+    hasParentGetter
   });
 }
 

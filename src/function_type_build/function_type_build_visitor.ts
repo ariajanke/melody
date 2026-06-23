@@ -34,11 +34,11 @@ function make
     make((node: DastNode) => node.visit(inst));
   const mDeclaredContextStack = DeclaredContextStack.make();
 
-  const topContext = () =>
+  const topContext = (): ObjectType =>
     mDeclaredContextStack.contextForHop(0)?.contextType() ??
     raise('No current context!');
 
-  const visitFringe = (name: string) =>
+  const visitFringe = (name: string): FunctionTypeBuild =>
     FringeFunctionBuild.make(name, topContext);
 
   const visitString = (string_: string): FunctionTypeBuild => 

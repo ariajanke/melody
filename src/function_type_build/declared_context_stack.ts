@@ -93,6 +93,9 @@ export const DeclaredContextStack = freeze({
       return mStack[mStack.length - 1 - hop];
     }
 
+    // two "stages"
+    // - prototype: (create the layout)
+    // - complete : (with layout access indices)
     function withContextStage<T>
       (defs: DastFunctionNameMappings,
        fn: (stage: ContextFactoryStage) => T): T

@@ -28,16 +28,16 @@ export interface ContextFunctionTypeBuild extends FunctionTypeBuild {
 };
 
 export interface ContextFactoryStage {
-  intoParentBuild(frameName: string, parentType: ObjectType): ContextFactoryStage;
-  intoModifierBuild
-    (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
-    : ContextFunctionTypeBuild;
-  intoAccessorBuild
-    (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
-    : ContextFunctionTypeBuild;
-  intoInitialSetBuild
-    (name: string, variableNames: Readonly<string[]>, basedOn: ObjectType)
-    : ContextFunctionTypeBuild;
+  // intoParentBuild(frameName: string, parentType: ObjectType): ContextFactoryStage;
+  // intoModifierBuild
+  //   (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
+  //   : ContextFunctionTypeBuild;
+  // intoAccessorBuild
+  //   (name: string, attr: DastAttributeDeclaration, basedOn: ObjectType)
+  //   : ContextFunctionTypeBuild;
+  // intoInitialSetBuild
+  //   (name: string, variableNames: Readonly<string[]>, basedOn: ObjectType)
+  //   : ContextFunctionTypeBuild;
   intoDirectLookUp(name: string, lookUpTable: FunctionLookUpTable)
     : ContextFactoryStage;
   intoObjectType(): ContextObjectType;
