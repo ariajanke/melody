@@ -31,6 +31,7 @@ export interface ObjectType {
   /// Display name only, no semantic use.
   name(): string;
 
+  // I need object type to be able to say "that's defined, but..."
   lookUp(operation: string | symbol): FunctionLookUpTable | undefined;
 
   /// If this is a tuple, it maybe "detuplified". By definition there are no
@@ -41,6 +42,7 @@ export interface ObjectType {
   // sizing... do I really need "stackCleanUp"?
   sizeInBytes(): number;
   sizeInStackItems(): number;
+  // TODO got to remove this, it's semantically unnecessary
   stackCleanUp(): FunctionType;
 };
 
