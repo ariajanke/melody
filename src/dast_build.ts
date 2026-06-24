@@ -27,7 +27,8 @@ export interface DastLetDeclaration {
   };
 };
 
-export type WritableDastDeclarationMap = { [functionName: string]: DastLetDeclaration };
+export type WritableDastDeclarationMap =
+  { [functionName: string]: DastLetDeclaration };
 export type DastDeclarationMap = Readonly<WritableDastDeclarationMap>;
 export interface DastFunctionNameMappings {
   /// A unique name assigned to this function.
