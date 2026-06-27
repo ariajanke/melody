@@ -57,6 +57,7 @@ function make
     for (const functionName in mDefs.declaredNames) {
       functionName;
     }
+    // no no no, just build an additional map, don't rely on an implicit cache
     for (const functionName in mDefs.declaredNames) {
       const decl = mDefs.declaredNames[functionName];
       const build = mIntoFTypeBuild(decl.value);

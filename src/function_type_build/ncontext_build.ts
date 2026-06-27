@@ -1,4 +1,6 @@
-import { ObjectType } from '../function_type_build';
+import { FunctionType, ObjectType } from '../function_type_build';
+import { Helpers } from '../helpers';
+import { UsedAncestorCollection } from './used_ancestor_collection';
 
 // We conceptualize the preface ftype as an initial setter
 // There's setting the parent pointer, and then the ancestors
@@ -20,6 +22,8 @@ import { ObjectType } from '../function_type_build';
 // n ancestors
 // m variables (declared names)
 
+const { freeze } = Helpers;
+
 interface ContextSnapshotN {
   contains(pendingName: string): boolean;
   referenceType(): ObjectType;
@@ -28,9 +32,41 @@ interface ContextSnapshotN {
 };
 
 interface ContextFrameStack {};
-// protoype for context type
-interface ContextTypeAncestorBase {
-  // no reference type (should not be needed yet)
+
+interface ContextBaseBuild {
+  
+  // always one pointer in size
+  referenceType(): ObjectType;
+  // reuse: UsedAncestorCollection
+
+  // preface: is a changing thing throughout link builds
+
+};
+
+interface ContextLinkBuild {
+  referenceType(): ObjectType;
+  // aggregateType(): ObjectType; not sure if needed
+
+  // preface builder: I need the current frame reference context type 
+  preface(): FunctionType;
+};
+const ContextLinkBuild = freeze({
+  // we can enforce sequencing like this:
+  make(mBaseBuild: ContextBaseBuild,
+       mUsedAncestorCollection: UsedAncestorCollection
+  ) {}
+  // or at least pass in the products of the previous step
+})
+
+interface ContextDelegationBuild {
+
+};
+const ContextDelegationBuild = freeze({
+  make(mPendingNames: { [name: string]: true }) {}
+})
+
+interface ContextDeclarationBuild {
+
 };
 
 ({
