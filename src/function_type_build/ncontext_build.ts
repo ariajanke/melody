@@ -1,5 +1,7 @@
-import { FunctionType, ObjectType } from '../function_type_build';
+import { DastFunctionNameMappings, DastNode } from '../dast_build';
+import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers } from '../helpers';
+import { DeclaredContextStack } from './declared_context_stack';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 
 // We conceptualize the preface ftype as an initial setter
@@ -31,7 +33,14 @@ interface ContextSnapshotN {
   // contextType? this should not be exposed here
 };
 
-interface ContextFrameStack {};
+// interface ContextFrameStack {
+//   findWhereDeclared(pendingName: string): ObjectType;
+//   hopCountFor(pendingName: string): number;
+//   contextForHop(idx: number): ContextSnapshotN | undefined;
+// };
+
+// What if you took your observed friction here, and turn that
+// into a basis for SLM use? (Since I can't really afford LLMs atm)
 
 interface ContextBaseBuild {
   
@@ -42,6 +51,20 @@ interface ContextBaseBuild {
   // preface: is a changing thing throughout link builds
 
 };
+
+// Why? My anhedonia, one day I'll escape
+
+const ContextBaseBuild = freeze({
+  make(mDefs: DastFunctionNameMappings,
+       mUsedAncestorCollection: UsedAncestorCollection,
+       mIntoFTypeBuild: (dnode: DastNode) => FunctionTypeBuild,
+       mFrameStack: DeclaredContextStack)
+  {
+    // scope: this replaces "stage" specifically
+    // add puts
+
+  }
+});
 
 interface ContextLinkBuild {
   referenceType(): ObjectType;

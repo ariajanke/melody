@@ -52,7 +52,8 @@ function make
 
   const callFunctionType = memoize(() => {
     const lexRec = lexicalReceiver();
-    if (!lexRec || !args()) { return; }
+    if (!lexRec || !args())
+      { return undefined; }
 
     const callFunctionType = lexRec.
       returns().
