@@ -53,6 +53,18 @@ interface ContextBaseBuild {
 };
 
 // Why? My anhedonia, one day I'll escape
+// Order brings me pleasure.
+//
+// What's the relationship between receiver and a typical member function?
+// In a call, we do not have a notion that any particular receiver is mounted.
+// Fringes don't appear to explicitly mount the receiver.
+// - Consequence: they have a "none" receiver
+// - These "base cases" for call trees where the "receive, args, call"
+//   routine stops
+//
+// I want to:
+// - clear up receiver and calls relationship
+// - replace "stage"
 
 const ContextBaseBuild = freeze({
   make(mDefs: DastFunctionNameMappings,

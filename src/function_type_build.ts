@@ -14,11 +14,37 @@ export interface FunctionType {
   returns(): ObjectType;
   emit(writer: CodeWriter): void;
 
-  /// A name of another function on the object type, which contains this
-  /// function type. Which is used as the actual receiver for this
+  /// A name of another function on the parent object type. Which is used as
+  /// the actual receiver for this
   /// function type. If no such name is provided, then the actual receiver is
-  /// the lexical receiver.
+  /// the DAST indicated receiver.
   alternateReceiver(): string | undefined;
+  // a consequence of this definition: accessors/modifiers may do emit receiver
+  // things on their own.
+  // e.g. an explicit "$<context> . $a:= ( 5 )" results in a DAST call node, with an
+  // explicit <context> "lexical" receiver
+  //
+  // Does this overwrite the "lexical" receiver? As it's currectly written, yes
+  // But should it? To answer this, lets think about tables, and try to keep things clean there
+  // a.b.c := 5
+  // The receiver here is "a.b" and ".c:=" is the function name
+  // a.b.foo()
+  // what if we had "handled receiver" or something to that effect here?
+  // what if we had a "base receiver" which covers what this function expects
+  // as being the mounted receiver?
+  // yuck, this sort of introduces another safety stack by which we have to
+  // keep track of receivers ...
+  // maybe it doesn't have to be that complicated, fundamentally there is only
+  // ever one receiver, consider "a.b", this expersion has to evaluate whereby
+  // that "b" is mounted and ready to play the role of receiving either "foo" or
+  // ".c:="
+
+  // expectedReceiver(): ObjectType;
+  // for "none" (e.g. "puts"), this can be "Tuple()"
+  // for "<context>", this can be "ContextType"
+  // for "5" (e.g. "5 + 6"), this will be "Integer"
+  // expectedReceiver != parent type (all the time anyhow, but can be)
+
   uid(): symbol;
 };
 

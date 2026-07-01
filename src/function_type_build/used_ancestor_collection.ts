@@ -35,7 +35,7 @@ function make
     allAncestors().filter(({ use }) => use === 'used'));
 
   const hasParentGetter = memoize(() => {
-    if (!mStackThing.contextForHop(1)) {
+    if (!parentContextSnapshot()) {
       if (Object.keys(mPendingNames).length > 0)
         { raise('DAST schema failure'); }
       return false;
