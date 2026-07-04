@@ -39,7 +39,7 @@ export interface FunctionType {
   // that "b" is mounted and ready to play the role of receiving either "foo" or
   // ".c:="
 
-  // expectedReceiver(): ObjectType;
+  expectedReceiver(): ObjectType;
   // for "none" (e.g. "puts"), this can be "Tuple()"
   // for "<context>", this can be "ContextType"
   // for "5" (e.g. "5 + 6"), this will be "Integer"
@@ -69,7 +69,7 @@ export interface ObjectType {
   sizeInBytes(): number;
   sizeInStackItems(): number;
   // TODO got to remove this, it's semantically unnecessary
-  stackCleanUp(): FunctionType;
+  // stackCleanUp(): FunctionType;
 };
 
 export interface MutableObjectType extends ObjectType {

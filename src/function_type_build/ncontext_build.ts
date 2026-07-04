@@ -1,8 +1,18 @@
+import { BuiltinFunctionNames } from '../builtin_function_names';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { FunctionNamingSchema } from '../function_naming_schema';
+import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { Helpers, StandardError } from '../helpers';
 import { DeclaredContextStack } from './declared_context_stack';
+import { FunctionTypeBase } from './function_type_base';
+import { MutableFunctionTable } from './mutable_function_table';
+import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { UsedAncestorCollection } from './used_ancestor_collection';
+import { CodeWriter  } from '../code_writer';
+import { TupleObjectFactory } from './tuple_type';
+import { ObjectTypeBuild } from './context_attribute_build';
+import { BuiltinTypeBase } from './builtin_type';
+import { MemoryArray } from '../memory_array';
 
 // We conceptualize the preface ftype as an initial setter
 // There's setting the parent pointer, and then the ancestors
@@ -24,7 +34,7 @@ import { UsedAncestorCollection } from './used_ancestor_collection';
 // n ancestors
 // m variables (declared names)
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 interface ContextSnapshotN {
   contains(pendingName: string): boolean;
@@ -33,11 +43,16 @@ interface ContextSnapshotN {
   // contextType? this should not be exposed here
 };
 
-// interface ContextFrameStack {
-//   findWhereDeclared(pendingName: string): ObjectType;
-//   hopCountFor(pendingName: string): number;
-//   contextForHop(idx: number): ContextSnapshotN | undefined;
-// };
+interface ContextFrameStack {
+  findWhereDeclared(pendingName: string): ObjectType;
+  hopCountFor(pendingName: string): number;
+  contextForHop(idx: number): ContextSnapshotN | undefined;
+};
+
+interface WritableContextFrameStack {
+  withBaseReferenceType(contextReferenceType: ObjectType, fn: () => void): void;
+};
+
 
 // What if you took your observed friction here, and turn that
 // into a basis for SLM use? (Since I can't really afford LLMs atm)
@@ -65,33 +80,120 @@ interface ContextBaseBuild {
 // I want to:
 // - clear up receiver and calls relationship
 // - replace "stage"
+// - get rid of "<context>" nodes in the DAST, possibly replacing it with "none"
+
+type FunctionOpLookUp =
+  { [op: string | symbol]: FunctionLookUpTable | undefined };
 
 const ContextBaseBuild = freeze({
-  make(mDefs: DastFunctionNameMappings,
-       mUsedAncestorCollection: UsedAncestorCollection,
-       mIntoFTypeBuild: (dnode: DastNode) => FunctionTypeBuild,
-       mFrameStack: DeclaredContextStack)
-  {
+  make() {
     // scope: this replaces "stage" specifically
     // add puts
+    const mTable: FunctionOpLookUp = {};
+    const { emptyTuple } = TupleObjectFactory;
+    const addPuts = ((): FunctionLookUpTable =>
+      mTable[BuiltinFunctionNames.kPuts] = PutsFunctionLookUpTable.instance());
 
+    const addContext = ((): MutableFunctionTable =>
+      mTable[FunctionNamingSchema.kContextName] = MutableFunctionTable.
+        make().setDefinition(emptyTuple(), referenceGetter()));
+
+    const addNone = ((): MutableFunctionTable =>
+      mTable[FunctionNamingSchema.kNoneName] = MutableFunctionTable.
+        make().setDefinition(emptyTuple(), noneGetter()));
+
+    const referenceGetter = memoize((): FunctionType => freeze({
+      ...FunctionTypeBase.receivedByNone(),
+      returns: () => referenceType(),
+      emit(codeWriter: CodeWriter) {
+        return codeWriter.pushStackPointer();
+      }
+    }));
+
+    const noneGetter = memoize((): FunctionType => freeze({
+      ...FunctionTypeBase.receivedByNone(),
+      emit(_0: CodeWriter) {}
+    }));
+
+    const referenceType = memoize((): ObjectType => {
+      const inst = freeze({
+        ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
+        name: () => 'ContextType',
+        lookUp(operation: string | symbol): FunctionLookUpTable | undefined
+          { return mTable[operation]; },
+        // NOTE: Just a pointer for the reference type.
+        sizeInBytes: () => MemoryArray.kWordSizeInBytes,
+        sizeInStackItems: () => 1
+      });
+      return addPuts() && addContext() && addNone() && inst;
+    });
+
+    return freeze({
+      referenceType,
+      contextLinkBuild: ((mUsedAncestorCollection: UsedAncestorCollection) =>
+        ContextLinkBuild.make( mUsedAncestorCollection, mTable ))
+      // some method about constructing the next phase...
+    })
   }
 });
 
 interface ContextLinkBuild {
   referenceType(): ObjectType;
-  // aggregateType(): ObjectType; not sure if needed
+  
 
   // preface builder: I need the current frame reference context type 
   preface(): FunctionType;
+
+  sizeInBytes(): number;
+  sizeInWords(): number;
 };
+
+// I'm still really not sure how I want to do this
+// interface WritableVariableOffset {
+//   type: ObjectType;
+//   accessIndex: number;
+// };
+
+// type VariableOffset = Readonly<WritableVariableOffset>;
+
+// interface VariableAllocation {
+//   lookUp(name: string): VariableOffset;
+//   next(name: string, objectType: ObjectType): VariableAllocation;
+//   talliedSizeInBytes(): number;
+//   talliedSizeInItems(): number;
+// };
+
+// const VariableAllocation = freeze({
+//   spentStep: memoize((): VariableAllocation => {
+
+//   }),
+//   make(mNextName: string,
+//        mNextObjectType: ObjectType,
+//        )
+// })
+
 const ContextLinkBuild = freeze({
   // we can enforce sequencing like this:
-  make(mBaseBuild: ContextBaseBuild,
-       mUsedAncestorCollection: UsedAncestorCollection
-  ) {}
-  // or at least pass in the products of the previous step
-})
+  make(mUsedAncestorCollection: UsedAncestorCollection,
+       mTable: FunctionOpLookUp = {}
+  )
+  {
+    
+    const sizeInWords = memoize(() => {
+      const { ancestorTupleType, hasParentGetter } = mUsedAncestorCollection;
+      const wordForParent = hasParentGetter() ? 1 : 0;
+      return ancestorTupleType().sizeInStackItems() + wordForParent;
+    });
+
+    const sizeInBytes =
+      memoize(() => sizeInWords() / MemoryArray.kWordSizeInBytes);
+
+    return freeze({
+      sizeInBytes,
+      sizeInWords
+    })
+  }
+});
 
 interface ContextDelegationBuild {
 

@@ -30,7 +30,7 @@ function make
     if (!callNameStr) {
       return setErrorMessage('Cannot use node as a call name');
     } else if (callNameStr === kAssignmentOperator) {
-      throw new Error(kAssignmentNotAValidCallName);
+      raise(kAssignmentNotAValidCallName);
     }
 
     if (kLogToConsole) {
@@ -69,6 +69,10 @@ function make
     }
     return callFunctionType;
   });
+
+  // a possible error:
+  // the expected receiver cannot be made available
+  // (be it lexically, current frame, or none)
 
   const actualReceiver = memoize(() => {
     if (!callFunctionType())
