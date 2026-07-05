@@ -2,12 +2,12 @@ import { BuiltinFunctionNames } from '../builtin_function_names';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { Helpers, StandardError } from '../helpers';
+import { Helpers, StandardError, raise } from '../helpers';
 import { DeclaredContextStack } from './declared_context_stack';
 import { FunctionTypeBase } from './function_type_base';
 import { MutableFunctionTable } from './mutable_function_table';
 import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
-import { UsedAncestorCollection } from './used_ancestor_collection';
+import { AncestorInfo, UsedAncestorCollection } from './used_ancestor_collection';
 import { CodeWriter  } from '../code_writer';
 import { TupleObjectFactory } from './tuple_type';
 import { ObjectTypeBuild } from './context_attribute_build';
@@ -39,6 +39,7 @@ const { freeze, memoize } = Helpers;
 interface ContextSnapshotN {
   contains(pendingName: string): boolean;
   referenceType(): ObjectType;
+  uniqueName(): string;
   // name?
   // contextType? this should not be exposed here
 };
@@ -48,6 +49,10 @@ interface ContextFrameStack {
   hopCountFor(pendingName: string): number;
   contextForHop(idx: number): ContextSnapshotN | undefined;
 };
+
+const ContextFrameStack = freeze({
+  kHopsToParent: 0
+});
 
 interface WritableContextFrameStack {
   withBaseReferenceType(contextReferenceType: ObjectType, fn: () => void): void;
@@ -85,6 +90,7 @@ interface ContextBaseBuild {
 type FunctionOpLookUp =
   { [op: string | symbol]: FunctionLookUpTable | undefined };
 
+// nor is this
 const ContextBaseBuild = freeze({
   make() {
     // scope: this replaces "stage" specifically
@@ -137,60 +143,147 @@ const ContextBaseBuild = freeze({
   }
 });
 
+interface ReceiverResolution {
+  mapExpectedToReceiverAccessor:
+    (expectedReceiver: ObjectType) =>
+    // will always have "Tuple()" as the expected receiver
+    // returning undefined would mean here: can't identify proper receiver error
+    FunctionType | undefined;
+};
+
+const ReceiverResolution = freeze({
+  make(mUsedAncestorCollection: UsedAncestorCollection,
+       mReferenceType: ObjectType
+  ) {
+    const mReceiverResolutionTable: { [uid: symbol]: FunctionType | undefined } = {};
+    const { emptyTuple } = TupleObjectFactory;
+
+    function addToTable(receiverType: ObjectType, name: string): FunctionType {
+      const ftype = mReferenceType.
+        lookUp(name)?.
+        byParameters(emptyTuple());
+      if (!ftype) {
+        raise(`Failed lookup of "${name}", was not added to stack frame's type`);
+      } else if (ftype.expectedReceiver().uid() !== emptyTuple().uid()) {
+        raise('All receiver accessors must have "Tuple()" as the expected receiver');
+      }
+      return mReceiverResolutionTable[receiverType.uid()] = ftype;
+    }
+
+    const { kNoneName, kContextName, kParentName } = FunctionNamingSchema;
+    const addBaseReceivers = () =>
+      addToTable(emptyTuple(), kNoneName) && 
+      addToTable(mReferenceType, kContextName);
+
+    // NOTE absence is not evidence of an error
+    function addParent(): FunctionType | undefined {
+      addBaseReceivers();
+
+      const { hasParentGetter } = mUsedAncestorCollection;
+
+      if (hasParentGetter()) {
+        const parentInfo: ContextSnapshotN = memoize(() => mFrameStack.
+          contextForHop(ContextFrameStack.kHopsToParent));
+        return addToTable(parentInfo!.referenceType(), kParentName) &&
+               addToTable(parentInfo!.referenceType(), parentInfo!.uniqueName());
+        
+      }
+
+      return undefined;
+    }
+
+    // NOTE absence is not evidence of an error
+    const addAncestors = memoize((): FunctionType | undefined =>
+      mUsedAncestorCollection.ancestors().reduce((prev: FunctionType | undefined, ancInfo: AncestorInfo) => {
+        const accName = FunctionNamingSchema.mapToFringeAccessor(ancInfo.variableName);
+        return prev && addToTable(ancInfo.type, accName);
+      }, addParent()));
+
+    const mapExpectedToReceiverAccessor = (expectedReceiver: ObjectType) => {
+      addAncestors();
+      return mReceiverResolutionTable[expectedReceiver.uid()];
+    };
+
+    return freeze({ mapExpectedToReceiverAccessor });
+  }
+})
+
+// Proposed redefinition:
+// Context means "the implicit receiver"
+// And the current stack frame type, is just that, the StackFrame type
+
+// this is not a build
 interface ContextLinkBuild {
   referenceType(): ObjectType;
-  
 
   // preface builder: I need the current frame reference context type 
   preface(): FunctionType;
 
-  sizeInBytes(): number;
-  sizeInWords(): number;
+  variableAllocation(): VariableAllocation;
+  // sizeInBytes(): number;
+  // sizeInWords(): number;
 };
 
 // I'm still really not sure how I want to do this
-// interface WritableVariableOffset {
-//   type: ObjectType;
-//   accessIndex: number;
-// };
+interface WritableVariableOffset {
+  type: ObjectType;
+  accessIndex: number;
+};
 
-// type VariableOffset = Readonly<WritableVariableOffset>;
+type VariableOffset = Readonly<WritableVariableOffset>;
 
-// interface VariableAllocation {
-//   lookUp(name: string): VariableOffset;
-//   next(name: string, objectType: ObjectType): VariableAllocation;
-//   talliedSizeInBytes(): number;
-//   talliedSizeInItems(): number;
-// };
+interface VariableAllocation {
+  lookUp(name: string): VariableOffset;
+  next(name: string, objectType: ObjectType): VariableAllocation;
+  talliedSizeInBytes(): number;
+  talliedSizeInItems(): number;
+};
 
-// const VariableAllocation = freeze({
-//   spentStep: memoize((): VariableAllocation => {
+const VariableAllocation = freeze({
+  // spentStep: memoize((): VariableAllocation => {
 
-//   }),
-//   make(mNextName: string,
-//        mNextObjectType: ObjectType,
-//        )
-// })
+  // }),
+  make(mNextName: string,
+       mNextObjectType: ObjectType,
+       ): VariableAllocation
+       {}
+})
 
 const ContextLinkBuild = freeze({
   // we can enforce sequencing like this:
   make(mUsedAncestorCollection: UsedAncestorCollection,
-       mTable: FunctionOpLookUp = {}
-  )
+       mFrameStack: ContextFrameStack,
+       // this belongs to the current (context) reference type
+       mReferenceType: ObjectType,
+       mReferenceTypeLookUpTable: FunctionOpLookUp = {}
+  ): ContextLinkBuild
   {
     
-    const sizeInWords = memoize(() => {
-      const { ancestorTupleType, hasParentGetter } = mUsedAncestorCollection;
-      const wordForParent = hasParentGetter() ? 1 : 0;
-      return ancestorTupleType().sizeInStackItems() + wordForParent;
+
+    ReceiverResolution.make(mUsedAncestorCollection, mReferenceType);
+
+    const variableAllocation = memoize((): VariableAllocation => {
+      if (!hasParentGetter())
+        { return; }
+      const parentContextSnapshot = mFrameStack.
+        contextForHop(ContextFrameStack.kHopsToParent);
+      if (!parentContextSnapshot) {
+        raise('Used ancestor collection contains direct parent for an empty ' +
+              'context stack.');
+      }
+      const varAlc = VariableAllocation.
+        make(FunctionNamingSchema.kParentName,
+             parentContextSnapshot.referenceType());
+      return mUsedAncestorCollection.
+        ancestors().
+        reduce((varAlc: VariableAllocation, anc: AncestorInfo) =>
+                varAlc.next(anc.variableName, anc.type), varAlc);
     });
 
-    const sizeInBytes =
-      memoize(() => sizeInWords() / MemoryArray.kWordSizeInBytes);
+    // TODO define accessors, and preface
 
     return freeze({
-      sizeInBytes,
-      sizeInWords
+      variableAllocation
     })
   }
 });
