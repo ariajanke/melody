@@ -63,13 +63,8 @@ interface WritableContextFrameStack {
 // into a basis for SLM use? (Since I can't really afford LLMs atm)
 
 interface ContextBaseBuild {
-  
-  // always one pointer in size
   referenceType(): ObjectType;
-  // reuse: UsedAncestorCollection
-
-  // preface: is a changing thing throughout link builds
-
+  contextLinkBuild(mUsedAncestorCollection: UsedAncestorCollection): ContextLinkBuild;
 };
 
 // Why? My anhedonia, one day I'll escape
@@ -90,9 +85,10 @@ interface ContextBaseBuild {
 type FunctionOpLookUp =
   { [op: string | symbol]: FunctionLookUpTable | undefined };
 
-// nor is this
+/// A ContextBaseCreation is the first, prototype stage for creating a stack
+/// frame's reference type.
 const ContextBaseBuild = freeze({
-  make() {
+  make(): ContextBaseBuild {
     // scope: this replaces "stage" specifically
     // add puts
     const mTable: FunctionOpLookUp = {};
@@ -151,6 +147,8 @@ interface ReceiverResolution {
     FunctionType | undefined;
 };
 
+/// The ReceiverResolution tells the current context which receiver ought be
+/// used, when the code does not make it explicit.
 const ReceiverResolution = freeze({
   make(mUsedAncestorCollection: UsedAncestorCollection,
        mReferenceType: ObjectType
@@ -212,16 +210,15 @@ const ReceiverResolution = freeze({
 // Context means "the implicit receiver"
 // And the current stack frame type, is just that, the StackFrame type
 
-// this is not a build
+/// A ContextLinkCreation is the second stage, where the current stack frame's
+/// ancestors are incorperated which sets initial behavior.
 interface ContextLinkBuild {
   referenceType(): ObjectType;
 
   // preface builder: I need the current frame reference context type 
   preface(): FunctionType;
 
-  variableAllocation(): VariableAllocation;
-  // sizeInBytes(): number;
-  // sizeInWords(): number;
+  next(): ContextDelegationBuild;
 };
 
 // I'm still really not sure how I want to do this
