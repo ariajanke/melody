@@ -18,7 +18,7 @@ export interface FunctionType {
   /// the actual receiver for this
   /// function type. If no such name is provided, then the actual receiver is
   /// the DAST indicated receiver.
-  alternateReceiver(): string | undefined;
+  // alternateReceiver(): string | undefined;
   // a consequence of this definition: accessors/modifiers may do emit receiver
   // things on their own.
   // e.g. an explicit "$<context> . $a:= ( 5 )" results in a DAST call node, with an

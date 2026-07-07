@@ -288,9 +288,30 @@ const ContextLinkBuild = freeze({
 interface ContextDelegationBuild {
 
 };
+const ContextDelegationFunctionType = freeze({
+  make(mName: string,
+       mFrameStack: ContextFrameStack,
+       mDelegateeType: ObjectType
+  ): FunctionTypeBuild {
+    const { mapToFringeAccessor } = FunctionNamingSchema;
+    const snapshot = () =>
+      mFrameStack.contextForHop(mFrameStack.hopCountFor(mName));
+    const accessorTable = () =>
+      mDelegateeType.lookUp(mName) ??
+      mDelegateeType.lookUp(mapToFringeAccessor(mName));
+    // const ancestorAccessor = memoize(() => accessorTable()?.byParameters
+      
+  }
+});
+
 const ContextDelegationBuild = freeze({
-  make(mPendingNames: { [name: string]: true }) {}
-})
+  make(mPendingNames: { [name: string]: true },
+       mReferenceTypeLookUpTable: FunctionOpLookUp,
+       mFrameStack: ContextFrameStack
+  ) {
+    
+  }
+});
 
 interface ContextDeclarationBuild {
 

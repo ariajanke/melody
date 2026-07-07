@@ -12,7 +12,8 @@ export interface CodeWriter {
   // will have to set SP
   indirectCall(signatureIndex: number): CodeWriter;
 
-  /// Takes SP + offset from memory, pushes value onto the stack
+  /// ~Takes SP + offset from memory, pushes value onto the stack~
+  /// From memory, takes offset from stack, pushes value onto the stack
   /// Stack Effect: [] -> [i32]
   loadInteger(offset: number): CodeWriter;
 
@@ -23,7 +24,8 @@ export interface CodeWriter {
   /// Stack Effect: [] -> [i32]
   pushRepresentation(num: number): CodeWriter;
 
-  /// Stores the top of the stack to SP + offset
+  /// ~Stores the top of the stack to SP + offset~
+  /// Onto memory, takes offset then the argument from stack
   /// Stack Effect: [i32] -> []
   storeInteger(offset: number): CodeWriter;
 
