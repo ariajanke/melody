@@ -12,7 +12,18 @@ const { freeze, memoize } = Helpers;
 export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;
-  emit(writer: CodeWriter): void;
+
+
+
+  simpleEmit(writer: CodeWriter): void;
+
+  emit(receiverFtype: FunctionType,
+       parameterFtype: FunctionType,
+       writer: CodeWriter): void;
+
+  // proposal:
+  // A function type which whose receiver and/or parameters is not "Tuple()"
+  // is not considered evaluable.
 
   /// A name of another function on the parent object type. Which is used as
   /// the actual receiver for this
@@ -39,7 +50,7 @@ export interface FunctionType {
   // that "b" is mounted and ready to play the role of receiving either "foo" or
   // ".c:="
 
-  expectedReceiver(): ObjectType;
+  receiver(): ObjectType;
   // for "none" (e.g. "puts"), this can be "Tuple()"
   // for "<context>", this can be "ContextType"
   // for "5" (e.g. "5 + 6"), this will be "Integer"

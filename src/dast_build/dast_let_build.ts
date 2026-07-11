@@ -6,8 +6,6 @@ import { LetDeclarationsRetrieval, LetNameElement } from './let_declarations_ret
 
 const { freeze, memoize } = Helpers;
 
-// we'll have to name that old build to LetNameElementBuild
-
 function make
   (mInnerNode: IastNode,
    mIntoDastBuild: (node: IastNode) => DastBuild,
@@ -39,8 +37,6 @@ function make
       return undefined;
     }
 
-    // I'm going to have to throw "order" away :(
-    
     for (const declarationMap of declarationBuilds()!) {
       for (const name in declarationMap) {
         if (mCurrentDeclarations()[name]) {

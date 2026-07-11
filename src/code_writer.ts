@@ -13,9 +13,10 @@ export interface CodeWriter {
   indirectCall(signatureIndex: number): CodeWriter;
 
   /// ~Takes SP + offset from memory, pushes value onto the stack~
-  /// From memory, takes offset from stack, pushes value onto the stack
+  /// Basic WASM instruction: from memory, takes offset from stack, pushes 
+  /// value onto the stack
   /// Stack Effect: [] -> [i32]
-  loadInteger(offset: number): CodeWriter;
+  loadInteger(): CodeWriter;
 
   multiplyIntegers(): CodeWriter;
   printInteger(): CodeWriter;
@@ -25,9 +26,10 @@ export interface CodeWriter {
   pushRepresentation(num: number): CodeWriter;
 
   /// ~Stores the top of the stack to SP + offset~
-  /// Onto memory, takes offset then the argument from stack
-  /// Stack Effect: [i32] -> []
-  storeInteger(offset: number): CodeWriter;
+  /// Basic WASM instruction: onto memory, takes the value on top, then stores
+  /// to memory as specified by the next value on the stack
+  /// Stack Effect: [i32, i32] -> []
+  storeInteger(): CodeWriter;
 
   subtractIntegers(): CodeWriter;
 

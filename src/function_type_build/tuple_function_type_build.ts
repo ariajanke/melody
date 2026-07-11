@@ -35,12 +35,13 @@ function make
     if (!functionTypesFromNodes())
       { return; }
     return freeze({
-      ...FunctionTypeBase.receivedByNone(),
+      // ...FunctionTypeBase.receivedByNone(),
+      ...FunctionTypeBase.makeDefaults(),
       returns: memoize(() => TupleObjectFactory.
         make(functionTypesFromNodes()!.map(ft => ft.returns()))),
-      emit(writer: CodeWriter) {
+      simpleEmit(writer: CodeWriter) {
         reversedFunctionTypes()!.
-          forEach((ft: FunctionType) => ft.emit(writer));
+          forEach((ft: FunctionType) => ft.simpleEmit(writer));
         return writer;
       }
     });
@@ -52,4 +53,10 @@ function make
   });
 }
 
-export const TupleFunctionTypeBuild = freeze({ make });
+const emitEmpty = memoize((): FunctionType =>
+  freeze({
+    ...FunctionTypeBase.makeDefaults(),
+    simpleEmit(_0: CodeWriter) {},
+  }));
+
+export const TupleFunctionTypeBuild = freeze({ make, emitEmpty });

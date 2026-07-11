@@ -105,16 +105,16 @@ const ContextBaseBuild = freeze({
         make().setDefinition(emptyTuple(), noneGetter()));
 
     const referenceGetter = memoize((): FunctionType => freeze({
-      ...FunctionTypeBase.receivedByNone(),
+      ...FunctionTypeBase.makeDefaults(),
       returns: () => referenceType(),
-      emit(codeWriter: CodeWriter) {
+      simpleEmit(codeWriter: CodeWriter) {
         return codeWriter.pushStackPointer();
       }
     }));
 
     const noneGetter = memoize((): FunctionType => freeze({
-      ...FunctionTypeBase.receivedByNone(),
-      emit(_0: CodeWriter) {}
+      ...FunctionTypeBase.makeDefaults(),
+      simpleEmit(_0: CodeWriter) {}
     }));
 
     const referenceType = memoize((): ObjectType => {
@@ -132,8 +132,10 @@ const ContextBaseBuild = freeze({
 
     return freeze({
       referenceType,
-      contextLinkBuild: ((mUsedAncestorCollection: UsedAncestorCollection) =>
-        ContextLinkBuild.make( mUsedAncestorCollection, mTable ))
+      contextLinkBuild: ((mUsedAncestorCollection: UsedAncestorCollection,
+        mFrameStack: ContextFrameStack
+      ) =>
+        ContextLinkBuild.make( mUsedAncestorCollection, mFrameStack, referenceType(), mTable,  ))
       // some method about constructing the next phase...
     })
   }
@@ -162,7 +164,7 @@ const ReceiverResolution = freeze({
         byParameters(emptyTuple());
       if (!ftype) {
         raise(`Failed lookup of "${name}", was not added to stack frame's type`);
-      } else if (ftype.expectedReceiver().uid() !== emptyTuple().uid()) {
+      } else if (ftype.receiver().uid() !== emptyTuple().uid()) {
         raise('All receiver accessors must have "Tuple()" as the expected receiver');
       }
       return mReceiverResolutionTable[receiverType.uid()] = ftype;
@@ -229,21 +231,106 @@ interface WritableVariableOffset {
 
 type VariableOffset = Readonly<WritableVariableOffset>;
 
-interface VariableAllocation {
-  lookUp(name: string): VariableOffset;
+export interface VariableAllocation {
+  lookUp(name: string): VariableOffset | undefined;
+  lookUpTuple(names: readonly string[]): VariableOffset | undefined;
   next(name: string, objectType: ObjectType): VariableAllocation;
   talliedSizeInBytes(): number;
   talliedSizeInItems(): number;
 };
 
-const VariableAllocation = freeze({
-  // spentStep: memoize((): VariableAllocation => {
+// kind of ugly tbh
+type VarAllocState = {
+  mVarTable: { [name: string]: VariableOffset };
+  mByteCount: number;
+  mItemCount: number;
+};
 
-  // }),
-  make(mNextName: string,
-       mNextObjectType: ObjectType,
-       ): VariableAllocation
-       {}
+const VariableAllocation = freeze({
+  make(mNextName?: string,
+       mNextObjectType?: ObjectType,
+       mPriv?: VarAllocState,
+       mPrev?: VariableAllocation)
+    : VariableAllocation
+  {
+    if ((mNextName === undefined) !==
+        (mNextObjectType === undefined))
+    {
+      raise('Either next name and next type are both defined or not');
+    }
+    const kJoinChar = ',';
+    function assertNextNameOk(name?: string) {
+      if (name === undefined)
+        { return; }
+      if (mNextName?.indexOf(kJoinChar) === -1)
+        { return; }
+      raise(`Name '${name}' may not contain '${kJoinChar}'`);
+    }
+    assertNextNameOk(mNextName);
+    
+    const { mByteCount, mVarTable, mItemCount } =
+      (mPriv ??= ({
+        mByteCount: mNextObjectType?.sizeInBytes() ?? 0,
+        mVarTable: {},
+        mItemCount: mNextObjectType?.sizeInStackItems() ?? 0
+      }));
+    if (mNextName) {
+      if (mVarTable[mNextName]) {
+        raise(`Name '${mNextName}' already reserved.`);
+      }
+      mVarTable[mNextName] = freeze({
+        accessIndex: mByteCount - mNextObjectType!.sizeInBytes(),
+        type: mNextObjectType!
+      });
+    }
+    
+    const inst: VariableAllocation = mPrev ?? freeze({
+      lookUpTuple(names: readonly string[]): VariableOffset | undefined {
+        if (names.length === 0) {
+          raise('there must be at least one name in a valid tuple name set');
+        }
+        const joinedNames = names.join(',');
+        const found = mVarTable[joinedNames];
+        if (found)
+          { return found; }
+        const lookUps = names.map(name => inst.lookUp(name));
+        if (lookUps.some(value => value === undefined))
+          { return undefined; }
+        type TupleCheck = number | 'not ok' | 'started';
+        const accessIndex = lookUps[0]!.accessIndex;
+        const tupleOkay = lookUps.reduce((prevIdx: TupleCheck, lookUp: VariableOffset | undefined) => {
+          if (prevIdx === 'not ok')
+            { return prevIdx; }
+          const size = lookUp!.type.sizeInStackItems();
+          const next = lookUp!.accessIndex + size;
+          if (prevIdx === 'started') {
+            return next;
+          } else if ((next - prevIdx) === size) {
+            return next;
+          }
+          return 'not ok';
+        }, 'started' as TupleCheck);
+        if (!tupleOkay)
+          { return undefined; }
+        const rv = freeze({
+          accessIndex,
+          type: TupleObjectFactory.make(lookUps.map(lookUp => lookUp!.type))
+        });
+        mVarTable[joinedNames] = rv;
+        return rv;
+      },
+      lookUp(name: string): VariableOffset | undefined
+        { return mVarTable[name]; },
+      next(name: string, objectType: ObjectType): VariableAllocation {
+        const rv = VariableAllocation.make(name, objectType, mPriv, inst);
+        mPriv = undefined;
+        return rv;
+      },
+      talliedSizeInBytes: (): number => mByteCount,
+      talliedSizeInItems: (): number => mItemCount
+    });
+    return inst;
+  }
 })
 
 const ContextLinkBuild = freeze({
@@ -256,12 +343,12 @@ const ContextLinkBuild = freeze({
   ): ContextLinkBuild
   {
     
-
+    const { hasParentGetter } = mUsedAncestorCollection;
     ReceiverResolution.make(mUsedAncestorCollection, mReferenceType);
 
     const variableAllocation = memoize((): VariableAllocation => {
       if (!hasParentGetter())
-        { return; }
+        { return VariableAllocation.make(); }
       const parentContextSnapshot = mFrameStack.
         contextForHop(ContextFrameStack.kHopsToParent);
       if (!parentContextSnapshot) {
@@ -280,7 +367,11 @@ const ContextLinkBuild = freeze({
     // TODO define accessors, and preface
 
     return freeze({
-      variableAllocation
+      referenceType: (): ObjectType => mReferenceType,
+
+      preface(): FunctionType;
+
+      next(): ContextDelegationBuild;
     })
   }
 });

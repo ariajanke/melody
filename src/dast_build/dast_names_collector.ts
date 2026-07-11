@@ -74,9 +74,7 @@ function make
     visitFunctionDefinition(defs: DastFunctionNameMappings, _1: Readonly<DastNode[]>) {
       if (mScanBreadth === 'forLetDependeeNames')
         { return; }
-      // this gets *new* carried names
-      // that is these are names which are pending for a child function
-      // (but may still be declared)
+
       if (!mCarriedNamesRegistry) {
         raise('attempted to collect names without a registry for carried names');
       }
