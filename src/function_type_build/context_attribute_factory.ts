@@ -78,7 +78,7 @@ export const ContextAttributeFactory = freeze({
             writer.
               pushRepresentation(accessIndex + additional*kBytesPerWord).
               addIntegers();
-            // !!NEED NOW!! swap top two items on WASM stack
+            raise('I need a "swap top two items on WASM stack" defined for code writer!');
           }
           
           writer.storeInteger();

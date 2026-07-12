@@ -23,7 +23,7 @@ export interface DastLetDeclaration {
   assignment?: DastAttributeDeclaration;
   initialSet?: {
     variableNames: Readonly<string[]>;
-    dependeeNames: Readonly<string[]>;  
+    dependeeNames: Readonly<string[]>;
   };
 };
 

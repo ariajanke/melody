@@ -1,8 +1,8 @@
 import { BuiltinFunctionNames } from '../builtin_function_names';
-import { DastFunctionNameMappings, DastNode } from '../dast_build';
+import { DastDeclarationMap, DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { Helpers, StandardError, raise } from '../helpers';
+import { Helpers, StandardError, StandardErrorMessage, raise } from '../helpers';
 import { DeclaredContextStack } from './declared_context_stack';
 import { FunctionTypeBase } from './function_type_base';
 import { MutableFunctionTable } from './mutable_function_table';
@@ -13,6 +13,7 @@ import { TupleObjectFactory } from './tuple_type';
 import { ObjectTypeBuild } from './context_attribute_build';
 import { BuiltinTypeBase } from './builtin_type';
 import { MemoryArray } from '../memory_array';
+import { FunctionBodyPrefaceBuild } from './function_body_preface_build';
 
 // We conceptualize the preface ftype as an initial setter
 // There's setting the parent pointer, and then the ancestors
@@ -335,14 +336,16 @@ const VariableAllocation = freeze({
 
 const ContextLinkBuild = freeze({
   // we can enforce sequencing like this:
-  make(mUsedAncestorCollection: UsedAncestorCollection,
+  make(//mUsedAncestorCollection: UsedAncestorCollection,
+       mPendingNames: Readonly<{ [name: string]: true }>,
        mFrameStack: ContextFrameStack,
        // this belongs to the current (context) reference type
        mReferenceType: ObjectType,
        mReferenceTypeLookUpTable: FunctionOpLookUp = {}
   ): ContextLinkBuild
   {
-    
+    const mUsedAncestorCollection = UsedAncestorCollection.
+      make(mFrameStack, mPendingNames);
     const { hasParentGetter } = mUsedAncestorCollection;
     ReceiverResolution.make(mUsedAncestorCollection, mReferenceType);
 
@@ -363,61 +366,203 @@ const ContextLinkBuild = freeze({
         reduce((varAlc: VariableAllocation, anc: AncestorInfo) =>
                 varAlc.next(anc.variableName, anc.type), varAlc);
     });
+    const prefaceBuild = FunctionBodyPrefaceBuild.
+      make(variableAllocation(), mUsedAncestorCollection, mReferenceType, mReferenceTypeLookUpTable);
 
+    const preface = memoize(() =>
+      prefaceBuild.addAncestorAccessors() && prefaceBuild.functionType());
     // TODO define accessors, and preface
 
     return freeze({
       referenceType: (): ObjectType => mReferenceType,
 
-      preface(): FunctionType;
+      preface,
 
-      next(): ContextDelegationBuild;
+      next(mPendingNames: { [name: string]: true }): ContextDelegationBuild {
+
+        const buildDeclarationThings = (): ContextDeclarationBuild => {
+          return ContextDeclarationBuild.make(variableAllocation());
+        };
+        preface();
+        return ContextDelegationBuild.
+          make(mPendingNames,
+               mReferenceTypeLookUpTable,
+               mFrameStack,
+               buildDeclarationThings);
+      }
     })
   }
 });
 
 interface ContextDelegationBuild {
-
+  referenceType(): ObjectType;
+  next(): ContextDeclarationBuild;
 };
-const ContextDelegationFunctionType = freeze({
-  make(mName: string,
-       mFrameStack: ContextFrameStack,
-       mDelegateeType: ObjectType
-  ): FunctionTypeBuild {
-    const { mapToFringeAccessor } = FunctionNamingSchema;
-    const snapshot = () =>
-      mFrameStack.contextForHop(mFrameStack.hopCountFor(mName));
-    const accessorTable = () =>
-      mDelegateeType.lookUp(mName) ??
-      mDelegateeType.lookUp(mapToFringeAccessor(mName));
-    // const ancestorAccessor = memoize(() => accessorTable()?.byParameters
-      
-  }
-});
+// const ContextDelegationFunctionType = freeze({
+//   make(mName: string,
+//        mFrameStack: ContextFrameStack,
+//        mDelegateeType: ObjectType,
+       
+//   ): FunctionTypeBuild {
+    
+//     const { mapToFringeAccessor } = FunctionNamingSchema;
+//     const snapshot = () =>
+//       mFrameStack.contextForHop(mFrameStack.hopCountFor(mName));
+//     // const accessorTable = () =>
+//     //   mDelegateeType.lookUp(mName) ??
+//     //   mDelegateeType.lookUp(mapToFringeAccessor(mName));
+//     // const ancestorAccessor = memoize(() => accessorTable()?.byParameters
+//     snapshot()?.referenceType()?.lookUp(mName);
+//   }
+// });
 
 const ContextDelegationBuild = freeze({
   make(mPendingNames: { [name: string]: true },
        mReferenceTypeLookUpTable: FunctionOpLookUp,
-       mFrameStack: ContextFrameStack
+       mFrameStack: ContextFrameStack,
+       mReferenceType: ObjectType,
+       mMakeDeclarationBuild: () => ContextDeclarationBuild
   ) {
-    
+    // delegation is easy I think
+    // since we have ancestors, receiver resolution semantics, we could
+    // probably just copy-paste them over
+    function lookUpName(name: string): FunctionLookUpTable {
+      const snapshot = mFrameStack.contextForHop(mFrameStack.hopCountFor(name));
+      return snapshot?.referenceType()?.lookUp(name) ??
+             raise(`Could find pending name '${name}'`);
+    }
+
+    const referenceType = memoize(() => {
+      // yes really that simple
+      // receiver resolution should take care of the rest
+      for (const name in mPendingNames) {
+        mReferenceTypeLookUpTable[name] = lookUpName(name);
+      }
+
+      return mReferenceType;
+    });
+
+
+    const next = () =>
+      referenceType() && mMakeDeclarationBuild();
+
+    return freeze({
+      referenceType,
+      next
+    });
   }
 });
 
+// this does have an error state, because this builds nodes into ftypes
 interface ContextDeclarationBuild {
+  // make our cache explicit
+  // cachedBuildFor(node: DastNode): FunctionTypeBuild;
 
+  referenceType(): ObjectType;
+  // we do need the aggregate type for indirect calls...
+  aggregateType(): ObjectType;
 };
 
-({
-  make(mStack: ContextFrameStack, // crawl up on me
-       mPendingName: string // string maybe?
-  ) {}
+interface DeclarationValuesMapBuild {
+  /// NOTE if this returns, then all subsequent builds are successful
+  valueToBuildCacheFunction(): (node: DastNode) => FunctionTypeBuild | undefined;
+  error(): StandardErrorMessage;
+}
+
+function setDeclarationBuildsInOrder
+  (mDeclarationsMap: DastDeclarationMap,
+   mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
+  : Readonly<FunctionTypeBuild[]>
+{
+  const mDastSet: { [dastUid: number]: true } = {};
+  const mFtypeBuildOrder: FunctionTypeBuild[] = [];
+  function addFtypeBuildOnceFor(node: DastNode) {
+    const build = mIntoFunctionTypeBuild(node);
+    if (mDastSet[node.uid()])
+      { return; }
+    mDastSet[node.uid()] = true;
+    mFtypeBuildOrder.push(build);
+  }
+
+  const varNameToDependees = memoize(() => {
+    const varNameToDependees_: { [name: string]: { dependeeNames: Readonly<string[]>; value: DastNode; } } = {};
+    for (const name in mDeclarationsMap) {
+      const decl = mDeclarationsMap[name];
+      if (decl.initialSet === undefined)
+        { continue; }
+      const { variableNames, dependeeNames } = decl.initialSet;
+      variableNames.forEach((name: string) => {
+        varNameToDependees_[name] = { dependeeNames, value: decl.value };
+      }); 
+    }
+    return varNameToDependees_;
+  });
+
+  function doName(name: string): void {
+    const { dependeeNames, value } = varNameToDependees()[name];
+    dependeeNames.forEach(doName);
+    addFtypeBuildOnceFor(value);
+  }
+
+  for (const name in varNameToDependees()) {
+    doName(name);
+  }
+
+  return mFtypeBuildOrder;
+}
+
+const DeclarationValuesMapBuild = freeze({
+  make(mDeclarationsMap: DastDeclarationMap,
+       mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
+    : DeclarationValuesMapBuild
+  {
+    const { setErrorFn, error } = StandardError.make();
+
+    const mBuildCache: { [dastUid: number]: FunctionTypeBuild | undefined } = {};
+    const declarationValueBuildsInOrder = memoize(() =>
+      setDeclarationBuildsInOrder(mDeclarationsMap, mIntoFunctionTypeBuild));
+    const failedBuild = memoize(() =>
+      declarationValueBuildsInOrder().
+      reduce((prev: FunctionTypeBuild | undefined, build: FunctionTypeBuild) => {
+        if (prev)
+          { return prev; }
+        const { functionType, error } = build;
+        const uid = functionType()?.uid();
+        if (uid) {
+          mBuildCache[] = 
+        }
+      }, undefined));
+  }
+});
+
+const ContextDeclarationBuild = freeze({
+  make(mVariableAllocation: VariableAllocation,
+       mReferenceTypeLookUpTable: FunctionOpLookUp,
+       mDeclarationsMap: DastDeclarationMap,
+       mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild
+  ): ContextDeclarationBuild
+  {
+    // declaration must be done in dependee order
+    const declarationValueBuildsInOrder = memoize(() =>
+      setDeclarationBuildsInOrder(mDeclarationsMap, mIntoFunctionTypeBuild));
+    // next we can just build in order and cache the builds
+    ;
+
+    for (const name in mDeclarationsMap) {
+      // mReferenceTypeLookUpTable[name]
+      const decl = mDeclarationsMap[name];
+      if (decl.initialSet) {
+        decl.initialSet.variableNames
+      }
+    }
+    // what's the aggregate type?
+    const aggregateType = memoize(() => {});
+  }
 })
 
-// create delegates
-
-// we may have to work with incomplete types
-// I would like to make that explicit in the code however
-// a sub type of ObjectType that has no sizing methods
-
-// create declareds, after which all lookUps should succeed
+// after that
+// it's grab the preface
+// build the lines
+// combine
+// clean up
+// then done

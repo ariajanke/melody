@@ -34,7 +34,8 @@ function make
   //  mFunctionLookUp: FunctionOpLookUp,
    mVariableAllocation: VariableAllocation,
    mUsedAncestorCollection: UsedAncestorCollection,
-   mCurrentContextReferenceType: ObjectType)
+   mCurrentContextReferenceType: ObjectType,
+   mReferenceTypeLookUpTable: FunctionOpLookUp = {})
   : FunctionBodyPrefaceBuild
 {
   const { hasParentGetter } = mUsedAncestorCollection;
@@ -45,10 +46,10 @@ function make
     if (ftype.receiver().uid() !== TupleObjectFactory.emptyTuple().uid()) {
       raise('uh oh, must not require a receiver');
     }
-    if (mFunctionLookUp[op]) {
+    if (mReferenceTypeLookUpTable[op]) {
       raise(`Already used '${String(op)}'`);
     }
-    mFunctionLookUp[op] = MutableFunctionTable.
+    mReferenceTypeLookUpTable[op] = MutableFunctionTable.
       make().
       setDefinition(ftype.parameters(), ftype);
     return ftype;
@@ -197,7 +198,7 @@ function make
   }));
 
   const inst = freeze({
-    functionType: preface
+    functionType: preface,
     addAncestorAccessors: ancestorAccessors
     // memoize((): FunctionType => {
     //   // ensure ancestor accessors are built first
