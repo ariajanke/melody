@@ -1,11 +1,10 @@
 import { DastDeclarationMap, DastNode } from '../dast_build';
 import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { StandardErrorMessage } from '../helpers';
+import * as cbs from './context_build/context_base_stage';
 
-export interface ContextBaseStage {
-  referenceType(): ObjectType;
-  contextLinkBuild(mPendingNames: Readonly<{ [name: string]: true }>): ContextLinkStage;
-};
+export type ContextBaseStage = cbs.ContextBaseStage_;
+export const ContextBaseStage = cbs.ContextBaseStage_;
 
 export interface ContextLinkStage {
   preface(): FunctionType;

@@ -5,11 +5,10 @@ import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_ty
 import { Helpers } from '../../helpers';
 import { MemoryArray } from '../../memory_array';
 import { BuiltinTypeBase } from '../builtin_type';
-import { ContextBaseStage } from '../context_build';
 import { ContextFrameStack } from '../context_frame_stack';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
-import { PutsFunctionLookUpTable } from '../puts_function_look_up_table';
+import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { TupleObjectFactory } from '../tuple_type';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 
@@ -18,10 +17,15 @@ const { freeze, memoize } = Helpers;
 export type FunctionOpLookUp =
   { [op: string | symbol]: FunctionLookUpTable | undefined };
 
+export interface ContextBaseStage_ {
+  referenceType(): ObjectType;
+  contextLinkBuild(mPendingNames: Readonly<{ [name: string]: true }>): ContextLinkStage_;
+};
+
 /// A ContextBaseCreation is the first, prototype stage for creating a stack
 /// frame's reference type.
 export const ContextBaseStage_ = freeze({
-  make(): ContextBaseStage {
+  make(): ContextBaseStage_ {
     // scope: this replaces "stage" specifically
     // add puts
     const mTable: FunctionOpLookUp = {};

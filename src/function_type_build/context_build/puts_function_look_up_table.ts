@@ -1,9 +1,9 @@
-import { BuiltinFunctionNames } from '../builtin_function_names';
-import { CodeWriter } from '../code_writer';
-import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
-import { Helpers, raise } from '../helpers';
-import { ConstantStringType, IntegerType } from './builtin_type';
-import { FunctionTypeBase } from './function_type_base';
+import { BuiltinFunctionNames } from '../../builtin_function_names';
+import { CodeWriter } from '../../code_writer';
+import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
+import { Helpers, raise } from '../../helpers';
+import { ConstantStringType, IntegerType } from '../builtin_type';
+import { FunctionTypeBase } from '../function_type_base';
 
 const { freeze, memoize } = Helpers;
 
@@ -41,14 +41,15 @@ function make(): FunctionLookUpTable {
     }
     const validWritters = writters as readonly CodeWriterFuncName[];
 
-    return freeze({
-      ...FunctionTypeBase.receivedByNone(),
+    const rv: FunctionType = freeze({
+      ...FunctionTypeBase.makeDefaults(),
       parameters: () => type,
-      emit(writer: CodeWriter) {
+      simpleEmit(writer: CodeWriter) {
         validWritters.forEach(name => writer[name]());
         return writer;
       }
     });
+    return rv;
   }
 
   return freeze({
