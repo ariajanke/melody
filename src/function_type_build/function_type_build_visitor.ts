@@ -8,8 +8,9 @@ import { FunctionTypeRegistry } from '../function_type_registry';
 import { Helpers, raise } from '../helpers';
 import { StringPoolBuilder } from '../string_pool';
 import { CallFunctionTypeBuild } from './call_function_type_build';
-import { DastBuildCache } from './dast_build_cache';
-import { DeclaredContextStack } from './declared_context_stack';
+import { ContextFrameStack } from './context_frame_stack';
+// import { DastBuildCache } from './dast_build_cache';
+// import { DeclaredContextStack } from './declared_context_stack';
 import { FringeFunctionBuild } from './fringe_function_build';
 import { FunctionDefinitionIndexBuild } from './function_definition_index_build';
 import { InitialSetBuild } from './initial_set_build';
@@ -30,13 +31,14 @@ function make
    mFunctionRegistry: FunctionTypeRegistry)
   : DastVisitor<FunctionTypeBuild>
 {
-  const mBuildCache = DastBuildCache.
-    make((node: DastNode) => node.visit(inst));
-  const mDeclaredContextStack = DeclaredContextStack.make();
+  // const mBuildCache = DastBuildCache.
+  //   make((node: DastNode) => node.visit(inst));
+  // const mDeclaredContextStack = DeclaredContextStack.make();
+  const mStackFrameStack = ContextFrameStack.make();
 
-  const topContext = (): ObjectType =>
-    mDeclaredContextStack.contextForHop(0)?.contextType() ??
-    raise('No current context!');
+  // const topContext = (): ObjectType =>
+  //   mDeclaredContextStack.contextForHop(0)?.contextType() ??
+  //   raise('No current context!');
 
   const visitFringe = (name: string): FunctionTypeBuild =>
     FringeFunctionBuild.make(name, topContext);

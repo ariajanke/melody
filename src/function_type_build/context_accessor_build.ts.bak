@@ -4,7 +4,7 @@ import { TupleObjectFactory } from '../function_type_build/tuple_type';
 import { DastAttributeDeclaration } from '../dast_build';
 import { VariableTracker } from './variable_tracker';
 import { Helpers, raise } from '../helpers';
-import { ContextAttributeFactory } from './context_attribute_factory';
+import { ContextAttributeFactory } from './context_build/context_attribute_factory';
 import { ContextFactoryStage, ContextFunctionTypeBuild, FunctionOpLookUp } from './context_factory_stage';
 import { ContextAttributeTypeBuild } from './context_attribute_build';
 import { MutableFunctionTable } from './mutable_function_table';

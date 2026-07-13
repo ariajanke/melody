@@ -1,10 +1,10 @@
-import { Helpers, raise } from '../helpers';
-import { FunctionType, ObjectType } from '../function_type_build';
-import { TupleObjectFactory } from './tuple_type';
-import { CodeWriter } from '../code_writer';
-import { MemoryArray } from '../memory_array';
-import { FunctionTypeBase } from './function_type_base';
-import { TupleFunctionTypeBuild } from './tuple_function_type_build';
+import { Helpers, raise } from '../../helpers';
+import { FunctionType, ObjectType } from '../../function_type_build';
+import { TupleObjectFactory } from '../tuple_type';
+import { CodeWriter } from '../../code_writer';
+import { MemoryArray } from '../../memory_array';
+import { FunctionTypeBase } from '../function_type_base';
+import { TupleFunctionTypeBuild } from '../tuple_function_type_build';
 
 const { freeze } = Helpers;
 

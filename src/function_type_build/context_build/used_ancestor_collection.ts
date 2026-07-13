@@ -1,8 +1,8 @@
-import { FunctionNamingSchema } from '../function_naming_schema';
-import { ObjectType } from '../function_type_build';
-import { Helpers, raise } from '../helpers';
-import { ContextSnapshot, DeclaredContextStack } from './declared_context_stack';
-import { TupleObjectFactory } from './tuple_type';
+import { FunctionNamingSchema } from '../../function_naming_schema';
+import { ObjectType } from '../../function_type_build';
+import { Helpers, raise } from '../../helpers';
+import { ContextSnapshot, DeclaredContextStack } from '../declared_context_stack';
+import { TupleObjectFactory } from '../tuple_type';
 
 const { freeze, memoize } = Helpers;
 

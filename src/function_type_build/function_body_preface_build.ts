@@ -1,18 +1,16 @@
-import { FunctionLookUpTable, FunctionType, MutableObjectType, ObjectType } from '../function_type_build';
+import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
 import { CodeWriter } from '../code_writer';
 import { FunctionTypeBase } from './function_type_base';
 import { TupleObjectFactory } from './tuple_type';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { StackSafetyChecker } from './stack_safety_checker';
 import {
   AncestorInfo,
   ExtendedAncestorInfo,
   UsedAncestorCollection
-} from './used_ancestor_collection';
-import { ContextFactoryStage } from './context_factory_stage';
-import { VariableAllocation } from './ncontext_build';
-import { ContextAttributeFactory } from './context_attribute_factory';
+} from './context_build/used_ancestor_collection';
+import { VariableAllocation } from './context_build/ncontext_build';
+import { ContextAttributeFactory } from './context_build/context_attribute_factory';
 import { MutableFunctionTable } from './mutable_function_table';
 import { TupleFunctionTypeBuild } from './tuple_function_type_build';
 
