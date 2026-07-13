@@ -117,5 +117,5 @@ function make(mRoot: DastNode,
 export const FunctionTypeBuild = freeze({
   make,
   emptyTupleType: TupleObjectFactory.emptyTuple,
-  makeBaseType: FunctionTypeBase.receivedByContext
+  // makeBaseType: FunctionTypeBase.receivedByContext
 });
