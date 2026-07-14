@@ -1,28 +1,17 @@
-import { DastDeclarationMap, DastNode } from '../dast_build';
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { StandardErrorMessage } from '../helpers';
+import { FunctionType, ObjectType } from '../function_type_build';
 import * as cbs from './context_build/context_base_stage';
+import * as cls from './context_build/context_link_stage';
+import * as cds from './context_build/context_delegation_stage';
+import * as cdb from './context_build/context_declaration_build';
 
-export type ContextBaseStage = cbs.ContextBaseStage_;
+export type  ContextBaseStage = cbs.ContextBaseStage_;
 export const ContextBaseStage = cbs.ContextBaseStage_;
 
-export interface ContextLinkStage {
-  preface(): FunctionType;
-  receiverResolution(): ReceiverResolution;
-  next(mPendingNames: { [name: string]: true }): ContextDelegationStage;
-};
+export type  ContextLinkStage = cls.ContextLinkStage_;
 
-export interface ContextDelegationStage {
-  next(declarationsMap: DastDeclarationMap,
-       intoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
-    : ContextDeclarationBuild;
-};
+export type ContextDelegationStage = cds.ContextDelegationStage_;
 
-export interface ContextDeclarationBuild {
-  referenceType(): ObjectType | undefined;
-  aggregateType(): ObjectType | undefined;
-  error(): StandardErrorMessage;
-};
+export type ContextDeclarationBuild = cdb.ContextDeclarationBuild_;
 
 /// Identifies how to get a receiver needed by a function call, typically
 /// within the context of a function's stack frame.

@@ -7,6 +7,12 @@ import { FunctionOpLookUp } from './context_base_stage';
 
 const { freeze, memoize } = Helpers;
 
+export interface ContextDelegationStage_ {
+  next(declarationsMap: DastDeclarationMap,
+       intoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
+    : ContextDeclarationBuild;
+};
+
 export const ContextDelegationStage_ = freeze({
   make(mPendingNames: { [name: string]: true },
        mReferenceTypeLookUpTable: FunctionOpLookUp,

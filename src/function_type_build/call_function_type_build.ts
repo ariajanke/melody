@@ -1,7 +1,7 @@
 import { CodeWriter } from '../code_writer';
 import { DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { FunctionType, FunctionTypeBuild } from '../function_type_build';
+import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, StandardError, raise } from '../helpers';
 import { FunctionTypeBase } from './function_type_base';
 import { StackSafetyChecker } from './stack_safety_checker';
@@ -19,6 +19,7 @@ function make
   (mCallName: DastNode,
    mReceiver: DastNode,
    mArgs: DastNode,
+   mGetCurrentAggregate: () => ObjectType | 'not ready',
    mGetContextSizeInBytes: () => number,
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
   : FunctionTypeBuild

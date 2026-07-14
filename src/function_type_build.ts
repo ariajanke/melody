@@ -13,8 +13,6 @@ export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;
 
-
-
   simpleEmit(writer: CodeWriter): void;
 
   emit(receiverFtype: FunctionType,

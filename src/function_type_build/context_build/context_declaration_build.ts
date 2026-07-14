@@ -1,7 +1,6 @@
 import { DastDeclarationMap, DastNode } from '../../dast_build';
 import { FunctionTypeBuild, ObjectType } from '../../function_type_build';
-import { Helpers, raise, StandardError } from '../../helpers';
-import { ContextDeclarationBuild } from '../context_build';
+import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { TupleObjectFactory } from '../tuple_type';
 import { ContextAttributeFactory } from './context_attribute_factory';
@@ -12,13 +11,19 @@ import { DeclarationValuesMapBuild } from './declaration_values_map_build';
 
 const { freeze, memoize } = Helpers;
 
+export interface ContextDeclarationBuild_ {
+  referenceType(): ObjectType | undefined;
+  aggregateType(): ObjectType | undefined;
+  error(): StandardErrorMessage;
+};
+
 export const ContextDeclarationBuild_ = freeze({
   make(mVariableAllocation: VariableAllocation,
        mReferenceTypeLookUpTable: FunctionOpLookUp,
        mDeclarationsMap: DastDeclarationMap,
        mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,
        mReferenceType: ObjectType
-  ): ContextDeclarationBuild
+  ): ContextDeclarationBuild_
   {
     const { error, setErrorFn } = StandardError.make();
     // declaration value ftypes, build in order, if that mapper ain't there

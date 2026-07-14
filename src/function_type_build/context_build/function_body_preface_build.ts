@@ -1,18 +1,19 @@
-import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
-import { Helpers, raise } from '../helpers';
-import { CodeWriter } from '../code_writer';
-import { FunctionTypeBase } from './function_type_base';
-import { TupleObjectFactory } from './tuple_type';
-import { FunctionNamingSchema } from '../function_naming_schema';
+import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
+import { Helpers, raise } from '../../helpers';
+import { CodeWriter } from '../../code_writer';
+import { FunctionTypeBase } from '../function_type_base';
+import { TupleObjectFactory } from '../tuple_type';
+import { FunctionNamingSchema } from '../../function_naming_schema';
 import {
   AncestorInfo,
   ExtendedAncestorInfo,
   UsedAncestorCollection
-} from './context_build/used_ancestor_collection';
-import { VariableAllocation } from './context_build/ncontext_build';
-import { ContextAttributeFactory } from './context_build/context_attribute_factory';
-import { MutableFunctionTable } from './mutable_function_table';
-import { TupleFunctionTypeBuild } from './tuple_function_type_build';
+} from './used_ancestor_collection';
+import { ContextAttributeFactory } from './context_attribute_factory';
+import { MutableFunctionTable } from '../mutable_function_table';
+import { TupleFunctionTypeBuild } from '../tuple_function_type_build';
+import { VariableAllocation } from './variable_allocation';
+import { FunctionOpLookUp } from './context_base_stage';
 
 const { freeze, memoize } = Helpers;
 
@@ -21,16 +22,8 @@ export interface FunctionBodyPrefaceBuild {
   addAncestorAccessors(): Readonly<FunctionType[]>;
 };
 
-type FunctionOpLookUp =
-  { [op: string | symbol]: FunctionLookUpTable | undefined };
-
-// I guess we're building and binding ftypes to the context?!
-// may as well include the parent?
 function make
-  (//mStage: ContextFactoryStage,
-  //  mPrototypeContext: MutableObjectType,
-  //  mFunctionLookUp: FunctionOpLookUp,
-   mVariableAllocation: VariableAllocation,
+  (mVariableAllocation: VariableAllocation,
    mUsedAncestorCollection: UsedAncestorCollection,
    mCurrentContextReferenceType: ObjectType,
    mReferenceTypeLookUpTable: FunctionOpLookUp = {})
@@ -65,15 +58,12 @@ function make
     const ftype = ContextAttributeFactory.
       buildReceiverGetter(varInfo.accessIndex, varInfo.type);
     checkedAddAccessor(FunctionNamingSchema.kParentName, ftype);
+
     return ftype;
-    // return mStage.intoObjectType().
-    //   lookUp(FunctionNamingSchema.kParentName)?.
-    //   byParameters(TupleObjectFactory.emptyTuple());
   });
 
   const saveLocalStackPointer = memoize((): FunctionType =>
     freeze({
-      // ...FunctionTypeBase.receivedByContext(),
       ...FunctionTypeBase.makeDefaults(),
       simpleEmit(writer: CodeWriter): void {
         writer.forStackPointer('saveToLocal');
@@ -93,21 +83,11 @@ function make
         raise(`Excepted variable '${info.variableName}' to be defined`);
       }
       const accessorName = FunctionNamingSchema.
-      //   mapToFringeAccessor(info.variableName);
         mapToFringeAccessor(info.variableName);
 
       const ftype = ContextAttributeFactory.
         buildReceiverGetter(varInfo.accessIndex, varInfo.type);
       return checkedAddAccessor(accessorName, ftype);
-      // const build = mStage.
-      //   intoAccessorBuild(accessorName, info, info.type);
-      // if (!build.functionType()) {
-      //   raise(
-      //     `Ancestor accessor "${accessorName}" failed to build: ` +
-      //     `"${build.error().message}"`
-      //   );
-      // }
-      // return build.functionType()!;
     });
   });
 
@@ -117,7 +97,6 @@ function make
     const ancs = mUsedAncestorCollection.allAncestors();
     if (ancs.length === 0) {
       return freeze({
-        // ...FunctionTypeBase.receivedByContext(),
         ...FunctionTypeBase.makeDefaults(),
         simpleEmit: (_0: CodeWriter) => {}
       });
@@ -145,7 +124,7 @@ function make
         }
       }
     );
-    // StackSafetyChecker.make().check(parentGetter()!);
+    
     const ftype = freeze({
       ...FunctionTypeBase.makeDefaults(),
       simpleEmit(writer: CodeWriter): void {
@@ -155,7 +134,7 @@ function make
       },
       returns: mUsedAncestorCollection.ancestorTupleType
     });
-    // StackSafetyChecker.make().check(ftype);
+    
     return ftype;
   });
 
@@ -198,20 +177,6 @@ function make
   const inst = freeze({
     functionType: preface,
     addAncestorAccessors: ancestorAccessors
-    // memoize((): FunctionType => {
-    //   // ensure ancestor accessors are built first
-    //   ancestorAccessors();
-    //   return freeze({
-    //     ...FunctionTypeBase.makeDefaults(),
-    //     simpleEmit(writer: CodeWriter) {
-    //       saveLocalStackPointer().emit(writer);
-    //       if (hasParentGetter()) {
-    //         ancestorInitialSet().simpleEmit(writer);
-    //       }
-    //       return writer;
-    //     }
-    //   });
-    // })
   });
   return inst;
 }

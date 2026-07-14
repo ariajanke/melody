@@ -1,11 +1,14 @@
 import { DastFunctionNameMappings } from '../dast_build';
 import { ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
+import { ReceiverResolution } from './context_build';
 
 const { freeze } = Helpers;
 
 export interface ContextFrameSnapshot {
+  receiverResolution(): ReceiverResolution;
   referenceType(): ObjectType;
+  aggregateType(): ObjectType | 'not ready';
   uniqueName(): string;
 };
 
@@ -16,10 +19,11 @@ export interface ContextFrameStack {
 };
 
 export interface WritableContextFrameStack {
-  withBaseReferenceType<T>(defs: DastFunctionNameMappings, contextReferenceType: ObjectType, fn: () => T): T;
+  withBaseReferenceType<T>(snapshot: ContextFrameSnapshot, fn: () => T): T;
 };
 
 export const ContextFrameStack = freeze({
+  // TODO possibly misleading
   kHopsToParent: 0,
   make(): WritableContextFrameStack {
     const mStack: ContextFrameSnapshot[] = [];
@@ -64,14 +68,10 @@ export const ContextFrameStack = freeze({
     }
 
     function withBaseReferenceType<T>
-      (defs: DastFunctionNameMappings,
-       incompleteReferenceType: ObjectType,
+      (snapshot: ContextFrameSnapshot, 
        fn: () => T): T
     {
-      mStack.push({
-        referenceType: () => incompleteReferenceType, 
-        uniqueName: () => defs.name
-      });
+      mStack.push(snapshot);
       mNameCacheThing = {};
       const result = fn();
       mStack.pop();
