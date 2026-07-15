@@ -1,7 +1,7 @@
 import { DastDeclarationMap, DastNode } from '../../dast_build';
 import { FunctionTypeBuild } from '../../function_type_build';
 import { Helpers, StandardError, StandardErrorMessage } from '../../helpers';
-import { DeclarationsBuildOrder } from './declarations_build_order';
+// import { DeclarationsBuildOrder } from './declarations_build_order';
 
 const { freeze, memoize } = Helpers;
 
