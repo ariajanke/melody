@@ -30,6 +30,12 @@ export const DeclarationValuesMapBuild = freeze({
         if (build.functionType())
           { return undefined; }
 
+        // NOTE
+        // after each succesful build, we have to immediately add the whatever
+        // the declaration creates on to the reference type
+        // this way other DAST value nodes which depend on this one are
+        // supported (e.g. no missing method error)
+
         return build;
       }, undefined));
 

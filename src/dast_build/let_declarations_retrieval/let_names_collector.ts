@@ -22,7 +22,7 @@ export const LetNamesCollector = freeze({
   },
   make(mNames: string[],
        mOperator: string,
-       mDependeeNames: readonly string[],
+       mDependeeNames: Readonly<string[]>,
        mArgsNode: DastNode)
   {
     const { beforeFinish, memoizedFinish } = FinishingMemoization.make();

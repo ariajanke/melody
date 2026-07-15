@@ -12,17 +12,30 @@ export type DastVisitor<ResultType = void> = DastVisitor_<ResultType>;
 export const DastVisitor = DastVisitor_;
 
 export interface DastAttributeDeclaration {
+  /// If present, this variable is part of a tuple, it's rank is the (array)
+  /// position of the type for which this variable is.
   tupleRank?: number;
   variableName: string;
 };
 
 export interface DastLetDeclaration {
+  /// This node determines the object type of this declaration's variable(s),
+  /// and subsequently it's function type.
+  /// Note that many declared functions may share a single value node, be it
+  /// part of the same series by variable name, or as a member of a tuple.
   value: DastNode;
 
   accessor?: DastAttributeDeclaration;
   assignment?: DastAttributeDeclaration;
+
+  /// If present, this declares an initial set function.
+  /// Every accessor and assignment will have a corresponding initial set
   initialSet?: {
+    /// variables defined by this initial set
+    /// Multiple names means a tuple initial set (e.g "let (a, b, ...) = ...")
     variableNames: Readonly<string[]>;
+    /// dependee names are function names which must be defined first, in order
+    /// for this declaration to be definable
     dependeeNames: Readonly<string[]>;
   };
 };
@@ -54,10 +67,12 @@ export interface DastBuild {
   node(): DastNode | undefined;
   error(): StandardErrorMessage;
 }
-// DAST: Declartive Abstract Syntax Tree
-// Fundamentally IAST -> DAST describes that creation of DAST. Its use is for
-// creating a tree which names are all laid out conviently for function type
-// building. Its schema is validated before finally returning.
+
+/// Builds a DAST, from the given IAST root node.
+/// DAST: Declartive Abstract Syntax Tree
+/// This tree has names (declarations and pending) are all laid out
+/// conveniently for function type building. Its schema is validated before
+/// finally returning.
 export const DastBuild = freeze({
   make(mRoot: IastNode,
        mVisitor = DastBuildVisitor.make(),

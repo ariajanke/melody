@@ -89,7 +89,7 @@ export const VariableAllocation = freeze({
           }
           return 'not ok';
         }, 'started' as TupleCheck);
-        if (!tupleOkay)
+        if (tupleOkay === 'not ok')
           { return undefined; }
         const rv = freeze({
           accessIndex,

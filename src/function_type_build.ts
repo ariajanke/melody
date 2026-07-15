@@ -13,6 +13,8 @@ export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;
 
+  // emission, it's important that emission can be deferred
+
   simpleEmit(writer: CodeWriter): void;
 
   emit(receiverFtype: FunctionType,

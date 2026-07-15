@@ -10,8 +10,11 @@ const { freeze } = Helpers;
 export interface DastVisitor_<ResultType = void> {
   visitString(v: string): ResultType;
   visitInteger(v: string): ResultType;
+  /// Fringe name strings will exclude there "." preface e.g. "a" instead of
+  /// ".a"
   visitFringe(v: string): ResultType;
   visitTuple(nodes: Readonly<DastNode[]>): ResultType;
+  /// callNames can be "puts", "a:="
   visitCall(callName: DastNode, receiver: DastNode, args: DastNode): ResultType;
   visitInitialSet(namesDefined: Readonly<string[]> | string, node: DastNode): ResultType;
   visitFunctionDefinition(

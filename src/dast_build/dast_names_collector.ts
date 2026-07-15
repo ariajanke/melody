@@ -57,6 +57,8 @@ function make
       {
         // NOTE direct calls will still have a `.name`, they are just sort of
         //      immediately evaluated
+        // NOTE we do not expect (nor support atm) explicit accessor calls in
+        //      call nodes, as they are expected in fringes only
         if (!isAnAssignmentName(name)) {
           mNames.add(mapToFringeAccessor(name));
         }

@@ -1,5 +1,5 @@
-import { DastFunctionNameMappings } from '../dast_build';
-import { ObjectType } from '../function_type_build';
+import { DastFunctionNameMappings, DastNode } from '../dast_build';
+import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
 import { ReceiverResolution } from './context_build';
 
@@ -10,12 +10,16 @@ export interface ContextFrameSnapshot {
   referenceType(): ObjectType;
   aggregateType(): ObjectType | 'not ready';
   uniqueName(): string;
+
+
 };
 
 export interface ContextFrameStack {
   findWhereDeclared(pendingName: string): ObjectType;
   hopCountFor(pendingName: string): number;
   contextForHop(idx: number): ContextFrameSnapshot | undefined;
+
+  top(): {};
 };
 
 export interface WritableContextFrameStack {
@@ -25,7 +29,8 @@ export interface WritableContextFrameStack {
 export const ContextFrameStack = freeze({
   // TODO possibly misleading
   kHopsToParent: 0,
-  make(): WritableContextFrameStack {
+  make(mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild): WritableContextFrameStack
+  {
     const mStack: ContextFrameSnapshot[] = [];
     let mNameCacheThing: { [name: string]: number | undefined } = {};
 

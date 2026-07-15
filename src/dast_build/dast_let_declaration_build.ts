@@ -56,7 +56,7 @@ function make(mElement: LetNameElement) {
     if (mElement.operator !== kAssignmentOperator) {
       return mDastLetDeclarationMap;
     }
-    // nice overhead jackass
+
     variableNamesWithRank((name: string, tupleRank: number | undefined) => {
       mDastLetDeclarationMap[mapToAssignment(name)] = {
         value,

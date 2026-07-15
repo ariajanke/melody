@@ -40,70 +40,128 @@ function assertSingleItemReceiver(receiverFtype: FunctionType) {
   { raise('receiver assumptions'); }
 }
 
-export const ContextAttributeFactory = freeze({
-  buildSetter(accessIndex: number, type: ObjectType, getter?: FunctionType): FunctionType {
+function makeBuildSetter(returnsItself: boolean) {
+  return (accessIndex: number, type: ObjectType): FunctionType => {
     const { emptyTuple } = TupleObjectFactory;
+    const getter = returnsItself ? ContextAttributeFactory.buildGetter(accessIndex, type) : undefined;
+    const emit = (receiverFtype: FunctionType,
+                  parameterFtype: FunctionType,
+                  writer: CodeWriter): void =>
+    {
+      assertSingleItemReceiver(receiverFtype);
+      if (parameterFtype.returns   ().uid() !== type.uid() ||
+          parameterFtype.receiver  ().uid() !== emptyTuple().uid() ||
+          parameterFtype.parameters().uid() !== emptyTuple().uid())
+      {
+        raise('parameter assumptions');
+      }
+
+      // we have no idea how many parameter "items" there are
+      // we can't intersperse our target
+
+      // HACK to reduce instructions
+      if (parameterFtype.returns().sizeInStackItems() === 1) {
+        receiverFtype.simpleEmit(writer);
+        writer.pushRepresentation(accessIndex).addIntegers();
+      }
+
+      parameterFtype.simpleEmit(writer);
+
+      forEachWord(inPlainOrder, type, (additional: number) => {
+        // HACK to reduce instructions
+        if (parameterFtype.returns().sizeInStackItems() !== 1) {
+          receiverFtype.simpleEmit(writer);
+          writer.
+            pushRepresentation(accessIndex + additional*kBytesPerWord).
+            addIntegers();
+          raise('I need a "swap top two items on WASM stack" defined for code writer!');
+        }
+        
+        writer.storeInteger();
+      });
+
+      if (!getter)
+        { return; }
+
+      // NOTE reached by "name:=" setters
+      getter.emit(receiverFtype, TupleFunctionTypeBuild.emitEmpty(), writer);
+    };
+
     return freeze({
-      // ...FunctionTypeBase.receivedByContext(),
       ...FunctionTypeBase.makeDefaults(),
       parameters: () => type,
       returns: () => getter ? type : emptyTuple(),
-      emit(receiverFtype: FunctionType,
-           parameterFtype: FunctionType,
-           writer: CodeWriter): void
-      {
-        assertSingleItemReceiver(receiverFtype);
-        if (parameterFtype.returns   ().uid() !== type.uid() ||
-            parameterFtype.receiver  ().uid() !== emptyTuple().uid() ||
-            parameterFtype.parameters().uid() !== emptyTuple().uid())
-        {
-          raise('parameter assumptions');
-        }
-
-        // we have no idea how many parameter "items" there are
-        // we can't intersperse our target
-
-        // HACK to reduce instructions
-        if (parameterFtype.returns().sizeInStackItems() === 1) {
-          receiverFtype.simpleEmit(writer);
-          writer.pushRepresentation(accessIndex).addIntegers();
-        }
-
-        parameterFtype.simpleEmit(writer);
-
-        forEachWord(inPlainOrder, type, (additional: number) => {
-          // HACK to reduce instructions
-          if (parameterFtype.returns().sizeInStackItems() !== 1) {
-            receiverFtype.simpleEmit(writer);
-            writer.
-              pushRepresentation(accessIndex + additional*kBytesPerWord).
-              addIntegers();
-            raise('I need a "swap top two items on WASM stack" defined for code writer!');
-          }
-          
-          writer.storeInteger();
-        });
-
-        if (!getter)
-          { return; }
-
-        // NOTE reach for "name:=" setters
-        getter.emit(receiverFtype, TupleFunctionTypeBuild.emitEmpty(), writer);
-      },
-      // emit(writer: CodeWriter): void {
-      //   forEachWord(inPlainOrder, type, (additional: number) => {
-      //     writer.storeInteger(accessIndex + additional*kBytesPerWord);
-      //   });
-
-      //   if (!getter)
-      //     { return; }
-
-      //   // NOTE reach for "name:=" setters
-      //   writer.drop();
-      //   getter.emit(writer);
-      // }
+      emit
     });
-  },
+  };
+}
+
+export const ContextAttributeFactory = freeze({
+  // buildSetter(accessIndex: number, type: ObjectType, getter?: FunctionType): FunctionType {
+  //   const { emptyTuple } = TupleObjectFactory;
+  //   return freeze({
+  //     // ...FunctionTypeBase.receivedByContext(),
+  //     ...FunctionTypeBase.makeDefaults(),
+  //     parameters: () => type,
+  //     returns: () => getter ? type : emptyTuple(),
+  //     emit(receiverFtype: FunctionType,
+  //          parameterFtype: FunctionType,
+  //          writer: CodeWriter): void
+  //     {
+  //       assertSingleItemReceiver(receiverFtype);
+  //       if (parameterFtype.returns   ().uid() !== type.uid() ||
+  //           parameterFtype.receiver  ().uid() !== emptyTuple().uid() ||
+  //           parameterFtype.parameters().uid() !== emptyTuple().uid())
+  //       {
+  //         raise('parameter assumptions');
+  //       }
+
+  //       // we have no idea how many parameter "items" there are
+  //       // we can't intersperse our target
+
+  //       // HACK to reduce instructions
+  //       if (parameterFtype.returns().sizeInStackItems() === 1) {
+  //         receiverFtype.simpleEmit(writer);
+  //         writer.pushRepresentation(accessIndex).addIntegers();
+  //       }
+
+  //       parameterFtype.simpleEmit(writer);
+
+  //       forEachWord(inPlainOrder, type, (additional: number) => {
+  //         // HACK to reduce instructions
+  //         if (parameterFtype.returns().sizeInStackItems() !== 1) {
+  //           receiverFtype.simpleEmit(writer);
+  //           writer.
+  //             pushRepresentation(accessIndex + additional*kBytesPerWord).
+  //             addIntegers();
+  //           raise('I need a "swap top two items on WASM stack" defined for code writer!');
+  //         }
+          
+  //         writer.storeInteger();
+  //       });
+
+  //       if (!getter)
+  //         { return; }
+
+  //       // NOTE reached by "name:=" setters
+  //       getter.emit(receiverFtype, TupleFunctionTypeBuild.emitEmpty(), writer);
+  //     },
+  //     // emit(writer: CodeWriter): void {
+  //     //   forEachWord(inPlainOrder, type, (additional: number) => {
+  //     //     writer.storeInteger(accessIndex + additional*kBytesPerWord);
+  //     //   });
+
+  //     //   if (!getter)
+  //     //     { return; }
+
+  //     //   // NOTE reach for "name:=" setters
+  //     //   writer.drop();
+  //     //   getter.emit(writer);
+  //     // }
+  //   });
+  // },
+  buildInitialSetter: makeBuildSetter(false),
+  buildGeneralSetter: makeBuildSetter(true),
   buildReceiverGetter(accessIndex: number, type: ObjectType): FunctionType {
     // this is where our stack point becomes very important
     // in order for receiver resolution to work, it must be a "base case"
