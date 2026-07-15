@@ -47,6 +47,7 @@ function make
     LiteralFunctionTypeBuild.makeForString(string_, mStringPoolBuilder);
 
   function visitCall(callName: DastNode, receiver: DastNode, args: DastNode): FunctionTypeBuild {
+    // TODO check for "not ready" at the top of the stack?
     return CallFunctionTypeBuild.
       make(callName,
            receiver,

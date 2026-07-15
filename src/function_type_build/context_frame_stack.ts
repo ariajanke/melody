@@ -10,8 +10,6 @@ export interface ContextFrameSnapshot {
   referenceType(): ObjectType;
   aggregateType(): ObjectType | 'not ready';
   uniqueName(): string;
-
-
 };
 
 export interface ContextFrameStack {
