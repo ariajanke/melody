@@ -1,6 +1,10 @@
+import { CodeWriter } from '../../code_writer';
 import { DastDeclarationMap, DastNode } from '../../dast_build';
-import { FunctionTypeBuild, ObjectType } from '../../function_type_build';
-import { Helpers, StandardError, StandardErrorMessage } from '../../helpers';
+import { FunctionNamingSchema } from '../../function_naming_schema';
+import { FunctionType, FunctionTypeBuild, ObjectType } from '../../function_type_build';
+import { Helpers, StandardError, StandardErrorMessage, raise } from '../../helpers';
+import { FunctionTypeBase } from '../function_type_base';
+import { TupleObjectFactory } from '../tuple_type';
 import { FunctionOpLookUp } from './context_base_stage';
 import { DeclarationFunctionGroup, NameTypePair } from './declaration_function_group';
 import { DeclarationLookUpTable } from './declaration_look_up_table';
@@ -16,6 +20,11 @@ export interface ContextDeclarationBuild_ {
   error(): StandardErrorMessage;
 };
 
+// interface EmitterContext {
+//   passParameterFunction(ftype: FunctionType, fn: () => void): void;
+
+// };
+
 function make
   (mVariableAllocation: VariableAllocation,
    mReferenceTypeLookUpTable: FunctionOpLookUp,
@@ -28,12 +37,52 @@ function make
 
   const { orderedGroups } = OrderedDeclarationsGroupCollection.make(mDeclarationsMap, mIntoFunctionTypeBuild);
 
+  const makeImplicitCalls = (
+    mReferenceType: ObjectType,
+    mBreakdown: Readonly<NameTypePair[]>) =>
+  {
+    mBreakdown.
+      filter((v: NameTypePair) =>
+        v.type.lookUp(FunctionNamingSchema.kCallName)).
+      map((v: NameTypePair) => {
+        const indexGetter = mReferenceType.
+          lookUp(FunctionNamingSchema.mapToFringeAccessor(v.name))?.
+          byParameters(TupleObjectFactory.emptyTuple()) ??
+          raise('uh oh');
+        const emit = (receiverFtype: FunctionType,
+                      parameterFtype: FunctionType,
+                      writer: CodeWriter): void =>
+        {
+          receiverFtype.simpleEmit(writer);
+          parameterFtype.simpleEmit(writer);
+          indexGetter.simpleEmit(writer);
+          writer.
+            // pushRepresentation( /* need aggregate size */ ).
+            pushStackPointer().
+            addIntegers().
+            setStackPointer();
+
+          // TODO do the actual call
+          // writer.indirectCall(...)
+
+          writer.forStackPointer('restoreToGlobal');
+        };
+        const ftype = freeze({
+          ...FunctionTypeBase.makeNewEmitlessEmpty(),
+          // returns: empty
+          // parameters: empty
+          emit
+        });
+        return [v.name, ftype];
+      });
+  };
+
   const fullVariableAllocation = memoize(() => orderedGroups().
     reduce((startingAlloc: VariableAllocation | undefined, t: DeclarationFunctionGroup) => {
       if (!startingAlloc)
         { return undefined; }
 
-      // NOTE higly state dependant, build the base value node first
+      // NOTE higly state dependant, build the base value node first,
       //      variable and function types will depend on it
       const { functionType, error } = t.baseValueFunctionBuild();
       
@@ -49,6 +98,7 @@ function make
       // NOTE we must add functions as they maybe depended upon in future base
       //      value builds
       t.functionNames().forEach((name: string) => {
+
         mReferenceTypeLookUpTable[name] = DeclarationLookUpTable.
           make(mDeclarationsMap[name], newAlloc);
       });

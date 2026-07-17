@@ -12,9 +12,9 @@ function makeFunctionType
   (mRepresentation: number, mType: ObjectType): FunctionType
 {
   return freeze({
-    ...FunctionTypeBase.receivedByNone(),
+    ...FunctionTypeBase.makeNewEmitlessEmpty(),
     returns: (): ObjectType => mType,
-    emit(writer: CodeWriter) {
+    simpleEmit(writer: CodeWriter) {
       return writer.pushRepresentation(mRepresentation);
     }
   });

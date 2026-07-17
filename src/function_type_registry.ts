@@ -34,8 +34,8 @@ function make() {
   const { emptyTupleType } = FunctionTypeBuild;
   const callName = Token.kCallToken.content;
   const callFunction = memoize((): FunctionType => freeze({
-    ...FunctionTypeBuild.makeBaseType(),
-    emit(writer: CodeWriter) {
+    ...FunctionType.makeNewEmitlessEmpty(),
+    simpleEmit(writer: CodeWriter) {
       return writer.indirectCall(kSignatureIndex);
     }
   }));
@@ -61,13 +61,13 @@ function make() {
       uid: memoize(Symbol),
       sizeInBytes: () => MemoryArray.kWordSizeInBytes,
       sizeInStackItems: () => 1,
-      stackCleanUp: memoize((): FunctionType => freeze({
-        ...FunctionTypeBuild.makeBaseType(),
-        parameters: () => objectType,
-        emit(writer: CodeWriter) {
-          return writer.drop();
-        }
-      }))
+      // stackCleanUp: memoize((): FunctionType => freeze({
+      //   ...FunctionType.makeNewEmitlessEmpty(),
+      //   parameters: () => objectType,
+      //   simpleEmit(writer: CodeWriter) {
+      //     return writer.drop();
+      //   }
+      // }))
     });
     return objectType;
   });
@@ -75,9 +75,9 @@ function make() {
   function newIndexEmission(): FunctionType {
     const idx = mRegistryLength++;
     return freeze({
-      ...FunctionTypeBuild.makeBaseType(),
+      ...FunctionType.makeNewEmitlessEmpty(),
       returns: () => functionObjectType(),
-      emit(writer: CodeWriter) {
+      simpleEmit(writer: CodeWriter) {
         return writer.pushRepresentation(idx);
       },
     });

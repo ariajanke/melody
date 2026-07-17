@@ -35,8 +35,7 @@ function make
     if (!functionTypesFromNodes())
       { return; }
     return freeze({
-      // ...FunctionTypeBase.receivedByNone(),
-      ...FunctionTypeBase.makeDefaults(),
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
       returns: memoize(() => TupleObjectFactory.
         make(functionTypesFromNodes()!.map(ft => ft.returns()))),
       simpleEmit(writer: CodeWriter) {
@@ -53,10 +52,4 @@ function make
   });
 }
 
-const emitEmpty = memoize((): FunctionType =>
-  freeze({
-    ...FunctionTypeBase.makeDefaults(),
-    simpleEmit(_0: CodeWriter) {},
-  }));
-
-export const TupleFunctionTypeBuild = freeze({ make, emitEmpty });
+export const TupleFunctionTypeBuild = freeze({ make });

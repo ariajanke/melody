@@ -55,7 +55,10 @@ function make
       if (!aggregateType()) {
         return setErrorFn(fullContextBuild().error);
       }
+      // wrap my code writer, s.t. it gets extended?!
+
       mSetAggregateType = aggregateType()!;
+      // mSetAggregateType.sizeInBytes(); -> send this to ftypes some how
 
       const subBuilds: FunctionTypeBuild[] = [];
       subBuilds.

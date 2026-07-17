@@ -17,7 +17,7 @@ export interface ContextFrameStack {
   hopCountFor(pendingName: string): number;
   contextForHop(idx: number): ContextFrameSnapshot | undefined;
 
-  top(): {};
+  // top(): {};
 };
 
 export interface WritableContextFrameStack {

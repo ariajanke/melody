@@ -27,7 +27,7 @@ export interface CodeWriter {
 
   /// ~Stores the top of the stack to SP + offset~
   /// Basic WASM instruction: onto memory, takes the value on top, then stores
-  /// to memory as specified by the next value on the stack
+  /// to the address as specified by the next value on the stack
   /// Stack Effect: [i32, i32] -> []
   storeInteger(): CodeWriter;
 

@@ -3,6 +3,7 @@ import { DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, StandardError, raise } from '../helpers';
+import { ContextFrameSnapshot } from './context_frame_stack';
 import { FunctionTypeBase } from './function_type_base';
 import { StackSafetyChecker } from './stack_safety_checker';
 import { TupleObjectFactory } from './tuple_type';
@@ -19,8 +20,9 @@ function make
   (mCallName: DastNode,
    mReceiver: DastNode,
    mArgs: DastNode,
-   mGetCurrentAggregate: () => ObjectType | 'not ready',
-   mGetContextSizeInBytes: () => number,
+  //  mGetCurrentAggregate: () => ObjectType | 'not ready',
+  //  mGetContextSizeInBytes: () => number,
+   mContext: ContextFrameSnapshot,
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
   : FunctionTypeBuild
 {
@@ -75,19 +77,19 @@ function make
   // the expected receiver cannot be made available
   // (be it lexically, current frame, or none)
 
-  const actualReceiver = memoize(() => {
-    if (!callFunctionType())
-      { return undefined; }
-    const { alternateReceiver } = callFunctionType()!;
-    if (!alternateReceiver()) {
-      return lexicalReceiver();
-    }
+  // const actualReceiver = memoize(() => {
+  //   if (!callFunctionType())
+  //     { return undefined; }
+  //   const { alternateReceiver } = callFunctionType()!;
+  //   if (!alternateReceiver()) {
+  //     return lexicalReceiver();
+  //   }
 
-    return lexicalReceiver()?.
-      returns().
-      lookUp(alternateReceiver()!)?.
-      byParameters(emptyTuple());
-  });
+  //   return lexicalReceiver()?.
+  //     returns().
+  //     lookUp(alternateReceiver()!)?.
+  //     byParameters(emptyTuple());
+  // });
   
   const { emptyTuple } = TupleObjectFactory;
 

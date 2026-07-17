@@ -34,8 +34,9 @@ function make
   // const mBuildCache = DastBuildCache.
   //   make((node: DastNode) => node.visit(inst));
   // const mDeclaredContextStack = DeclaredContextStack.make();
-  const mStackFrameStack = ContextFrameStack.make();
   const mFurtherVisit = (node: DastNode) => node.visit(inst);
+  const mStackFrameStack = ContextFrameStack.make(mFurtherVisit);
+  
   // const topContext = (): ObjectType =>
   //   mDeclaredContextStack.contextForHop(0)?.contextType() ??
   //   raise('No current context!');

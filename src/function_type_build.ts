@@ -59,6 +59,8 @@ export interface FunctionType {
   uid(): symbol;
 };
 
+export const FunctionType = FunctionTypeBase;
+
 // TODO we're so far from PTCs its not even funny
 // export interface FunctionAbility {
 //   evaluableNow(): boolean;
@@ -117,5 +119,4 @@ function make(mRoot: DastNode,
 export const FunctionTypeBuild = freeze({
   make,
   emptyTupleType: TupleObjectFactory.emptyTuple,
-  // makeBaseType: FunctionTypeBase.receivedByContext
 });

@@ -1,7 +1,5 @@
 import { Helpers } from '../helpers';
-import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
-import { CodeWriter } from '../code_writer';
-import { FunctionTypeBase } from './function_type_base';
+import { FunctionLookUpTable, ObjectType } from '../function_type_build';
 
 const { freeze, memoize } = Helpers;
 
@@ -27,17 +25,7 @@ const makeInstance =
     ),
     sizeInStackItems: memoize(() =>
       tallyUp((type: ObjectType) => type.sizeInStackItems())
-    ),
-    stackCleanUp: memoize((): FunctionType => freeze({
-      ...FunctionTypeBase.receivedByNone(),
-      parameters: () => inst,
-      emit(writer: CodeWriter) {
-        types.forEach((type: ObjectType) => {
-          type.stackCleanUp().emit(writer);
-        });
-        return writer;
-      }
-    }))
+    )
   });
   return inst; 
 };
