@@ -20,11 +20,6 @@ export interface ContextDeclarationBuild_ {
   error(): StandardErrorMessage;
 };
 
-// interface EmitterContext {
-//   passParameterFunction(ftype: FunctionType, fn: () => void): void;
-
-// };
-
 function make
   (mVariableAllocation: VariableAllocation,
    mReferenceTypeLookUpTable: FunctionOpLookUp,

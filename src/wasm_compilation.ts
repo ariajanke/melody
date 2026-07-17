@@ -92,6 +92,9 @@ function make(mStringPool: StringPool,
   {
     const codeWriter = WasmFunctionCodeWriter.make();
     implementation.emit(codeWriter);
+    // <- collect heterogenous container
+    // plug through a "compliation unit"
+    // and comes out the homogenous bytecode
     const { i32 } = TypesAware.types();
     mTypesSection.pushFunction([i32], []);
     const typeIndex = mTypesSection.indexFor([i32], []);

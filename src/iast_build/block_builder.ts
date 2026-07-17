@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { OperativeStatementBuilder } from './operative_statement_builder';
 import { OperativeStatementAstCreation } from './operative_statement_ast_creation';
 import { IastNode } from '../iast_node';
@@ -16,7 +16,7 @@ export const BlockBuilder = freeze({
     const mLineNodes: IastNode[] = [];
     const mStatementBuilders = [OperativeStatementBuilder.make()];
     const throwAlreadyPopped = () =>
-      { throw new Error('All group frames already popped'); };
+      { raise('All group frames already popped'); };
     const lastStatementBuilder = () =>
       mStatementBuilders[mStatementBuilders.length - 1] ??
       throwAlreadyPopped();
@@ -73,7 +73,7 @@ export const BlockBuilder = freeze({
           console.log(lineNodesAsString());
         }
         if (mStatementBuilders.length !== 0) {
-          throw new Error(`there are still statement builders left`);
+          raise(`there are still statement builders left`);
         }
         return IastNode.makeFunctionDefinition(mLineNodes);
       }

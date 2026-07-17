@@ -80,4 +80,10 @@ export interface CodeWriter {
   ///   local.tee $lTmpSwp
   ///   local.get $lTmpSwp
   duplicateTop(): CodeWriter;
+
+  // TODO
+  swapTopTwo(): CodeWriter;
+
+  // gets shimmed
+  pushStackFrameSizeInteger(): CodeWriter;
 };
