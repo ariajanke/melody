@@ -20,6 +20,25 @@ export interface ContextDeclarationBuild_ {
   error(): StandardErrorMessage;
 };
 
+interface CompliationUnitFinish {
+  mapIntegerToString(int: number): string | undefined;
+};
+
+interface CompliationUnit {
+  // "string pooling" has to go both ways
+  internString(str: string): number;
+  functionSignatureFor(ftype: FunctionType): number;
+  withStackFrameSize<T>(size: number, fn: (cu: CompliationUnit) => T): T;
+
+  finish(): CompliationUnitFinish;
+};
+
+const CompliationUnit = freeze({
+  make() {
+
+  }
+});
+
 function make
   (mVariableAllocation: VariableAllocation,
    mReferenceTypeLookUpTable: FunctionOpLookUp,
@@ -44,6 +63,7 @@ function make
           lookUp(FunctionNamingSchema.mapToFringeAccessor(v.name))?.
           byParameters(TupleObjectFactory.emptyTuple()) ??
           raise('uh oh');
+        
         const emit = (receiverFtype: FunctionType,
                       parameterFtype: FunctionType,
                       writer: CodeWriter): void =>
@@ -51,6 +71,10 @@ function make
           receiverFtype.simpleEmit(writer);
           parameterFtype.simpleEmit(writer);
           indexGetter.simpleEmit(writer);
+          const beingCalledFType = indexGetter.
+            returns().
+            lookUp(FunctionNamingSchema.kCallName)?.
+            byParameters(parameterFtype.returns());
           writer.
             // pushRepresentation( /* need aggregate size */ ).
             pushStackPointer().

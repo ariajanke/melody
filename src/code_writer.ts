@@ -1,4 +1,7 @@
 /// Defines the "ISA" for Melody
+
+import { FunctionType } from './function_type_build';
+
 /// Similar to WASM, but simplified
 export interface CodeWriter {
   addIntegers(): CodeWriter;
@@ -10,7 +13,8 @@ export interface CodeWriter {
   drop(): CodeWriter;
 
   // will have to set SP
-  indirectCall(signatureIndex: number): CodeWriter;
+  // indirectCall(signatureIndex: number): CodeWriter;
+  indirectCall(beingCalled: FunctionType): CodeWriter;
 
   /// ~Takes SP + offset from memory, pushes value onto the stack~
   /// Basic WASM instruction: from memory, takes offset from stack, pushes 
@@ -39,10 +43,12 @@ export interface CodeWriter {
   ///   for 'saveToLocal':
   ///     global.get $gSP
   ///     local.set $lSP
+  // rm'd done internally by indirect call
   ///   for 'restoreToGlobal':
   ///     local.get $lSP
   ///     global.set $gSP
-  forStackPointer(option: 'saveToLocal' | 'restoreToGlobal'): CodeWriter;
+  // forStackPointer(option: 'saveToLocal' | 'restoreToGlobal'): CodeWriter;
+  saveStackPointerToLocal(): CodeWriter;
 
   /// fixed offset (0) from SP
   /// Stack Effect: [] -> []
@@ -50,7 +56,7 @@ export interface CodeWriter {
   ///  global.get $gSP
   ///  local.get $param0
   ///  i32.store
-  storeParentStackPointer(): CodeWriter;
+  storeParentPointer(): CodeWriter;
 
   // /// Increments the stack pointer with the top of the stack
   // /// Expectation: must first call pushRepresentation with current frame size
@@ -84,6 +90,5 @@ export interface CodeWriter {
   // TODO
   swapTopTwo(): CodeWriter;
 
-  // gets shimmed
-  pushStackFrameSizeInteger(): CodeWriter;
+  withStackFrameSize<T>(size: number, fn: (cw: CodeWriter) => T): T;
 };
