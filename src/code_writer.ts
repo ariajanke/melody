@@ -1,8 +1,9 @@
-/// Defines the "ISA" for Melody
-
 import { FunctionType } from './function_type_build';
 
-/// Similar to WASM, but simplified
+/// Defines the "ISA" for Melody
+/// The point is to be an intermediary between baseline logic for Melody code
+/// and WASM.
+/// [try not to speak WASM, but rather an inbetween, ftypes shouldn't concern themselves with "i32s"]
 export interface CodeWriter {
   addIntegers(): CodeWriter;
   askInteger(): CodeWriter;
@@ -27,7 +28,10 @@ export interface CodeWriter {
   printString(): CodeWriter;
 
   /// Stack Effect: [] -> [i32]
-  pushRepresentation(num: number): CodeWriter;
+  // pushRepresentation(num: number): CodeWriter;
+  pushInteger(num: number): CodeWriter;
+
+  pushLiteralString(str: string): CodeWriter;
 
   /// ~Stores the top of the stack to SP + offset~
   /// Basic WASM instruction: onto memory, takes the value on top, then stores
@@ -43,20 +47,23 @@ export interface CodeWriter {
   ///   for 'saveToLocal':
   ///     global.get $gSP
   ///     local.set $lSP
-  // rm'd done internally by indirect call
   ///   for 'restoreToGlobal':
   ///     local.get $lSP
   ///     global.set $gSP
-  // forStackPointer(option: 'saveToLocal' | 'restoreToGlobal'): CodeWriter;
-  saveStackPointerToLocal(): CodeWriter;
+  forStackPointer(option: 'saveToLocal' | 'restoreToGlobal'): CodeWriter;
+  // saveStackPointerToLocal(): CodeWriter;
 
   /// fixed offset (0) from SP
   /// Stack Effect: [] -> []
   /// WASM:
   ///  global.get $gSP
+  ///  {if accessIndex != 0}
+  ///    i32.const [accessIndex]
+  ///    i32.add
+  ///  {end}
   ///  local.get $param0
   ///  i32.store
-  storeParentPointer(): CodeWriter;
+  storeParentPointer(accessIndex: number): CodeWriter;
 
   // /// Increments the stack pointer with the top of the stack
   // /// Expectation: must first call pushRepresentation with current frame size

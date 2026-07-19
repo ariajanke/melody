@@ -31,8 +31,6 @@ export const DeclarationLookUpTable = freeze({
       return ContextAttributeFactory.buildInitialSetter;
     };
 
-    // const implicitlyDeclared
-
     const ftype = chosenFactory()(varInfo().accessIndex, varInfo().type);
 
     return MutableFunctionTable.make().setDefinition(varInfo().type, ftype);

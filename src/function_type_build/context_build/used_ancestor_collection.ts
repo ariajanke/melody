@@ -1,7 +1,7 @@
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { ContextSnapshot, DeclaredContextStack } from '../declared_context_stack';
+import { ContextFrameSnapshot, ContextFrameStack } from '../context_frame_stack';
 import { TupleObjectFactory } from '../tuple_type';
 
 const { freeze, memoize } = Helpers;
@@ -24,11 +24,11 @@ export interface UsedAncestorCollection {
 };
 
 function make
-  (mStackThing: DeclaredContextStack,
+  (mStackThing: ContextFrameStack,
    mPendingNames: Readonly<{ [name: string]: true }>)
   : UsedAncestorCollection
 {
-  const parentContextSnapshot = ((): ContextSnapshot | undefined =>
+  const parentContextSnapshot = ((): ContextFrameSnapshot | undefined =>
     mStackThing.contextForHop(1));
 
   const ancestors = memoize((): Readonly<AncestorInfo[]> => 
@@ -45,7 +45,7 @@ function make
 
   const allAncestors = memoize((): Readonly<ExtendedAncestorInfo[]> => {
     const found: { [hops: number]: ObjectType | undefined } = {};
-    const parentUid = parentContextSnapshot()?.contextType().uid();
+    const parentUid = parentContextSnapshot()?.referenceType().uid();
     mapNamesToParents().forEach(([name, parent]: [string, ObjectType]) => {
       if (parent.uid() === parentUid)
         { return; }
@@ -59,9 +59,9 @@ function make
       const snapshot = mStackThing.contextForHop(i);
       if (!snapshot)
         { break; }
-      const { referenceType, name } = snapshot;
+      const { referenceType, uniqueName } = snapshot;
       const use = found[i] ? 'used' : 'unused';
-      result.push({ use, type: referenceType(), variableName: name() });
+      result.push({ use, type: referenceType(), variableName: uniqueName() });
     }
     return result;
   });

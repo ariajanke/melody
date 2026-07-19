@@ -11,6 +11,7 @@ import { MutableFunctionTable } from '../mutable_function_table';
 import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { TupleObjectFactory } from '../tuple_type';
 import { UsedAncestorCollection } from './used_ancestor_collection';
+import { ContextLinkStage_ } from './context_link_stage';
 
 const { freeze, memoize } = Helpers;
 
@@ -19,7 +20,9 @@ export type FunctionOpLookUp =
 
 export interface ContextBaseStage_ {
   referenceType(): ObjectType;
-  contextLinkBuild(mPendingNames: Readonly<{ [name: string]: true }>): ContextLinkStage_;
+  contextLinkStage(mPendingNames: Readonly<{ [name: string]: true }>,
+                   mFrameStack: ContextFrameStack)
+    : ContextLinkStage_;
 };
 
 /// A ContextBaseCreation is the first, prototype stage for creating a stack
@@ -42,7 +45,7 @@ export const ContextBaseStage_ = freeze({
         make().setDefinition(emptyTuple(), noneGetter()));
 
     const referenceGetter = memoize((): FunctionType => freeze({
-      ...FunctionTypeBase.makeDefaults(),
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
       returns: () => referenceType(),
       simpleEmit(codeWriter: CodeWriter) {
         return codeWriter.pushStackPointer();
@@ -50,7 +53,7 @@ export const ContextBaseStage_ = freeze({
     }));
 
     const noneGetter = memoize((): FunctionType => freeze({
-      ...FunctionTypeBase.makeDefaults(),
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(_0: CodeWriter) {}
     }));
 
@@ -69,10 +72,10 @@ export const ContextBaseStage_ = freeze({
 
     return freeze({
       referenceType,
-      contextLinkBuild: ((mUsedAncestorCollection: UsedAncestorCollection,
+      contextLinkStage: ((mPendingNames: Readonly<{ [name: string]: true }>,
         mFrameStack: ContextFrameStack
       ) =>
-        ContextLinkBuild.make( mUsedAncestorCollection, mFrameStack, referenceType(), mTable,  ))
+        ContextLinkStage_.make( mPendingNames, mFrameStack, referenceType(), mTable,  ))
       // some method about constructing the next phase...
     })
   }

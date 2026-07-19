@@ -42,7 +42,7 @@ function make(): FunctionLookUpTable {
     const validWritters = writters as readonly CodeWriterFuncName[];
 
     const rv: FunctionType = freeze({
-      ...FunctionTypeBase.makeDefaults(),
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
       parameters: () => type,
       simpleEmit(writer: CodeWriter) {
         validWritters.forEach(name => writer[name]());

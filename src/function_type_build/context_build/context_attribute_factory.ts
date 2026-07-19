@@ -4,7 +4,6 @@ import { TupleObjectFactory } from '../tuple_type';
 import { CodeWriter } from '../../code_writer';
 import { MemoryArray } from '../../memory_array';
 import { FunctionTypeBase } from '../function_type_base';
-import { TupleFunctionTypeBuild } from '../tuple_function_type_build';
 
 const { freeze } = Helpers;
 
@@ -59,7 +58,7 @@ function makeBuildSetter(returnsItself: boolean) {
       // HACK to reduce instructions
       if (parameterFtype.returns().sizeInStackItems() === 1) {
         receiverFtype.simpleEmit(writer);
-        writer.pushRepresentation(accessIndex).addIntegers();
+        writer.pushInteger(accessIndex).addIntegers();
         parameterFtype.simpleEmit(writer);
         writer.storeInteger();
       } else {
@@ -69,11 +68,11 @@ function makeBuildSetter(returnsItself: boolean) {
           // HACK to reduce instructions
           receiverFtype.simpleEmit(writer);
           writer.
-            pushRepresentation(accessIndex + additional*kBytesPerWord).
+            pushInteger(accessIndex + additional*kBytesPerWord).
             addIntegers();
-          raise('I need a "swap top two items on WASM stack" defined for code writer!');        
+          // raise('I need a "swap top two items on WASM stack" defined for code writer!');        
 
-          writer.storeInteger();
+          writer.swapTopTwo();
         });
       }
 
@@ -81,7 +80,7 @@ function makeBuildSetter(returnsItself: boolean) {
         { return; }
 
       // NOTE reached by "name:=" setters
-      getter.emit(receiverFtype, TupleObjectFactory.emitEmptyTuple(), writer);
+      getter.emit(receiverFtype, FunctionTypeBase.emitEmptyTuple(), writer);
     };
 
     return freeze({
@@ -105,7 +104,7 @@ function buildReceiverGetter
     simpleEmit(writer: CodeWriter) {
       writer.
         pushStackPointer().
-        pushRepresentation(accessIndex).
+        pushInteger(accessIndex).
         addIntegers().
         loadInteger();
     },
@@ -123,12 +122,12 @@ function buildGetter
           writer: CodeWriter): void
     {
       assertSingleItemReceiver(receiverFtype);
-      if (parameterFtype.uid() !== TupleObjectFactory.emitEmptyTuple().uid())
+      if (parameterFtype.uid() !== FunctionTypeBase.emitEmptyTuple().uid())
         { raise('parameters assumptions'); }
       forEachWord(inReverseOrder, type, (additional: number) => {
         receiverFtype.simpleEmit(writer);
         writer.
-          pushRepresentation(accessIndex + additional*kBytesPerWord).
+          pushInteger(accessIndex + additional*kBytesPerWord).
           addIntegers().
           loadInteger();
       });

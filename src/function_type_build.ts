@@ -91,7 +91,7 @@ export interface MutableObjectType extends ObjectType {
 
 export interface FunctionLookUpTable {
   byParameters(type: ObjectType): FunctionType | undefined;
-  // [deprecate me]
+  // think I'm stuck with this :/
   list(): Readonly<FunctionType[]>;
 };
 

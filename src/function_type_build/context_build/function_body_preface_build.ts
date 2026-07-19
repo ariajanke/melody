@@ -46,17 +46,16 @@ function make
     return ftype;
   }
 
+  const parentAccessInfo = memoize(() =>
+    mVariableAllocation.lookUp(FunctionNamingSchema.kParentName) ??
+    raise('used ancestors is not consistent with variable allocations'));
+
   const parentGetter = memoize((): FunctionType | undefined => {
     if (!hasParentGetter())
       { return undefined; }
 
-    // have to make accessors from our variable allocation
-    const varInfo = 
-      mVariableAllocation.lookUp(FunctionNamingSchema.kParentName) ??
-      raise('used ancestors is not consistent with variable allocations');
-    
     const ftype = ContextAttributeFactory.
-      buildReceiverGetter(varInfo.accessIndex, varInfo.type);
+      buildReceiverGetter(parentAccessInfo().accessIndex, parentAccessInfo().type);
     checkedAddAccessor(FunctionNamingSchema.kParentName, ftype);
 
     return ftype;
@@ -64,11 +63,11 @@ function make
 
   const saveLocalStackPointer = memoize((): FunctionType =>
     freeze({
-      ...FunctionTypeBase.makeDefaults(),
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(writer: CodeWriter): void {
         writer.forStackPointer('saveToLocal');
         if (hasParentGetter()) {
-          writer.storeParentStackPointer();
+          writer.storeParentPointer(parentAccessInfo().accessIndex);
         }
       }
     })
@@ -97,7 +96,7 @@ function make
     const ancs = mUsedAncestorCollection.allAncestors();
     if (ancs.length === 0) {
       return freeze({
-        ...FunctionTypeBase.makeDefaults(),
+        ...FunctionTypeBase.makeNewEmitlessEmpty(),
         simpleEmit: (_0: CodeWriter) => {}
       });
     }
@@ -110,6 +109,7 @@ function make
         // assume a_{n-1} (info.type's context pointer) is on top...
         writer.setStackPointer();
 
+        // NOTE receiver resolution without the actual thing
         const recFtype = info.type.
           lookUp(FunctionNamingSchema.kContextName)?.
           byParameters(TupleObjectFactory.emptyTuple());
@@ -117,7 +117,7 @@ function make
         info.type.
           lookUp(FunctionNamingSchema.kParentName)?.
           byParameters(TupleObjectFactory.emptyTuple())!.
-          emit(recFtype!, TupleFunctionTypeBuild.emitEmpty(), writer);
+          emit(recFtype!, FunctionTypeBase.emitEmptyTuple(), writer);
 
         if (info.use === 'used') {
           writer.duplicateTop();
@@ -126,7 +126,7 @@ function make
     );
     
     const ftype = freeze({
-      ...FunctionTypeBase.makeDefaults(),
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(writer: CodeWriter): void {
         parentGetter()!.simpleEmit(writer);
         hopEmissions.forEach(emitHop => emitHop(writer));
@@ -150,12 +150,12 @@ function make
     }
 
     const setter = ContextAttributeFactory.
-      buildSetter(varInfo.accessIndex, varInfo.type);
+      buildInitialSetter(varInfo.accessIndex, varInfo.type);
     const getContext = mCurrentContextReferenceType.
       lookUp(FunctionNamingSchema.kContextName)!.
       byParameters(TupleObjectFactory.emptyTuple());
     return freeze({
-      ...FunctionTypeBase.makeDefaults(),
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(writer: CodeWriter) {
         setter.emit(getContext!, ancestorTupleEmission(), writer);
       }
@@ -163,7 +163,7 @@ function make
   });
 
   const preface = memoize((): FunctionType => freeze({
-    ...FunctionTypeBase.makeDefaults(),
+    ...FunctionTypeBase.makeNewEmitlessEmpty(),
     simpleEmit(writer: CodeWriter) {
       // save your parent WASM param
       saveLocalStackPointer().simpleEmit(writer);
