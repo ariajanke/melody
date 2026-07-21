@@ -5,17 +5,17 @@ import { FunctionType } from './function_type_build';
 /// and WASM.
 /// [try not to speak WASM, but rather an inbetween, ftypes shouldn't concern themselves with "i32s"]
 export interface CodeWriter {
-  addIntegers(): CodeWriter;
+  /// --- builtin parts ---
   askInteger(): CodeWriter;
   askString(): CodeWriter;
+  printInteger(): CodeWriter;
+  printString(): CodeWriter;
 
-  /// Discards the top of the stack
-  /// Stack Effect: [i32] -> []
-  drop(): CodeWriter;
-
-  // will have to set SP
-  // indirectCall(signatureIndex: number): CodeWriter;
-  indirectCall(beingCalled: FunctionType): CodeWriter;
+  /// --- ALU/Memory parts ---
+  
+  addIntegers(): CodeWriter;
+  multiplyIntegers(): CodeWriter;
+  subtractIntegers(): CodeWriter;
 
   /// ~Takes SP + offset from memory, pushes value onto the stack~
   /// Basic WASM instruction: from memory, takes offset from stack, pushes 
@@ -23,15 +23,9 @@ export interface CodeWriter {
   /// Stack Effect: [] -> [i32]
   loadInteger(): CodeWriter;
 
-  multiplyIntegers(): CodeWriter;
-  printInteger(): CodeWriter;
-  printString(): CodeWriter;
-
   /// Stack Effect: [] -> [i32]
   // pushRepresentation(num: number): CodeWriter;
   pushInteger(num: number): CodeWriter;
-
-  pushLiteralString(str: string): CodeWriter;
 
   /// ~Stores the top of the stack to SP + offset~
   /// Basic WASM instruction: onto memory, takes the value on top, then stores
@@ -39,19 +33,27 @@ export interface CodeWriter {
   /// Stack Effect: [i32, i32] -> []
   storeInteger(): CodeWriter;
 
-  subtractIntegers(): CodeWriter;
+  /// --- function call parts ---
 
+  // will have to set SP
+  // indirectCall(signatureIndex: number): CodeWriter;
+  indirectCall(beingCalled: FunctionType): CodeWriter;
+  withStackFrameSize<T>(size: number, fn: (cw: CodeWriter) => T): T;
+
+  /// --- stack pointer parts ---
   /// back and forth between local and global SP
   /// Stack Effect: [] -> []
   /// WASM:
   ///   for 'saveToLocal':
   ///     global.get $gSP
   ///     local.set $lSP
+  saveStackPointerToLocal(): CodeWriter;
   ///   for 'restoreToGlobal':
   ///     local.get $lSP
   ///     global.set $gSP
-  forStackPointer(option: 'saveToLocal' | 'restoreToGlobal'): CodeWriter;
-  // saveStackPointerToLocal(): CodeWriter;
+  restoreStackPointerToGlobal(): CodeWriter;
+  // forStackPointer(option: 'saveToLocal' | 'restoreToGlobal'): CodeWriter;
+  
 
   /// fixed offset (0) from SP
   /// Stack Effect: [] -> []
@@ -87,6 +89,16 @@ export interface CodeWriter {
   ///   global.get $gSP
   pushStackPointer(): CodeWriter;
 
+  /// --- string parts ---
+  
+  pushLiteralString(str: string): CodeWriter;
+
+  /// --- stack ops parts ---
+  
+  /// Discards the top of the stack
+  /// Stack Effect: [i32] -> []
+  drop(): CodeWriter;
+
   /// Duplicates the top of the stack
   /// Stack Effect: [i32] -> [i32, i32]
   /// WASM:
@@ -96,6 +108,4 @@ export interface CodeWriter {
 
   // TODO
   swapTopTwo(): CodeWriter;
-
-  withStackFrameSize<T>(size: number, fn: (cw: CodeWriter) => T): T;
 };

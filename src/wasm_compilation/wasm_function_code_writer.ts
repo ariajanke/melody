@@ -3,8 +3,10 @@ import { WasmFunctionBody } from './wasm_function_body';
 import { WasmBuiltinImportsCreation } from './wasm_builtin_imports_creation';
 import { CodeWriter } from '../code_writer';
 import { StackCodeWriter } from './stack_code_writer';
+import { FunctionType } from '../function_type_build';
+import { WasmGlobalsSection } from './wasm_globals_section';
 
-const { freeze } = Helpers;
+const { freeze, memoize, makeCounter } = Helpers;
 
 // this could preface the function: (an initial set)
 // <parent> SP (passed as parameter, to be set in memory)
@@ -39,6 +41,312 @@ const { freeze } = Helpers;
 //     local.get $lSP
 //     global.set $gSP
 
+// stack parts
+// arthemitic parts
+// literal parts
+// builtin parts
+
+// it's so statey :/
+interface WasmFunctionLocalAllocation {
+  receiverParameterIndex(): number;
+  // swapTempIndex(): number;
+  // I know, there's a better way to do this :/
+  swapA(): number;
+  swapB(): number;
+  localStackPointerIndex(): number;
+  totalLocalCount(): number;
+}
+
+const WasmFunctionLocalAllocation = freeze({
+  make(mFunctionToBuild: FunctionType):
+    WasmFunctionLocalAllocation
+  {
+    assertFtypeSignatureOkay(mFunctionToBuild);
+    let mLocalsCount = 0;
+    const counter = makeCounter();
+    const kParentPointerParamIndex = mLocalsCount = counter();
+    
+    return freeze({
+      receiverParameterIndex: () => kParentPointerParamIndex,
+      swapA: memoize(() => mLocalsCount = counter()),
+      swapB: memoize(() => mLocalsCount = counter()),
+      localStackPointerIndex: memoize(() => mLocalsCount = counter()),
+      totalLocalCount: () => mLocalsCount
+    });
+  }
+});
+
+function makeBaseWriter(): CodeWriter {
+
+}
+
+function makeN(): CodeWriter {
+  const getInst = (): CodeWriter => inst;
+  // I have to be picky (ouch!)
+  const { pushLiteralString, mapToString } = makeStringLiteralWriter(getInst);
+  const { indirectCall, withStackFrameSize } = makeFunctionCallWriter(
+    undefined as unknown as WasmFunctionBody,
+    getInst);
+  const {
+    saveStackPointerToLocal,
+    restoreStackPointerToGlobal,
+    storeParentPointer,
+    setStackPointer,
+    pushStackPointer
+  } = makeStackPointerParts(undefined as unknown as WasmFunctionBody, getInst);
+  const {
+    drop,
+    duplicateTop,
+    swapTopTwo
+  } = makeStackOps(undefined as unknown as WasmFunctionBody, getInst);
+  const {
+    addIntegers,
+    multiplyIntegers,
+    subtractIntegers,
+    loadInteger,
+    pushInteger,
+    storeInteger
+  } = makeAluParts(undefined as unknown as WasmFunctionBody, getInst);
+  const {
+    askInteger,
+    askString,
+    printInteger,
+    printString
+  } = makeBuiltinParts(undefined as unknown as WasmFunctionBody, getInst);
+  const inst = freeze({
+    // builtin
+    askInteger,
+    askString,
+    printInteger,
+    printString,
+    // ALU/mem
+    addIntegers,
+    multiplyIntegers,
+    subtractIntegers,
+    loadInteger,
+    pushInteger,
+    storeInteger,
+    // function call
+    indirectCall,
+    withStackFrameSize,
+    // string
+    pushLiteralString,
+    mapToString,
+    // stack pointer
+    saveStackPointerToLocal,
+    restoreStackPointerToGlobal,
+    storeParentPointer,
+    setStackPointer,
+    pushStackPointer,
+    // stack ops
+    drop,
+    duplicateTop,
+    swapTopTwo
+  }) satisfies CodeWriter;
+  inst.mapToString;
+  return inst;
+}
+
+interface StringLiteralWriter extends CodeWriter {
+  mapToString(n: number): string | undefined;
+}
+
+function makeStringLiteralWriter
+  (getInst: () => CodeWriter): StringLiteralWriter
+{
+  const mStrings: string[] = [];
+  const mStringMap: { [s: string]: number | undefined } = {};
+  return freeze({
+    ...makeBaseWriter(),
+    mapToString: (n: number) => mStrings[n],
+    pushLiteralString(str: string): CodeWriter {
+      if (!mStringMap[str]) {
+        mStringMap[str] = mStrings.length;
+        mStrings.push(str);
+      }
+
+      return getInst().pushInteger(mStringMap[str]);
+    }
+  })
+}
+
+function assertFtypeSignatureOkay(beingCalled: FunctionType): void {
+  const emptyTuple = memoize(() =>
+    FunctionType.emitEmptyTuple().parameters());
+  const isFtypeOkay = 
+    beingCalled.parameters().uid() === emptyTuple().uid() &&
+    beingCalled.returns   ().uid() === emptyTuple().uid() &&
+    beingCalled.receiver  ().sizeInStackItems() === 1;
+  if (!isFtypeOkay) {
+    raise('only one call signature supported');
+  }
+}
+
+function makeFunctionCallWriter
+  (mByteCodeEmitter: WasmFunctionBody,
+   mGetInst: () => CodeWriter): CodeWriter
+{
+  // NOTE strictly support only one signature: (i32) -> ()
+
+  const kSignatureIndex = 0;
+  const mStackFrameSizes: number[] = [];
+  const getTopSize = (): number =>
+    mStackFrameSizes[mStackFrameSizes.length - 1] ??
+    raise('uh oh!');
+  
+  return freeze({
+    ...makeBaseWriter(),
+    indirectCall(beingCalled: FunctionType): CodeWriter {
+      assertFtypeSignatureOkay(beingCalled);
+      mByteCodeEmitter.pushI32Const(getTopSize());
+      mGetInst().pushStackPointer();
+      mByteCodeEmitter.pushI32Add();
+      mGetInst().setStackPointer();
+      mByteCodeEmitter.callIndirect(kSignatureIndex);
+      return mGetInst().restoreStackPointerToGlobal();
+    },
+    withStackFrameSize<T>(size: number, fn: (cw: CodeWriter) => T): T {
+      mStackFrameSizes.push(size);
+      const rv = fn(mGetInst());
+      mStackFrameSizes.pop();
+      return rv;
+    }
+  })
+}
+
+function makeStackPointerParts
+  (mByteCodeEmitter: WasmFunctionBody,
+   mLocalAllocations: WasmFunctionLocalAllocation,
+   mGetInst: () => CodeWriter): CodeWriter
+{
+  // TODO reduce count to only the needed public methods
+  const stackPointerLocation = memoize(() =>
+    WasmGlobalsSection.kStackPointerLocation);
+
+  const { localStackPointerIndex, receiverParameterIndex } = mLocalAllocations;
+
+  return freeze({
+    ...makeBaseWriter(),
+    saveStackPointerToLocal(): CodeWriter {
+      mByteCodeEmitter.
+        getGlobal(stackPointerLocation()).
+        setLocal(localStackPointerIndex());
+      return mGetInst();
+    },
+    restoreStackPointerToGlobal(): CodeWriter {
+      mByteCodeEmitter.
+        getLocal(localStackPointerIndex()).
+        setGlobal(stackPointerLocation());
+      return mGetInst();
+    },
+    storeParentPointer(accessIndex: number): CodeWriter {
+      if (accessIndex !== 0) {
+        raise(`need to rewrite this function for a different access index (${accessIndex})`);
+      }
+      mByteCodeEmitter.
+        getGlobal(stackPointerLocation()).
+        getLocal(receiverParameterIndex()).
+        pushI32Store();
+      return mGetInst();
+    },
+    setStackPointer(): CodeWriter {
+      mByteCodeEmitter.setGlobal(stackPointerLocation());
+      return mGetInst();
+    },
+    pushStackPointer(): CodeWriter {
+      mByteCodeEmitter.getLocal(receiverParameterIndex());
+      return mGetInst();
+    }
+  });
+}
+
+function makeStackOps
+  (mFunctionBody: WasmFunctionBody,
+   mLocalAllocations: WasmFunctionLocalAllocation,
+   mGetInst: () => CodeWriter): CodeWriter
+{
+  const { swapA, swapB } = mLocalAllocations;
+  return freeze({
+    ...makeBaseWriter(),
+    drop(): CodeWriter {
+      mFunctionBody.pushDrop();
+      return mGetInst();
+    },
+    duplicateTop(): CodeWriter {
+      mFunctionBody.
+        pushTeeLocal(swapA()).
+        getLocal(swapA());
+      return mGetInst();
+    },
+    swapTopTwo(): CodeWriter {
+      mFunctionBody.
+        setLocal(swapA()).
+        setLocal(swapB()).
+        getLocal(swapA()).
+        getLocal(swapB());
+      return mGetInst();
+    }
+  });
+}
+
+function makeAluParts
+  (mFunctionBody: WasmFunctionBody,
+   mGetInst: () => CodeWriter): CodeWriter
+{
+  return freeze({
+    ...makeBaseWriter(),
+    addIntegers(): CodeWriter {
+      mFunctionBody.pushI32Add();
+      return mGetInst();
+    },
+    multiplyIntegers(): CodeWriter {
+      mFunctionBody.pushI32Multiply();
+      return mGetInst();
+    },
+    subtractIntegers(): CodeWriter {
+      mFunctionBody.pushI32Subtract();
+      return mGetInst();
+    },
+    loadInteger(): CodeWriter {
+      return mGetInst();
+    },
+    pushInteger(num: number): CodeWriter {
+      return mGetInst();
+    },
+    storeInteger(): CodeWriter {
+      return mGetInst();
+    }
+  });
+}
+
+function makeBuiltinParts
+  (mFunctionBody: WasmFunctionBody,
+   mGetInst: () => CodeWriter): CodeWriter
+{
+  const getImportFuncIndex = (name: string) => {
+    const { descriptions } = WasmBuiltinImportsCreation;
+    const desc = descriptions()[name];
+    if (!desc) { 
+      raise(`"${name}" is mispelled or does not exist`);
+    }
+    return desc.index;
+  };
+
+  const makeFunctionCall = (name: string) =>
+    () => {
+      const idx = getImportFuncIndex(name);
+      mFunctionBody = mFunctionBody.pushFunctionCall(idx);
+      return mGetInst();
+    };
+
+  return freeze({
+    ...makeBaseWriter(),
+    askInteger: makeFunctionCall('askInteger'),
+    askString: makeFunctionCall('askString'),
+    printInteger: makeFunctionCall('printInteger'),
+    printString: makeFunctionCall('printString'),
+  });
+}
 
 export interface WasmFunctionCodeWriter extends CodeWriter {
   toFunctionBody(): WasmFunctionBody;
