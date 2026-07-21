@@ -2,6 +2,7 @@ import { FunctionType } from './function_type_build';
 import { FunctionTypeIndexGrabber } from './function_type_index_grabber';
 import { Helpers, raise } from './helpers';
 import { StringPool } from './string_pool';
+import { MelodyCodeWriter } from './wasm_compilation/melody_code_writer';
 import { WasmBuiltinImportsCreation }
   from './wasm_compilation/wasm_builtin_imports_creation';
 import { WasmCodeSection } from './wasm_compilation/wasm_code_section';
@@ -85,24 +86,35 @@ function make(mStringPool: StringPool,
     return Uint8Array.from(nums);
   });
 
-  const mIndexGrabber = FunctionTypeIndexGrabber.make();
-  function incorporate
-    (implementation: FunctionType,
-     _1: FunctionType): void
-  {
-    const codeWriter = WasmFunctionCodeWriter.make();
-    implementation.emit(codeWriter);
-    // <- collect heterogenous container
-    // plug through a "compliation unit"
-    // and comes out the homogenous bytecode
+  const supportedFunctionSignatureIndex = memoize(() => {
     const { i32 } = TypesAware.types();
     mTypesSection.pushFunction([i32], []);
     const typeIndex = mTypesSection.indexFor([i32], []);
     if (typeIndex === undefined) {
       raise('Failed to register type');
     }
+    return typeIndex;
+  });
+
+  function signatureIndexFor(mFunctionType: FunctionType) {
+    MelodyCodeWriter.assertFtypeSignatureOkay(mFunctionType);
+    return supportedFunctionSignatureIndex();
+  }
+
+  const mIndexGrabber = FunctionTypeIndexGrabber.make();
+  function incorporate
+    (implementation: FunctionType,
+     _1: FunctionType): void
+  {
+    MelodyCodeWriter.make(implementation, signatureIndexFor, );
+    const codeWriter = WasmFunctionCodeWriter.make();
+    implementation.emit(codeWriter);
+    // <- collect heterogenous container
+    // plug through a "compliation unit"
+    // and comes out the homogenous bytecode
+    
     mCodeSection.pushFunctionBody(codeWriter.toFunctionBody());
-    mFunctionsSection.pushSignatureFrom(typeIndex);
+    mFunctionsSection.pushSignatureFrom(supportedFunctionSignatureIndex());
     ++mFunctionCount;
   }
 

@@ -76,11 +76,15 @@ const WasmFunctionLocalAllocation = freeze({
   }
 });
 
-function makeBaseWriter(): CodeWriter {
+// function makeBaseWriter(): CodeWriter {
 
-}
+// }
 
-function makeN(): CodeWriter {
+function makeN
+  (mFunctionToBuild: FunctionType,
+   mByteCodeEmitter: WasmFunctionBody): CodeWriter
+{
+  const mAllocation = WasmFunctionLocalAllocation.make(mFunctionToBuild);
   const getInst = (): CodeWriter => inst;
   // I have to be picky (ouch!)
   const { pushLiteralString, mapToString } = makeStringLiteralWriter(getInst);
@@ -93,12 +97,12 @@ function makeN(): CodeWriter {
     storeParentPointer,
     setStackPointer,
     pushStackPointer
-  } = makeStackPointerParts(undefined as unknown as WasmFunctionBody, getInst);
+  } = makeStackPointerParts(mByteCodeEmitter, mAllocation, getInst);
   const {
     drop,
     duplicateTop,
     swapTopTwo
-  } = makeStackOps(undefined as unknown as WasmFunctionBody, getInst);
+  } = makeStackOps(mByteCodeEmitter, mAllocation, getInst);
   const {
     addIntegers,
     multiplyIntegers,
@@ -106,13 +110,13 @@ function makeN(): CodeWriter {
     loadInteger,
     pushInteger,
     storeInteger
-  } = makeAluParts(undefined as unknown as WasmFunctionBody, getInst);
+  } = makeAluParts(mByteCodeEmitter, getInst);
   const {
     askInteger,
     askString,
     printInteger,
     printString
-  } = makeBuiltinParts(undefined as unknown as WasmFunctionBody, getInst);
+  } = makeBuiltinParts(mByteCodeEmitter, getInst);
   const inst = freeze({
     // builtin
     askInteger,

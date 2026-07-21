@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import {
   FinisherHelpers,
   TypesAware,
@@ -30,7 +30,7 @@ function make() {
       // have to exclude known types?
       resetFinishedCode();
       if (arguments_.length > 255 || returns.length > 255) {
-        throw new Error('Too many arguments for WASM');
+        raise('Too many arguments for WASM');
       }
       if (mTypeSignatureTracker.indexFor(arguments_, returns) === undefined) {
         mCode.
