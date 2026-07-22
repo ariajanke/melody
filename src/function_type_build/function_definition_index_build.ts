@@ -3,7 +3,10 @@ import { Helpers } from '../helpers';
 import { FunctionDefinitionBodyBuild } from './function_definition_body_build';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionTypeRegistry } from '../function_type_registry';
+import { FunctionTypeBase } from './function_type_base';
 // import { WritableDeclaredContextStack } from './declared_context_stack';
+import { CodeWriter } from '../code_writer';
+import { WritableContextFrameStack } from './context_frame_stack';
 
 const { freeze, memoize } = Helpers;
 
@@ -12,8 +15,8 @@ function make
   (mDefs: DastFunctionNameMappings,
    mNodes: Readonly<DastNode[]>,
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,
-   mDeclaredContextStack: WritableDeclaredContextStack,
-   mFunctionRegistry: FunctionTypeRegistry)
+   mDeclaredContextStack: WritableContextFrameStack)
+  //  mFunctionRegistry: FunctionTypeRegistry)
   : FunctionTypeBuild
 {
   const defBuild = FunctionDefinitionBodyBuild.
@@ -25,7 +28,14 @@ function make
     const compositeFunctionType = defBuild.functionType();
     if (!compositeFunctionType)
       { return undefined; }
-    return mFunctionRegistry.indexEmissionOf(compositeFunctionType);
+
+    freeze({
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      simpleEmit(writer: CodeWriter) {
+        writer.pushIndexOfRegistered(compositeFunctionType);
+      }
+    })
+    // return mFunctionRegistry.indexEmissionOf(compositeFunctionType);
   });
   return freeze({ functionType, error });
 }

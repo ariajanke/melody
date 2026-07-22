@@ -35,9 +35,11 @@ export interface CodeWriter {
 
   /// --- function call parts ---
 
-  // will have to set SP
-  // indirectCall(signatureIndex: number): CodeWriter;
   indirectCall(beingCalled: FunctionType): CodeWriter;
+
+  // such ftype *must* represent a definition that was registered
+  pushIndexOfRegistered(ftype: FunctionType): CodeWriter;
+
   withStackFrameSize<T>(size: number, fn: (cw: CodeWriter) => T): T;
 
   /// --- stack pointer parts ---
