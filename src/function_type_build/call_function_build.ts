@@ -22,12 +22,12 @@ function make
    mArgs: DastNode,
   //  mGetCurrentAggregate: () => ObjectType | 'not ready',
   //  mGetContextSizeInBytes: () => number,
-   mContext: ContextFrameSnapshot,
-   mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
+   mContext: ContextFrameSnapshot)
+  //  mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
   : FunctionTypeBuild
 {
   const { error, setErrorMessage, setErrorFn } = StandardError.make();
-
+  const mIntoFunctionTypeBuild = mContext.intoBuildFor;
   const callNameStr = memoize((): string | undefined => {
     const callNameStr = mCallName.asString();
     if (!callNameStr) {
@@ -73,6 +73,22 @@ function make
     return callFunctionType;
   });
 
+  const receiver = memoize(() => {
+    if (!callFunctionType())
+      { return undefined; }
+
+    const rec = callFunctionType()!.receiver();
+    const ftype = mContext.
+      receiverResolution().
+      mapExpectedToReceiverAccessor( rec );
+    if (!ftype) {
+      return setErrorMessage('Cannot resolve receiver retrieval');
+    }
+    if (ftype.receiver().uid() !==  emptyTuple().uid())
+      { raise('Receiver resolution is behaving poorly'); }
+    return ftype;
+  });
+
   // a possible error:
   // the expected receiver cannot be made available
   // (be it lexically, current frame, or none)
@@ -93,32 +109,33 @@ function make
   
   const { emptyTuple } = TupleObjectFactory;
 
-  const optionalIndexAccessor = memoize(() => {
-    const indexAccessorName = FunctionNamingSchema.
-      mapToFringeAccessor(callNameStr()!);
-    // for delegates: if we define "f" on the current context
-    // we also define a ".f" 
-    return lexicalReceiver()?.
-      returns().
-      lookUp(indexAccessorName)?.
-      byParameters(emptyTuple());
-  });
+  // const optionalIndexAccessor = memoize(() => {
+  //   const indexAccessorName = FunctionNamingSchema.
+  //     mapToFringeAccessor(callNameStr()!);
+  //   // for delegates: if we define "f" on the current context
+  //   // we also define a ".f" 
+  //   return lexicalReceiver()?.
+  //     returns().
+  //     lookUp(indexAccessorName)?.
+  //     byParameters(emptyTuple());
+  // });
 
   const functionType = memoize((): FunctionType | undefined => {
-    if (!callFunctionType())
+    if (!callFunctionType() || !args() || !receiver())
       { return undefined; }
   
     const compositeFunctionType = freeze({
-      ...FunctionTypeBase.receivedByNone(),
+      // ...FunctionTypeBase.receivedByNone(),
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
       returns: () => callFunctionType()!.returns(),
-      emit(writer: CodeWriter) {
-        const contextSize = mGetContextSizeInBytes();
-        if (contextSize < 0) {
-          raise(`Context size cannot be negative, got ${contextSize}`);
-        }
+      simpleEmit(writer: CodeWriter) {
+        // const contextSize = mGetContextSizeInBytes();
+        // if (contextSize < 0) {
+        //   raise(`Context size cannot be negative, got ${contextSize}`);
+        // }
 
-        actualReceiver()!.emit(writer);
-        args()!.emit(writer);
+        // actualReceiver()!.emit(writer);
+        // args()!.emit(writer);
         // NOTE
         // mechanics of call
         // To handle indirect calls, special handling is needed. Consider these
@@ -128,32 +145,33 @@ function make
         // NOTE
         // the function is *always* expected to consume it's parameters
         // need function index for user defined functions
-        optionalIndexAccessor()?.emit(writer);
-        // down here so our loads/stores stay sane
-        if (optionalIndexAccessor()) {
-          writer.
-            pushRepresentation( contextSize ).
-            pushStackPointer().
-            addIntegers().
-            setStackPointer();
-        }
-        callFunctionType()!.emit(writer);
-        if (optionalIndexAccessor()) {
-          writer.forStackPointer('restoreToGlobal');
-        }
+        // optionalIndexAccessor()?.emit(writer);
+        // // down here so our loads/stores stay sane
+        // if (optionalIndexAccessor()) {
+        //   writer.
+        //     pushRepresentation( contextSize ).
+        //     pushStackPointer().
+        //     addIntegers().
+        //     setStackPointer();
+        // }
+        // callFunctionType()!.emit(writer);
+        // if (optionalIndexAccessor()) {
+        //   writer.forStackPointer('restoreToGlobal');
+        // }
+        callFunctionType()!.emit(receiver()!, args()!, writer);
         return writer;
       }
     });
 
-    if (kLogToConsole) {
-      const { parameters, returns } = compositeFunctionType;
-      console.log(`Call "${callNameStr}" as composite ftype ` +
-                  `taking ${parameters().name()} returning ` +
-                  `"${returns().name()}" ` +
-                  `received by "${mReceiver.asString()}" `+
-                  `(${optionalIndexAccessor() ? 'is' : 'is not'} an indirect call)`);
-    }
-    StackSafetyChecker.make().check(compositeFunctionType);
+    // if (kLogToConsole) {
+    //   const { parameters, returns } = compositeFunctionType;
+    //   console.log(`Call "${callNameStr}" as composite ftype ` +
+    //               `taking ${parameters().name()} returning ` +
+    //               `"${returns().name()}" ` +
+    //               `received by "${mReceiver.asString()}" `+
+    //               `(${optionalIndexAccessor() ? 'is' : 'is not'} an indirect call)`);
+    // }
+    // StackSafetyChecker.make().check(compositeFunctionType);
 
     return compositeFunctionType;
   });
@@ -161,4 +179,4 @@ function make
   return freeze({ functionType, error });
 }
 
-export const CallFunctionTypeBuild = freeze({ make });
+export const CallFunctionBuild = freeze({ make });

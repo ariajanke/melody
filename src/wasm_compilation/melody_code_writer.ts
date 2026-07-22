@@ -6,28 +6,39 @@ import { FunctionCallWriter } from './melody_code_writer/function_call_writer';
 import { MemoryAluWriter } from './melody_code_writer/memory_alu_writer';
 import { StackOperationsWriter } from './melody_code_writer/stack_operations_writer';
 import { StackPointerWriter } from './melody_code_writer/stack_pointer_writer';
-import { StringLiteralWriter } from './melody_code_writer/string_literal_writer';
+// import { StringLiteralWriter } from './melody_code_writer/string_literal_writer';
 import { WasmFunctionLocalAllocation } from './melody_code_writer/wasm_function_locals_allocation';
+import { StringPool } from './string_pool';
+import { WasmCodeSection } from './wasm_code_section';
 import { WasmFunctionBody } from './wasm_function_body';
 
 const { freeze } = Helpers;
 
+export interface MelodyCodeWriter extends CodeWriter {
+  appendByteCodeTo(codeSection: WasmCodeSection): void;
+};
+
 function make
   (mFunctionToBuild: FunctionType,
-   mSignatureIndexFor: (ftype: FunctionType) => number,
-   mByteCodeEmitter: WasmFunctionBody): CodeWriter
+   mStringPool: StringPool,
+   mSignatureIndexFor: (ftype: FunctionType) => number): MelodyCodeWriter
 {
+  const mByteCodeEmitter = WasmFunctionBody.make();
   const mLocalAllocations = WasmFunctionLocalAllocation.make(mFunctionToBuild);
   const mGetInst = () => inst;
+  function appendByteCodeTo(codeSection: WasmCodeSection): void {
+    codeSection.pushFunctionBody( mByteCodeEmitter.finish() );
+  }
   const inst = freeze({
     ...BuiltinsWriter.make(mByteCodeEmitter, mGetInst),
-    ...FunctionCallWriter.make(mByteCodeEmitter, mGetInst),
+    ...FunctionCallWriter.make(mByteCodeEmitter, mGetInst, mSignatureIndexFor),
     ...MemoryAluWriter.make(mByteCodeEmitter, mGetInst),
     ...StackOperationsWriter.make(mByteCodeEmitter, mLocalAllocations, mGetInst),
     ...StackPointerWriter.make(mByteCodeEmitter, mLocalAllocations, mGetInst),
-    ...StringLiteralWriter.make(mGetInst),
+    ...mStringPool.makeLiteralWriter(mGetInst),
+    appendByteCodeTo
+  });
 
-  }) satisfies CodeWriter;
   return inst;
 }
 

@@ -5,7 +5,7 @@ import {
 } from './wasm_helpers';
 import { WasmTypesSection } from './wasm_types_section';
 import { WasmImportsSection } from './wasm_imports_section';
-import { StringPool } from '../string_pool';
+import { StringPool } from './string_pool';
 
 const { freeze, memoize, makeCounter } = Helpers;
 
@@ -65,7 +65,7 @@ function make
           mJsPrint(i.toString());
         },
         printString(i: number) {
-          mJsPrint(mStringPool.reverseLookUp(i) ?? '<??UNKNOWN??>');
+          mJsPrint(mStringPool.mapToString(i) ?? '<??UNKNOWN??>');
         },
         askString: mJsAskString,
         askInteger: mJsAskInteger

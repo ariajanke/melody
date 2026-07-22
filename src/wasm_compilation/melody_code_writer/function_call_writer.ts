@@ -8,10 +8,10 @@ const { freeze } = Helpers;
 
 function make
   (mByteCodeEmitter: WasmFunctionBody,
-   mGetInst: () => CodeWriter)
+   mGetInst: () => CodeWriter,
+   mSignatureIndexFor: (ftype: FunctionType) => number)
 {
   // NOTE strictly support only one signature: (i32) -> ()
-  const kSignatureIndex = 0;
 
   const mStackFrameSizes: number[] = [];
   const getTopSize = (): number =>
@@ -25,7 +25,7 @@ function make
       mGetInst().pushStackPointer();
       mByteCodeEmitter.pushI32Add();
       mGetInst().setStackPointer();
-      mByteCodeEmitter.callIndirect(kSignatureIndex);
+      mByteCodeEmitter.callIndirect(mSignatureIndexFor(beingCalled));
       return mGetInst().restoreStackPointerToGlobal();
     },
     withStackFrameSize<T>(size: number, fn: (cw: CodeWriter) => T): T {

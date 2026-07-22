@@ -1,4 +1,4 @@
-import { Helpers, StandardError } from '../helpers';
+import { Helpers, raise, StandardError } from '../helpers';
 import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionTypeBuildBase } from './function_type_build_base';
@@ -11,7 +11,6 @@ const { freeze, memoize } = Helpers;
 function make
   (mDefs: DastFunctionNameMappings,
    mNodes: Readonly<DastNode[]>,
-   // v this has a "context" stack frame for nodes...
    mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,
    mStackFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild
@@ -21,7 +20,7 @@ function make
   const baseStage = memoize(ContextBaseStage.make);
 
   const linkStage = memoize((): ContextLinkStage =>
-    baseStage().contextLinkBuild( mDefs.pendingNames ));
+    baseStage().contextLinkStage( mDefs.pendingNames, mStackFrameStack ));
 
   const fullContextBuild = memoize((): ContextDeclarationBuild =>
     linkStage().next().next(mDefs.declaredNames, mIntoFunctionTypeBuild));
@@ -34,15 +33,27 @@ function make
     const { referenceType } = baseStage();
     const { receiverResolution } = linkStage();
 
-    if (!referenceType())
-      { return setErrorFn(fullContextBuild().error); }
-
     return freeze({
       referenceType: referenceType as () => ObjectType,
       aggregateType: (() => mSetAggregateType) as () => ObjectType | 'not ready',
       receiverResolution,
-      uniqueName: () => mDefs.name
+      uniqueName: () => mDefs.name,
+      
+      intoBuildFor(node: DastNode) {
+        if (mSetAggregateType === 'not ready') {
+          raise('should not be called yet!');
+        }
+        return intoFunctionTypeBuildFunc()(node);
+      }
     })
+  });
+
+  // TODO this doesn't get passed down though...
+  const intoFunctionTypeBuildFunc = memoize(() => {
+    const { cachedBuildFor } = fullContextBuild();
+
+    return (node: DastNode) =>
+      cachedBuildFor(node) ?? mIntoFunctionTypeBuild(node);
   });
 
   const functionType = memoize((): FunctionType | undefined => {
@@ -56,14 +67,13 @@ function make
         return setErrorFn(fullContextBuild().error);
       }
       // wrap my code writer, s.t. it gets extended?!
-
+      // TODO needs to be in "emit"
       mSetAggregateType = aggregateType()!;
-      // mSetAggregateType.sizeInBytes(); -> send this to ftypes some how
 
       const subBuilds: FunctionTypeBuild[] = [];
       subBuilds.
         push(FunctionTypeBuildBase.makeSuccessFromType(preface()),
-            ...mNodes.map(mIntoFunctionTypeBuild));
+             ...mNodes.map(intoFunctionTypeBuildFunc()));
       const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
       const compositeFunctionType = cleanUpBuild.functionType();
       if (!compositeFunctionType)

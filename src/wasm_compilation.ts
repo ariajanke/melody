@@ -1,15 +1,16 @@
 import { FunctionType } from './function_type_build';
 import { FunctionTypeIndexGrabber } from './function_type_index_grabber';
 import { Helpers, raise } from './helpers';
-import { StringPool } from './string_pool';
+// import { StringPool } from './string_pool';
 import { MelodyCodeWriter } from './wasm_compilation/melody_code_writer';
+import { StringPool } from './wasm_compilation/string_pool';
 import { WasmBuiltinImportsCreation }
   from './wasm_compilation/wasm_builtin_imports_creation';
 import { WasmCodeSection } from './wasm_compilation/wasm_code_section';
 import { WasmElementsSection } from './wasm_compilation/wasm_elements_section';
 import { WasmExportsSection } from './wasm_compilation/wasm_exports_section';
-import { WasmFunctionCodeWriter }
-  from './wasm_compilation/wasm_function_code_writer';
+// import { WasmFunctionCodeWriter }
+//   from './wasm_compilation/wasm_function_code_writer';
 import { WasmFunctionsSection }
   from './wasm_compilation/wasm_functions_section';
 import { WasmGlobalsSection } from './wasm_compilation/wasm_globals_section';
@@ -44,10 +45,10 @@ const header = memoize((): readonly number[] => {
   ];
 });
 
-function make(mStringPool: StringPool,
-              mInjections = defaultInjections())
+function make(mInjections = defaultInjections())
   : WasmCompilation
 {
+  const mStringPool = StringPool.make();
   const mImportsCreation = WasmBuiltinImportsCreation.
     make(mStringPool,
          mInjections.puts,
@@ -100,21 +101,18 @@ function make(mStringPool: StringPool,
     MelodyCodeWriter.assertFtypeSignatureOkay(mFunctionType);
     return supportedFunctionSignatureIndex();
   }
+  
 
   const mIndexGrabber = FunctionTypeIndexGrabber.make();
   function incorporate
     (implementation: FunctionType,
      _1: FunctionType): void
   {
-    MelodyCodeWriter.make(implementation, signatureIndexFor, );
-    const codeWriter = WasmFunctionCodeWriter.make();
-    implementation.emit(codeWriter);
-    // <- collect heterogenous container
-    // plug through a "compliation unit"
-    // and comes out the homogenous bytecode
-    
-    mCodeSection.pushFunctionBody(codeWriter.toFunctionBody());
-    mFunctionsSection.pushSignatureFrom(supportedFunctionSignatureIndex());
+    const codeWriter = MelodyCodeWriter.
+      make(implementation, mStringPool, signatureIndexFor);
+    implementation.simpleEmit(codeWriter);
+    codeWriter.appendByteCodeTo(mCodeSection);
+    mFunctionsSection.pushSignatureFrom(signatureIndexFor(implementation));
     ++mFunctionCount;
   }
 

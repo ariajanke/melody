@@ -4,15 +4,17 @@ import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_bu
 import { StackSafetyChecker } from './stack_safety_checker';
 import { Helpers, StandardError } from '../helpers';
 import { FunctionTypeBase } from './function_type_base';
+import { ContextFrameSnapshot } from './context_frame_stack';
 
 const { freeze, memoize } = Helpers;
 
 // builds the whole "let a := stuff"
 // after "<initSet>:(a)" has been added
-export const InitialSetBuild = freeze({
+export const InitialSetFunctionBuild = freeze({
   make(mNamesDefined: readonly string[] | string, 
        mArgsBuild: FunctionTypeBuild,
-       mTopContextType: () => ObjectType)
+       mTopFrame: ContextFrameSnapshot)
+      //  mTopContextType: () => ObjectType)
       : FunctionTypeBuild
   {
     const { error, setErrorFn } = StandardError.make();
@@ -35,8 +37,8 @@ export const InitialSetBuild = freeze({
         { return; }
 
       const compositeFunctionType: FunctionType = freeze({
-        ...FunctionTypeBase.receivedByContext(),
-        emit(writer: CodeWriter) {
+        ...FunctionTypeBase.makeNewEmitlessEmpty(),
+        simpleEmit(writer: CodeWriter) {
           // no "receiver"
           argsFType()!.emit(writer);
           initialSetter()!.emit(writer);

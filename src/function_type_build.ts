@@ -5,7 +5,7 @@ import { FunctionTypeBuildVisitor } from './function_type_build/function_type_bu
 import { TupleObjectFactory } from './function_type_build/tuple_type';
 import { FunctionTypeRegistry } from './function_type_registry';
 import { Helpers, StandardErrorMessage } from './helpers';
-import { StringPoolBuilder } from './string_pool';
+// import { StringPoolBuilder } from './string_pool';
 
 const { freeze, memoize } = Helpers;
 
@@ -101,7 +101,7 @@ export interface FunctionTypeBuild {
 };
 
 function make(mRoot: DastNode,
-              mStringPoolBuilder: StringPoolBuilder,
+              // mStringPoolBuilder: StringPoolBuilder,
               mFunctionRegistry: FunctionTypeRegistry)
   : FunctionTypeBuild
 {

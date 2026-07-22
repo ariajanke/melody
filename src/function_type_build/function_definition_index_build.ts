@@ -3,7 +3,7 @@ import { Helpers } from '../helpers';
 import { FunctionDefinitionBodyBuild } from './function_definition_body_build';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionTypeRegistry } from '../function_type_registry';
-import { WritableDeclaredContextStack } from './declared_context_stack';
+// import { WritableDeclaredContextStack } from './declared_context_stack';
 
 const { freeze, memoize } = Helpers;
 

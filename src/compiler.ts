@@ -24,7 +24,7 @@ function make(mSource: string,
       return undefined;
     }
 
-    const wasmCompilation = WasmCompilation.make(stringPool()!, mInjections);
+    const wasmCompilation = WasmCompilation.make(mInjections);
     functionRegistry()!.forEach(wasmCompilation.incorporate);
     wasmCompilation.makeEntryPoint(build.rootIndexEmission()!);
     return wasmCompilation;

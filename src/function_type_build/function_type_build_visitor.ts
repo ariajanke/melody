@@ -6,14 +6,15 @@ import {
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { FunctionTypeRegistry } from '../function_type_registry';
 import { Helpers, raise } from '../helpers';
-import { StringPoolBuilder } from '../string_pool';
-import { CallFunctionTypeBuild } from './call_function_type_build';
+import { CallFunctionBuild } from './call_function_build';
+// import { StringPoolBuilder } from '../string_pool';
+// import { CallFunctionTypeBuild } from './call_function_build';
 import { ContextFrameStack } from './context_frame_stack';
 // import { DastBuildCache } from './dast_build_cache';
 // import { DeclaredContextStack } from './declared_context_stack';
 import { FringeFunctionBuild } from './fringe_function_build';
 import { FunctionDefinitionIndexBuild } from './function_definition_index_build';
-import { InitialSetBuild } from './initial_set_build';
+// import { InitialSetBuild } from './initial_set_function_build';
 import { LiteralFunctionTypeBuild } from './literal_function_type_build';
 import { TupleFunctionTypeBuild } from './tuple_function_type_build';
 
@@ -27,34 +28,24 @@ export type HoldContextTypeFunction =
 // It represents a good place to stop for this project as well and pivot to demos  of competency in other domains like RDBMSs (Rails)
 // That way I have a good demo set for interviews
 function make
-  (mStringPoolBuilder: StringPoolBuilder,
+  (//mStringPoolBuilder: StringPoolBuilder,
    mFunctionRegistry: FunctionTypeRegistry)
   : DastVisitor<FunctionTypeBuild>
 {
-  // const mBuildCache = DastBuildCache.
-  //   make((node: DastNode) => node.visit(inst));
-  // const mDeclaredContextStack = DeclaredContextStack.make();
-  const mFurtherVisit = (node: DastNode) => node.visit(inst);
-  const mStackFrameStack = ContextFrameStack.make(mFurtherVisit);
-  
-  // const topContext = (): ObjectType =>
-  //   mDeclaredContextStack.contextForHop(0)?.contextType() ??
-  //   raise('No current context!');
+  const mStackFrameStack = ContextFrameStack.
+    make((node: DastNode) => node.visit(inst));
+  const { topFrame, intoBuildFunction } = mStackFrameStack;
 
   const visitFringe = (name: string): FunctionTypeBuild =>
-    FringeFunctionBuild.make(name, topContext);
-
-  const visitString = (string_: string): FunctionTypeBuild => 
-    LiteralFunctionTypeBuild.makeForString(string_, mStringPoolBuilder);
+    FringeFunctionBuild.make(name, topFrame());
 
   function visitCall(callName: DastNode, receiver: DastNode, args: DastNode): FunctionTypeBuild {
     // TODO check for "not ready" at the top of the stack?
-    return CallFunctionTypeBuild.
+    return CallFunctionBuild.
       make(callName,
            receiver,
            args,
-           topContext().sizeInBytes,
-           mBuildCache.checkCachedBuild);
+           topFrame());
   }
 
   function visitFunctionDefinition
@@ -69,10 +60,10 @@ function make
   }
 
   function visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): FunctionTypeBuild {
-    return InitialSetBuild.
+    return InitialSetFunctionBuild.
       make(namesDefined,
            mBuildCache.checkCachedBuild(node),
-           topContext);
+           topFrame());
   }
 
   const visitTuple = (nodes: Readonly<DastNode[]>): FunctionTypeBuild =>
@@ -84,7 +75,7 @@ function make
     visitFunctionDefinition,
     visitInitialSet,
     visitInteger: LiteralFunctionTypeBuild.makeForInteger,
-    visitString,
+    visitString: LiteralFunctionTypeBuild.makeForString,
     visitTuple
   });
   return inst;

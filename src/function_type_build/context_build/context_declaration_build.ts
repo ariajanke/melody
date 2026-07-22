@@ -11,9 +11,9 @@ import { VariableAllocation } from './variable_allocation';
 const { freeze, memoize } = Helpers;
 
 export interface ContextDeclarationBuild_ {
-  // TODO also get our cached (DAST node -> ftype build) map?
   referenceType(): ObjectType | undefined;
   aggregateType(): ObjectType | undefined;
+  cachedBuildFor(node: DastNode): FunctionTypeBuild | undefined;
   error(): StandardErrorMessage;
 };
 
@@ -27,8 +27,16 @@ function make
 {
   const { error, setErrorFn } = StandardError.make();
 
-  const { orderedGroups } = OrderedDeclarationsGroupCollection.make(mDeclarationsMap, mIntoFunctionTypeBuild);
+  const mOrderedDeclarations = OrderedDeclarationsGroupCollection.
+    make(mDeclarationsMap, mIntoFunctionTypeBuild);
 
+  const { orderedGroups } = mOrderedDeclarations;
+
+  const cachedBuildFor = (node: DastNode) => {
+    if (!referenceType())
+      { return undefined; }
+    return mOrderedDeclarations.cachedBuildFor(node);
+  };
 
   const fullVariableAllocation = memoize(() => orderedGroups().
     reduce((startingAlloc: VariableAllocation | undefined, t: DeclarationFunctionGroup) => {
@@ -53,7 +61,6 @@ function make
       t.functionNames().forEach((name: string) => {
         mReferenceTypeLookUpTable[name] = DeclarationLookUpTable.
           make(mDeclarationsMap[name], newAlloc);
-        
       });
 
       ImplicitCallCollection.
@@ -87,7 +94,7 @@ function make
     return mReferenceType;
   });
 
-  return freeze({ referenceType, aggregateType, error });
+  return freeze({ referenceType, aggregateType, cachedBuildFor, error });
 }
 
 export const ContextDeclarationBuild_ = freeze({ make });

@@ -3,7 +3,7 @@ import { DastNode, DastVisitor } from '../../src/dast_build';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
 import { FunctionLookUpTable, FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
 import { BuiltinTypeBase, IntegerType } from '../../src/function_type_build/builtin_type';
-import { CallFunctionTypeBuild } from '../../src/function_type_build/call_function_type_build';
+import { CallFunctionTypeBuild } from '../../src/function_type_build/call_function_build';
 import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
 import { TupleObjectFactory } from '../../src/function_type_build/tuple_type';
 import { Helpers, raise, StandardError } from '../../src/helpers';

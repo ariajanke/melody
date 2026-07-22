@@ -1,12 +1,3 @@
-import { CodeWriter } from '../../code_writer';
-import { Helpers } from '../../helpers';
-
-const { freeze } = Helpers;
-
-export interface StringLiteralWriter {
-  mapToString(n: number): string | undefined;
-  pushLiteralString(str: string): CodeWriter;
-};
 
 function make
   (getInst: () => CodeWriter): StringLiteralWriter

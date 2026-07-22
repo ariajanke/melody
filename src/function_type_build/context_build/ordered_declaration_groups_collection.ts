@@ -7,6 +7,7 @@ const { freeze, memoize } = Helpers;
 
 export interface OrderedDeclarationsGroupCollection {
   orderedGroups(): Readonly<DeclarationFunctionGroup[]>;
+  cachedBuildFor(dast: DastNode): FunctionTypeBuild | undefined;
 };
 
 function make
@@ -38,7 +39,7 @@ function make
   });
 
   const mOrder: thing[] = [];
-  const mDone : { [dastNodeUid: number]: true | undefined } = {};
+  const mDone : { [dastNodeUid: number]: FunctionTypeBuild | undefined } = {};
 
   function appendInitialSetFrom(name: string) {
     const decl = mDeclarationsMap[name];
@@ -70,7 +71,7 @@ function make
     if (!initialSetName)
       { raise('uh oh'); }
     
-    mDone[uid()] = true;
+    mDone[uid()] = fbuild;
     mOrder.push({ fnames, initialSetName, fbuild, vnames });
   }
 
@@ -84,6 +85,7 @@ function make
 
   return freeze({
     orderedGroups,
+    cachedBuildFor: (node: DastNode) => mDone[node.uid()]
   });
 }
 

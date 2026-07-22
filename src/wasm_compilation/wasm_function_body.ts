@@ -147,7 +147,7 @@ function make(): WasmFunctionBody {
     pushTeeLocal: makeAttr('teeLocal'),
     finish() {
       return trackFinished(() => {
-        // must begin with local decl count
+        // NOTE by WASM spec, must begin with local decl count
         const localsInfo = localCountIntoCode(mLocalCount);
         const wrappedCode = [
           ...localsInfo,

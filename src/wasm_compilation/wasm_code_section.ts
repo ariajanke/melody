@@ -1,6 +1,5 @@
-import { Helpers } from '../helpers';
-import { FinisherHelpers, WasmHelpers } from './wasm_helpers';
-import { type WasmFunctionBody } from './wasm_function_body';
+import { Helpers, raise } from '../helpers';
+import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 
 const { freeze } = Helpers;
 
@@ -12,9 +11,14 @@ function make() {
   const { encodeVaruint32 } = WasmHelpers;
   const { resetFinishedCode, trackFinished } = FinisherHelpers.make();
   const inst = freeze({
-    pushFunctionBody(functionBody: WasmFunctionBody) {
+    pushFunctionBody(bytecode: Readonly<number[]>) {
+      if (TypesAware.opCodes().functionEnd !==
+          bytecode[bytecode.length - 1])
+      {
+        raise('bytecode must describe a function body ');
+      }
       resetFinishedCode();
-      mCode.push(...functionBody.finish());
+      mCode.push(...bytecode);
       mFunctionCount += 1;
       return inst;
     },

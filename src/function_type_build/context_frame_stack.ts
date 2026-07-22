@@ -1,4 +1,4 @@
-import { DastFunctionNameMappings, DastNode } from '../dast_build';
+import { DastNode } from '../dast_build';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
 import { ReceiverResolution } from './context_build';
@@ -10,17 +10,18 @@ export interface ContextFrameSnapshot {
   referenceType(): ObjectType;
   aggregateType(): ObjectType | 'not ready';
   uniqueName(): string;
+  intoBuildFor(node: DastNode): FunctionTypeBuild;
 };
 
 export interface ContextFrameStack {
   findWhereDeclared(pendingName: string): ObjectType;
   hopCountFor(pendingName: string): number;
   contextForHop(idx: number): ContextFrameSnapshot | undefined;
-
-  // top(): {};
+  topFrame(): ContextFrameSnapshot;
+  intoBuildFunction(): (node: DastNode) => FunctionTypeBuild;
 };
 
-export interface WritableContextFrameStack {
+export interface WritableContextFrameStack extends ContextFrameStack {
   withBaseReferenceType<T>(snapshot: ContextFrameSnapshot, fn: () => T): T;
 };
 
@@ -81,11 +82,22 @@ export const ContextFrameStack = freeze({
       return result;
     }
 
+    const topFrameAssertless = () => mStack[mStack.length - 1];
+
+    const topFrame = () =>
+      topFrameAssertless() ?? raise('stack is empty');
+
+    function intoBuildFunction() {
+      return topFrameAssertless()?.intoBuildFor ?? mIntoFunctionTypeBuild;
+    }
+
     return freeze({
       contextForHop,
       hopCountFor,
       withBaseReferenceType,
-      findWhereDeclared
+      findWhereDeclared,
+      topFrame,
+      intoBuildFunction
     });
   }
 });
