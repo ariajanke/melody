@@ -1,4 +1,5 @@
-import { FunctionDefinitionRegistry, FunctionType } from '../function_type_build';
+import { FunctionDefinitionRegistry } from '../function_definition_registry';
+import { FunctionType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
 import { TypesAware } from './wasm_helpers';
 import { WasmTypesSection } from './wasm_types_section';

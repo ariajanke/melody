@@ -1,12 +1,11 @@
 import { CodeWriter } from '../code_writer';
 import { DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError, raise } from '../helpers';
 import { ContextFrameSnapshot } from './context_frame_stack';
 import { FunctionTypeBase } from './function_type_base';
-import { StackSafetyChecker } from './stack_safety_checker';
-import { TupleObjectFactory } from './tuple_type';
+import { TupleObjectFactory } from './tuple_type_factory';
 
 const { freeze, memoize } = Helpers;
 const { kAssignmentOperator } = FunctionNamingSchema;
@@ -20,14 +19,12 @@ function make
   (mCallName: DastNode,
    mReceiver: DastNode,
    mArgs: DastNode,
-  //  mGetCurrentAggregate: () => ObjectType | 'not ready',
-  //  mGetContextSizeInBytes: () => number,
    mContext: ContextFrameSnapshot)
-  //  mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
   : FunctionTypeBuild
 {
   const { error, setErrorMessage, setErrorFn } = StandardError.make();
   const mIntoFunctionTypeBuild = mContext.intoBuildFor;
+
   const callNameStr = memoize((): string | undefined => {
     const callNameStr = mCallName.asString();
     if (!callNameStr) {
@@ -43,22 +40,21 @@ function make
     return callNameStr;
   });
 
+  const contextSelfFtype = () =>
+    mContext.receiverResolution().
+    mapExpectedToReceiverAccessor(mContext.referenceType()) ??
+    raise('no self reference function <context>');
+
   const lexicalReceiver = memoize(() => {
     const receiverBuild = mIntoFunctionTypeBuild(mReceiver);
     return receiverBuild.functionType() ?? setErrorFn(receiverBuild.error);
   });
 
-  const args = memoize(() => {
-    const argsBuild = mIntoFunctionTypeBuild(mArgs);
-    return argsBuild.functionType() ?? setErrorFn(argsBuild.error);
-  });
-
   const callFunctionType = memoize(() => {
-    const lexRec = lexicalReceiver();
-    if (!lexRec || !args())
+    if (!lexicalReceiver() || !args())
       { return undefined; }
 
-    const callFunctionType = lexRec.
+    const callFunctionType = lexicalReceiver()!.
       returns().
       lookUp(callNameStr()!)?.
       byParameters( args()!.returns() );
@@ -66,114 +62,51 @@ function make
       const msg =
         `cannot find function "${callNameStr()}" ` +
         `on receiver "${mReceiver.asString()}" ` +
-        `(type: "${lexRec.returns().name()}") ` +
+        `(type: "${lexicalReceiver()!.returns().name()}") ` +
         `for args "${mArgs.asString()}"`;
       return setErrorMessage(msg);
     }
+
     return callFunctionType;
   });
 
-  const receiver = memoize(() => {
+  const receiverFtype = memoize(() => {
     if (!callFunctionType())
       { return undefined; }
 
-    const rec = callFunctionType()!.receiver();
+    if (contextSelfFtype().uid() !== lexicalReceiver()?.uid())
+      { return lexicalReceiver(); }
+
     const ftype = mContext.
       receiverResolution().
-      mapExpectedToReceiverAccessor( rec );
+      mapExpectedToReceiverAccessor( callFunctionType()!.receiver() );
     if (!ftype) {
       return setErrorMessage('Cannot resolve receiver retrieval');
     }
-    if (ftype.receiver().uid() !==  emptyTuple().uid())
+
+    const { emptyTuple } = TupleObjectFactory;
+    if (ftype.receiver().uid() !== emptyTuple().uid())
       { raise('Receiver resolution is behaving poorly'); }
     return ftype;
   });
 
-  // a possible error:
-  // the expected receiver cannot be made available
-  // (be it lexically, current frame, or none)
-
-  // const actualReceiver = memoize(() => {
-  //   if (!callFunctionType())
-  //     { return undefined; }
-  //   const { alternateReceiver } = callFunctionType()!;
-  //   if (!alternateReceiver()) {
-  //     return lexicalReceiver();
-  //   }
-
-  //   return lexicalReceiver()?.
-  //     returns().
-  //     lookUp(alternateReceiver()!)?.
-  //     byParameters(emptyTuple());
-  // });
-  
-  const { emptyTuple } = TupleObjectFactory;
-
-  // const optionalIndexAccessor = memoize(() => {
-  //   const indexAccessorName = FunctionNamingSchema.
-  //     mapToFringeAccessor(callNameStr()!);
-  //   // for delegates: if we define "f" on the current context
-  //   // we also define a ".f" 
-  //   return lexicalReceiver()?.
-  //     returns().
-  //     lookUp(indexAccessorName)?.
-  //     byParameters(emptyTuple());
-  // });
+  const args = memoize(() => {
+    const argsBuild = mIntoFunctionTypeBuild(mArgs);
+    return argsBuild.functionType() ?? setErrorFn(argsBuild.error);
+  });
 
   const functionType = memoize((): FunctionType | undefined => {
-    if (!callFunctionType() || !args() || !receiver())
+    if (!callFunctionType()  || !receiverFtype() || !args())
       { return undefined; }
-  
-    const compositeFunctionType = freeze({
-      // ...FunctionTypeBase.receivedByNone(),
-      ...FunctionTypeBase.makeNewEmitlessEmpty(),
-      returns: () => callFunctionType()!.returns(),
-      simpleEmit(writer: CodeWriter) {
-        // const contextSize = mGetContextSizeInBytes();
-        // if (contextSize < 0) {
-        //   raise(`Context size cannot be negative, got ${contextSize}`);
-        // }
 
-        // actualReceiver()!.emit(writer);
-        // args()!.emit(writer);
-        // NOTE
-        // mechanics of call
-        // To handle indirect calls, special handling is needed. Consider these
-        // examples:
-        // - with "puts" you will not find ".puts"
-        // - with "f" you will find ".f"
-        // NOTE
-        // the function is *always* expected to consume it's parameters
-        // need function index for user defined functions
-        // optionalIndexAccessor()?.emit(writer);
-        // // down here so our loads/stores stay sane
-        // if (optionalIndexAccessor()) {
-        //   writer.
-        //     pushRepresentation( contextSize ).
-        //     pushStackPointer().
-        //     addIntegers().
-        //     setStackPointer();
-        // }
-        // callFunctionType()!.emit(writer);
-        // if (optionalIndexAccessor()) {
-        //   writer.forStackPointer('restoreToGlobal');
-        // }
-        callFunctionType()!.emit(receiver()!, args()!, writer);
+    return freeze({
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      returns: callFunctionType()!.returns,
+      simpleEmit(writer: CodeWriter) {
+        callFunctionType()!.emit(receiverFtype()!, args()!, writer);
         return writer;
       }
     });
-
-    // if (kLogToConsole) {
-    //   const { parameters, returns } = compositeFunctionType;
-    //   console.log(`Call "${callNameStr}" as composite ftype ` +
-    //               `taking ${parameters().name()} returning ` +
-    //               `"${returns().name()}" ` +
-    //               `received by "${mReceiver.asString()}" `+
-    //               `(${optionalIndexAccessor() ? 'is' : 'is not'} an indirect call)`);
-    // }
-    // StackSafetyChecker.make().check(compositeFunctionType);
-
-    return compositeFunctionType;
   });
 
   return freeze({ functionType, error });

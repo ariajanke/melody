@@ -5,7 +5,7 @@ import { ConstantStringType, IntegerType } from '../../src/function_type_build/b
 import { ContextFactoryStage, ContextObjectType } from '../../src/function_type_build/context_factory_stage';
 import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
 import { PutsFunctionLookUpTable } from '../../src/function_type_build/context_build/puts_function_look_up_table';
-import { TupleObjectFactory } from '../../src/function_type_build/tuple_type';
+import { TupleObjectFactory } from '../../src/function_type_build/tuple_type_factory';
 import { Helpers, raise } from '../../src/helpers';
 import { TestHelpers } from '../test_helpers';
 

@@ -3,71 +3,52 @@ import {
   DastNode,
   DastVisitor
 } from '../dast_build';
-import { FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { FunctionTypeRegistry } from '../function_type_registry';
-import { Helpers, raise } from '../helpers';
+import { FunctionTypeBuild } from '../function_type_build';
+import { Helpers } from '../helpers';
 import { CallFunctionBuild } from './call_function_build';
-// import { StringPoolBuilder } from '../string_pool';
-// import { CallFunctionTypeBuild } from './call_function_build';
 import { ContextFrameStack } from './context_frame_stack';
-// import { DastBuildCache } from './dast_build_cache';
-// import { DeclaredContextStack } from './declared_context_stack';
 import { FringeFunctionBuild } from './fringe_function_build';
-import { FunctionDefinitionIndexBuild } from './function_definition_index_build';
-// import { InitialSetBuild } from './initial_set_function_build';
+import { DefinitionIndexFunctionBuild } from './definition_index_function_build';
 import { LiteralFunctionTypeBuild } from './literal_function_type_build';
-import { TupleFunctionTypeBuild } from './tuple_function_type_build';
+import { TupleFunctionBuild } from './tuple_function_build';
+import { FunctionDefinitionRegistry } from '../function_definition_registry';
+import { InitialSetFunctionBuild } from './initial_set_function_build';
 
 const { freeze } = Helpers;
 
-export type HoldContextTypeFunction =
-  <T>(getter: () => ObjectType, whileFn: () => T) => T;
-
-// I have to finish this
-// If I do that's a portfolio piece (in conjunction with a demo branch)
-// It represents a good place to stop for this project as well and pivot to demos  of competency in other domains like RDBMSs (Rails)
-// That way I have a good demo set for interviews
 function make
-  (//mStringPoolBuilder: StringPoolBuilder,
-   mFunctionRegistry: FunctionTypeRegistry)
+  (mFunctionRegistry: FunctionDefinitionRegistry)
   : DastVisitor<FunctionTypeBuild>
 {
   const mStackFrameStack = ContextFrameStack.
     make((node: DastNode) => node.visit(inst));
-  const { topFrame, intoBuildFunction } = mStackFrameStack;
+  const { topFrame } = mStackFrameStack;
 
   const visitFringe = (name: string): FunctionTypeBuild =>
     FringeFunctionBuild.make(name, topFrame());
 
-  function visitCall(callName: DastNode, receiver: DastNode, args: DastNode): FunctionTypeBuild {
-    // TODO check for "not ready" at the top of the stack?
-    return CallFunctionBuild.
-      make(callName,
-           receiver,
-           args,
-           topFrame());
+  function visitCall
+    (callName: DastNode, receiver: DastNode, args: DastNode): FunctionTypeBuild
+  {
+    return CallFunctionBuild.make(callName, receiver, args, topFrame());
   }
 
   function visitFunctionDefinition
     (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>): FunctionTypeBuild
   {
-    return FunctionDefinitionIndexBuild.
-      make(defs,
-           nodes,
-           mBuildCache.checkCachedBuild,
-           mDeclaredContextStack,
-           mFunctionRegistry);
+    return DefinitionIndexFunctionBuild.
+      make(defs, nodes, mFunctionRegistry, mStackFrameStack);
   }
 
-  function visitInitialSet(namesDefined: readonly string[] | string, node: DastNode): FunctionTypeBuild {
-    return InitialSetFunctionBuild.
-      make(namesDefined,
-           mBuildCache.checkCachedBuild(node),
-           topFrame());
+  function visitInitialSet
+    (namesDefined: readonly string[] | string,
+     node: DastNode): FunctionTypeBuild
+  {
+    return InitialSetFunctionBuild.make(namesDefined, node, topFrame());
   }
 
   const visitTuple = (nodes: Readonly<DastNode[]>): FunctionTypeBuild =>
-    TupleFunctionTypeBuild.make(nodes, mBuildCache.checkCachedBuild);
+    TupleFunctionBuild.make(nodes, topFrame().intoBuildFor);
   
   const inst = freeze({
     visitCall,

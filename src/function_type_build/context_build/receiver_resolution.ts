@@ -2,7 +2,7 @@ import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { ContextFrameStack } from '../context_frame_stack';
-import { TupleObjectFactory } from '../tuple_type';
+import { TupleObjectFactory } from '../tuple_type_factory';
 import { AncestorInfo, UsedAncestorCollection } from './used_ancestor_collection';
 
 const { freeze, memoize } = Helpers;

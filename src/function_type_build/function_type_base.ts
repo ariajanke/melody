@@ -1,7 +1,7 @@
 import { CodeWriter } from '../code_writer';
-import { FunctionType, ObjectType } from '../function_type_build';
+import { FunctionType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { TupleObjectFactory } from './tuple_type';
+import { TupleObjectFactory } from './tuple_type_factory';
 
 const { freeze, memoize } = Helpers;
 const makeUid = () => memoize(Symbol);

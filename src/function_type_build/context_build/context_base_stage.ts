@@ -9,7 +9,7 @@ import { ContextFrameStack } from '../context_frame_stack';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
-import { TupleObjectFactory } from '../tuple_type';
+import { TupleObjectFactory } from '../tuple_type_factory';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 import { ContextLinkStage_ } from './context_link_stage';
 
@@ -59,7 +59,7 @@ export const ContextBaseStage_ = freeze({
 
     const referenceType = memoize((): ObjectType => {
       const inst = freeze({
-        ...BuiltinTypeBase.defaultsWith((): ObjectType => inst),
+        ...BuiltinTypeBase.defaultsWith(),
         name: () => 'ContextType',
         lookUp(operation: string | symbol): FunctionLookUpTable | undefined
           { return mTable[operation]; },

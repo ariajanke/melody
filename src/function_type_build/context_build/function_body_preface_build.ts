@@ -1,8 +1,8 @@
-import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
+import { FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { CodeWriter } from '../../code_writer';
 import { FunctionTypeBase } from '../function_type_base';
-import { TupleObjectFactory } from '../tuple_type';
+import { TupleObjectFactory } from '../tuple_type_factory';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import {
   AncestorInfo,
@@ -11,7 +11,6 @@ import {
 } from './used_ancestor_collection';
 import { ContextAttributeFactory } from './context_attribute_factory';
 import { MutableFunctionTable } from '../mutable_function_table';
-import { TupleFunctionTypeBuild } from '../tuple_function_type_build';
 import { VariableAllocation } from './variable_allocation';
 import { FunctionOpLookUp } from './context_base_stage';
 
@@ -65,7 +64,7 @@ function make
     freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(writer: CodeWriter): void {
-        writer.forStackPointer('saveToLocal');
+        writer.saveStackPointerToLocal();
         if (hasParentGetter()) {
           writer.storeParentPointer(parentAccessInfo().accessIndex);
         }
@@ -130,7 +129,7 @@ function make
       simpleEmit(writer: CodeWriter): void {
         parentGetter()!.simpleEmit(writer);
         hopEmissions.forEach(emitHop => emitHop(writer));
-        writer.forStackPointer('restoreToGlobal');
+        writer.restoreStackPointerToGlobal();
       },
       returns: mUsedAncestorCollection.ancestorTupleType
     });

@@ -3,7 +3,7 @@ import { DastNode } from '../dast_build';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
 import { FunctionTypeBase } from './function_type_base';
-import { TupleObjectFactory } from './tuple_type';
+import { TupleObjectFactory } from './tuple_type_factory';
 
 const { freeze, memoize } = Helpers;
 
@@ -23,6 +23,7 @@ function make
       const ftype = build.functionType();
       if (!ftype)
         { return setErrorFn(build.error); }
+
       fts.push(ftype);
     };
     return fts;
@@ -34,10 +35,13 @@ function make
   const functionType = memoize((): FunctionType | undefined => {
     if (!functionTypesFromNodes())
       { return; }
+
+    const ftypeReturns = memoize(() => TupleObjectFactory.
+      make(functionTypesFromNodes()!.map(ft => ft.returns())));
+
     return freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
-      returns: memoize(() => TupleObjectFactory.
-        make(functionTypesFromNodes()!.map(ft => ft.returns()))),
+      returns: ftypeReturns,
       simpleEmit(writer: CodeWriter) {
         reversedFunctionTypes()!.
           forEach((ft: FunctionType) => ft.simpleEmit(writer));
@@ -46,10 +50,7 @@ function make
     });
   });
   
-  return freeze({
-    functionType,
-    error
-  });
+  return freeze({ functionType, error });
 }
 
-export const TupleFunctionTypeBuild = freeze({ make });
+export const TupleFunctionBuild = freeze({ make });

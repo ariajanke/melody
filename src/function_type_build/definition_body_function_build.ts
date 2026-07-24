@@ -11,11 +11,13 @@ const { freeze, memoize } = Helpers;
 function make
   (mDefs: DastFunctionNameMappings,
    mNodes: Readonly<DastNode[]>,
-   mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild,
    mStackFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild
 {
   const { error, setErrorFn } = StandardError.make();
+
+  // NOTE order dependant, must be done before the whole "with..."
+  const mIntoFunctionTypeBuild = mStackFrameStack.intoBuildFunction();
 
   const baseStage = memoize(ContextBaseStage.make);
 
@@ -86,4 +88,4 @@ function make
   return freeze({ functionType, error });
 }
 
-export const FunctionDefinitionBodyBuild = freeze({ make });
+export const DefinitionBodyFunctionBuild = freeze({ make });

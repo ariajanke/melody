@@ -1,9 +1,9 @@
 import { IastBuild } from './iast_build';
 import { DastBuild } from './dast_build';
 import { FunctionType, FunctionTypeBuild } from './function_type_build';
-import { FunctionTypeRegistry } from './function_type_registry';
+// import { FunctionTypeRegistry } from './function_type_registry';
 import { Helpers } from './helpers';
-import { StringPool, StringPoolBuilder } from './string_pool';
+// import { StringPool, StringPoolBuilder } from './string_pool';
 import { Tokenization } from './tokenization';
 
 const { freeze, memoize } = Helpers;

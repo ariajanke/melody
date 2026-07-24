@@ -2,7 +2,7 @@ import { CodeWriter } from '../../code_writer';
 import { FunctionType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { WasmFunctionBody } from '../wasm_function_body';
-import { WasmFunctionLocalAllocation } from './wasm_function_locals_allocation';
+import { WasmFunctionRegistry } from '../wasm_function_registry';
 
 const { freeze } = Helpers;
 
@@ -20,7 +20,7 @@ function make
   
   return freeze({
     indirectCall(beingCalled: FunctionType): CodeWriter {
-      WasmFunctionLocalAllocation.assertFtypeSignatureOkay(beingCalled);
+      WasmFunctionRegistry.assertFtypeSignatureOkay(beingCalled);
       mByteCodeEmitter.pushI32Const(getTopSize());
       mGetInst().pushStackPointer();
       mByteCodeEmitter.pushI32Add();

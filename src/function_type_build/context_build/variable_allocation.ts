@@ -1,6 +1,6 @@
 import { ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { TupleObjectFactory } from '../tuple_type';
+import { TupleObjectFactory } from '../tuple_type_factory';
 
 const { freeze } = Helpers;
 

@@ -1,6 +1,6 @@
 import { Helpers, raise } from '../../helpers';
 import { FunctionType, ObjectType } from '../../function_type_build';
-import { TupleObjectFactory } from '../tuple_type';
+import { TupleObjectFactory } from '../tuple_type_factory';
 import { CodeWriter } from '../../code_writer';
 import { MemoryArray } from '../../memory_array';
 import { FunctionTypeBase } from '../function_type_base';

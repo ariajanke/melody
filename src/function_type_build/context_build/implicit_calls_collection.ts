@@ -4,7 +4,7 @@ import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_ty
 import { Helpers, raise } from '../../helpers';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
-import { TupleObjectFactory } from '../tuple_type';
+import { TupleObjectFactory } from '../tuple_type_factory';
 import { NameTypePair } from './declaration_function_group';
 
 const { freeze, memoize } = Helpers;

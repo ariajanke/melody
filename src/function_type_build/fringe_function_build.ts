@@ -3,7 +3,7 @@ import { FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
 import { ContextFrameSnapshot } from './context_frame_stack';
 import { FunctionTypeBase } from './function_type_base';
-import { TupleObjectFactory } from './tuple_type';
+import { TupleObjectFactory } from './tuple_type_factory';
 
 const { freeze, memoize } = Helpers;
 

@@ -1,4 +1,5 @@
-import { FunctionDefinitionRegistry, FunctionType } from './function_type_build';
+import { FunctionDefinitionRegistry } from './function_definition_registry';
+import { FunctionType } from './function_type_build';
 import { Helpers } from './helpers';
 import { MelodyCodeWriter } from './wasm_compilation/melody_code_writer';
 import { StringPool } from './wasm_compilation/string_pool';

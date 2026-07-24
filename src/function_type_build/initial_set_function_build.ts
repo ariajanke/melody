@@ -1,57 +1,64 @@
 import { CodeWriter } from '../code_writer';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
-import { StackSafetyChecker } from './stack_safety_checker';
-import { Helpers, StandardError } from '../helpers';
+import { FunctionTypeBuild } from '../function_type_build';
+import { Helpers, raise, StandardError } from '../helpers';
 import { FunctionTypeBase } from './function_type_base';
 import { ContextFrameSnapshot } from './context_frame_stack';
+import { DastNode } from '../dast_build';
 
 const { freeze, memoize } = Helpers;
 
-// builds the whole "let a := stuff"
-// after "<initSet>:(a)" has been added
-export const InitialSetFunctionBuild = freeze({
-  make(mNamesDefined: readonly string[] | string, 
-       mArgsBuild: FunctionTypeBuild,
-       mTopFrame: ContextFrameSnapshot)
-      //  mTopContextType: () => ObjectType)
-      : FunctionTypeBuild
-  {
-    const { error, setErrorFn } = StandardError.make();
-    const argsFType = memoize(() =>
-      mArgsBuild.functionType() ?? setErrorFn(mArgsBuild.error));
-    const initialSetter = memoize(() => {
-      if (!argsFType())
-        { return; }
-      const initialSetName = FunctionNamingSchema.
-        mapToInitialSetName(mNamesDefined);
-      return mTopContextType().
-        lookUp( initialSetName )?.
-        byParameters( argsFType()!.returns() ) ?? (() => {
-          throw new Error(`Cannot find "${initialSetName}"`);
-        })();
-    });
+function make
+  (mNamesDefined: readonly string[] | string, 
+   mArgsNode: DastNode,
+   mTopFrame: ContextFrameSnapshot)
+  : FunctionTypeBuild
+{
+  const { error, setErrorFn } = StandardError.make();
 
-    const functionType = memoize(() => {
-      if (!initialSetter())
-        { return; }
+  const argsBuild = memoize(() => mTopFrame.intoBuildFor(mArgsNode));
 
-      const compositeFunctionType: FunctionType = freeze({
-        ...FunctionTypeBase.makeNewEmitlessEmpty(),
-        simpleEmit(writer: CodeWriter) {
-          // no "receiver"
-          argsFType()!.emit(writer);
-          initialSetter()!.emit(writer);
-          return writer;
-        }
-      });
-      StackSafetyChecker.make().check(compositeFunctionType);
-      return compositeFunctionType;
-    });
+  const argsFType = memoize(() =>
+    argsBuild().functionType() ?? setErrorFn(argsBuild().error));
+
+  const mInitialSetName = FunctionNamingSchema.
+    mapToInitialSetName(mNamesDefined);
+
+  const initialSetter = memoize(() => {
+    if (!argsFType())
+      { return; }
+
+    return mTopFrame.
+      referenceType().
+      lookUp(mInitialSetName)?.
+      byParameters(argsFType()!.returns()) ??
+      raise(`Cannot find "${mInitialSetName}"`);
+  });
+
+  const receiver = memoize(() => {
+    if (!initialSetter())
+      { return undefined; }
+
+    return mTopFrame.
+      receiverResolution().
+      mapExpectedToReceiverAccessor(initialSetter()!.receiver());
+  });
+
+  const functionType = memoize(() => {
+    if (!initialSetter())
+      { return undefined; }
 
     return freeze({
-      functionType,
-      error
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      simpleEmit(writer: CodeWriter) {
+        initialSetter()!.emit(receiver()!, argsFType()!, writer);
+        return writer;
+      }
     });
-  }
-});
+  });
+
+  return freeze({ functionType, error });
+}
+
+/// builds the function type roughly described by "let a := stuff" statements
+export const InitialSetFunctionBuild = freeze({ make });

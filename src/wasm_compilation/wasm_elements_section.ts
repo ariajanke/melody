@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { FinisherHelpers, TypesAware, WasmHelpers } from './wasm_helpers';
 import { WasmImportsSection } from './wasm_imports_section';
 
@@ -34,7 +34,7 @@ function make() {
 
   const finish = () => trackFinished(() => {
     if (mStartingIndex === undefined) {
-      throw new Error('Starting index not set for elements section');
+      raise('Starting index not set for elements section');
     }
     const mIndexList = Array.
       from({ length: mFunctionCount }, (_, i) => i + mStartingIndex!);

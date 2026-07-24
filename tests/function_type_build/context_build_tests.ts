@@ -9,7 +9,7 @@ import { ContextBuild } from '../../src/function_type_build/context_build';
 import { ContextFactoryStage, ContextFunctionTypeBuild, ContextObjectType } from '../../src/function_type_build/context_factory_stage';
 import { DeclaredContextStack } from '../../src/function_type_build/declared_context_stack';
 import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
-import { TupleObjectFactory } from '../../src/function_type_build/tuple_type';
+import { TupleObjectFactory } from '../../src/function_type_build/tuple_type_factory';
 import { Helpers, StandardError } from '../../src/helpers';
 import { TestHelpers } from '../test_helpers';
 
