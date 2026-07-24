@@ -60,7 +60,7 @@ function make(mSource: string,
     if (!functionRegistry())
       { return undefined; }
 
-    return WasmCompilation.make(functionRegistry(), mInjections);
+    return WasmCompilation.make(functionRegistry()!, mInjections);
   });
 
   const byteCode = () => compile()?.byteCode();
