@@ -1,16 +1,17 @@
 import { CodeWriter } from '../code_writer';
 import { FunctionType } from '../function_type_build';
 import { Helpers } from '../helpers';
+import { StringPool } from './string_pool';
+import { WasmCodeSection } from './wasm_code_section';
+import { WasmFunctionBody } from './wasm_function_body';
+import { WasmFunctionRegistry } from './wasm_function_registry';
+
 import { BuiltinsWriter } from './melody_code_writer/builtins_writer';
 import { FunctionCallWriter } from './melody_code_writer/function_call_writer';
 import { MemoryAluWriter } from './melody_code_writer/memory_alu_writer';
 import { StackOperationsWriter } from './melody_code_writer/stack_operations_writer';
 import { StackPointerWriter } from './melody_code_writer/stack_pointer_writer';
-// import { StringLiteralWriter } from './melody_code_writer/string_literal_writer';
 import { WasmFunctionLocalAllocation } from './melody_code_writer/wasm_function_locals_allocation';
-import { StringPool } from './string_pool';
-import { WasmCodeSection } from './wasm_code_section';
-import { WasmFunctionBody } from './wasm_function_body';
 
 const { freeze } = Helpers;
 
@@ -21,7 +22,8 @@ export interface MelodyCodeWriter extends CodeWriter {
 function make
   (mFunctionToBuild: FunctionType,
    mStringPool: StringPool,
-   mSignatureIndexFor: (ftype: FunctionType) => number): MelodyCodeWriter
+   mFunctionRegistry: WasmFunctionRegistry
+  ): MelodyCodeWriter
 {
   const mByteCodeEmitter = WasmFunctionBody.make();
   const mLocalAllocations = WasmFunctionLocalAllocation.make(mFunctionToBuild);
@@ -29,19 +31,24 @@ function make
   function appendByteCodeTo(codeSection: WasmCodeSection): void {
     codeSection.pushFunctionBody( mByteCodeEmitter.finish() );
   }
+  const pushIndexOfRegistered = (ftype: FunctionType): CodeWriter => {
+    const idx = mFunctionRegistry.indexOfRegisteredFor(ftype);
+    mByteCodeEmitter.pushI32Const( idx );
+    return inst;
+  };
+
   const inst = freeze({
     ...BuiltinsWriter.make(mByteCodeEmitter, mGetInst),
-    ...FunctionCallWriter.make(mByteCodeEmitter, mGetInst, mSignatureIndexFor),
+    ...FunctionCallWriter.make(mByteCodeEmitter, mGetInst, mFunctionRegistry.signatureIndexFor),
     ...MemoryAluWriter.make(mByteCodeEmitter, mGetInst),
     ...StackOperationsWriter.make(mByteCodeEmitter, mLocalAllocations, mGetInst),
     ...StackPointerWriter.make(mByteCodeEmitter, mLocalAllocations, mGetInst),
     ...mStringPool.makeLiteralWriter(mGetInst),
-    appendByteCodeTo
+    appendByteCodeTo,
+    pushIndexOfRegistered
   });
 
   return inst;
 }
 
-const { assertFtypeSignatureOkay } = WasmFunctionLocalAllocation;
-
-export const MelodyCodeWriter = freeze({ make, assertFtypeSignatureOkay });
+export const MelodyCodeWriter = freeze({ make });

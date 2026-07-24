@@ -1,7 +1,9 @@
 import { FunctionType } from '../../function_type_build';
-import { Helpers, raise } from '../../helpers';
+import { Helpers } from '../../helpers';
+import { WasmFunctionRegistry } from '../wasm_function_registry';
 
 const { freeze, memoize, makeCounter } = Helpers;
+const { assertFtypeSignatureOkay } = WasmFunctionRegistry;
 
 // it's so statey :/
 export interface WasmFunctionLocalAllocation {
@@ -12,18 +14,6 @@ export interface WasmFunctionLocalAllocation {
   swapB(): number;
   localStackPointerIndex(): number;
   totalLocalCount(): number;
-}
-
-function assertFtypeSignatureOkay(beingCalled: FunctionType): void {
-  const emptyTuple = memoize(() =>
-    FunctionType.emitEmptyTuple().parameters());
-  const isFtypeOkay = 
-    beingCalled.parameters().uid() === emptyTuple().uid() &&
-    beingCalled.returns   ().uid() === emptyTuple().uid() &&
-    beingCalled.receiver  ().sizeInStackItems() === 1;
-  if (!isFtypeOkay) {
-    raise('only one call signature supported');
-  }
 }
 
 function make(mFunctionToBuild: FunctionType): WasmFunctionLocalAllocation {
@@ -41,7 +31,4 @@ function make(mFunctionToBuild: FunctionType): WasmFunctionLocalAllocation {
   });
 }
 
-export const WasmFunctionLocalAllocation = freeze({
-  make,
-  assertFtypeSignatureOkay
-});
+export const WasmFunctionLocalAllocation = freeze({ make });

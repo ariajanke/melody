@@ -18,6 +18,7 @@ export interface ContextFrameStack {
   hopCountFor(pendingName: string): number;
   contextForHop(idx: number): ContextFrameSnapshot | undefined;
   topFrame(): ContextFrameSnapshot;
+  depth(): number;
   intoBuildFunction(): (node: DastNode) => FunctionTypeBuild;
 };
 
@@ -92,6 +93,7 @@ export const ContextFrameStack = freeze({
     }
 
     return freeze({
+      depth: () => mStack.length,
       contextForHop,
       hopCountFor,
       withBaseReferenceType,

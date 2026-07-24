@@ -2,7 +2,7 @@ import { FunctionTypeBuild } from '../function_type_build';
 import { Helpers } from '../helpers';
 import { FunctionDefinitionBodyBuild } from './function_definition_body_build';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
-import { FunctionTypeRegistry } from '../function_type_registry';
+// import { FunctionTypeRegistry } from '../function_type_registry';
 import { FunctionTypeBase } from './function_type_base';
 // import { WritableDeclaredContextStack } from './declared_context_stack';
 import { CodeWriter } from '../code_writer';
@@ -28,6 +28,8 @@ function make
     const compositeFunctionType = defBuild.functionType();
     if (!compositeFunctionType)
       { return undefined; }
+
+    (mDeclaredContextStack.depth() === 0) // I am root!
 
     freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),

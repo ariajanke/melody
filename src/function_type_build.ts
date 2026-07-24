@@ -3,11 +3,15 @@ import { DastNode } from './dast_build';
 import { FunctionTypeBase } from './function_type_build/function_type_base';
 import { FunctionTypeBuildVisitor } from './function_type_build/function_type_build_visitor';
 import { TupleObjectFactory } from './function_type_build/tuple_type';
-import { FunctionTypeRegistry } from './function_type_registry';
+// import { FunctionTypeRegistry } from './function_type_registry';
 import { Helpers, StandardErrorMessage } from './helpers';
 // import { StringPoolBuilder } from './string_pool';
+import { FunctionDefinitionRegistry_ } from './function_type_build/function_definition_registry';
 
 const { freeze, memoize } = Helpers;
+
+export type  FunctionDefinitionRegistry = FunctionDefinitionRegistry_;
+export const FunctionDefinitionRegistry = FunctionDefinitionRegistry_;
 
 export interface FunctionType {
   parameters(): ObjectType;
