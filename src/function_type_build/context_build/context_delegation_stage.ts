@@ -19,7 +19,7 @@ export const ContextDelegationStage_ = freeze({
        mFrameStack: ContextFrameStack,
        mReferenceType: ObjectType,
        mMakeDeclarationBuild: (mDeclarationsMap: DastDeclarationMap,
-           mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild) => ContextDeclarationBuild
+       mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild) => ContextDeclarationBuild
   ) {
     function lookUpName(name: string): FunctionLookUpTable {
       const snapshot = mFrameStack.contextForHop(mFrameStack.hopCountFor(name));

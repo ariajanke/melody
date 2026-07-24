@@ -1,5 +1,5 @@
 import { Helpers, raise } from './helpers';
-import { Token } from './token';
+// import { Token } from './token';
 
 const { freeze } = Helpers;
 
@@ -32,7 +32,7 @@ export const FunctionNamingSchema = freeze({
   kContextName: mapToInternalName('context'),
   kParentName: mapToInternalName('parent'),
   kNoneName: mapToInternalName('none'),
-  kCallName: mapToInitialSetName(Token.kCallToken.content()),
+  kCallName: mapToInternalName('call'),
   uniqueFrameNameFor(n: number): string { return mapToInternalName(`frame:${n}`); },
   mapToInternalName,
   mapToInitialSetName,

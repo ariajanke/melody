@@ -1,9 +1,10 @@
 import { CodeWriter } from '../../src/code_writer';
 import { DastNode, DastVisitor } from '../../src/dast_build';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
-import { FunctionLookUpTable, FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
+import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../../src/function_type_build';
 import { BuiltinTypeBase, IntegerType } from '../../src/function_type_build/builtin_type';
-import { CallFunctionTypeBuild } from '../../src/function_type_build/call_function_build';
+import { CallFunctionBuild } from '../../src/function_type_build/call_function_build';
+// import { CallFunctionTypeBuild } from '../../src/function_type_build/call_function_build';
 import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
 import { TupleObjectFactory } from '../../src/function_type_build/tuple_type_factory';
 import { Helpers, raise, StandardError } from '../../src/helpers';
@@ -33,15 +34,15 @@ const DastNodeMaker = (() => {
           asString: () => rep,
           uid: memoize(counter)
         });
-        const ftype = freeze({
-          ...FunctionTypeBase.receivedByNone(),
+        const ftype: FunctionType = freeze({
+          ...FunctionTypeBase.makeNewEmitlessEmpty(),
           parameters: () => parameters,
           returns: () => returns,
-          emit(writter: CodeWriter) {
+          simpleEmit(writter: CodeWriter) {
             mEmitNames.push(rep);
             if (emissions > 0) {
               for (let i = 0; i < emissions; ++i) {
-                writter.pushRepresentation(0);
+                writter.pushInteger(0);
               }
             }
             return writter;
@@ -60,7 +61,7 @@ const DastNodeMaker = (() => {
   });
 })();
 
-describeNamed({ CallFunctionTypeBuild }, () => {
+describeNamed({ CallFunctionBuild }, () => {
   const integerType = IntegerType.instance;
   const { emptyTuple } = TupleObjectFactory;
 
@@ -71,7 +72,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
     { throw new Error(`define receiverLookUp`);};
   let callNameStr = (): string => { throw new Error(`define callNameStr`); };
   const receiverType = (): ObjectType => freeze({
-    ...BuiltinTypeBase.defaultsWith(receiverType),
+    ...BuiltinTypeBase.defaultsWith(),
     name: () => 'receiver',
     lookUp: (name: string) => receiverLookUp(name),
     sizeInStackItems: () => 0,
@@ -86,7 +87,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
   const receiver = () => makeSampleDastNode_('receiver', emptyTuple(), receiverType(), 0);
   const args = () => makeSampleDastNode_('args', emptyTuple(), integerType(), argsEmissions());
   const makeBuild = (fn: (node: DastNode) => FunctionTypeBuild) =>
-    () => CallFunctionTypeBuild.make(call(), receiver(), args(), () => 4, fn);
+    () => CallFunctionBuild.make(call(), receiver(), args(), fn);
 
   const makeSampleLookUpTable =
     (emittedNames: string[], rep: string): FunctionLookUpTable =>
@@ -94,7 +95,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
     return freeze({
       byParameters(_0: ObjectType) {
         return freeze({
-          ...FunctionTypeBase.receivedByLexical(),
+          ...FunctionTypeBase.makeNewEmitlessEmpty(),
           emit(writer: CodeWriter) {
             emittedNames.push(rep);
             return writer;
@@ -107,7 +108,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
 
   const makeSampleWriter = () => {
     const inst = freeze({
-      pushRepresentation(_0: number): CodeWriter { return inst; },
+      pushInteger(_0: number): CodeWriter { return inst; },
       pushStackPointer() { return inst; },
       addIntegers() { return inst; },
       setStackPointer() { return inst; },
@@ -156,7 +157,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
       const { functionType } = build();
       functionType();
       emitNames.length = 0;
-      functionType()!.emit(makeSampleWriter());
+      functionType()!.simpleEmit(makeSampleWriter());
       expect(emitNames).toEqual(['receiver', 'args', callNameStr()]);
     });
   });
@@ -186,7 +187,7 @@ describeNamed({ CallFunctionTypeBuild }, () => {
       expect(build.functionType()).toBeDefined();
       // NOTE functionType will call emits to check stack safety
       emitNames.length = 0;
-      build.functionType()!.emit(makeSampleWriter());
+      build.functionType()!.simpleEmit(makeSampleWriter());
       expect(emitNames).toEqual([
         'receiver', 'args', `.${callNameStr()}`, callNameStr()
       ]);

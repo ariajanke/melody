@@ -1,4 +1,5 @@
 import { CodeWriter } from '../code_writer';
+import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
 import { ContextFrameSnapshot } from './context_frame_stack';
@@ -13,9 +14,14 @@ export const FringeFunctionBuild = freeze({
     const { emptyTuple } = TupleObjectFactory;
     const { makeNewEmitlessEmpty, emitEmptyTuple } = FunctionTypeBase;
 
+    const functionName =
+      mName === FunctionNamingSchema.kContextName ?
+      mName :
+      FunctionNamingSchema.mapToFringeAccessor(mName);
+
     const originalFtype = memoize(() => mTopSnapshot.
       referenceType().
-      lookUp(mName)?.
+      lookUp(functionName)?.
       byParameters(emptyTuple()) ??
       setErrorMessage(`Cannot find function for "${mName}"`));
 

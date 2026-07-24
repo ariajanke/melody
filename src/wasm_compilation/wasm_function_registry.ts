@@ -15,10 +15,11 @@ export interface WasmFunctionRegistry {
 function assertFtypeSignatureOkay(beingCalled: FunctionType): void {
   const emptyTuple = memoize(() =>
     FunctionType.emitEmptyTuple().parameters());
+  const recSize = beingCalled.receiver().sizeInStackItems();
   const isFtypeOkay = 
     beingCalled.parameters().uid() === emptyTuple().uid() &&
     beingCalled.returns   ().uid() === emptyTuple().uid() &&
-    beingCalled.receiver  ().sizeInStackItems() === 1;
+    (recSize === 0 || recSize === 1);
   if (!isFtypeOkay) {
     raise('only one call signature supported');
   }
@@ -30,6 +31,7 @@ function make
   : WasmFunctionRegistry
 {
   type FtypeUidToIndex = { [uid: symbol]: number | undefined };
+  const { i32 } = TypesAware.types();
   const { orderedDefinitions } = mRegistry;
   const ftypeMap = memoize(() =>
     orderedDefinitions().
@@ -38,24 +40,23 @@ function make
       return map;
     }, {} as FtypeUidToIndex));
 
-  const supportedFunctionSignatureIndex = memoize(() => {
-    const { i32 } = TypesAware.types();
-    mTypesSection.pushFunction([i32], []);
-    const typeIndex = mTypesSection.indexFor([i32], []);
-    if (typeIndex === undefined) {
-      raise('Failed to register type');
-    }
-    return typeIndex;
-  });
+  const kOne = freeze([i32]);
+  const kNone = freeze([]);
 
   const wasmTypesSection = memoize(() => {
-    supportedFunctionSignatureIndex();
+    mTypesSection.pushFunction(kOne, kNone);
+    mTypesSection.pushFunction(kNone, kNone);
     return mTypesSection;
   });
 
   function signatureIndexFor(mFunctionType: FunctionType) {
     assertFtypeSignatureOkay(mFunctionType);
-    return supportedFunctionSignatureIndex();
+
+    const pType = mFunctionType.receiver().sizeInStackItems() === 1 ?
+      kOne : kNone;
+    const rType = kNone;
+    return wasmTypesSection().indexFor(pType, rType) ??
+      raise('cannot get WASM function signature');
   }
 
   const indexOfRegisteredFor = (ftype: FunctionType) =>

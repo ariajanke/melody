@@ -5,6 +5,8 @@ import { FunctionTypeBuildBase } from './function_type_build_base';
 import { FunctionSequenceStackCleanUp } from './function_sequence_stack_clean_up';
 import { ContextFrameSnapshot, WritableContextFrameStack } from './context_frame_stack';
 import { ContextBaseStage, ContextDeclarationBuild, ContextLinkStage } from './context_build';
+import { TupleObjectFactory } from './tuple_type_factory';
+import { FunctionTypeBase } from './function_type_base';
 
 const { freeze, memoize } = Helpers;
 
@@ -15,6 +17,12 @@ function make
   : FunctionTypeBuild
 {
   const { error, setErrorFn } = StandardError.make();
+
+  // NOTE order dependant, must be done before the whole "with..."
+  const parentType = memoize(() =>
+    mStackFrameStack.depth() === 0 ?
+    TupleObjectFactory.emptyTuple() : 
+    mStackFrameStack.topFrame().referenceType());
 
   // NOTE order dependant, must be done before the whole "with..."
   const mIntoFunctionTypeBuild = mStackFrameStack.intoBuildFunction();
@@ -62,7 +70,10 @@ function make
     if (!currentFrameSnapshot())
       { return undefined; }
 
-    return mStackFrameStack.withBaseReferenceType(currentFrameSnapshot()!, () => {
+    // NOTE order dependant, must be done before the whole "with..."
+    parentType();
+
+    const intF = mStackFrameStack.withBaseReferenceType(currentFrameSnapshot()!, () => {
       const { preface } = linkStage();
       const { aggregateType } = fullContextBuild();
       if (!aggregateType()) {
@@ -83,7 +94,20 @@ function make
 
       return compositeFunctionType;
     });
+
+    if (!intF)
+      { return undefined; }
+
+    // mmm... not quite right
+    return freeze({
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      receiver: parentType,
+      simpleEmit: intF.simpleEmit
+    })
   });
+
+  // as root, received by "Tuple()"
+  // all others, received by "parent"
 
   return freeze({ functionType, error });
 }

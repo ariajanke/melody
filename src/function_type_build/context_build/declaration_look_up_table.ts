@@ -33,6 +33,6 @@ export const DeclarationLookUpTable = freeze({
 
     const ftype = chosenFactory()(varInfo().accessIndex, varInfo().type);
 
-    return MutableFunctionTable.make().setDefinition(varInfo().type, ftype);
+    return MutableFunctionTable.make().setDefinition(ftype.parameters(), ftype);
   }
 });

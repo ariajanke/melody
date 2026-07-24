@@ -1,6 +1,5 @@
 import { Compiler } from '../src/compiler';
 import { Helpers } from '../src/helpers';
-import { Interpreter } from '../src/interpreter';
 import { WebSupport } from '../src/web_support';
 
 const { freeze } = Helpers;
@@ -22,21 +21,6 @@ function compileFromSource
     throw new Error(`Compilation failed: ${error()}`);
   }
   return WebSupport.getEntryPoint(compiler).then(entry => { entry(0); });
-}
-
-function interpretFromSource(source: string, printedStrings: string[]): Promise<void> {
-  const interpreter = Interpreter.make(source, {
-    ...Interpreter.defaultInjections(),
-    putsFunction(str: string) {
-      printedStrings.push(str);
-    }
-  });
-  return new Promise((resolve, _1) => {
-    if (!interpreter.run()) {
-      throw new Error(`Interpretation failed: ${interpreter.error()}`);
-    }
-    resolve();
-  });
 }
 
 function errorHandler(done: () => void) {
@@ -63,7 +47,6 @@ function makeExampleRunner
 
 export const EndToEndHelpers = freeze({
   compileFromSource,
-  interpretFromSource,
   makeExampleRunner,
   errorHandler
 });

@@ -63,6 +63,7 @@ function make
 
     const ftype = freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      receiver: () => mReferenceType,
       // returns: empty
       // parameters: empty
       emit
