@@ -7,6 +7,7 @@ import { ContextFrameSnapshot, WritableContextFrameStack } from './context_frame
 import { ContextBaseStage, ContextDeclarationBuild, ContextLinkStage } from './context_build';
 import { TupleObjectFactory } from './tuple_type_factory';
 import { FunctionTypeBase } from './function_type_base';
+import { CodeWriter } from '../code_writer';
 
 const { freeze, memoize } = Helpers;
 
@@ -17,12 +18,6 @@ function make
   : FunctionTypeBuild
 {
   const { error, setErrorFn } = StandardError.make();
-
-  // NOTE order dependant, must be done before the whole "with..."
-  const parentType = memoize(() =>
-    mStackFrameStack.depth() === 0 ?
-    TupleObjectFactory.emptyTuple() : 
-    mStackFrameStack.topFrame().referenceType());
 
   // NOTE order dependant, must be done before the whole "with..."
   const mIntoFunctionTypeBuild = mStackFrameStack.intoBuildFunction();
@@ -70,10 +65,7 @@ function make
     if (!currentFrameSnapshot())
       { return undefined; }
 
-    // NOTE order dependant, must be done before the whole "with..."
-    parentType();
-
-    const intF = mStackFrameStack.withBaseReferenceType(currentFrameSnapshot()!, () => {
+    return mStackFrameStack.withBaseReferenceType(currentFrameSnapshot()!, () => {
       const { preface } = linkStage();
       const { aggregateType } = fullContextBuild();
       if (!aggregateType()) {
@@ -88,26 +80,36 @@ function make
         push(FunctionTypeBuildBase.makeSuccessFromType(preface()),
              ...mNodes.map(intoFunctionTypeBuildFunc()));
       const cleanUpBuild = FunctionSequenceStackCleanUp.make(subBuilds);
-      const compositeFunctionType = cleanUpBuild.functionType();
-      if (!compositeFunctionType)
+      const ftypeArr = subBuilds.reduce((prev: FunctionType[] | undefined, build: FunctionTypeBuild) => {
+        if (!prev) {
+          return undefined;
+        }
+        if (build.functionType()) {
+          prev.push(build.functionType()!);
+          return prev;
+        }
+        return setErrorFn(build.error);
+      }, [] as (FunctionType[])| undefined)
+      if (!ftypeArr)
+        { return undefined; }
+
+      const cleanUp = cleanUpBuild.functionType();
+      if (!cleanUp)
         { return setErrorFn(cleanUpBuild.error); }
 
-      return compositeFunctionType;
+      return freeze({
+        ...FunctionTypeBase.makeNewEmitlessEmpty(),
+        simpleEmit(writer: CodeWriter) {
+          writer.withStackFrameSize(aggregateType()!.sizeInBytes(), (writer: CodeWriter) => {
+            for (let i = 0; i < ftypeArr.length; ++i) {
+              ftypeArr[i].simpleEmit(writer);
+            }
+            cleanUp.simpleEmit(writer);
+          });
+        }
+      }) satisfies FunctionType;
     });
-
-    if (!intF)
-      { return undefined; }
-
-    // mmm... not quite right
-    return freeze({
-      ...FunctionTypeBase.makeNewEmitlessEmpty(),
-      receiver: parentType,
-      simpleEmit: intF.simpleEmit
-    })
   });
-
-  // as root, received by "Tuple()"
-  // all others, received by "parent"
 
   return freeze({ functionType, error });
 }

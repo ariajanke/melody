@@ -6,6 +6,7 @@ import { CodeWriter } from '../code_writer';
 import { WritableContextFrameStack } from './context_frame_stack';
 import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import { DefinitionBodyFunctionBuild } from './definition_body_function_build';
+import { TupleObjectFactory } from './tuple_type_factory';
 
 const { freeze, memoize } = Helpers;
 
@@ -24,23 +25,44 @@ function make
 
   const mCurrentDepth = mContextFrameStack.depth();
 
-  const bodyFtype = memoize(() => {
+  // const bodyFtype = memoize(() => {
+  //   const compositeFunctionType = defBuild.functionType();
+  //   if (!compositeFunctionType)
+  //     { return undefined; }
+
+  //   // registerDefinitionBody(compositeFunctionType, mCurrentDepth);
+  //   return compositeFunctionType;
+  // });
+
+  // as root, received by "Tuple()"
+  // all others, received by "parent"
+  const parentType = memoize(() =>
+    mCurrentDepth === 0 ?
+    TupleObjectFactory.emptyTuple() : 
+    mContextFrameStack.topFrame().referenceType());
+
+  const recWrappedBodyFtype = memoize(() => {
     const compositeFunctionType = defBuild.functionType();
     if (!compositeFunctionType)
       { return undefined; }
 
     registerDefinitionBody(compositeFunctionType, mCurrentDepth);
-    return compositeFunctionType;
+
+    return freeze({
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      receiver: parentType,
+      simpleEmit: compositeFunctionType.simpleEmit
+    });
   });
 
   const functionType = memoize(() => {
-    if (!bodyFtype())
+    if (!recWrappedBodyFtype())
       { return undefined; }
     
     return freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(writer: CodeWriter) {
-        writer.pushIndexOfRegistered(bodyFtype()!);
+        writer.pushIndexOfRegistered(recWrappedBodyFtype()!);
       }
     });
   });
