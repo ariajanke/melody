@@ -22,8 +22,8 @@ export interface MelodyCodeWriter extends CodeWriter {
 function make
   (mFunctionToBuild: FunctionType,
    mStringPool: StringPool,
-   mFunctionRegistry: WasmFunctionRegistry
-  ): MelodyCodeWriter
+   mFunctionRegistry: WasmFunctionRegistry)
+  : MelodyCodeWriter
 {
   const mByteCodeEmitter = WasmFunctionBody.make();
   const mLocalAllocations = WasmFunctionLocalAllocation.make(mFunctionToBuild);

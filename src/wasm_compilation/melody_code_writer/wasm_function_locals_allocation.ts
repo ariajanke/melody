@@ -5,11 +5,8 @@ import { WasmFunctionRegistry } from '../wasm_function_registry';
 const { freeze, memoize, makeCounter } = Helpers;
 const { assertFtypeSignatureOkay } = WasmFunctionRegistry;
 
-// it's so statey :/
 export interface WasmFunctionLocalAllocation {
   receiverParameterIndex(): number;
-  // swapTempIndex(): number;
-  // I know, there's a better way to do this :/
   swapA(): number;
   swapB(): number;
   localStackPointerIndex(): number;
