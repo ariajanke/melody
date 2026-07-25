@@ -1,12 +1,17 @@
 import { DastDeclarationMap, WritableDastDeclarationMap } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { Helpers, StandardError } from '../helpers';
+import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
 import { DastTuple } from './dast_node_specializations';
 import { LetNameElement } from './let_declarations_retrieval';
 
 const { freeze, memoize } = Helpers;
 
-function make(mElement: LetNameElement) {
+export interface DastLetDeclarationBuild {
+  fullNames(): DastDeclarationMap | undefined;
+  error(): StandardErrorMessage;
+};
+
+function make(mElement: LetNameElement): DastLetDeclarationBuild {
   const { error, setErrorMessage } = StandardError.make();
   const { value, dependeeNames } = mElement;
   

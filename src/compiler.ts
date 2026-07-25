@@ -63,8 +63,8 @@ function make(mSource: string,
     return WasmCompilation.make(functionRegistry()!, mInjections);
   });
 
-  const byteCode = () => compile()?.byteCode();
-  const importsObject = () => compile()?.importObject();
+  const byteCode = (): Uint8Array | undefined => compile()?.byteCode();
+  const importsObject = (): WasmImports | undefined => compile()?.importObject();
 
   return freeze({
     byteCode,
