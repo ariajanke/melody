@@ -31,21 +31,15 @@ function make
   function appendByteCodeTo(codeSection: WasmCodeSection): void {
     codeSection.pushFunctionBody( mByteCodeEmitter.finish() );
   }
-  const pushIndexOfRegistered = (ftype: FunctionType): CodeWriter => {
-    const idx = mFunctionRegistry.indexOfRegisteredFor(ftype);
-    mByteCodeEmitter.pushI32Const( idx );
-    return inst;
-  };
 
   const inst = freeze({
     ...BuiltinsWriter.make(mByteCodeEmitter, mGetInst),
-    ...FunctionCallWriter.make(mByteCodeEmitter, mGetInst, mFunctionRegistry.signatureIndexFor),
+    ...FunctionCallWriter.make(mByteCodeEmitter, mGetInst, mFunctionRegistry),
     ...MemoryAluWriter.make(mByteCodeEmitter, mGetInst),
     ...StackOperationsWriter.make(mByteCodeEmitter, mLocalAllocations, mGetInst),
     ...StackPointerWriter.make(mByteCodeEmitter, mLocalAllocations, mGetInst),
     ...mStringPool.makeLiteralWriter(mGetInst),
-    appendByteCodeTo,
-    pushIndexOfRegistered
+    appendByteCodeTo
   });
 
   return inst;

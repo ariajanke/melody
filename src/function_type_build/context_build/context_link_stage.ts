@@ -20,72 +20,76 @@ export interface ContextLinkStage_ {
   next(): ContextDelegationStage;
 };
 
-export const ContextLinkStage_ = freeze({
-  make(mPendingNames: Readonly<{ [name: string]: true }>,
-       mFrameStack: ContextFrameStack,
-       mReferenceType: ObjectType,
-       mReferenceTypeLookUpTable: FunctionOpLookUp = {}
-  ): ContextLinkStage
+function make
+  (mPendingNames: Readonly<{ [name: string]: true }>,
+   mFrameStack: ContextFrameStack,
+   mReferenceType: ObjectType,
+   mReferenceTypeLookUpTable: FunctionOpLookUp = {})
+: ContextLinkStage
+{
+  const mUsedAncestorCollection = UsedAncestorCollection.
+    make(mFrameStack, mPendingNames);
+
+  const variableAllocation = memoize((): VariableAllocation => {
+    if (!mUsedAncestorCollection.hasParentGetter())
+      { return VariableAllocation.make(); }
+
+    const parentContextSnapshot = mFrameStack.
+      contextForHop(ContextFrameStack.kHopsToParent);
+    if (!parentContextSnapshot) {
+      raise('Used ancestor collection contains direct parent for an empty ' +
+            'context stack.');
+    }
+
+    const varAlc = VariableAllocation.
+      make(FunctionNamingSchema.kParentName,
+            parentContextSnapshot.referenceType());
+    return mUsedAncestorCollection.
+      ancestors().
+      reduce((varAlc: VariableAllocation, anc: AncestorInfo) =>
+              varAlc.next(anc.variableName, anc.type), varAlc);
+  });
+
+  const prefaceBuild = memoize(() =>
+    FunctionBodyPrefaceBuild.
+      make(variableAllocation(),
+           mUsedAncestorCollection,
+           mReferenceType,
+           mReferenceTypeLookUpTable));
+
+  function buildDeclarationThings
+    (mDeclarationsMap: DastDeclarationMap,
+     mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
+  : ContextDeclarationBuild
   {
-    const mUsedAncestorCollection = UsedAncestorCollection.
-      make(mFrameStack, mPendingNames);
-    const { hasParentGetter } = mUsedAncestorCollection;
-    const receiverResolution = memoize(() =>
-      ReceiverResolution_.make(mUsedAncestorCollection, mReferenceType, mFrameStack));
-
-    const variableAllocation = memoize((): VariableAllocation => {
-      if (!hasParentGetter())
-        { return VariableAllocation.make(); }
-
-      const parentContextSnapshot = mFrameStack.
-        contextForHop(ContextFrameStack.kHopsToParent);
-      if (!parentContextSnapshot) {
-        raise('Used ancestor collection contains direct parent for an empty ' +
-              'context stack.');
-      }
-
-      const varAlc = VariableAllocation.
-        make(FunctionNamingSchema.kParentName,
-             parentContextSnapshot.referenceType());
-      return mUsedAncestorCollection.
-        ancestors().
-        reduce((varAlc: VariableAllocation, anc: AncestorInfo) =>
-                varAlc.next(anc.variableName, anc.type), varAlc);
-    });
-
-    const prefaceBuild = FunctionBodyPrefaceBuild.
-      make(variableAllocation(), mUsedAncestorCollection, mReferenceType, mReferenceTypeLookUpTable);
-
-    const preface = memoize(() =>
-      prefaceBuild.addAncestorAccessors() && prefaceBuild.functionType());
-
-    const buildDeclarationThings =
-      (mDeclarationsMap: DastDeclarationMap,
-        mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild
-    ): ContextDeclarationBuild => {
-      return ContextDeclarationBuild_.
-        make(variableAllocation(),
-              mReferenceTypeLookUpTable,
-              mDeclarationsMap,
-              mIntoFunctionTypeBuild,
-              mReferenceType);
-    };
-
-    const next =
-      (): ContextDelegationStage =>
-    {        
-      return preface() && ContextDelegationStage_.
-        make(mPendingNames,
-              mReferenceTypeLookUpTable,
-              mFrameStack,
-              mReferenceType,
-              buildDeclarationThings);
-    };
-
-    return freeze({
-      receiverResolution,
-      preface,
-      next
-    });
+    return ContextDeclarationBuild_.
+      make(variableAllocation(),
+           mReferenceTypeLookUpTable,
+           mDeclarationsMap,
+           mIntoFunctionTypeBuild,
+           mReferenceType);
   }
-});
+
+  const receiverResolution = memoize(() =>
+    ReceiverResolution_.make(mUsedAncestorCollection, mReferenceType, mFrameStack));
+
+  const preface = memoize(() =>
+    prefaceBuild().addAncestorAccessors() && prefaceBuild().functionType());
+
+  function next(): ContextDelegationStage {
+    return preface() && ContextDelegationStage_.
+      make(mPendingNames,
+           mReferenceTypeLookUpTable,
+           mFrameStack,
+           mReferenceType,
+           buildDeclarationThings);
+  }
+
+  return freeze({
+    receiverResolution,
+    preface,
+    next
+  });
+}
+
+export const ContextLinkStage_ = freeze({ make });

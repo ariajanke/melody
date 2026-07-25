@@ -5,7 +5,6 @@ import { FunctionTypeBuildBase } from './function_type_build_base';
 import { FunctionSequenceStackCleanUp } from './function_sequence_stack_clean_up';
 import { ContextFrameSnapshot, WritableContextFrameStack } from './context_frame_stack';
 import { ContextBaseStage, ContextDeclarationBuild, ContextLinkStage } from './context_build';
-import { TupleObjectFactory } from './tuple_type_factory';
 import { FunctionTypeBase } from './function_type_base';
 import { CodeWriter } from '../code_writer';
 
@@ -43,7 +42,6 @@ function make
       aggregateType: (() => mSetAggregateType) as () => ObjectType | 'not ready',
       receiverResolution,
       uniqueName: () => mDefs.name,
-      
       intoBuildFor(node: DastNode) {
         if (mSetAggregateType === 'not ready') {
           raise('should not be called yet!');
@@ -53,7 +51,6 @@ function make
     })
   });
 
-  // TODO this doesn't get passed down though...
   const intoFunctionTypeBuildFunc = memoize(() => {
     const { cachedBuildFor } = fullContextBuild();
 

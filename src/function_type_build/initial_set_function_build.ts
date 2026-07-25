@@ -35,7 +35,7 @@ function make
       raise(`Cannot find "${mInitialSetName}"`);
   });
 
-  const receiver = memoize(() => {
+  const getReceiver = (() => {
     if (!initialSetter())
       { return undefined; }
 
@@ -48,10 +48,11 @@ function make
     if (!initialSetter())
       { return undefined; }
 
+    const rec = getReceiver();
     return freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(writer: CodeWriter) {
-        initialSetter()!.emit(receiver()!, argsFType()!, writer);
+        initialSetter()!.emit(rec!, argsFType()!, writer);
         return writer;
       }
     });

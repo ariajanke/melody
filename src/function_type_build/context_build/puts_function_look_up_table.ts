@@ -2,7 +2,7 @@ import { BuiltinFunctionNames } from '../../builtin_function_names';
 import { CodeWriter } from '../../code_writer';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { ConstantStringType, IntegerType } from '../builtin_type';
+import { ConstantStringType, IntegerType } from '../integer_type';
 import { FunctionTypeBase } from '../function_type_base';
 
 const { freeze, memoize } = Helpers;

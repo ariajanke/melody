@@ -23,12 +23,21 @@ export interface ContextFrameStack {
 };
 
 export interface WritableContextFrameStack extends ContextFrameStack {
+  // TODO deference can be a foot gun here!
   withBaseReferenceType<T>(snapshot: ContextFrameSnapshot, fn: () => T): T;
 };
 
 export const ContextFrameStack = freeze({
   // TODO possibly misleading
   kHopsToParent: 0,
+  makeAssertStillHasSameTop: (mStack: ContextFrameStack, mWhy: string) => {
+    const topUid = mStack.topFrame().referenceType().uid();
+    return () => {
+      if (topUid === mStack.topFrame().referenceType().uid())
+        { return; }
+      raise(mWhy);
+    };
+  },
   make(mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild): WritableContextFrameStack
   {
     const mStack: ContextFrameSnapshot[] = [];
@@ -53,11 +62,12 @@ export const ContextFrameStack = freeze({
     }
 
     function findWhereDeclared(pendingName: string): ObjectType {
-      const idx = nameCacheLookup(pendingName);
-      if (idx === undefined) {
-        raise(`pending name "${pendingName}" is not declared in any context`);
-      }
-      return mStack[idx].referenceType();
+      return contextForHop(hopCountFor(pendingName))!.referenceType();
+      // const idx = nameCacheLookup(pendingName);
+      // if (idx === undefined) {
+      //   raise(`pending name "${pendingName}" is not declared in any context`);
+      // }
+      // return mStack[idx].referenceType();
     }
 
     function hopCountFor(pendingName: string): number {

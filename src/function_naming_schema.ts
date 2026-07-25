@@ -1,5 +1,4 @@
 import { Helpers, raise } from './helpers';
-// import { Token } from './token';
 
 const { freeze } = Helpers;
 
@@ -25,7 +24,7 @@ function mapToInternalName(name: string): string {
 const kAssignmentOperator = ':=';
 
 export type ContextFunctionGroup = 'initialSet' | 'assignment' | 'accessor';
-// starting to get fat
+
 export const FunctionNamingSchema = freeze({
   kAssignmentOperator,
   kEqualityOperator: '=',

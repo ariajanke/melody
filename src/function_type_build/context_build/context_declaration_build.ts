@@ -25,20 +25,13 @@ function make
    mReferenceType: ObjectType)
 : ContextDeclarationBuild_
 {
-  const { error, setErrorFn } = StandardError.make();
-
   const mOrderedDeclarations = OrderedDeclarationsGroupCollection.
     make(mDeclarationsMap, mIntoFunctionTypeBuild);
 
   const { orderedGroups } = mOrderedDeclarations;
 
-  const cachedBuildFor = (node: DastNode) => {
-    if (!referenceType())
-      { return undefined; }
-    return mOrderedDeclarations.cachedBuildFor(node);
-  };
-
-  const fullVariableAllocation = memoize(() => orderedGroups().
+  const fullVariableAllocation = memoize(() =>
+    orderedGroups().
     reduce((startingAlloc: VariableAllocation | undefined, t: DeclarationFunctionGroup) => {
       if (!startingAlloc)
         { return undefined; }
@@ -73,6 +66,13 @@ function make
       return newAlloc;
     }, mVariableAllocation));
 
+  const referenceType = memoize((): ObjectType | undefined => {
+    if (!fullVariableAllocation())
+      { return undefined; }
+
+    return mReferenceType;
+  });
+
   const aggregateType = memoize((): ObjectType | undefined => {
     if (!fullVariableAllocation())
       { return undefined; }
@@ -87,12 +87,13 @@ function make
     });
   });
 
-  const referenceType = memoize((): ObjectType | undefined => {
-    if (!fullVariableAllocation())
+  const cachedBuildFor = (node: DastNode) => {
+    if (!referenceType())
       { return undefined; }
+    return mOrderedDeclarations.cachedBuildFor(node);
+  };
 
-    return mReferenceType;
-  });
+  const { error, setErrorFn } = StandardError.make();
 
   return freeze({ referenceType, aggregateType, cachedBuildFor, error });
 }

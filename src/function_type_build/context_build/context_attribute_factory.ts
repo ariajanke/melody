@@ -65,13 +65,11 @@ function makeBuildSetter(returnsItself: boolean) {
         parameterFtype.simpleEmit(writer);
 
         forEachWord(inPlainOrder, type, (additional: number) => {
-          // HACK to reduce instructions
           receiverFtype.simpleEmit(writer);
+          // HACK to reduce instructions          
           writer.
             pushInteger(accessIndex + additional*kBytesPerWord).
             addIntegers();
-          // raise('I need a "swap top two items on WASM stack" defined for code writer!');        
-
           writer.swapTopTwo();
         });
       }

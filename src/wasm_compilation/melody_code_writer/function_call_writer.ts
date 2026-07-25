@@ -9,14 +9,14 @@ const { freeze } = Helpers;
 function make
   (mByteCodeEmitter: WasmFunctionBody,
    mGetInst: () => CodeWriter,
-   mSignatureIndexFor: (ftype: FunctionType) => number)
+   mFunctionRegistry: WasmFunctionRegistry)
 {
-  // NOTE strictly support only one signature: (i32) -> ()
-
   const mStackFrameSizes: number[] = [];
   const getTopSize = (): number =>
     mStackFrameSizes[mStackFrameSizes.length - 1] ??
-    raise('uh oh!');
+    raise('stack frame sizes stack is empty');
+
+  const { signatureIndexFor, indexOfRegisteredFor } = mFunctionRegistry;
   
   return freeze({
     indirectCall(beingCalled: FunctionType): CodeWriter {
@@ -25,8 +25,13 @@ function make
       mGetInst().pushStackPointer();
       mByteCodeEmitter.pushI32Add();
       mGetInst().setStackPointer();
-      mByteCodeEmitter.callIndirect(mSignatureIndexFor(beingCalled));
+      mByteCodeEmitter.callIndirect(signatureIndexFor(beingCalled));
       return mGetInst().restoreStackPointerToGlobal();
+    },
+    pushIndexOfRegistered(ftype: FunctionType): CodeWriter {
+      const idx = indexOfRegisteredFor(ftype);
+      mByteCodeEmitter.pushI32Const( idx );
+      return mGetInst();
     },
     withStackFrameSize<T>(size: number, fn: (cw: CodeWriter) => T): T {
       mStackFrameSizes.push(size);

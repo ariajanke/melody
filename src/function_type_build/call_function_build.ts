@@ -22,7 +22,6 @@ function make
    mContext: ContextFrameSnapshot)
   : FunctionTypeBuild
 {
-  const { error, setErrorMessage, setErrorFn } = StandardError.make();
   const mIntoFunctionTypeBuild = mContext.intoBuildFor;
 
   const callNameStr = memoize((): string | undefined => {
@@ -51,7 +50,7 @@ function make
   });
 
   const callFunctionType = memoize(() => {
-    if (!lexicalReceiver() || !args())
+    if (!lexicalReceiver() || !args() || !callNameStr())
       { return undefined; }
 
     const callFunctionType = lexicalReceiver()!.
@@ -70,7 +69,7 @@ function make
     return callFunctionType;
   });
 
-  const receiverFtype = memoize(() => {
+  const receiverFtype = memoize((): FunctionType | undefined => {
     if (!callFunctionType())
       { return undefined; }
 
@@ -90,10 +89,12 @@ function make
     return ftype;
   });
 
-  const args = memoize(() => {
+  const args = memoize((): FunctionType | undefined => {
     const argsBuild = mIntoFunctionTypeBuild(mArgs);
     return argsBuild.functionType() ?? setErrorFn(argsBuild.error);
   });
+
+  const { error, setErrorMessage, setErrorFn } = StandardError.make();
 
   const functionType = memoize((): FunctionType | undefined => {
     if (!callFunctionType()  || !receiverFtype() || !args())

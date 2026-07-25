@@ -1,34 +1,31 @@
 import { CodeWriter } from '../code_writer';
 import { Helpers } from '../helpers';
-import { ConstantStringType, IntegerType } from './builtin_type';
+import { IntegerType } from './integer_type';
 import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
+import { ConstantStringType } from './builtin_type_base';
+import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 
 const { freeze } = Helpers;
 
 const klass = freeze({
-  makeForInteger: (int_: string) => {
-    const ftype = freeze({
+  makeSuccessFromType: (ftype: FunctionType): FunctionTypeBuild =>
+    FunctionTypeBuildBase.makeSuccessFromType(ftype),
+  makeForInteger: (int_: string) =>
+    klass.makeSuccessFromType(freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       returns: IntegerType.instance,
-      simpleEmit(writer: CodeWriter) {
-        return writer.pushLiteralString(int_);
-      }
-    });
-
-    return FunctionTypeBuildBase.makeSuccessFromType(ftype);
-  },
+      simpleEmit: (writer: CodeWriter) =>
+        writer.pushLiteralString(int_)
+    })),
   makeForString: (string_: string) => {
     string_ = string_.slice(1, -1);
-    const ftype = freeze({
+    return klass.makeSuccessFromType(freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       returns: ConstantStringType.instance,
-      simpleEmit(writer: CodeWriter) {
-        return writer.pushLiteralString(string_);
-      }
-    });
-
-    return FunctionTypeBuildBase.makeSuccessFromType(ftype);
+      simpleEmit: (writer: CodeWriter) =>
+        writer.pushLiteralString(string_)
+    }));
   }
 });
 

@@ -3,7 +3,6 @@ import { Helpers, raise } from './helpers';
 
 const { freeze } = Helpers;
 
-// NOTE this is a dependancy of emission
 export interface FunctionDefinitionRegistry {
   registerDefinitionBody(ftype: FunctionType, depth: number): void;
   rootDefinition(): FunctionType;
@@ -14,6 +13,7 @@ function make(): FunctionDefinitionRegistry {
   const mUids: { [uid: symbol]: FunctionType } = {};
   const mOrderedDefinitions: FunctionType[] = [];
   let mRootFtype: FunctionType | undefined = undefined;
+
   function registerDefinitionBody(ftype: FunctionType, depth: number) {
     if (mUids[ftype.uid()]) {
       raise('May not register a function more than once.');

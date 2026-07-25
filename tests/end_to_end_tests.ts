@@ -1,12 +1,10 @@
 import { Compiler } from '../src/compiler';
-import { MemoryArray } from '../src/memory_array';
 import { WebSupport } from '../src/web_support';
 import { EndToEndHelpers, EntryPointGetter } from './end_to_end_helpers';
 
 describe('end-to-end', () => {
   const {
     compileFromSource,
-    // interpretFromSource,
     makeExampleRunner,
     errorHandler
   } = EndToEndHelpers;
@@ -79,28 +77,10 @@ describe('end-to-end', () => {
         f()
       `, ['10']);
     });
-    
-    // describe('with an interpreter', () => {
-    //   // because root takes a parent pointer too, we can write this test
-    //   it('stores the parent pointer at the expected location', () => {
-    //     const memory = MemoryArray.make();
-    //     memory.store(0, 0);
-    //     const makeMemory = (): MemoryArray => memory;
-        
-    //     const interpreter = Interpreter.make(source, {
-    //       ...Interpreter.defaultInjections(),
-    //       makeMemory
-    //     });
-    //     expect(interpreter.run()).toBe(true);
-    //     const parentPointerValue = memory.load(0);
-    //     expect(parentPointerValue).toBe(kCanaryValue);
-    //   });
-    // });
   });
 
   ([
     [compileFromSource, 'compiler'],
-    // [interpretFromSource, 'interpreter']
   ] as [
     EntryPointGetter,
     string

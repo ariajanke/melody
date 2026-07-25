@@ -1,148 +1,108 @@
-import { FunctionType, ObjectType } from '../../function_type_build';
+import { FunctionType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { CodeWriter } from '../../code_writer';
 import { FunctionTypeBase } from '../function_type_base';
 import { TupleObjectFactory } from '../tuple_type_factory';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import {
-  AncestorInfo,
   ExtendedAncestorInfo,
   UsedAncestorCollection
 } from './used_ancestor_collection';
 import { ContextAttributeFactory } from './context_attribute_factory';
-import { MutableFunctionTable } from '../mutable_function_table';
-import { VariableAllocation } from './variable_allocation';
-import { FunctionOpLookUp } from './context_base_stage';
+import { VariableAllocation, VariableOffset } from './variable_allocation';
+import { ContextAncestorAccessorsStage } from './context_ancestor_accessors_stage';
 
 const { freeze, memoize } = Helpers;
 
+// TODO this has an "and" and probably should be split up
+//      preface ftype AND ancestor accessors (yuck!)
 export interface FunctionBodyPrefaceBuild {
   functionType(): FunctionType;
-  addAncestorAccessors(): Readonly<FunctionType[]>;
 };
 
 function make
   (mVariableAllocation: VariableAllocation,
    mUsedAncestorCollection: UsedAncestorCollection,
-   mCurrentContextReferenceType: ObjectType,
-   mReferenceTypeLookUpTable: FunctionOpLookUp = {})
+   mContextAncestorAccessors: ContextAncestorAccessorsStage)
   : FunctionBodyPrefaceBuild
 {
   const { hasParentGetter } = mUsedAncestorCollection;
+  const { parentAccessInfo, parentGetter, referenceType } =
+    mContextAncestorAccessors;
+  const { emptyTuple } = TupleObjectFactory;
+  const { kParentName, kContextName } = FunctionNamingSchema;
 
-  function checkedAddAccessor
-    (op: string | symbol, ftype: FunctionType): FunctionType
-  {
-    if (ftype.receiver().uid() !== TupleObjectFactory.emptyTuple().uid()) {
-      raise('uh oh, must not require a receiver');
-    }
-    if (mReferenceTypeLookUpTable[op]) {
-      raise(`Already used '${String(op)}'`);
-    }
-    mReferenceTypeLookUpTable[op] = MutableFunctionTable.
-      make().
-      setDefinition(ftype.parameters(), ftype);
-    return ftype;
-  }
+  // NOTE
+  // calls a chain of parent getters across ancestors
+  // subsequent calls have their receiver consumed, unless they're used
+  const hopEmissions = memoize((): Readonly<((cw: CodeWriter) => void)[]> =>
+    mUsedAncestorCollection.
+    allAncestors().
+    map((info: ExtendedAncestorInfo) => {
+      // NOTE we're doing receiver resolution manually
+      const ancSelfRef = info.type.
+        lookUp(kContextName)?.
+        byParameters(emptyTuple()) ??
+        raise('cannot find self refence function <context>');
 
-  const parentAccessInfo = memoize(() =>
-    mVariableAllocation.lookUp(FunctionNamingSchema.kParentName) ??
-    raise('used ancestors is not consistent with variable allocations'));
+      const ancParentRef = info.type.
+        lookUp(kParentName)?.
+        byParameters(emptyTuple()) ??
+        raise('cannot find self refence function <context>');
 
-  const parentGetter = memoize((): FunctionType | undefined => {
-    if (!hasParentGetter())
-      { return undefined; }
+      return (writer: CodeWriter): void => {
+        // NOTE assume a_{n-1} (info.type's context pointer) is on top...
+        writer.setStackPointer();
 
-    const ftype = ContextAttributeFactory.
-      buildReceiverGetter(parentAccessInfo().accessIndex, parentAccessInfo().type);
-    checkedAddAccessor(FunctionNamingSchema.kParentName, ftype);
+        ancParentRef.
+          emit(ancSelfRef, FunctionTypeBase.emitEmptyTuple(), writer);
 
-    return ftype;
-  });
-
-  const saveLocalStackPointer = memoize((): FunctionType =>
-    freeze({
-      ...FunctionTypeBase.makeNewEmitlessEmpty(),
-      simpleEmit(writer: CodeWriter): void {
-        writer.saveStackPointerToLocal();
-        if (hasParentGetter()) {
-          writer.storeParentPointer(parentAccessInfo().accessIndex);
+        if (info.use === 'used') {
+          writer.duplicateTop();
         }
-      }
-    })
-  );
-
-  const ancestorAccessors = memoize((): Readonly<FunctionType[]> => {
-    if (!parentGetter())
-      { return []; }
-    return mUsedAncestorCollection.ancestors().map((info: AncestorInfo) => {
-      const varInfo = mVariableAllocation.lookUp(info.variableName);
-      if (!varInfo) {
-        raise(`Excepted variable '${info.variableName}' to be defined`);
-      }
-      const accessorName = FunctionNamingSchema.
-        mapToFringeAccessor(info.variableName);
-
-      const ftype = ContextAttributeFactory.
-        buildReceiverGetter(varInfo.accessIndex, varInfo.type);
-      return checkedAddAccessor(accessorName, ftype);
-    });
-  });
+      };
+    }));
 
   const ancestorTupleEmission = memoize((): FunctionType => {
-    if (!parentGetter())
+    if (parentGetter() === 'none')
       { raise('need parent'); }
-    const ancs = mUsedAncestorCollection.allAncestors();
-    if (ancs.length === 0) {
+
+    if (hopEmissions().length === 0) {
       return freeze({
         ...FunctionTypeBase.makeNewEmitlessEmpty(),
         simpleEmit: (_0: CodeWriter) => {}
       });
     }
-    // a_0 === parent, specifically parentGetter
-    const hopEmissions = ancs.map(
-      (info: ExtendedAncestorInfo) =>
-      (writer: CodeWriter): void => {
-        // to call this parent method, their receiver must be pushed
-        // the magic is in setting SP
-        // assume a_{n-1} (info.type's context pointer) is on top...
-        writer.setStackPointer();
 
-        // NOTE receiver resolution without the actual thing
-        const recFtype = info.type.
-          lookUp(FunctionNamingSchema.kContextName)?.
-          byParameters(TupleObjectFactory.emptyTuple());
-
-        info.type.
-          lookUp(FunctionNamingSchema.kParentName)?.
-          byParameters(TupleObjectFactory.emptyTuple())!.
-          emit(recFtype!, FunctionTypeBase.emitEmptyTuple(), writer);
-
-        if (info.use === 'used') {
-          writer.duplicateTop();
-        }
-      }
-    );
-    
-    const ftype = freeze({
+    return freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(writer: CodeWriter): void {
-        parentGetter()!.simpleEmit(writer);
-        hopEmissions.forEach(emitHop => emitHop(writer));
+        (parentGetter() as FunctionType).simpleEmit(writer);
+        hopEmissions().forEach(emitHop => emitHop(writer));
         writer.restoreStackPointerToGlobal();
       },
       returns: mUsedAncestorCollection.ancestorTupleType
     });
-    
-    return ftype;
   });
 
+  const saveLocalStackPointer = memoize((): FunctionType => freeze({
+    ...FunctionTypeBase.makeNewEmitlessEmpty(),
+    simpleEmit(writer: CodeWriter): void {
+      writer.saveStackPointerToLocal();
+      if (hasParentGetter()) {
+        writer.
+          storeParentPointer((parentAccessInfo() as VariableOffset).accessIndex);
+      }
+    }
+  }));
+
   const ancestorInitialSet = memoize((): FunctionType => {
-    if (!parentGetter())
+    if (parentGetter() === 'none')
       { raise('need parent'); }
 
-    const ancestorTupleName = mUsedAncestorCollection.ancestors().
-      map(value => value.variableName)
+    const ancestorTupleName = mUsedAncestorCollection.
+      ancestors().
+      map(value => value.variableName);
     const varInfo = mVariableAllocation.lookUpTuple(ancestorTupleName);
     if (!varInfo) {
       raise('ancestors must be allocated in order');
@@ -150,9 +110,10 @@ function make
 
     const setter = ContextAttributeFactory.
       buildInitialSetter(varInfo.accessIndex, varInfo.type);
-    const getContext = mCurrentContextReferenceType.
-      lookUp(FunctionNamingSchema.kContextName)!.
-      byParameters(TupleObjectFactory.emptyTuple());
+    const getContext = referenceType().
+      lookUp(kContextName)?.
+      byParameters(emptyTuple()) ??
+      raise('no self <context> on current reference');
     return freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       simpleEmit(writer: CodeWriter) {
@@ -161,23 +122,18 @@ function make
     });
   });
 
-  const preface = memoize((): FunctionType => freeze({
+  const functionType = memoize((): FunctionType => freeze({
     ...FunctionTypeBase.makeNewEmitlessEmpty(),
     simpleEmit(writer: CodeWriter) {
-      // save your parent WASM param
       saveLocalStackPointer().simpleEmit(writer);
-      // set your ancestors
+
       if (hasParentGetter()) {
         ancestorInitialSet().simpleEmit(writer);
       }
     },
   }));
 
-  const inst = freeze({
-    functionType: preface,
-    addAncestorAccessors: ancestorAccessors
-  });
-  return inst;
+  return freeze({ functionType });
 }
 
 export const FunctionBodyPrefaceBuild = freeze({ make });

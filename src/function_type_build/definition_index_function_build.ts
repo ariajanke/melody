@@ -25,17 +25,6 @@ function make
 
   const mCurrentDepth = mContextFrameStack.depth();
 
-  // const bodyFtype = memoize(() => {
-  //   const compositeFunctionType = defBuild.functionType();
-  //   if (!compositeFunctionType)
-  //     { return undefined; }
-
-  //   // registerDefinitionBody(compositeFunctionType, mCurrentDepth);
-  //   return compositeFunctionType;
-  // });
-
-  // as root, received by "Tuple()"
-  // all others, received by "parent"
   const parentType = memoize(() =>
     mCurrentDepth === 0 ?
     TupleObjectFactory.emptyTuple() : 
@@ -46,13 +35,14 @@ function make
     if (!compositeFunctionType)
       { return undefined; }
 
-    registerDefinitionBody(compositeFunctionType, mCurrentDepth);
-
-    return freeze({
+    const ftype = freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       receiver: parentType,
       simpleEmit: compositeFunctionType.simpleEmit
     });
+
+    registerDefinitionBody(ftype, mCurrentDepth);
+    return ftype;
   });
 
   const functionType = memoize(() => {

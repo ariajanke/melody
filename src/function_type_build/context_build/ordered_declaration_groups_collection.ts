@@ -17,7 +17,7 @@ function make
 {
   type FunctionNameSet = { initialSetName?: string; fnames: string[]; };
   type ValueNameMap = { [dastNodeUid: number]: FunctionNameSet | undefined };
-  type thing = {
+  type VarNameSet = {
     fbuild: FunctionTypeBuild;
     initialSetName: string;
     fnames: Readonly<string[]>;
@@ -38,7 +38,7 @@ function make
     return valueMap_;
   });
 
-  const mOrder: thing[] = [];
+  const mOrder: VarNameSet[] = [];
   const mDone : { [dastNodeUid: number]: FunctionTypeBuild | undefined } = {};
 
   function appendInitialSetFrom(name: string) {
@@ -51,8 +51,6 @@ function make
     appendInitialSet(initialSetName);
   }
 
-  // what if only do initial sets?
-  // we can't because dependeeNames might not be initial sets...
   function appendInitialSet(name: string) {
     const decl = mDeclarationsMap[name];
     const { uid } = decl.value;
@@ -79,7 +77,7 @@ function make
     for (const name in mDeclarationsMap) {
       appendInitialSetFrom(name);
     }
-    return mOrder.map((t: thing) => 
+    return mOrder.map((t: VarNameSet) => 
       DeclarationFunctionGroup.make(t.fbuild, t.fnames, t.vnames));
   });
 
