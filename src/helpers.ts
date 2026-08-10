@@ -1,4 +1,8 @@
-const globalThis_ = (globalThis as unknown as { [name: string]: boolean | object } );
+type NodeEnvVar = { env: { [name: string]: boolean } };
+const globalThis_ = (globalThis as unknown as {
+  [name: string]: boolean | object | NodeEnvVar
+} );
+globalThis_['debug_mode'] ??= (globalThis_['process'] as NodeEnvVar)?.env.DEBUG_MODE;
 const kDebugMode: boolean = globalThis_['debug_mode'] as boolean ?? false;
 
 export const Helpers = Object.freeze({

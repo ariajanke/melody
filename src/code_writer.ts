@@ -32,15 +32,14 @@ export interface CodeWriter {
 
   /// --- function call parts ---
 
-  /// Translates the given (registered) ftype into an index for an indirect call
-  /// Following a call the stack maybe assumed to have the return values pushed
-  /// onto the stack, and the receiver + parameters consumed.
+  /// Makes an indirect call following the signature of the given fType.
   ///
-  /// Raises if given ftype is not registered.
+  /// Raises if given ftype's signature is not registered.
   ///
   /// WASM: this handles all of the call overhead, including stack pointer
   //        operations
-  indirectCall(beingCalled: FunctionType): CodeWriter;
+  /// Stack Effect: [i32, ...t_n] -> [...t_m]
+  indirectCall(representativeFtype: FunctionType): CodeWriter;
 
   // TODO this is broken, we must support the fact that ftype index modifiers
   //      are called, presently reassigning indicies will fail to work as

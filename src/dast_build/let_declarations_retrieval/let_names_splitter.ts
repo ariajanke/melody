@@ -27,7 +27,7 @@ export type LetNameGlob = Readonly<{
   operator: string,
   dependeeNames: readonly string[],
   tupleNode: DastNode
-}>
+}>;
 
 function construct(mGlob: LetNameGlob): LetNamesSplitter {
   const { error, setErrorMessage } = StandardError.make();

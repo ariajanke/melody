@@ -97,9 +97,11 @@ function make
     ...FunctionTypeBase.makeNewEmitlessEmpty(),
     simpleEmit(writer: CodeWriter) {
       writer.saveStackPointerToLocal();
+      // writer.pushStackPointer().printInteger();
 
       if (parentIndex() !== undefined) {
         writer.storeParentPointer(parentIndex()!);
+        // writer.pushStackPointer().loadInteger().printInteger();
       }
 
       ancestorInitialSet()?.simpleEmit(writer);

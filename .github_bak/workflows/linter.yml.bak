@@ -1,4 +1,5 @@
-name: 'Specs'
+# Due to Github billing scheme, disable until further notice
+name: 'Linter'
 on:
   pull_request:
     types:
@@ -21,10 +22,9 @@ jobs:
       - name: setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 20.13.1
+          node-version: 24.19.0
 
-      - name: run specs
+      - name: run linter
         run: |
           npm install
-          MEL_BUILD_DIR="$(pwd)/ci-tests" ./build_tests.sh && \
-          npx jasmine ./ci-tests/build-ts/tests.js
+          npm run lint

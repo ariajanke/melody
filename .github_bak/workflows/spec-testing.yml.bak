@@ -1,4 +1,5 @@
-name: 'Linter'
+# Due to Github billing scheme, disable until further notice
+name: 'Specs'
 on:
   pull_request:
     types:
@@ -12,6 +13,8 @@ on:
 
 jobs:
   tests:
+    env:
+      MEL_BUILD_DIR="$(pwd)/ci-tests"
     name: tests
     runs-on: ubuntu-24.04
     if: ${{ !github.event.pull_request.draft }}
@@ -21,9 +24,10 @@ jobs:
       - name: setup Node
         uses: actions/setup-node@v3
         with:
-          node-version: 20.13.1
+          node-version: 24.19.0
 
-      - name: run linter
+      - name: run specs
         run: |
           npm install
-          npm run lint
+          PURPOSE=test ./builder.sh && \
+          npm run test --testdir="$(MEL_BUILD_DIR)"

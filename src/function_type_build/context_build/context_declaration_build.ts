@@ -26,8 +26,7 @@ function make
   (mVariableAllocation: ProgressiveVariableAllocation,
    mDeclarationsMap: DastDeclarationMap,
    mWritableReferenceType: WritableObjectType,
-   mProgression: ContextTypeProgression_
-  )
+   mProgression: ContextTypeProgression_)
 : ContextDeclarationBuild_
 {
   type RefAllocPair =
@@ -100,7 +99,6 @@ function make
       if (!pair)
         { return pair; }
 
-      // CRITICAL SECTION
       const fbuild = mProgression.nextUndeferredBuild(pair.reference, v.valueNode);
       const ftype = fbuild.functionType() ?? setErrorFn(fbuild.error);
       if (!ftype)

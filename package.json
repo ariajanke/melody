@@ -1,29 +1,41 @@
 {
   "dependencies": {
-    "@stylistic/eslint-plugin": "^1.7.2",
-    "@sweet-monads/either": "^3.3.1",
-    "esbuild": "^0.20.2"
+    "esbuild": "^0.28.2"
   },
   "scripts": {
-    "build": "npx esbuild build.js --bundle --outfile=build/stuff.m.js",
-    "buildn": "npx esbuild $(find src/ | grep '.ts$') $npm_config_testsfiles --outdir=$npm_config_melbuilddir/build-es",
-    "build_for_tests": "cat build-tests.js | npx esbuild --bundle --outfile=build/tests.js",
+    "build": "npx esbuild $(find src/ | grep '.ts$')",
     "lint": "npx eslint $(find src/ | grep '.ts$') $(find tests/ | grep -P '(?<!\\.d)\\.ts$')",
-    "test": "npx jasmine /media/ramdisk/melody-build/build-ts/tests.js",
+    "test": "DEBUG_MODE=true npx jasmine $npm_config_testdir/tests.js",
     "watch": "npx tsc -w"
   },
   "include": [
     "**/*.ts"
   ],
   "devDependencies": {
-    "@eslint/js": "^9.3.0",
-    "@types/jasmine": "^5.1.5",
-    "eslint": "^8.57.0",
-    "fix-esm-import-path": "^1.10.1",
-    "globals": "^15.3.0",
-    "jasmine": "^5.5.0",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^7.9.0"
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@stylistic/eslint-plugin-js": "^4.4.1",
+    "@types/jasmine": "^6.0.0",
+    "eslint": "^10.8.1",
+    "fix-esm-import-path": "^1.10.3",
+    "globals": "^17.9.0",
+    "jasmine": "^6.3.0",
+    "typescript": "6.0",
+    "typescript-eslint": "^8.66.0"
   },
-  "compilerOptions": {}
+  "compilerOptions": {},
+  "name": "melody",
+  "version": "0.0.1",
+  "description": "Melody is a simple WASM compiled language. It's written mostly from scratch in TypeScript.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ariajanke/melody.git"
+  },
+  "keywords": [],
+  "author": "Aria Janke",
+  "license": "AGPLv3",
+  "bugs": {
+    "url": "https://github.com/ariajanke/melody/issues"
+  },
+  "homepage": "https://github.com/ariajanke/melody#readme"
 }

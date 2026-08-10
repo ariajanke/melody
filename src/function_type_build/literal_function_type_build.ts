@@ -1,5 +1,5 @@
 import { CodeWriter } from '../code_writer';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { IntegerType } from './integer_type';
 import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
@@ -19,6 +19,10 @@ const klass = freeze({
         writer.pushInteger(Number(int_))
     })),
   makeForString: (string_: string) => {
+    const { length } = string_;
+    if (length < 2 || string_[0] !== '\'' || string_[length - 1] != '\'') {
+      raise(`Given value "${string_}" is not a valid string literal`);
+    }
     string_ = string_.slice(1, -1);
     return klass.makeSuccessFromType(freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),

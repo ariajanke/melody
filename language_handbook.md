@@ -23,6 +23,7 @@ Provide a central place to define the language in as much detail and precisely a
 # An Introduction a code snippet at a time.
 
 ## Declations
+Declarations are made using a sort of "standard let". The follow the formula: `let <name expression> <declaration group> <initial value>`.
 
 ### Standard constant declaration
 ```melody

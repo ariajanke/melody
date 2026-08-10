@@ -1,0 +1,26 @@
+import { FunctionLookUpTable, ObjectType } from '../function_type_build';
+import { Helpers } from '../helpers';
+import { BuiltinTypeBase } from './builtin_type_base';
+
+const { freeze, memoize } = Helpers;
+
+function make(): ObjectType {
+  const lookUpTable = memoize(():
+    { [name: string | symbol]: FunctionLookUpTable | undefined } => 
+    freeze({
+      'askInteger': undefined,
+      'askString': undefined,
+      'puts': undefined
+    }));
+
+  const inst = freeze({
+    ...BuiltinTypeBase.makeNewWithDefaults(),
+    name: () => 'Integer',
+    lookUp(name: string | symbol): FunctionLookUpTable | undefined
+      { return lookUpTable()[name]; },
+  });
+
+  return inst;
+}
+
+export const SystemIoType = freeze({ instance: memoize(make) });

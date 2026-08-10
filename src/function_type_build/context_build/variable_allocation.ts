@@ -110,7 +110,8 @@ function make
   if ((mNextName === undefined) !==
       (mNextObjectType === undefined))
   { raise('Either next name and next type are both defined or not'); }
-  mNextName && mNextObjectType && next(mNextName, mNextObjectType);
+  if (mNextName && mNextObjectType)
+    { next(mNextName, mNextObjectType); }
   return inst;
 }
 

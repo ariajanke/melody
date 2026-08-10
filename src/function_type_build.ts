@@ -49,10 +49,6 @@ export interface MutableObjectType extends ObjectType {
 
 export interface FunctionLookUpTable {
   byParameters(type: ObjectType): FunctionType | undefined;
-  // this for tracking where an original delegation is?
-  // commonReceiverByAll(): ObjectType | undefined;
-  // TODO rm me, only needed by attributes creation so far...
-  // list(): Readonly<FunctionType[]>;
   uniqueFunctionType(): FunctionType | undefined;
 };
 

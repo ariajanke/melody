@@ -1,4 +1,4 @@
-import { FunctionLookUpTable, FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionTypeBase } from './function_type_base';
@@ -7,21 +7,9 @@ import { WritableContextFrameStack } from './context_frame_stack';
 import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import { DefinitionBodyFunctionBuild } from './definition_body_function_build';
 import { TupleObjectFactory } from './tuple_type_factory';
-import { MemoryArray } from '../memory_array';
-import { FunctionNamingSchema } from '../function_naming_schema';
-import { MutableFunctionTable } from './mutable_function_table';
+import { FunctionIndexType } from './function_index_type';
 
 const { freeze, memoize } = Helpers;
-
-const functionHandleBaseType = memoize((): ObjectType => freeze({
-  name: () => 'Function()()',
-  lookUp(_0: string | symbol): FunctionLookUpTable | undefined
-    { return undefined; },
-  detuplify: () => undefined,
-  uid: memoize(Symbol),
-  sizeInBytes: () => MemoryArray.kWordSizeInBytes,
-  sizeInStackItems: () => 1
-}));
 
 function make
   (mDefs: DastFunctionNameMappings,
@@ -61,20 +49,7 @@ function make
     return ftype;
   });
 
-  const functionHandleType = memoize(() => {
-    const ftype = recWrappedBodyFtype() ?? raise('should not be callable on error');
-    const callFTable = memoize(() => MutableFunctionTable.
-      fromFunctionType(ftype));
-
-    return freeze({
-      ...functionHandleBaseType(),
-      lookUp(operation: string | symbol) {
-        if (operation !== FunctionNamingSchema.kCallName)
-          { return undefined; }
-        return callFTable();
-      },
-    });
-  });
+  const indexRepresentation = (() => FunctionIndexType.of(parentType()));
 
   const functionType = memoize((): FunctionType | undefined => {
     if (!recWrappedBodyFtype())
@@ -91,7 +66,7 @@ function make
       // this is essentially a literal...
       receiver: emptyTuple,
       parameters: emptyTuple,
-      returns: functionHandleType,
+      returns: indexRepresentation().functionIndexType,
       simpleEmit(writer: CodeWriter) {
         writer.pushIndexOfRegistered(recWrappedBodyFtype()!);
       }

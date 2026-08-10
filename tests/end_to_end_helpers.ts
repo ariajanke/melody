@@ -13,6 +13,7 @@ function compileFromSource
   const compiler = Compiler.make(source, {
     ...Compiler.defaultInjections(),
     puts(str: string) {
+      console.log(str);
       printedStrings.push(str);
     }
   });
@@ -20,13 +21,13 @@ function compileFromSource
   if (!byteCode() || !importsObject()) {
     throw new Error(`Compilation failed: ${error()}`);
   }
-  return WebSupport.getEntryPoint(compiler).then(entry => { entry(0); });
+  return WebSupport.getEntryPoint(compiler).then(entry => { entry(); });
 }
 
 function errorHandler(done: () => void) {
   return (err: unknown): never => {
-    done();
     fail(err);
+    done();
     throw err;
   };
 }

@@ -1,9 +1,7 @@
-import { CodeWriter } from '../../code_writer';
-import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
+import { CallAttributeCreation } from './call_attribute_creation';
 import { ContextAttributeFactory } from './context_attribute_factory';
 import { OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
 import { VariableAllocation } from './variable_allocation';
@@ -18,43 +16,6 @@ export interface AttributesCreation {
 };
 
 const { freeze, memoize } = Helpers;
-
-function functionBeingCalledFor(possibleIndexGetter: FunctionType): FunctionType | undefined {
-  const lookUp = possibleIndexGetter.returns().
-    lookUp(FunctionNamingSchema.kCallName);
-  if (!lookUp)
-    { return undefined; }
-
-  // NOTE there must be exactly one ftype in this table
-  //      having more means more than one signature and
-  //      a single index cannot support that
-  return lookUp.uniqueFunctionType() ??
-         raise('cannot support more than one index');
-}
-
-function makeCallableFunctionType
-  (receiverType: ObjectType,
-   indexGetter: FunctionType,
-   functionToIndirectCall: FunctionType)
-{
-  const emit = (receiverFtype: FunctionType,
-                parameterFtype: FunctionType,
-                writer: CodeWriter): void =>
-  {
-    receiverFtype.simpleEmit(writer);
-    indexGetter.emit(receiverFtype, parameterFtype, writer);
-    writer.indirectCall(functionToIndirectCall);
-  };
-
-  return freeze({
-    ...FunctionTypeBase.makeNewEmitlessEmpty(),
-    receiver: () => receiverType,
-    // NOTE only one set of params/returns supported so far
-    //      returns: empty
-    //      parameters: empty
-    emit
-  });
-}
 
 function make
   (mReferenceType: ObjectType,
@@ -105,12 +66,9 @@ function make
     if (!accessorFtype())
       { return undefined; }
 
-    const functionBeingCalled = functionBeingCalledFor(accessorFtype()!);
-    if (!functionBeingCalled)
+    const ftype = CallAttributeCreation.of(accessorFtype()!);
+    if (!ftype)
       { return undefined; }
-
-    const ftype = makeCallableFunctionType(
-      mReferenceType, accessorFtype()!, functionBeingCalled);
 
     return [mVariableName, toFunctionTable(ftype)];
   });

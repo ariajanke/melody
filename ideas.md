@@ -398,7 +398,7 @@ Unary as:
 ```melody
 let f = fn ()
   as Entity.underscored(
-    Goose.new(),
+    Goose.new,
     Cat.new
   )
   # "goose" becomes a pending name
@@ -407,3 +407,92 @@ let f = fn ()
   cat.meow()
 ~
 ```
+
+# 2026-0811-1347
+
+## Type Inference Ideas
+The "via" type deduction helper keyword?
+So our name expressions work like:
+`name is ... via ...`
+This: `let n is Number via Usage = ...`
+Would mean: Using a service called "Usage", find a suitable type
+
+Consider the example:
+```
+let f = fn () ... # returning "Tuple()"
+let g = fn
+  let g1 via Usage := f
+  let g2 = fn () ... # returning "Tuple()"
+  # now possible!
+  g1 := g2
+  # Because the Usage service will analyze this assignment operator
+  # and learn that "oh, I need to stash another pointer for my receiver
+  # during runtime, so use a receiver agnostic function type to 
+  # accommodate!
+  let g3 via Usage := f
+  let g4 = fn (a is Integer) ... # returning something odd
+  g3 := g4
+  # now I need something *very* generic! With lots of safeties and 
+  # therefore this type can get expensive, but! that's what the programmer
+  # pays for with that Usage service
+  # let g5 via Usage... some example using something beyond plain "Usage"
+~
+```
+
+Adjective for interface
+Noun for specific type
+
+The supreme rule is: we must know exactly what we can and cannot do with any name as soon as we finished reading the complete name expression.
+
+The two cases:
+```
+let add = fn (a is Numeric, b is Numeric) a + b
+```
+And
+```
+let Point = fn (a is Numeric.type) tbl
+  new = fn (x_ is a, y_ is a) tbl
+    x := x_
+    y := y_
+    add = fn (r is new.ReturnType)
+      # do we know what and how new.ReturnType works here yet?
+      new(r.x + x, r.y + y)
+    ~
+  ~
+~
+```
+
+Currently Melody will *fully build* a value node to infer type for let declarations.
+`let a = valueNode` where `valueNode` gets fully built which can create problems when we hit function/block boundries.
+
+## Colon as a body opening character?
+```
+(a > 10).then(: 'greater than 10').else(: 'less than or equal to 10')
+```
+## Could we omit parantheses for calls?
+I think for certain situations obviously not. An remember during tokenization we know absolutely nothing about the interface of anything, let alone typing!
+
+```
+(a > 10).then :
+  'greater than 10'
+~.else :
+  'less than or equal to 10'
+~
+```
+identifier `then` followed by block opener `:` and that stops on `~`, which is immediately followed by a `.` operator....
+
+And drop closes and instead rely on indentation...
+```
+(a > 10).then :
+  'greater than 10'
+.else :
+  'less than or equal to 10'
+
+as Entity... # uh oh! "as" ends up being an operator I think...
+```
+If that were the case, how do we know when the line "ends"?
+
+Type inference, meta functions, and function boundries...
+Where we would see this: `let f := fn ...` and realize that we only need function handle things.
+
+What are my "big" questions...

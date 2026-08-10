@@ -40,9 +40,9 @@ export const StartFunctionDefinitionBuild = freeze({
     
     return freeze({
       build: memoize((): BuildStateAddition | undefined => {
-        console.log(`making SFnD for ${mTokenRange.asString()}`);
+        // console.log(`making SFnD for ${mTokenRange.asString()}`);
         const afterPart = CloseFunctionDefinitionBuild.make(afterBlockRange());
-        console.log(`close position is ${closePosition()}`);
+        // console.log(`close position is ${closePosition()}`);
         const inBlockPart = TreePartBuild.make(inBlockRange());
         return BuildStateAddition.make((sink: BuildSink) => {
           sink.pushBlock().pushPart(afterPart).pushPart(inBlockPart);

@@ -2,7 +2,7 @@ import { Compiler } from '../src/compiler';
 import { WebSupport } from '../src/web_support';
 import { EndToEndHelpers, EntryPointGetter } from './end_to_end_helpers';
 
-describe('end-to-end', () => {
+describe('happy path end-to-end', () => {
   const {
     compileFromSource,
     makeExampleRunner,
@@ -42,7 +42,7 @@ describe('end-to-end', () => {
          const memory = makeMemoryFilledWith(200);
          getEntryPointWithMemory(memory, compiler).
            then(entry => {
-             entry(0);
+             entry();
              const valueOfA = new DataView(memory.buffer).getInt32(0, true);
              expect(valueOfA).toBe(aVal);
              expect(printedStrings).toEqual(['Hello world!', `${aVal}`]);
@@ -143,6 +143,7 @@ describe('end-to-end', () => {
           f1()
         `, ['10']);
 
+        // [f1, .f1] are delegated
         doRun(`runs function that indirectly accesses parent's variable`, `
           let a = 10
           let f1 = fn
@@ -177,20 +178,36 @@ describe('end-to-end', () => {
           f1()
           puts(a)
           `, ['6', '7']);
-        // doRun(`can perform a mutation cross frame`, `
-        //   let a := 5
-        //   let f1 = fn
-        //     let f2 = fn
-        //       a := 10
-        //     ~
-        //     let b = a
-        //     f2()
-        //     puts(a)
-        //     a := b
-        //   ~
-        //   f1()
-        //   puts(a)
-        //   `, ['10', '5']);
+
+          doRun(`uh oh`, `
+            let a := 5
+            let f = fn
+              a := 6
+            ~
+            let g = fn
+              let g2 := f
+              g2()
+              puts(a)
+            ~
+            g()
+            `, ['6']);
+
+          it(`Fails to find modifier for a different fType`, () => {
+            const source = `
+              let f = fn
+              ~
+              let g = fn
+                let g2 := f
+                let g3 := fn
+                ~
+                g3 := g2
+              ~
+              g()
+            `;
+            const compiler = Compiler.make(source);
+            expect(compiler.byteCode()).toBeUndefined();
+            expect(compiler.error()).toMatch('cannot find function "g3:=" on receiver*');
+          });
       });
     });
   });

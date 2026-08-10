@@ -1,21 +1,17 @@
-# CAT TOYS!!!
+# Melody Programming Language
+Melody is a simple WASM compiled language. It's written mostly from scratch in TypeScript.
 
-Mew prrr prrrr :3!!!
+Declaration types are inferred by the RHS value's type. Right now it is incredibly simple. It can support some numeric operations, functions, and variable captures. All functions take no parameters, and return nothing.
 
-*Always remember to please put away your cat toys before work!*
+## Building/Demo
+BASH/Linux/Node.js support only for now.
 
-You are free to play with these toys too, provided you follow the AGPLv3. Which
-for the ignorant is **NOT** public domain! (Though I can't imagine this being
-of interest to anyone.)
-Please note that the AGPLv3 means that if used in a SaaS setup, source code must be made available under the same license (IANAL!!).
-
-### Dev Rules
-
-- "Class" names are at least two words
-- never define something in the same place that it's used
-- every module may see all of:
-  - sibling modules
-  - modules above
-  - modules below only in a directory by the same name as the module itself
-- next merge code:spec ratio is 100:35
-
+To build, run the following. Replace the directory values below with ones that will work for you, on your machine. Make sure you have node version 24.19.0 available and selected before starting.
+```BASH
+npm install
+export MEL_BUILD_DIR=/your/build/dir
+PURPOSE=demo ./builder.sh
+cd $MEL_BUILD_DIR
+python3 -m http.server
+```
+After that you should be able to navigate to localhost and open the demo page from the file index.

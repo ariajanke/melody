@@ -5,42 +5,70 @@ import { IntegerType } from '../integer_type';
 import { FunctionTypeBase } from '../function_type_base';
 import { ConstantStringType } from '../builtin_type_base';
 import { TupleObjectFactory } from '../tuple_type_factory';
+import { LiteralFunctionTypeBuild } from '../literal_function_type_build';
 
 const { freeze, memoize } = Helpers;
 
+const emitNlFtype = memoize(() =>
+  LiteralFunctionTypeBuild.makeForString('\'\n\'').functionType()!);
+
 // TODO accept nested tuples
 function make(): FunctionLookUpTable {
-  const mIntegerType = IntegerType.instance();
-  const mStringType = ConstantStringType.instance();
+  const mIntegerType = IntegerType.instance;
+  const mStringType = ConstantStringType.instance;
 
-  const kCodeWriterFuncNames =
-    ['printInteger', 'printString'] as const satisfies (keyof CodeWriter)[];
-
-  type CodeWriterFuncName = typeof kCodeWriterFuncNames[number];
+  type CodeWriterFuncName = 'printInteger' | 'printString';
 
   type MappingEntry = FunctionType | 'notSupported' | undefined;
   
   const mParameterMapping: { [uid: symbol]: MappingEntry } = {};
 
-  function makePutsFunctionFor(type: ObjectType): MappingEntry {
-    const detuped = type.detuplify();
-    const reverseTypes = (detuped ? [...detuped] : [type]);
-    const writters: (CodeWriterFuncName | undefined)[] =
-      reverseTypes.map((t: ObjectType) =>
-      {
-        if (t.uid() === mIntegerType.uid()) {
-          return 'printInteger';
-        } else if (t.uid() === mStringType.uid()) {
-          return 'printString';
-        }
-        return undefined;
-      });
-
-    const allTypesSupported = writters.every((writter) => writter);
-    if (!allTypesSupported) {
-      return 'notSupported';
+  function writerFor
+    (type: ObjectType): CodeWriterFuncName | undefined
+  {
+    if (type.uid() === mIntegerType().uid()) {
+      return 'printInteger';
+    } else if (type.uid() === mStringType().uid()) {
+      return 'printString';
     }
-    const validWritters = writters as readonly CodeWriterFuncName[];
+    return undefined;
+  }
+
+  function writersFor
+    (type: ObjectType): Readonly<CodeWriterFuncName[]> | undefined
+  {
+    const detuped = type.detuplify();
+    if (!detuped) {
+      const w = writerFor(type);
+      return w ? [w] : undefined;
+    }
+
+    return detuped.reduce((arr: CodeWriterFuncName[] | undefined, type: ObjectType) => {
+      if (!arr)
+        { return arr; }
+
+      const w = writerFor(type);
+      if (!w)
+        { return w; }
+
+      arr.push(w);
+      return arr;
+    }, []);
+  }
+
+  const emitFor = (type: ObjectType): ((cw: CodeWriter) => void) | undefined =>
+    writersFor(type)?.
+      reduce((p: (cw: CodeWriter) => void, c: CodeWriterFuncName) => {
+        return (cw: CodeWriter) => {
+          p(cw);
+          cw[c]();
+        }
+    }, (_0: CodeWriter) => {});
+
+  function makePutsFunctionFor(type: ObjectType): MappingEntry {
+    const emissionFunc = emitFor(type);
+    if (!emissionFunc)
+      { return 'notSupported'; }
 
     const { emptyTuple } = TupleObjectFactory;
 
@@ -63,16 +91,16 @@ function make(): FunctionLookUpTable {
           raise('parameter assumptions');
         }
         parameterFtype.simpleEmit(writer);
-        validWritters.forEach(name => writer[name]());    
+        emissionFunc(writer);
 
+        emitNlFtype().simpleEmit(writer);
+        writer.printString();
       },
     });
     return rv;
   }
 
   return freeze({
-    // list: () =>
-    //   raise(`Cannot list for "${BuiltinFunctionNames.kPuts}" functions`),
     uniqueFunctionType: (): FunctionType | undefined => undefined,
     byParameters(type: ObjectType): FunctionType | undefined {
       const found =

@@ -29,7 +29,8 @@ function make(): WasmImportsSection {
   const inst = freeze({
     pushFunction(idx: number, moduleName: string, fieldName: string) {
       resetFinishedCode();
-      (idx >= 0 && idx < 256) || raise('index too beefy');
+      if (idx < 0 && idx >= 256)
+        { raise('index too beefy'); }
       pushImportName(moduleName, fieldName);
       mCode.push(
         externalKinds().func,

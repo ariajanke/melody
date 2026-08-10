@@ -6,27 +6,34 @@ import { Helpers } from './helpers';
 
 const { freeze, expose } = Helpers;
 
-function getEntryPointOnInst(instance: WebAssembly.Instance | undefined): (dummyReceiver: number) => void {
+function getEntryPointOnInst(instance: WebAssembly.Instance | undefined): () => void {
   const exports = instance?.exports;
   if (exports && 'entry' in exports) {
-    return exports.entry as (dummyReceiver: number) => void;
+    return exports.entry as () => void;
   } else {
     throw new Error('Failed to find entry point in WASM exports');
   }
 }
 
-function narrowToCompiler(compilerOrSource: Compiler | string): Compiler {
+function narrowToCompiler(compilerOrSource: Compiler | string, printer?: (str: string) => void): Compiler {
   if (typeof compilerOrSource === 'string') {
-    return Compiler.make(compilerOrSource);
+    return Compiler.
+      make(compilerOrSource,
+           {
+            ...Compiler.defaultInjections(),
+            puts: printer ?? console.log
+           });
   }
   return compilerOrSource;
 }
 
 async function getEntryPointWithMemory
   (memory: WebAssembly.Memory,
-   compilerOrSource: Compiler | string): Promise<(dummyReceiver: number) => void>
+   compilerOrSource: Compiler | string,
+   printer?: (str: string) => void)
+  : Promise<() => void>
 {
-  const compiler = narrowToCompiler(compilerOrSource);
+  const compiler = narrowToCompiler(compilerOrSource, printer);
   const importsObject = {
     ...compiler.importsObject(),
     js: { memory }
@@ -46,14 +53,14 @@ async function getEntryPointWithMemory
 
 export const WebSupport = freeze({
   forTesting: { getEntryPointWithMemory },
-  async getEntryPoint(compilerOrSource: Compiler | string) {
+  async getEntryPoint(compilerOrSource: Compiler | string, printer?: (str: string) => void) {
     const memory = new WebAssembly.Memory({
       initial: 1,
       maximum: 1,
     });
     for (let i = 0; i < 5000; ++i)
       new DataView(memory.buffer).setInt32(i*4, 4);
-   return getEntryPointWithMemory(memory, compilerOrSource);
+   return getEntryPointWithMemory(memory, compilerOrSource, printer);
   }
 });
 

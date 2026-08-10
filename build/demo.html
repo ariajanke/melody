@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Melody Language Demo</title>
+  <style>
+    .container {
+      display: flex;
+      flex: 1;
+      height: 80vh;
+    }
+    .container section {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      padding: 5px;
+      gap: 10px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      gap: 12px;
+    }
+    #melody-code, #prog-output {
+      font-size: 18px;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <script type="module" src="index-demo.js"></script>
+</head>
+<body>
+  <div class="container">
+    <section>
+      <h2>Code</h2>
+      <form onsubmit="compileAndRun(event)">
+        <textarea id="melody-code" spellcheck="false" rows="18">
+
+        </textarea>
+        <button type="button" onclick="compileAndRun(event)">Run</button>
+      </form>
+    </section>
+    <section>
+      <h2>Program Output</h2>
+      <pre id="prog-output">
+Your program's output will appear here.
+If there are any compiler errors or problems, those messages will appear here also.
+      </pre>
+    </section>
+  </div>
+  <script>
+    const kDemoProgram = `
+let a := 5
+let b = 6
+let f1 = fn
+  a := a * 2
+  puts('Hello from f1, where a = ', a)
+~
+let f2 = fn
+  a := a - b
+  puts('Hello from f2, where a = ', a)
+~
+let f3 := f1
+puts('This is my simple programing language demo!')
+f3()
+f3 := f2
+f3()`;
+    document.getElementById('melody-code').value = kDemoProgram;
+    const progEl = () => document.getElementById('prog-output');
+    function appendOutput(content) {
+      const output = progEl();
+      output.textContent = (output.textContent ?? '') + `${content}`;
+    }
+    let mRunNumber = 0;
+    async function compileAndRun() {
+      event.preventDefault();
+      progEl().textContent = '';
+      try {
+        const source = document.getElementById('melody-code').value;
+        const compiler = Compiler.make(source, {
+          ...Compiler.defaultInjections(),
+          puts: appendOutput
+        });
+        const entry = await WebSupport.getEntryPoint(compiler);
+        appendOutput(
+          `Compiled to ${compiler.byteCode().length} bytes of WASM code.\n` +
+          `Program Run #${++mRunNumber} Output:\n`);
+        entry();
+      } catch (error) {
+        appendOutput(`An error has occured:\n${error}`);
+      }
+    }
+  </script>
+</body>
+</html>
