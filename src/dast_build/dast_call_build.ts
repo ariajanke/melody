@@ -1,6 +1,7 @@
 import { DastBuild } from '../dast_build';
 import { Helpers, StandardError } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
+import { IastNode } from '../iast_node';
 import { DastNode_ } from './dast_node';
 import { DastCall } from './dast_node_specializations';
 import { ReceiverAssignmentStripping } from './receiver_assignment_stripping';
@@ -8,52 +9,68 @@ import { ReceiverAssignmentStripping } from './receiver_assignment_stripping';
 const { freeze, memoize } = Helpers;
 
 function make
-  (mCallBuild: DastBuild,
-   mReceiverBuild: DastBuild,
-   mArgsBuild: DastBuild)
+  (mCallName: string,
+   mIntoDastBuild: (n: IastNode) => DastBuild,
+   mReceiverNode: IastNode,
+   mArgsNode: IastNode)
   : DastBuild
 {
   const { error, setErrorFn } = StandardError.make();
-  const callNode = memoize(() =>
-    mCallBuild.node() ?? setErrorFn(mCallBuild.error));
-
-  const receiverNode = memoize(() =>
-    mReceiverBuild.node() ?? setErrorFn(mReceiverBuild.error));
-
-  const argsNode = memoize(() =>
-    mArgsBuild.node() ?? setErrorFn(mArgsBuild.error));
+  const { kAssignment } = OperatorNamingSchema;
 
   const assignmentStripping = memoize((): ReceiverAssignmentStripping | undefined => {
-    const callNode_ = callNode();
-    const receiverNode_ = receiverNode();
-    const isAssignmentOperator =
-      callNode_?.asString() === OperatorNamingSchema.kAssignment;
-    if (callNode_ && receiverNode_ && isAssignmentOperator)
-      { return ReceiverAssignmentStripping.make(receiverNode_); }
+    if (mCallName === kAssignment)
+      { return ReceiverAssignmentStripping.make(mReceiverNode); }
+
     return undefined;
   });
 
-  const nodeAsAnAssignment = ((): DastNode_ | undefined => {
-    if (!assignmentStripping())
-      { return undefined; }
+  const adjustedReceiver = memoize(() => {
+    if (assignmentStripping()) {
+      return assignmentStripping()!.strippedTree() ??
+             setErrorFn(assignmentStripping()!.error);
+    }
 
-    const { nameTarget, interior, error } = assignmentStripping()!;
-    if (!(nameTarget() ?? interior()))
-      { return setErrorFn(error); }
-
-    const fringe = DastNode_.makeFringe(nameTarget()!);
-    return DastCall.make(fringe, interior()!, argsNode()!);
+    return mReceiverNode;
   });
 
-  const nodeAsACall = ((): DastNode_ | undefined => {
-    if (!(callNode() ?? receiverNode() ?? argsNode()))
+  const receiverBuild = memoize(() => {
+    if (!adjustedReceiver())
       { return undefined; }
 
-    return DastCall.make(callNode()!, receiverNode()!, argsNode()!);
+    return mIntoDastBuild(adjustedReceiver()!);
   });
 
-  const node = memoize((): DastNode_ | undefined =>
-    nodeAsAnAssignment() ?? nodeAsACall());
+  const argsBuild = memoize(() => mIntoDastBuild(mArgsNode));
+
+  const callName = memoize(() => {
+    if (assignmentStripping()) {
+      const token = assignmentStripping()!.nameTarget();
+      if (!token)
+        { return undefined; }
+
+      return `${token.content()}${mCallName}`;
+    }
+
+    return mCallName;
+  });
+
+  const receiverNode = memoize(() => {
+    if (!receiverBuild())
+      { return undefined; }
+
+    return receiverBuild()!.node() ?? setErrorFn(receiverBuild()!.error);
+  });
+
+  const argsNode = memoize(() =>
+    argsBuild().node() ?? setErrorFn(argsBuild().error));
+
+  const node = memoize((): DastNode_ | undefined => {
+    if (!callName() || !receiverNode() || !argsNode())
+      { return undefined; }
+
+    return DastCall.make(callName()!, receiverNode()!, argsNode()!);
+  });
 
   return freeze({ node, error });
 }

@@ -3,13 +3,15 @@ import {
   LetDeclarationsRetrieval,
   LetNameElement,
 } from '../../src/dast_build/let_declarations_retrieval';
-import { IastNode, IastVisitor, ReseatableIastVisitor } from '../../src/iast_node';
 import { DastNode_ } from '../../src/dast_build/dast_node';
 import { DastBuild } from '../../src/dast_build';
 import { DastCall, DastTuple } from '../../src/dast_build/dast_node_specializations';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
 import { Helpers, StandardError } from '../../src/helpers';
+import { IastNode, IastVisitor } from '../../src/iast_node';
 import { TokenFactories } from '../token_factories';
+import { Token } from '../../src/token';
+import { ReseatableIastVisitor } from '../iast_visitor_factories';
 
 const { describeNamed } = TestHelpers;
 
@@ -63,7 +65,6 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     };
   }
   const generallyIntoDastBuild = (() => {
-    // const { makeFromNode } = DastBuildBase;
     const makeFromNode = (node: DastNode_): DastBuild => freeze({
       node: () => node,
       error: () => StandardError.make().error()
@@ -72,14 +73,15 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
       (str: string): DastBuild =>
         makeFromNode(fn(str));
     const visitor: IastVisitor<DastBuild> = {
-      visitFringe: forFringe(DastNode_.makeFringe),
+      visitFringe: (tok: Token) =>
+        DastNode_.makeFringe(tok),
       visitInteger: forFringe(DastNode_.makeInteger),
       visitTuple(nodes: Readonly<IastNode[]>): DastBuild {
         return makeFromNode(DastTuple.make(nodes.map(node => node.visit(visitor).node()!)));
       },
-      visitCall: (callName: IastNode, rec: IastNode, fArgs: IastNode): DastBuild =>
+      visitCall: (callName: Token, rec: IastNode, fArgs: IastNode): DastBuild =>
         makeFromNode(DastCall.
-          make(callName.visit(visitor).node()!,
+          make(callName.content(),
                rec.visit(visitor).node()!,
                fArgs.visit(visitor).node()!))
       // let that f****er raise if that function is undefined
@@ -91,8 +93,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     return (node: IastNode): DastBuild =>
       node.visit(visitor);
   })();
-  // const makeFromDastNode = (node: DastNode_): () => DastBuild =>
-  //   () => DastBuildBase.makeFromNode(node);
+
   it('captures a single declaration', () => {
     // let a = 1
     const letDecl = makeSingleDecl('a', makeFringe('1'));

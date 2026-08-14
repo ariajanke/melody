@@ -16,7 +16,7 @@ const kAssignmentNotAValidCallName =
   `stripped it out and replaced it with the appropriate fringe accessor`;
 
 function make
-  (mCallName: DastNode,
+  (mCallName: string,
    mReceiver: DastNode,
    mArgs: DastNode,
    mContext: ContextFrameSnapshot)
@@ -26,18 +26,15 @@ function make
   const { emptyTuple } = TupleObjectFactory;
 
   const callNameStr = memoize((): string | undefined => {
-    const callNameStr = mCallName.asString();
-    if (!callNameStr) {
-      return setErrorMessage('Cannot use node as a call name');
-    } else if (callNameStr === kAssignment) {
+    if (mCallName === kAssignment) {
       raise(kAssignmentNotAValidCallName);
     }
 
     if (kLogToConsole) {
-      console.log(`Looking up call "${callNameStr}" on receiver ` +
+      console.log(`Looking up call "${mCallName}" on receiver ` +
                   `"${mReceiver.asString()}" with args "${mArgs.asString()}"`);
     }
-    return callNameStr;
+    return mCallName;
   });
 
   const contextSelfFtype = () =>

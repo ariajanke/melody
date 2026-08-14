@@ -3,6 +3,7 @@ import { IastNode, IastVisitor } from '../iast_node';
 import { DastBuild } from '../dast_build';
 import * as dldb from './let_declarations_retrieval/dast_let_declaration_build';
 import * as LetNamesSplitter from './let_declarations_retrieval/let_names_splitter';
+import { Token } from '../token';
 
 const { freeze } = Helpers;
 
@@ -20,7 +21,7 @@ const CallLevelVisitor = ((): { make: CallLevelVisitorConstructor } => {
   const visitLet = (_0: IastNode): DastLetDeclarationBuild =>
     makeError('no nested let declarations allowed');
 
-  const visitFringe = (_0: string): DastLetDeclarationBuild =>
+  const visitFringe = (_0: Token): DastLetDeclarationBuild =>
     makeError('name needs a "= ..." following it');
     
   const visitString = (_0: string): DastLetDeclarationBuild =>
@@ -40,8 +41,8 @@ const CallLevelVisitor = ((): { make: CallLevelVisitorConstructor } => {
       mIntoDastBuild: (node: IastNode) => DastBuild
     ): IastVisitor<DastLetDeclarationBuild> {
       const visitCall =
-        (callName: IastNode, receiver: IastNode, args: IastNode): DastLetDeclarationBuild =>
-        DastLetDeclarationBuild.make(callName, receiver, args, mIntoDastBuild);
+        (callName: Token, receiver: IastNode, args: IastNode): DastLetDeclarationBuild =>
+        DastLetDeclarationBuild.make(callName.content(), receiver, args, mIntoDastBuild);
       return freeze({
         visitLet,
         visitFringe,

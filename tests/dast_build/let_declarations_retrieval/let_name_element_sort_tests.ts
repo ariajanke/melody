@@ -5,6 +5,7 @@ import {
 import { LetNameElement }
   from '../../../src/dast_build/let_declarations_retrieval';
 import { DastNode_ } from '../../../src/dast_build/dast_node';
+import { TokenFactories } from '../../token_factories';
 
 const { describeNamed } = TestHelpers;
 
@@ -13,7 +14,7 @@ describeNamed({ LetNameElementSort }, () => {
   function makeLetElementCommon(): { operator: '=', value: DastNode_ } {
     return {
       operator: '=',
-      value: makeFringe('...')
+      value: makeFringe(TokenFactories.makeFromStringOnly('...'))
     };
   }
   const toName = (el: LetNameElement): string => {

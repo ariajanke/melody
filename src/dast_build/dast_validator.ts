@@ -58,10 +58,9 @@ function makeVisitorCommon(getInst: () => DastVisitor<boolean>): DastVisitor<boo
     visitFunctionDefinition(_0: DastFunctionNameMappings,
                             _1: Readonly<DastNode[]>)
     { raise('Must implement "visitFunctionDefinition"'); },
-    visitCall(callName: DastNode, receiver: DastNode, args: DastNode) {
+    visitCall(_0: string, receiver: DastNode, args: DastNode) {
       const inst = getInst();
-      return callName.visit(inst) &&
-             receiver.visit(inst) &&
+      return receiver.visit(inst) &&
              args.visit(inst);
     },
     visitFringe() { return true; },

@@ -28,7 +28,7 @@ function make
     FringeFunctionBuild.make(name, topFrame());
 
   function visitCall
-    (callName: DastNode, receiver: DastNode, args: DastNode): FunctionTypeBuild
+    (callName: string, receiver: DastNode, args: DastNode): FunctionTypeBuild
   {
     return CallFunctionBuild.make(callName, receiver, args, topFrame());
   }

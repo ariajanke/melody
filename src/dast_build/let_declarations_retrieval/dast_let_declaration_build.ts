@@ -19,7 +19,7 @@ export interface DastLetDeclarationBuild {
 const { kAssignment, kEquality } = OperatorNamingSchema;
 
 function make
-  (mCallName: IastNode,
+  (mCallName: string,
    mReceiver: IastNode,
    mArgs: IastNode,
    mIntoDastBuild: (node: IastNode) => DastBuild)
@@ -28,13 +28,11 @@ function make
   const { error, setErrorFn, setErrorMessage } = StandardError.make();
 
   const callNameStr = memoize(() => {
-    const callNameStr = mCallName.asString();
-    if (callNameStr !== kEquality &&
-        callNameStr !== kAssignment)
-    {
-      return setErrorMessage(`unexpected operator "${callNameStr}" in let declaration`);
+    if (mCallName !== kEquality && mCallName !== kAssignment) {
+      return setErrorMessage(`unexpected operator "${mCallName}" in let declaration`);
     }
-    return callNameStr;
+
+    return mCallName;
   });
 
   const declaredNames = memoize(() => {

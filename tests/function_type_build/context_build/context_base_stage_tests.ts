@@ -10,8 +10,9 @@ describeNamed({ ContextBaseStage }, () => {
   const inst = ContextBaseStage.make();
   const lookUp = inst.referenceType().lookUp;
   const { emptyTuple } = TupleObjectFactory;
-  it('defines builtin function for "puts"', () => {
-    expect(lookUp(BuiltinFunctionNames.kPuts)).toBeDefined();
+
+  it('defines builtin function for "SystemIO"', () => {
+    expect(lookUp(BuiltinFunctionNames.kSystemIoTable)).toBeDefined();
   });
 
   it('defines self referential function <context>', () => {

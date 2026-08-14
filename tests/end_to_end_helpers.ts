@@ -15,7 +15,7 @@ function compileFromSource
     puts(str: string) {
       if (str === '\n')
         { return; }
-      console.log(str);
+
       printedStrings.push(str);
     }
   });

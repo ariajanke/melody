@@ -1,32 +1,47 @@
 import { ReceiverAssignmentStripping } from '../../src/dast_build/receiver_assignment_stripping';
-import { TestHelpers } from '../test_helpers';
-import { DastNode_ } from '../../src/dast_build/dast_node';
-import { DastCall } from '../../src/dast_build/dast_node_specializations';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
+import { IastNode } from '../../src/iast_node';
+import { TestHelpers } from '../test_helpers';
+import { TokenFactories } from '../token_factories';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ ReceiverAssignmentStripping }, () => {
-  const { makeFringe, makeInteger } = DastNode_;
-  const makeCall = DastCall.make;
+  const makeToken = TokenFactories.makeFromStringOnly;
+  const makeFringe = (v: string) => IastNode.makeFringe( makeToken(v) );
+  const makeCall = (v: string, rec: IastNode, args: IastNode) =>
+    IastNode.forAssignmentStripping.makeCall(makeToken(v), rec, args);
+
   describe('assignment directly on the receiver (a := 5)', () => {
     it('strips the receiver to the context', () => {
-      const { interior, nameTarget } = ReceiverAssignmentStripping.
+      const { strippedTree, nameTarget } = ReceiverAssignmentStripping.
         make(makeFringe('a'));
-      expect(nameTarget()).toEqual('a:=');
-      const interior_ = interior();
+
+        expect(nameTarget()?.content()).toEqual('a');
+      const interior_ = strippedTree();
       expect(interior_?.asString()).toEqual(FunctionNamingSchema.kContextName);
     });
   });
 
-  // TODO: table support
-  xdescribe('assignment on a table (a.b := 5)', () => {
+  describe('assignment on a table (a.b := 5)', () => {
     it('strips the receiver to the context', () => {
-      const call = makeCall(makeFringe('.'), makeFringe('a'), makeInteger('b'));
-      const { interior, nameTarget } = ReceiverAssignmentStripping.make(call);
-      expect(nameTarget()).toEqual('b:=');
-      const interior_ = interior();
-      expect(interior_?.asString()).toEqual('a'); 
+      const rec = makeFringe('a');
+      const call = makeCall('.', rec, makeFringe('b'));
+      const { strippedTree, nameTarget } = ReceiverAssignmentStripping.make(call);
+      expect(nameTarget()?.content()).toEqual('b');
+      expect(strippedTree()?.asString()).toEqual('a'); 
     });
   });
+
+  describe('assignment single member tuple ( (a) := ... )', () => {
+    it('strips the receiver to the context', () => {
+      fail();
+    });
+  });
+
+  describe(`assignment on a deeper table (a.foo(3, 'beans').b := 5)`, () => {
+    it('strips the receiver to the context', () => {
+      fail();
+    });
+  });  
 });

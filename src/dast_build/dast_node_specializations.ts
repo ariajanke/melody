@@ -53,14 +53,14 @@ export const DastInitialSet = freeze({
 });
 
 export const DastCall = freeze({
-  make(mCall: DastNode,
+  make(mCallName: string,
        mReceiver: DastNode,
        mArgs: DastNode)
   {
     return freeze({
       ...DastNodeBase.make(),
       visit: <T>(visitor: DastVisitor_<T>): T =>
-        visitor.visitCall(mCall, mReceiver, mArgs),
+        visitor.visitCall(mCallName, mReceiver, mArgs),
     });
   }
 });

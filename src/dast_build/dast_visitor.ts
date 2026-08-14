@@ -15,7 +15,7 @@ export interface DastVisitor_<ResultType = void> {
   visitFringe(v: string): ResultType;
   visitTuple(nodes: Readonly<DastNode[]>): ResultType;
   /// callNames can be "puts", "a:="
-  visitCall(callName: DastNode, receiver: DastNode, args: DastNode): ResultType;
+  visitCall(callName: string, receiver: DastNode, args: DastNode): ResultType;
   visitInitialSet(namesDefined: Readonly<string[]> | string, node: DastNode): ResultType;
   visitFunctionDefinition(
     nameMappings: DastFunctionNameMappings,
@@ -30,8 +30,7 @@ function makeDefaultingToContinue(): ReseatableDastVisitor {
     visitString: visitFringe,
     visitInteger: visitFringe,
     visitFringe,
-    visitCall(callName: DastNode, receiver: DastNode, args: DastNode) {
-      callName.visit(inst);
+    visitCall(callName: string, receiver: DastNode, args: DastNode) {
       receiver.visit(inst);
       args.visit(inst);
     },

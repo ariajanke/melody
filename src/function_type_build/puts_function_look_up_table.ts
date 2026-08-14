@@ -1,11 +1,11 @@
-import { CodeWriter } from '../../code_writer';
-import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
-import { Helpers, raise } from '../../helpers';
-import { IntegerType } from '../integer_type';
-import { FunctionTypeBase } from '../function_type_base';
-import { ConstantStringType } from '../builtin_type_base';
-import { TupleObjectFactory } from '../tuple_type_factory';
-import { LiteralFunctionTypeBuild } from '../literal_function_type_build';
+import { CodeWriter } from '../code_writer';
+import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
+import { Helpers, raise } from '../helpers';
+import { IntegerType } from './integer_type';
+import { FunctionTypeBase } from './function_type_base';
+import { ConstantStringType } from './builtin_type_base';
+import { TupleObjectFactory } from './tuple_type_factory';
+import { LiteralFunctionTypeBuild } from './literal_function_type_build';
 
 const { freeze, memoize } = Helpers;
 

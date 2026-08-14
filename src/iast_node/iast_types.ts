@@ -1,0 +1,17 @@
+import { Token } from '../token';
+
+export interface IastVisitor_<ResultType = void> {
+  visitString(v: string): ResultType;
+  visitInteger(v: string): ResultType;
+  visitFringe(token: Token): ResultType;
+  visitTuple(nodes: Readonly<IastNode_[]>): ResultType;
+  visitLet(innerNode: IastNode_): ResultType;
+  visitCall(callName: Token, receiver: IastNode_, args: IastNode_): ResultType;
+  visitFunctionDefinition(nodes: Readonly<IastNode_[]>): ResultType;
+}
+
+// IAST: Initial Abstract Syntax Tree
+export interface IastNode_ {
+  asString(): string;
+  visit<T>(visitor: IastVisitor_<T>): T;
+};

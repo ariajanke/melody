@@ -15,79 +15,84 @@ export interface OperativeStatementAstCreation extends OperativeStatementVisitor
 };
 
 const {
-  makeCall,
   tuplify,
   makeLetDeclation,
-  makeOnContextCall
+  makeCall,
+  // contextNode,
+  makeContextNodeAt,
+  tokenize
 } = IastNode.forOperativeStatements;
 
-export const OperativeStatementAstCreation = freeze({
-  make: (): OperativeStatementAstCreation => {
-    const mNodeStack: IastNode[] = [];
-    const popOrThrow = () => {
-      return mNodeStack.pop() ?? raise('nodes depleted');
-    };
-    const binaryOperator = (token: Token) => {
-      const first = popOrThrow();
-      const fcall = makeCall( token, popOrThrow(), first );
-      mNodeStack.push(fcall);
-    };
-    const tupleOperator = (_0: Token) => {
-      const first = popOrThrow();
-      const second = popOrThrow();
+const tokenizeOrRaise = (node: IastNode): Token =>
+  tokenize(node) ?? raise(`cannot use node "${node.asString()}" as a call name`);
 
-      mNodeStack.push( tuplify(second, first) );
-    };
-    const letOperator = (_0: Token) => {
-      mNodeStack.push(makeLetDeclation(popOrThrow()));
-    };
-    const functionCall = (_0: Token) => {
-      const argsNode = popOrThrow();
-      const nameNode = popOrThrow();
-      const callNode = makeOnContextCall(nameNode, argsNode);
-      mNodeStack.push(callNode);
-    };
+function make(): OperativeStatementAstCreation {
+  const mNodeStack: IastNode[] = [];
+  const popOrThrow = () =>
+    mNodeStack.pop() ?? raise('nodes depleted');
+  const binaryOperator = (token: Token) => {
+    const first = popOrThrow();
+    const fcall = makeCall( token, popOrThrow(), first );
+    mNodeStack.push(fcall);
+  };
+  const tupleOperator = (_0: Token) => {
+    const first = popOrThrow();
+    const second = popOrThrow();
 
-    const { binaryListing, unaryListing } = OperatorDefinitions;
-    const mSpecialOperatorFactories: { [op: string]: typeof letOperator } = {
-      [','  ]: tupleOperator ,
-      [OperatorNamingSchema.kLet ]: letOperator ,
-      [OperatorNamingSchema.kCall]: functionCall
-    };
-    const inst = freeze({
-      visitToken   : (token: Token) => {
-        const opFactory = mSpecialOperatorFactories[token.content()];
-        if (opFactory) {
-          return opFactory(token);
-        }
-        if (binaryListing()[token.content()]) {
-          return binaryOperator(token);
-        }
-        if (unaryListing()[token.content()]) {
-          throw new Error('unimplemented');
-        }
+    mNodeStack.push( tuplify(second, first) );
+  };
+  const letOperator = (_0: Token) => {
+    mNodeStack.push(makeLetDeclation(popOrThrow()));
+  };
+  const functionCall = (_0: Token) => {
+    const argsNode = popOrThrow();
+    const nameNode = popOrThrow();
+    const callName = tokenizeOrRaise(nameNode);
+    const callNode = makeCall(callName, makeContextNodeAt(callName), argsNode);
+    mNodeStack.push(callNode);
+  };
 
-        mNodeStack.push(IastNode.makeFringe(token));
-      },
-      visitNode    : (node: IastNode) =>
-        { mNodeStack.push(node); },
-      visitLinks:
-        (low: OperativeStatementVisitable,
-         node: OperativeStatementVisitable,
-         high: OperativeStatementVisitable) =>
-      {
-        low.visit(inst);
-        high.visit(inst);
-        node.visit(inst);
-      },
-      finish: (): IastNode => {
-        const node = popOrThrow();
-        if (mNodeStack.length !== 0) {
-          throw new Error('uh oh');
-        }
-        return node;
+  const { binaryListing, unaryListing } = OperatorDefinitions;
+  const mSpecialOperatorFactories: { [op: string]: typeof letOperator } = {
+    [OperatorNamingSchema.kComma]: tupleOperator ,
+    [OperatorNamingSchema.kLet  ]: letOperator   ,
+    [OperatorNamingSchema.kCall ]: functionCall
+  };
+  const inst = freeze({
+    visitToken   : (token: Token) => {
+      const opFactory = mSpecialOperatorFactories[token.content()];
+      if (opFactory) {
+        return opFactory(token);
       }
-    });
-    return inst;
-  }
-});
+      if (binaryListing()[token.content()]) {
+        return binaryOperator(token);
+      }
+      if (unaryListing()[token.content()]) {
+        raise('unimplemented');
+      }
+
+      mNodeStack.push(IastNode.makeFringe(token));
+    },
+    visitNode    : (node: IastNode) =>
+      { mNodeStack.push(node); },
+    visitLinks:
+      (low: OperativeStatementVisitable,
+       node: OperativeStatementVisitable,
+       high: OperativeStatementVisitable) =>
+    {
+      low.visit(inst);
+      high.visit(inst);
+      node.visit(inst);
+    },
+    finish: (): IastNode => {
+      const node = popOrThrow();
+      if (mNodeStack.length !== 0) {
+        raise('node stack must be cleared by the time finish is called');
+      }
+      return node;
+    }
+  });
+  return inst;
+}
+
+export const OperativeStatementAstCreation = freeze({ make });

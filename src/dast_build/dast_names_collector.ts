@@ -49,22 +49,20 @@ function make
     },
     visitString: visitLiteral,
     visitInteger: visitLiteral,
-    visitCall(callName: DastNode, receiver: DastNode, args: DastNode) {
-      const name = callName.asString();
-      if (name &&
-          receiver.asString() === contextName() &&
-          !isBuiltinFunctionName(name))
+    visitCall(callName: string, receiver: DastNode, args: DastNode) {
+      if (receiver.asString() === contextName() &&
+          !isBuiltinFunctionName(callName))
       {
         // NOTE direct calls will still have a `.name`, they are just sort of
         //      immediately evaluated
-        if (isAFringeAccessorName(name)) {
+        if (isAFringeAccessorName(callName)) {
           raise('explicit calls to fringe names are not supported for call nodes');
         }
-        if (!isAnAssignmentName(name)) {
+        if (!isAnAssignmentName(callName)) {
           // TODO we gotta rethink the DAST here a bit
-          mNames.add(mapToFringeAccessor(name));
+          mNames.add(mapToFringeAccessor(callName));
         } else {
-          mNames.add(name);
+          mNames.add(callName);
         }
       }
 

@@ -1,5 +1,6 @@
 import { DastNode } from '../dast_build';
 import { Helpers } from '../helpers';
+import { Token } from '../token';
 import { DastVisitor_ } from './dast_visitor';
 
 const { freeze, memoize, makeCounter } = Helpers;
@@ -27,12 +28,12 @@ export interface DastNode_ {
 };
 
 export const DastNode_ = freeze({
-  makeFringe: (v: string): DastNode =>
+  makeFringe: (token: Token): DastNode =>
     freeze({
       ...DastNodeBase.make(),
-      asString: () => v,
+      asString: () => token.content(),
       visit: <T>(visitor: DastVisitor_<T>): T =>
-        visitor.visitFringe(v)
+        visitor.visitFringe(token.content())
     }),
   makeString: (v: string): DastNode =>
     freeze({
