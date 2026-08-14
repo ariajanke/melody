@@ -2,14 +2,14 @@ import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { FunctionTypeBase } from '../function_type_base';
-import { TupleObjectFactory } from '../tuple_type_factory';
 import { CodeWriter } from '../../code_writer';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
+import { TupleObjectType } from '../tuple_object_type';
 
 const { freeze } = Helpers;
 
 function wrappedIndexGetterOf(originalIndexGetter: FunctionType): FunctionType {
-  const { emptyTuple } = TupleObjectFactory;
+  const { emptyTuple } = TupleObjectType;
   const { emitEmptyTuple, makeNewEmitlessEmpty } = FunctionTypeBase;
 
   const selfRefFtype = originalIndexGetter.

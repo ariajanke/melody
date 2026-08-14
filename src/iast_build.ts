@@ -1,62 +1,69 @@
-import { TreePartBuild } from './iast_build/tree_part_build';
-import { BuildState } from './iast_build/build_state';
-import { TokenRange } from './token_range';
 import { Helpers, raise } from './helpers';
+import {
+  IastBuild_,
+  IastBuildConstructor,
+  IastBuildConstructorRetrieval 
+} from './iast_build/iast_build_constructor_retrieval';
+import { IastExpressionBuild } from './iast_build/iast_expression_build';
+import { IastFunctionDefinitionBuild } from './iast_build/iast_function_definition_build';
+import { OperatorStripping } from './iast_build/operator_stripping';
+import { Segmentation, SegmentType } from './iast_build/segmentation';
 import { IastNode } from './iast_node';
+import { Token } from './token';
 
 const { freeze, memoize } = Helpers;
 
-let sPrintOutTpbs = false;
+export type IastBuild = IastBuild_;
 
-function setPrintOutsEnabled(b: boolean): void {
-  sPrintOutTpbs = b;
-}
-
-export interface IastBuild {
-  build: () => IastNode | undefined,
-  errors: () => Readonly<{ message: string }>[] 
-}
-
-function make(mTokens: TokenRange): IastBuild {
-  const mErrors: Readonly<{ message: string }>[] = [];
-  const mBuildState = BuildState.make(mErrors);
-
-  const inst = freeze({
-    build: memoize((): IastNode | undefined => {
-      mBuildState.pushPart( TreePartBuild.make(mTokens) );
-      if (sPrintOutTpbs) {
-        console.log(`init ${mBuildState.asString()}`);
-      }
-      while (mBuildState.hasRemainingParts()) {
-        if (sPrintOutTpbs) {
-          console.log(mBuildState.asString());
-        }
-        const part = mBuildState.popPart();
-        const addition = part.build();
-        if (!addition) {
-          mErrors.push( part.error() );
-          return;
-        }
-        addition.pushTo(mBuildState);
-      }
-      if (sPrintOutTpbs) {
-        console.log(`on complete ${mBuildState.asString()}`);
-      }
-      return mBuildState.complete();
-    }),
-    errors: () => mErrors
+IastBuildConstructorRetrieval.initialize(((): IastBuildConstructorRetrieval => {
+  const strats: Readonly<{ [st in SegmentType]: IastBuildConstructor | undefined }> = freeze({
+    functionDefinitionBody: IastFunctionDefinitionBuild.make,
+    expression: IastExpressionBuild.make
   });
 
-  return inst;
+  return freeze({
+    constructorFor(type: SegmentType): IastBuildConstructor {
+      return strats[type] ?? raise('not a valid type');
+    }
+  });
+})());
+
+function make(mTokens: Readonly<Token[]>): IastBuild {  
+  const { segment, error } = Segmentation.makeInitialSegmentation(mTokens);
+
+  const build = memoize(() => {
+    if (!segment())
+      { return undefined; }
+
+    return IastFunctionDefinitionBuild.
+      make(mTokens, segment()!, IastBuildConstructorRetrieval.instance());
+  });
+
+  const assignmentStripping = memoize((): IastBuild | undefined => {
+    const node_ = build()?.node();
+    if (!node_)
+      { return undefined; }
+
+    return OperatorStripping.make(node_);
+  });
+
+  const node = ((): IastNode | undefined =>
+    assignmentStripping()?.node());
+
+  return freeze({
+    node,
+    errors: memoize(() => {
+      if (!build()) {
+        return [error()];
+      }
+
+      if (!assignmentStripping()) {
+        return build()!.errors();
+      }
+
+      return assignmentStripping()!.errors();
+    })
+  });  
 }
 
-function buildFor(tokens: TokenRange): IastNode {
-  const inst = make(tokens);
-  const res = inst.build();
-  if (!res) {
-    raise(`Failed to build AST:\n${inst.errors()[0]?.message}`);
-  }
-  return res;
-}
-
-export const IastBuild = freeze({ make, buildFor, setPrintOutsEnabled });
+export const IastBuild = freeze({ make });

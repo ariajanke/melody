@@ -1,15 +1,12 @@
-
 # WARNING
 This is the first iteration of this work, and therefore is not in a demostrable condition.
 
 My best, honest attempt at defining a language.
 
-# What is "Melody"
+# What is "Melody"?
 The pie-in-the-sky aspiration for Melody involve it in becoming a multi-layered, "dynastatically" strongly typed programming language. "Project completion", another lofty goal will look like: the language being able to support its own compliation (i.e. a functioning backend written in itself).
 
 This language has a "set of preferences", which include "hugging the stack", prefering english like syntax, high signal to noise ratio.
-
-In this and its previous incarnation, it was both compilable and interpreted. Its interpretability has the purpose of allowing Melody to support its "layered" nature. Including its meta type functions.
 
 # Goal of this Handbook
 Provide a central place to define the language in as much detail and precisely as possible. This is not a specification.
@@ -49,7 +46,7 @@ This language solves this problem via a slightly different way. While in for exa
 In the above example, "a :=" is converted into "a:=" which is then sent to the current Context.
 
 ## Builtin Types
-For now only the following two: `Integer`, and `ConstantString`.
+For now only the following: `Integer`, `ConstantString`, `SystemIO`, and every possible tuple (i.e. `Tuple(...)`).
 
 ### Integer
 Represents the humble integer of course. In WASM it's represented with an `i32`, however Integer is not 32 bits by definition. Its byte width isn't fixed by definition. The following functions are defined:
@@ -223,6 +220,15 @@ puts(t.a)
 
 Tables are exactly like tuples, except they also have explicit names. They are not mutable by default (":=" needs to be used for that specific member). Should be easier to implement when "Context" types are working.
 
+#### Table Member Access
+Table members are accessed with the dot `.` operator, which must be proceded by a valid identifier (name).
+
+The function that's called on a table depends on how access is expressed.
+For example `t.a` will call `.a` on `t`, but `t.a()` will call `a` on `t`.
+
+##### Implementation Note 2026-0914
+As of now, `SystemIO` is a builtin table which maybe accessed by a programmer. Its current incarnation is planned to be entirely replaced, even `puts`.
+
 ### [planned] Function Definition with Parameters
 ```melody
 let f = fn (a is Integer) a*2
@@ -281,7 +287,7 @@ In the above example, `a` gets "escaped" due to `g` capturing it and being retur
 ### [partial] The Reference
 The closest thing this language has to a "pointer". Reference span from "smart" to "raw" pointers. The big difference with them and especially "raw" pointers, is that they are subject to a variety of tight rules that prevent dangling.
 
-In Melody's current incarnation, the only existing reference is the current context accessor function (i.e. ".&gt;context&lt;"). This accessor is not intented for use by the programmer, but rather is intented as a building block for other language features. One such example: making variables accessible to child functions [not yet implemented].
+In Melody's current incarnation, the only existing reference is the current context accessor function (i.e. ".&gt;context&lt;"). This accessor is not intented for use by the programmer, but rather is intented as a building block for other language features. One such example: making variables accessible to child functions.
 
 ## [planned] Self-Support Needs
 If we're going to have the ideal goal of Melody supporting itself, we'll need sophisticated language features.

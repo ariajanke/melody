@@ -5,7 +5,7 @@ import { Helpers, StandardError, raise } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { ContextFrameSnapshot } from './context_frame_stack';
 import { FunctionTypeBase } from './function_type_base';
-import { TupleObjectFactory } from './tuple_type_factory';
+import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 const { kAssignment } = OperatorNamingSchema;
@@ -16,28 +16,25 @@ const kAssignmentNotAValidCallName =
   `stripped it out and replaced it with the appropriate fringe accessor`;
 
 function make
-  (mCallName: DastNode,
+  (mCallName: string,
    mReceiver: DastNode,
    mArgs: DastNode,
    mContext: ContextFrameSnapshot)
   : FunctionTypeBuild
 {
   const mIntoFunctionTypeBuild = mContext.intoBuildFor;
-  const { emptyTuple } = TupleObjectFactory;
+  const { emptyTuple } = TupleObjectType;
 
   const callNameStr = memoize((): string | undefined => {
-    const callNameStr = mCallName.asString();
-    if (!callNameStr) {
-      return setErrorMessage('Cannot use node as a call name');
-    } else if (callNameStr === kAssignment) {
+    if (mCallName === kAssignment) {
       raise(kAssignmentNotAValidCallName);
     }
 
     if (kLogToConsole) {
-      console.log(`Looking up call "${callNameStr}" on receiver ` +
+      console.log(`Looking up call "${mCallName}" on receiver ` +
                   `"${mReceiver.asString()}" with args "${mArgs.asString()}"`);
     }
-    return callNameStr;
+    return mCallName;
   });
 
   const contextSelfFtype = () =>
@@ -105,7 +102,7 @@ function make
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       returns: callFunctionType()!.returns,
       simpleEmit(writer: CodeWriter) {
-        if (receiverFtype()!.returns().uid() === emptyTuple().uid() &&
+        if (receiverFtype()!.returns().sizeInBytes() === 0 &&
             args()!.returns().uid() === emptyTuple().uid())
         {
           callFunctionType()!.simpleEmit(writer);  

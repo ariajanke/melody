@@ -1,18 +1,46 @@
-import { IastBuild } from '../src/iast_build';
 import { ReachPoint, TestHelpers } from './test_helpers';
-import { Token } from '../src/token';
-import { TokenRange } from '../src/token_range';
-import { IastNode, IastVisitor } from '../src/iast_node';
+import { Token, TokenType } from '../src/token';
+import { IastLiteralType, IastNode } from '../src/iast_node';
 import { TokenFactories } from './token_factories';
+import { ReseatableIastVisitor } from './iast_visitor_factories';
+import { IastBuild } from '../src/iast_build';
+import { Helpers, raise } from '../src/helpers';
+import { OperatorNamingSchema } from '../src/operator_naming_schema';
+import { IastHelpers } from './iast_helpers';
+
+const { freeze, memoize } = Helpers;
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ IastBuild }, () => {
+  const makeInstFromStrings = (strs: Readonly<string[]>): () => IastBuild =>
+    memoize(() => IastBuild.make(strs.map(makeToken)));
+  const callsFromNode = IastHelpers.callsFromInst;
+  const idsFromNode = IastHelpers.identifiersFromInst;
+  const makeVisitor = ReseatableIastVisitor.makeSelfModified;
+  const makeDefaultVisitor = ReseatableIastVisitor.makeDefaultingToContinue;
   const makeToken = TokenFactories.makeFromStringOnly;
 
+  const kCallToken: Token = freeze({
+    start  : (): number => raise('!!'),
+    end    : (): number => raise('!!'),
+    type   : (): TokenType => Token.types.operator,
+    content: (): string => OperatorNamingSchema.kCall
+  });
+
+  function buildIastFor(tokens: Readonly<Token[]>): IastNode {
+    const inst = IastBuild.make(tokens);
+    const res = inst.node();
+    if (!res) {
+      raise(`Failed to build AST:\n${inst.errors()[0]?.message}`);
+    }
+
+    return res;
+  }
+
+
   function makeBuildAst(tokens: () => Token[]) {
-    return (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens()));
+    return (): IastNode => buildIastFor(tokens());
   }
 
   describe('builds a mutli-line ast', () => {
@@ -21,21 +49,22 @@ describeNamed({ IastBuild }, () => {
 
     it('builds two function calls', () => {
       const { points, verifyAllHit } = ReachPoint.makeCollection(1);
+      const kPutsCall = [
+        makeToken('puts'), kCallToken, makeToken('('), makeToken('a'), makeToken(')'),
+        makeToken('\n')
+      ];
       tokens = [
-        makeToken('puts'), makeToken('('), makeToken('a'), makeToken(')'),
-        makeToken('\n'),
-        makeToken('puts'), makeToken('('), makeToken('a'), makeToken(')'),
-        makeToken('\n'),
+        ...kPutsCall,
+        ...kPutsCall
       ];
 
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(_0: IastNode, _1: IastNode, args: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(_0: Token, _1: IastNode, args: IastNode): void {
           points()[0].hitsAtExactly(2);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
 
       buildAst().visit(visitor);
       expect(verifyAllHit()).toBeTruthy();
@@ -46,18 +75,17 @@ describeNamed({ IastBuild }, () => {
       tokens = [
         makeToken('\n'),
         makeToken('a'), makeToken(','), makeToken('b'), makeToken('\n'),
-        makeToken('puts'), makeToken('('), makeToken('a'), makeToken(')'),
+        makeToken('puts'), kCallToken, makeToken('('), makeToken('a'), makeToken(')'),
         makeToken('\n'),
       ];
       
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(_0: IastNode, _1: IastNode, args: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(_0: Token, _1: IastNode, args: IastNode): void {
           hitsAtExactly(1);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
 
       buildAst().visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -69,10 +97,10 @@ describeNamed({ IastBuild }, () => {
       ];
 
       let vop = '<NOT SET>';
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
-          vop = callName.asString();
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, receiver: IastNode, args: IastNode): void {
+          vop = callName.content();
           
           expect(Number(receiver.asString())).toEqual(2);
           args.visit(visitor);
@@ -82,7 +110,6 @@ describeNamed({ IastBuild }, () => {
           expect(Number(nodes[0].asString())).toEqual(2);
         }
       });
-      visitor.setInstRef(visitor);
 
       buildAst().visit(visitor);
       expect(vop).toEqual('+');
@@ -95,25 +122,25 @@ describeNamed({ IastBuild }, () => {
       const { points, verifyAllHit } = ReachPoint.makeCollection(3);
       const [pt1, pt2, pt3] = points();
       const foundOperators: string[] = [];
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
         visitLet(innerNode: IastNode): void {
           pt2.hitsAtExactly(1);
           innerNode.visit(visitor);
         },
-        visitFringe(identifier: string): void {
-          expect(identifier).toEqual('a');
+        visitFringe(identifier: Token): void {
+          expect(identifier.content()).toEqual('a');
           pt3.hitsAtExactly(1);
         },
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
-          foundOperators.push(callName.asString());
+        visitCall(callName: Token, receiver: IastNode, args: IastNode): void {
+          foundOperators.push(callName.content());
           pt1.hitsAtExactly(1);
 
           receiver.visit(visitor);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
+
       buildAst().visit(visitor);
       expect(foundOperators).toEqual([':=']);
       expect(verifyAllHit()).toBeTruthy();
@@ -125,59 +152,50 @@ describeNamed({ IastBuild }, () => {
         makeToken('2'), makeToken('+'), makeToken('3')
       ];
       const foundOperators: string[] = [];
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
-          foundOperators.push(callName.asString());
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, receiver: IastNode, args: IastNode): void {
+          foundOperators.push(callName.content());
           receiver.visit(visitor);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
 
       buildAst().visit(visitor);
       expect(foundOperators).toEqual([':=', '+']);
     });
 
-    xit('builds ast with multiple lines end on an unary operator', () => {
-      tokens = [
-        makeToken('a'),
-        makeToken('\n'),
-        makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2')
-      ];
-      // const rootNode = buildAst();
-      // if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {
-      //   return fail();
-      // }
-      // expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(2);
+    const letALine = [
+      'let', 'a', ':=', '2'
+    ] as const;
+
+    it('builds ast with multiple lines end on an unary operator', () => {
+      const inst = makeInstFromStrings(['a', '\n', ...letALine]);
+      const calls = callsFromNode(inst().node);
+      expect(calls).toEqual(['let', ':=']);
     });
 
-    xit('builds ast with multiple lines of unary operators', () => {
-      tokens = [
-        makeToken('let'), makeToken('b'), makeToken(':='), makeToken('2'),
-        makeToken('\n'),
-        makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2'),
-        makeToken('\n'),
-        makeToken('a')
-      ];
-      // const rootNode = buildAst();
-      // if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {
-      //   return fail();
-      // }
-      // expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(3);
+    it('builds ast with multiple lines of unary operators', () => {
+      const inst = makeInstFromStrings([
+        'let', 'b', ':=', '2',
+        '\n',
+        ...letALine, '\n',
+        'a'
+      ]);
+      const calls = callsFromNode(inst().node);
+      expect(calls).toEqual(['let', ':=', 'let', ':=']);
     });
   });
 
   function includeAllNIdentifiers(astRes: () => IastNode, identifiers: string[]): void {
     it(`includes all ${identifiers.length} identifiers, in correct order`, () => { 
       const identifiers: string[] = [];
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitFringe(str: string): void {
-          identifiers.push(str);
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitFringe(str: Token): void {
+          identifiers.push(str.content());
         }
       });
-      visitor.setInstRef(visitor);
 
       const rootNode = astRes();
       rootNode.visit(visitor);
@@ -191,22 +209,20 @@ describeNamed({ IastBuild }, () => {
       makeToken('a'), makeToken('+'), makeToken('b'), makeToken('+'),
       makeToken('c')
     ];
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => buildIastFor(tokens);
 
     includeAllNIdentifiers(buildAst, ['a', 'b', 'c']);
 
     it('includes two operators', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(_0: IastNode, receiver: IastNode, args: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(_0: Token, receiver: IastNode, args: IastNode): void {
           hitsAtExactly(2);
           receiver.visit(visitor);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
 
       const rootNode = buildAst();
       rootNode.visit(visitor);
@@ -221,18 +237,17 @@ describeNamed({ IastBuild }, () => {
 
     includeAllNIdentifiers(buildAst, ['a', 'b']);
 
-    it('includes one ":=" operators', () => {
+    it('includes a ":=" call', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, receiver: IastNode, args: IastNode): void {
           hitsAtExactly(1);
-          expect(callName.asString()).toEqual(':=');
+          expect(callName.content()).toEqual(':=');
           receiver.visit(visitor);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
 
       const rootNode = buildAst();
       rootNode.visit(visitor);
@@ -243,20 +258,19 @@ describeNamed({ IastBuild }, () => {
   describe('\\naskString()', () => {
     const buildAst = makeBuildAst(() => [
       makeToken('\n'),
-      makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
+      makeToken('askString'), kCallToken, makeToken('('), makeToken(')'), makeToken('\n')
     ]);
 
     it('builds single function call node', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, _2: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, _1: IastNode, _2: IastNode): void {
           hitsAtExactly(1);
-          expect(callName.asString()).toEqual('askString');
+          expect(callName.content()).toEqual('askString');
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -265,14 +279,13 @@ describeNamed({ IastBuild }, () => {
     it('function call node takes no arguments', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
         visitTuple(nodes: Readonly<IastNode[]>): void {
           hitsAtExactly(1);
           expect(nodes.length).toEqual(0);
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -281,23 +294,22 @@ describeNamed({ IastBuild }, () => {
 
   describe('puts(a, b)\\n', () => {
     const tokens = [
-      makeToken('puts'), makeToken('('), makeToken('a'), makeToken(','),
+      makeToken('puts'), kCallToken, makeToken('('), makeToken('a'), makeToken(','),
       makeToken('b'),
       makeToken(')'), makeToken('\n')
     ];
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => buildIastFor(tokens);
 
     it('creates a function node', () => {
       const { verifyHit, hitsAtExactly } = ReachPoint.make();
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(_0: IastNode, _1: IastNode, _2: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(_0: Token, _1: IastNode, _2: IastNode): void {
           hitsAtExactly(1);
         }
       });
-      visitor.setInstRef(visitor);
+
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
     });
@@ -305,14 +317,13 @@ describeNamed({ IastBuild }, () => {
     it('creates a function node with name "puts"', () => {
       const { verifyHit, hitsAtExactly } = ReachPoint.make();
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, _2: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, _1: IastNode, _2: IastNode): void {
           hitsAtExactly(1);
-          expect(callName.asString()).toEqual('puts');
+          expect(callName.content()).toEqual('puts');
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -321,14 +332,13 @@ describeNamed({ IastBuild }, () => {
     it('passes two arguments to puts call', () => {
       const { verifyHit, hitsAtExactly } = ReachPoint.make();
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
         visitTuple(nodes: Readonly<IastNode[]>): void {
           hitsAtExactly(1);
           expect(nodes.length).toEqual(2);
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -338,25 +348,23 @@ describeNamed({ IastBuild }, () => {
   describe('with function blocks', () => {
     const tokens = [
       'let', 'a', ':=', 'fn', '\n',
-      'puts', '(', `'hello'`, ')', '\n',
+      'puts', kCallToken.content(), '(', `'hello'`, ')', '\n',
       '~', '\n',
-      'queue', '(', 'a', ')'
+      'queue', kCallToken.content(), '(', 'a', ')'
     ].map(makeToken);
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => buildIastFor(tokens);
 
     it('has two references to variable "a"', () => {
       let aCount = 0;
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitFringe(v: string): void {
-          if (v === 'a') {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitFringe(v: Token): void {
+          if (v.content() === 'a') {
             ++aCount;
           }
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(aCount).toEqual(2);
@@ -366,21 +374,20 @@ describeNamed({ IastBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const rootNode = buildAst();
       let inLet = false;
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
         visitLet(innerNode: IastNode): void {
           inLet = true;
           innerNode.visit(visitor);
           inLet = false;
         },
-        visitCall(_0: IastNode, receiver: IastNode, _2: IastNode): void {
+        visitCall(_0: Token, receiver: IastNode, _2: IastNode): void {
           if (!inLet) { return; }
 
           hitsAtExactly(1);
           expect(receiver.asString()).toEqual('a');
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -389,13 +396,12 @@ describeNamed({ IastBuild }, () => {
     it('has a function definition', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
         visitFunctionDefinition(_0: Readonly<IastNode[]>): void {
           hitsAtExactly(1);
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -403,31 +409,23 @@ describeNamed({ IastBuild }, () => {
 
     it('queue call is outside the function definition', () => {
       const rootNode = buildAst();
-      const { points, verifyAllHit } = ReachPoint.makeCollection(2);
-      const [pt1, pt2] = points();
       const functionCalls: string[] = [];
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitFringe(v: string): void {
-          // 'puts' and 'queue' will both hit context once
-          if (v === '<context>') {
-            pt2.hitsAtExactly(2);
-            return;
-          }
-          expect(v).toEqual('a');
-          pt1.hitsAtExactly(2);
+      const identifiers: string[] = [];
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitFringe(v: Token): void {
+          identifiers.push(v.content());
         },
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
-          functionCalls.push(callName.asString());
+        visitCall(callName: Token, receiver: IastNode, args: IastNode): void {
+          functionCalls.push(callName.content());
           receiver.visit(visitor);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(functionCalls).toEqual([':=', 'puts', 'queue']);
-      expect(verifyAllHit()).toBeTruthy();
+      expect(identifiers).toEqual(['a', '<context>', '<context>', 'a']);
     });
   });
 
@@ -440,19 +438,17 @@ describeNamed({ IastBuild }, () => {
       '~', '\n',
     ].map(makeToken);
 
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => buildIastFor(tokens);
     it('builds two nested function definitions', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
         visitFunctionDefinition(nodes: Readonly<IastNode[]>): void {
           hitsAtExactly(3); // including root
           nodes.forEach(node => node.visit(visitor));
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -461,21 +457,19 @@ describeNamed({ IastBuild }, () => {
 
   describe('single line ast', () => {
     let tokens: Token[] = [];
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => buildIastFor(tokens);
 
     const expectFunctionsCalledInOrder = (...names: string[]): void => {
       const gottenNames: string[] = [];
       const rootNode = buildAst();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
-          gottenNames.push(callName.asString());
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, receiver: IastNode, args: IastNode): void {
+          gottenNames.push(callName.content());
           receiver.visit(visitor);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(gottenNames).toEqual(names);
@@ -484,24 +478,24 @@ describeNamed({ IastBuild }, () => {
     it('builds a simple function call', () => {
       tokens = [
         makeToken('\n'),
-        makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')'), makeToken('\n')
       ];
       expectFunctionsCalledInOrder('askString');
     });
 
-    it('"let a := askString()"', () => {
+    it('let a := askString()', () => {
       tokens = [
         makeToken('let'), makeToken('a'), makeToken(':='),
-        makeToken('askString'), makeToken('('), makeToken(')')
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')')
       ];
 
       expectFunctionsCalledInOrder(':=', 'askString');
     });
 
-    it('"puts(askString())"', () => {
+    it('puts(askString())', () => {
       tokens = [
-        makeToken('puts'), makeToken('('),
-        makeToken('askString'), makeToken('('), makeToken(')'),
+        makeToken('puts'), kCallToken, makeToken('('),
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')'),
         makeToken(')')
       ];
 
@@ -512,11 +506,11 @@ describeNamed({ IastBuild }, () => {
         askString: 0,
         puts: 1
       });
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, args: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, _1: IastNode, args: IastNode): void {
           hitsAtExactly(2);
-          fnnames.push(callName.asString());
+          fnnames.push(callName.content());
           args.visit(visitor);
         },
         visitTuple(nodes: Readonly<IastNode[]>): void {
@@ -525,7 +519,6 @@ describeNamed({ IastBuild }, () => {
             toEqual(kExpectArgumentCount[lastName]);
         }
       });
-      visitor.setInstRef(visitor);
 
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
@@ -534,7 +527,7 @@ describeNamed({ IastBuild }, () => {
 
     it('puts(2 + 3, 5 + 9)', () => {
       tokens = [
-        makeToken('puts'), makeToken('('),
+        makeToken('puts'), kCallToken, makeToken('('),
         makeToken('2'), makeToken('+'), makeToken('3'), makeToken(','),
         makeToken('5'), makeToken('+'), makeToken('9'),
         makeToken(')')
@@ -543,14 +536,14 @@ describeNamed({ IastBuild }, () => {
       const { verifyAllHit, points } = ReachPoint.makeCollection(3);
       const [pt1, pt2, pt3] = points();
       let hitInteger = false;
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, receiver: IastNode, args: IastNode): void {
-          if (callName.asString() === 'puts') {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, receiver: IastNode, args: IastNode): void {
+          if (callName.content() === 'puts') {
             pt3.hitsAtExactly(1);
             args.visit(visitor);
           } else {
-            expect(callName.asString()).toEqual('+');
+            expect(callName.content()).toEqual('+');
             pt2.hitsAtExactly(2);
             hitInteger = false;
             receiver.visit(visitor);
@@ -561,57 +554,44 @@ describeNamed({ IastBuild }, () => {
             expect(hitInteger).toBeTruthy();
           }
         },
-        visitInteger(_0: string): void {
+        visitLiteral(_0: Token, type: IastLiteralType): void {
+          if (type !== 'number')
+            { return; }
+
           hitInteger = true;
           pt1.hitsAtExactly(4);
         }
       });
-      visitor.setInstRef(visitor);
 
       buildAst().visit(visitor);
       expect(verifyAllHit()).toBeTruthy();
     });
 
     it('puts(askString(), askString())', () => {
-      // more sees puts(askString()), askString()
-      // 0.) tpb -> frg -> st frg
-      // 1.) cont af frg -> grp
-      // 2.) st grp
-      // 3.) tpb -> frg -> st frg
-      // 4.) con af frg -> grp
-      // 5.) st grp
-      // 6.) tpb
-      // 7.) con af frg
-      // 8.) con af op
-      // 9.) con af frg
-      // 10.) st grp
-      // 11.) tpb
-      // FINISH
       tokens = [
-        makeToken('puts'), makeToken('('),
-        makeToken('askString'), makeToken('('), makeToken(')'), makeToken(','),
-        makeToken('askString'), makeToken('('), makeToken(')'),
+        makeToken('puts'), kCallToken, makeToken('('),
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')'), makeToken(','),
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')'),
         makeToken(')')
       ];
       const { verifyAllHit, points } = ReachPoint.makeCollection(2);
       const [pt1, pt2] = points();
       let onArgs = false;
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, args: IastNode): void {
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, _1: IastNode, args: IastNode): void {
           if (onArgs) {
             pt2.hitsAtExactly(2);
-            expect(callName.asString()).toEqual('askString');
+            expect(callName.content()).toEqual('askString');
             return;
           }
-          expect(callName.asString()).toEqual('puts');
+          expect(callName.content()).toEqual('puts');
           pt1.hitsAtExactly(1);
           onArgs = true;
           args.visit(visitor);
           onArgs = false;
         }
       });
-      visitor.setInstRef(visitor);
 
       buildAst().visit(visitor);
       expect(verifyAllHit()).toBeTruthy();
@@ -619,22 +599,127 @@ describeNamed({ IastBuild }, () => {
 
     it(`puts(('hello'))`, () => {
       tokens = [
-        makeToken('puts'), makeToken('('), makeToken('('),
+        makeToken('puts'), kCallToken, makeToken('('), makeToken('('),
         makeToken(`'hello'`), makeToken(')'), makeToken(')')
       ];
 
       const pt1 = ReachPoint.make();
-      const visitor = ({
-        ...IastVisitor.makeDefaultingToContinue(),
-        visitCall(callName: IastNode, _1: IastNode, _2: IastNode): void {
-          expect(callName.asString()).toEqual('puts');
+      const visitor = makeVisitor({
+        ...makeDefaultVisitor(),
+        visitCall(callName: Token, _1: IastNode, _2: IastNode): void {
+          expect(callName.content()).toEqual('puts');
           pt1.hitsAtExactly(1);
         }
       });
-      visitor.setInstRef(visitor);
 
       buildAst().visit(visitor);
       expect(pt1.verifyHit()).toBeTruthy();
+    });
+
+  });
+
+  describe('table access expressions', () => {
+    it(`simple.table`, () => {
+      const inst = makeInstFromStrings(['simple', '.', 'table']);
+      const calls = callsFromNode(inst().node);
+      expect(calls).toEqual(['.table']);
+    });
+
+    it(`nested.table.accessor`, () => {
+      const inst = makeInstFromStrings(['nested', '.', 'table', '.', 'accessor']);
+      const calls = callsFromNode(inst().node);
+      expect(calls).toEqual(['.accessor', '.table']);
+    });
+
+    it(`nested.table.assignment := 5`, () => {
+      const inst = makeInstFromStrings([
+        'nested', '.', 'table', '.', 'assignment', ':=', '5'
+      ]);
+      const calls = callsFromNode(inst().node);
+      expect(calls).toEqual(['assignment:=', '.table']);
+    });
+
+    it(`nested.foo(a, b).assignment := 5`, () => {
+      const inst = makeInstFromStrings([
+        'nested', '.', 'foo', '<call>', '(', 'a', ',', 'b', ')', '.',
+          'assignment', ':=', '5'
+      ]);
+      const calls = callsFromNode(inst().node);
+      const ids = idsFromNode(inst().node);
+      expect(calls).toEqual(['assignment:=', 'foo']);
+      expect(ids).toEqual(['nested', 'a', 'b']);
+    });
+
+    it(`a(nested.table).assignment := 5`, () => {
+      const inst = makeInstFromStrings([
+        'a', '<call>', '(', 'nested', '.', 'table', ')', '.', 'assignment', ':=', '5'
+      ]);
+      const calls = callsFromNode(inst().node);
+      const ids = idsFromNode(inst().node);
+      expect(calls).toEqual(['assignment:=', 'a', '.table']);
+      expect(ids).toEqual(['<context>', 'nested']);
+    });
+
+    it(`t.foo(let a = 5).assignment := 5`, () => {
+      const inst = makeInstFromStrings([
+        't', '.', 'foo', '<call>', '(',
+          'let', 'a', '=', '5',
+        ')', '.', 'assignment', ':=', '5'
+      ]);
+      const calls = callsFromNode(inst().node);
+      const ids = idsFromNode(inst().node);
+      expect(calls).toEqual(['assignment:=', 'foo', 'let', '=']);
+      expect(ids).toEqual(['t', 'a']);
+    });
+
+    it(`(let a = 5).assignment := 5`, () => {
+      const inst = makeInstFromStrings([
+        '(', 'let', 'a', '=', '5', ')', '.', 'assignment', ':=', '5'
+      ]);
+      const calls = callsFromNode(inst().node);
+      const ids = idsFromNode(inst().node);
+      expect(calls).toEqual(['assignment:=', 'let', '=']);
+      expect(ids).toEqual(['a']);
+    });
+
+    it(`(t.actually_okay) := 5`, () => {
+      const inst = makeInstFromStrings([
+        '(', 't', '.', 'actually_okay', ')', ':=', '5'
+      ]);
+      const calls = callsFromNode(inst().node);
+      const ids = idsFromNode(inst().node);
+      expect(calls).toEqual(['actually_okay:=']);
+      expect(ids).toEqual(['t']);
+    });
+
+    it(`nested.table.equality = 5`, () => {
+      const inst = makeInstFromStrings([
+        'nested', '.', 'table', '.', 'equality', '=', '5'
+      ]);
+      const calls = callsFromNode(inst().node);
+      const ids = idsFromNode(inst().node);
+      expect(calls).toEqual(['=', '.equality', '.table']);
+      expect(ids).toEqual(['nested']);
+    });
+
+    it(`nested.table.call('withArg')`, () => {
+      const inst = makeInstFromStrings([
+        'nested', '.', 'table', '.', 'call', '<call>', '(', `'withArg'`, ')'
+      ]);
+      const calls = callsFromNode(inst().node);
+      const ids = idsFromNode(inst().node);
+      expect(calls).toEqual(['call', '.table']);
+      expect(ids).toEqual(['nested']);
+    });
+
+    it(`vex2d.x + vex2d.y`, () => {
+      const inst = makeInstFromStrings([
+        'vex2d', '.', 'x', '+', 'vex2d', '.', 'y'
+      ]);
+      const calls = callsFromNode(inst().node);
+      const ids = idsFromNode(inst().node);
+      expect(calls).toEqual(['+', '.x', '.y']);
+      expect(ids).toEqual(['vex2d', 'vex2d']);
     });
   });
 });

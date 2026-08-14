@@ -1,6 +1,6 @@
 import { ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { TupleObjectFactory } from '../tuple_type_factory';
+import { TupleObjectType } from '../tuple_object_type';
 
 const { freeze } = Helpers;
 
@@ -76,7 +76,7 @@ function make
     
     return freeze({
       accessIndex,
-      type: TupleObjectFactory.make(lookUps.map(lookUp => lookUp!.type))
+      type: TupleObjectType.instanceFor(lookUps.map(lookUp => lookUp!.type))
     });
   }
 

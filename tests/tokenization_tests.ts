@@ -1,7 +1,7 @@
 import { TestHelpers } from './test_helpers';
 import { Tokenization } from '../src/tokenization';
-import { TokenRange } from '../src/token_range';
 import { TokenType } from '../src/token';
+import { OperatorNamingSchema } from '../src/operator_naming_schema';
 
 const { describeNamed } = TestHelpers;
 
@@ -10,12 +10,8 @@ describeNamed({ Tokenization }, () => {
   type ContentTokenCaseSet = Readonly<ContentTokenCase[]>;
   type TypeTokenCase = [string, string, TokenType[]];
   type TypeTokenCaseSet = Readonly<TypeTokenCase[]>;
-  const getTokens = (inp: string): string[] => {
-    const strings: string[] = [];
-    const range = Tokenization.make(inp).tokenRange();
-    TokenRange.forEachIn(range, (str: string) => strings.push(str));
-    return strings;
-  };
+  const getTokens = (inp: string): string[] =>
+    Tokenization.make(inp).tokens().map(t => t.content());
 
   function doContentSplitTestsFor(set: ContentTokenCaseSet) {
     set.forEach((tuple: [string, string, string[]]) => {
@@ -37,7 +33,8 @@ describeNamed({ Tokenization }, () => {
   }
 
   it('splits a hello world program', () => {
-    expect(getTokens("puts('hello')")).toEqual(['puts', '(', 'hello', ')']);
+    expect(getTokens("puts('hello')")).
+      toEqual(['puts', OperatorNamingSchema.kCall, '(', 'hello', ')']);
   });
 
   describe('operators', () => {
@@ -106,12 +103,12 @@ describeNamed({ Tokenization }, () => {
       [
         'identation and multi-characters',
         'a\r\n b\n\r c',
-        ['a', '\n ', 'b', '\n\r ', 'c']
+        ['a', '\n ', 'b', '\n  ', 'c']
       ],
       [
         'comment becomes part of the indentation',
         'a\n#{ }b',
-        ['a', '\n#{ }', 'b']
+        ['a', '\n    ', 'b']
       ]
     ] as [string, string, string[]][]);
     doTypeSplitTestsFor([
@@ -119,7 +116,7 @@ describeNamed({ Tokenization }, () => {
         'comment becomes part of the indentation',
         'fn()\n#{ :3 } let b',
         [
-          'grouping', 'grouping', 'grouping', 'newLine',
+          'opening', 'opening', 'closing', 'separator',
           'operator', 'identifier'
         ]
       ]
@@ -134,14 +131,19 @@ describeNamed({ Tokenization }, () => {
         ['a', '=', 'hello']
       ],
       [
+        'does not omit an empty string, just because it is empty',
+        `a = ''`,
+        ['a', '=', ''],
+      ],
+      [
         'escaped string',
         `foo('\\'\\#{')`,
-        ['foo', '(', `\\'\\#{`, ')']
+        ['foo', OperatorNamingSchema.kCall, '(', `\\'\\#{`, ')']
       ],
       [
         'string interpolation',
         `foo('Good #{tod} to you!')`,
-        ['foo', '(', 'Good ', '#{', 'tod', '}', ' to you!', ')']
+        ['foo', OperatorNamingSchema.kCall, '(', 'Good ', '#{', 'tod', '}', ' to you!', ')']
       ],
       [
         'complex string interpolation',
@@ -151,7 +153,7 @@ describeNamed({ Tokenization }, () => {
       [
         'nested interpolation',
         `'b#{'hello #{name}'}'`,
-        ['b', '#{', 'hello ', '#{', 'name', '}', '', '}', '']
+        ['b', '#{', 'hello ', '#{', 'name']
       ]
     ] as [string, string, string[]][]);
     doTypeSplitTestsFor([
@@ -159,9 +161,7 @@ describeNamed({ Tokenization }, () => {
         'string interpolation',
         `'#{nutrient} can be found in #{food}'`,
         [
-          'stringLiteral', 'concatenation', 'identifier',
-          'concatenation', 'stringLiteral', 'concatenation',
-          'identifier', 'concatenation', 'stringLiteral'
+          'identifier', 'concatenation', 'string', 'concatenation', 'identifier'
         ]
       ]
     ]);
@@ -200,17 +200,17 @@ describeNamed({ Tokenization }, () => {
       [
         'hash literal',
         'color := #333',
-        ['identifier', 'operator', 'hashLiteral']
+        ['identifier', 'operator', 'hash']
       ],
       [
         'integer with call',
         '12.to_string()',
-        ['numericLiteral', 'operator', 'identifier', 'grouping', 'grouping']
+        ['numeric', 'operator', 'identifier', 'operator', 'opening', 'closing']
       ],
       [
         'decimal with call',
         '12.0.to_string()',
-        ['numericLiteral', 'operator', 'identifier', 'grouping', 'grouping']
+        ['numeric', 'operator', 'identifier', 'operator', 'opening', 'closing']
       ]
     ]);
   });
@@ -220,7 +220,7 @@ describeNamed({ Tokenization }, () => {
       [
         'the shebang comment',
         '#!/somewhere/stuff\nhello()',
-        ['\n', 'hello', '(', ')']
+        ['\n', 'hello', OperatorNamingSchema.kCall, '(', ')']
       ],
       [
         'typical comment',
@@ -262,7 +262,7 @@ describeNamed({ Tokenization }, () => {
       [
         'capture operator',
         '$+ = fn',
-        ['identifier', 'operator', 'grouping']
+        ['identifier', 'operator', 'opening']
       ]
     ]);
   });
@@ -273,10 +273,10 @@ describeNamed({ Tokenization }, () => {
         'groupings are identified correctly',
         'tbl \n a = fn () ~ \n ~',
         [
-          'grouping', 'newLine',
-          'identifier', 'operator', 'grouping',
-          'grouping', 'grouping', 'grouping', 'newLine',
-          'grouping'
+          'opening', 'separator',
+          'identifier', 'operator', 'opening',
+          'opening', 'closing', 'closing', 'separator',
+          'closing'
         ]
       ],
     ]);

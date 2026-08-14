@@ -2,23 +2,20 @@ import { GroupingNamingSchema } from './grouping_naming_schema';
 import { Helpers } from './helpers';
 import { OperatorNamingSchema } from './operator_naming_schema';
 
-const { freeze, memoize, toNamedMap } = Helpers;
+const { freeze, memoize, toNamedMap, makeIsStringInLookUpTable } = Helpers;
 
-const tokenTypes = [
-  // TODO deprecate, remove pending IAST refactor
-  'functionDefinition',
-  //      following remain okay
-  'operator'          ,
-  'newLine'           ,
-  'grouping'          ,
-  'identifier'        ,
-  'stringLiteral'     ,
-  'numericLiteral'    ,
-  'hashLiteral'       ,
-  'concatenation'     
-] as const;
+const groupings = ['opening', 'closing', 'separator'] as const;
+const literals = ['string', 'numeric', 'hash'] as const;
+const otherTypes = ['operator', 'concatenation', 'identifier'] as const;
 
-export type TokenType = typeof tokenTypes[number];
+const types = freeze({
+  literal: toNamedMap(literals),
+  grouping: toNamedMap(groupings),
+  ...toNamedMap(otherTypes)
+});
+
+export type TokenType =
+  typeof groupings[number] | typeof literals[number] | typeof otherTypes[number];
 
 export interface Token {
   type   (): TokenType;
@@ -26,8 +23,6 @@ export interface Token {
   start  (): number;
   end    (): number;
 };
-
-const types = toNamedMap(tokenTypes);
 
 function makeCallAfter(lastToken: Token): Token {
   const lastEnd = lastToken.end;
@@ -38,6 +33,22 @@ function makeCallAfter(lastToken: Token): Token {
     end: lastEnd
   });
 }
+
+const isLiteralType = makeIsStringInLookUpTable(literals);
+
+function isLiteral(tok: Token): boolean {
+  return isLiteralType(tok.type());
+}
+
+const isOperativeType = makeIsStringInLookUpTable([
+  'operator', 'concatenation'
+] satisfies TokenType[]);
+
+function isOperative(tok: Token): boolean {
+  return isOperativeType(tok.type());
+}
+
+const lenOf = (tok: Token) => tok.end() - tok.start();
 
 function makeContentFunction
   (mParentString: string,
@@ -55,8 +66,11 @@ function makeAlphaNumeric
     if (OperatorNamingSchema.isAlphabeticOperator(content()))
       { return types.operator; }
 
-    if (GroupingNamingSchema.isGrouping(content()))
-      { return types.grouping; }
+    if (GroupingNamingSchema.isClosing(content()))
+      { return types.grouping.closing; }
+
+    if (GroupingNamingSchema.isOpening(content()))
+      { return types.grouping.opening; }
 
     return types.identifier;
   });
@@ -85,7 +99,10 @@ function make
 
 export const Token = freeze({
   make,
+  lenOf,
   types,
   makeCallAfter,
-  makeAlphaNumeric
+  makeAlphaNumeric,
+  isLiteral,
+  isOperative
 });

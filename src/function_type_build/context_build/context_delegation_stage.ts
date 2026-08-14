@@ -4,7 +4,7 @@ import { FunctionLookUpTable } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
 import { ContextDeclarationBuild } from '../context_build';
-import { TupleObjectFactory } from '../tuple_type_factory';
+import { TupleObjectType } from '../tuple_object_type';
 import { ContextTypeProgression_ } from './context_declaration_build';
 import { DeclarationBuildConstructor } from './context_link_stage';
 import { UsedAncestorCollection } from './used_ancestor_collection';
@@ -42,7 +42,7 @@ function make
     const isCallable = mUsedAncestorCollection.
       mapNameToAncestor(fname)?.
       lookUp(fname)?.
-      byParameters(TupleObjectFactory.emptyTuple())?.
+      byParameters(TupleObjectType.emptyTuple())?.
       returns()?.
       lookUp(OperatorNamingSchema.kCall);
     

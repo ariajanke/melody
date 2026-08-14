@@ -3,48 +3,48 @@ import {
   LetDeclarationsRetrieval,
   LetNameElement,
 } from '../../src/dast_build/let_declarations_retrieval';
-import { IastNode, IastVisitor, ReseatableIastVisitor } from '../../src/iast_node';
 import { DastNode_ } from '../../src/dast_build/dast_node';
 import { DastBuild } from '../../src/dast_build';
 import { DastCall, DastTuple } from '../../src/dast_build/dast_node_specializations';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
-import { Helpers, StandardError } from '../../src/helpers';
-import { TokenFactories } from '../token_factories';
+import { Helpers, raise, StandardError } from '../../src/helpers';
+import { IastLiteralType, IastNode, IastVisitor } from '../../src/iast_node';
+import { Token } from '../../src/token';
+import { ReseatableIastVisitor } from '../iast_visitor_factories';
+import { IastFactories } from '../iast_factories';
 
 const { describeNamed } = TestHelpers;
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 describeNamed({ LetDeclarationsRetrieval }, () => {
-  const makeFringe = (v: string): IastNode =>
-    IastNode.makeFringe(TokenFactories.makeFromStringOnly(v));
-  const { makeCall } = IastNode.forOperativeStatements;
-  const { makeTuple } = IastNode.forLetDeclarationRetrievals;
+  const { makeFringe, makeCall, makeTuple } = IastFactories;
   function makeEqual(lhs: IastNode, rhs: IastNode): IastNode {
-    return makeCallFromString('=', lhs, rhs);
+    return makeCall('=', lhs, rhs);
   }
+
   function makeAssignment(name: string, rhs: IastNode): IastNode {
     const { mapToAssignment } = FunctionNamingSchema;
     // NOTE this arrangement *never* occurs in an actual IAST
     //      it is a contrived way to create an assignment that works with our
     //      tests. Since we're testing support for DAST build, we cannot use
     //      it here.
-    return makeCallFromString(
+    return makeCall(
       mapToAssignment(name),
       makeFringe( FunctionNamingSchema.kContextName ),
       rhs);
   }
-  function makeCallFromString(callName: string, rec: IastNode, args: IastNode): IastNode {
-    return makeCall(TokenFactories.makeFromStringOnly(callName), rec, args);
-  }
+
   function makeSingleDecl(name: string, node: IastNode): IastNode {
     const assignment = makeEqual(makeFringe(name), node);
     return assignment;
   }
+
   function makeDoubleDecl(name1: string, name2: string, node: IastNode): IastNode {
-    const tuple = IastNode.forOperativeStatements.tuplify(makeFringe(name1), makeFringe(name2));
+    const tuple = makeTuple([makeFringe(name1), makeFringe(name2)]);
     return makeEqual(tuple, node);
   }
+
   const toName = (el: LetNameElement | undefined): string | undefined => {
     if (!el)
       { return undefined; }
@@ -52,6 +52,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
       { return el.name; }
     return el.names.join(',');
   };
+
   function stripNodesFrom(el: LetNameElement | undefined)
     : { name?: string, names?: Readonly<string[]>, operator?: string, dependeeNames?: Readonly<string[]> }
   {
@@ -62,8 +63,8 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
       dependeeNames: el?.dependeeNames
     };
   }
+
   const generallyIntoDastBuild = (() => {
-    // const { makeFromNode } = DastBuildBase;
     const makeFromNode = (node: DastNode_): DastBuild => freeze({
       node: () => node,
       error: () => StandardError.make().error()
@@ -71,19 +72,31 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     const forFringe = (fn: (v: string) => DastNode_) =>
       (str: string): DastBuild =>
         makeFromNode(fn(str));
+    const intoIntNode = forFringe(DastNode_.makeInteger);
     const visitor: IastVisitor<DastBuild> = {
-      visitFringe: forFringe(DastNode_.makeFringe),
-      visitInteger: forFringe(DastNode_.makeInteger),
+      visitFringe: (tok: Token): DastBuild => freeze({
+        node: memoize(() => DastNode_.makeFringe(tok)),
+        error: () => StandardError.make().error(),
+      }),
       visitTuple(nodes: Readonly<IastNode[]>): DastBuild {
         return makeFromNode(DastTuple.make(nodes.map(node => node.visit(visitor).node()!)));
       },
-      visitCall: (callName: IastNode, rec: IastNode, fArgs: IastNode): DastBuild =>
+      visitCall: (callName: Token, rec: IastNode, fArgs: IastNode): DastBuild =>
         makeFromNode(DastCall.
-          make(callName.visit(visitor).node()!,
+          make(callName.content(),
                rec.visit(visitor).node()!,
-               fArgs.visit(visitor).node()!))
-      // let that f****er raise if that function is undefined
-    } as unknown as IastVisitor<DastBuild>;
+               fArgs.visit(visitor).node()!)),
+      visitLiteral(token: Token, type: IastLiteralType) {
+        if (type === 'number') {
+          return intoIntNode(token.content());
+        }
+        raise('strings not handled in these tests');
+      },
+      visitLet(_0: IastNode): DastBuild
+        { raise('not handled for testing'); },
+      visitFunctionDefinition(_0: Readonly<IastNode[]>): DastBuild
+        { raise('not handled for testing'); }
+    };
     if ('setInstRef' in visitor) {
       const asReseatable = visitor as ReseatableIastVisitor;
       asReseatable.setInstRef(asReseatable);
@@ -91,8 +104,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     return (node: IastNode): DastBuild =>
       node.visit(visitor);
   })();
-  // const makeFromDastNode = (node: DastNode_): () => DastBuild =>
-  //   () => DastBuildBase.makeFromNode(node);
+
   it('captures a single declaration', () => {
     // let a = 1
     const letDecl = makeSingleDecl('a', makeFringe('1'));
@@ -104,7 +116,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
 
   it('captures a dependee that is a function call name', () => {
     // let a = f(x)
-    const call = makeCallFromString('f', makeFringe(FunctionNamingSchema.kContextName), makeFringe('x'));
+    const call = makeCall('f', makeFringe(FunctionNamingSchema.kContextName), makeFringe('x'));
     const letDecl = makeSingleDecl('a', call);
     const retrieval = LetDeclarationsRetrieval.make(letDecl, generallyIntoDastBuild);
     const elements = retrieval.elements();
@@ -123,26 +135,10 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     expect(elements![0].dependeeNames).toEqual(['b:=']);
   });
 
-  // it('captures a couple of declaration', () => {
-  //   // let a = 1
-  //   // let b = 1
-  //   const letA = makeSingleDecl('a', makeFringe('1'));
-  //   const letB = makeSingleDecl('b', makeFringe('1'));
-  //   const def = makeFunctionDefinition([letA, letB]);
-  //   const res = LetDeclarationsRetrieval.
-  //     make(def).elements()?.map(toName);
-  //   expect(res).toEqual(['a', 'b']);
-  // });
-
   it('handles a declaration with a dependee', () => {
     // let a = b + 4
-    const addition = makeCallFromString('+', makeFringe('b'), makeFringe('4'));
+    const addition = makeCall('+', makeFringe('b'), makeFringe('4'));
     const letA = makeSingleDecl('a', addition);
-    // const makeArg = (() => {
-    //   const { makeFringe, makeInteger } = DastNode_;
-    //   return makeFromDastNode(DastCall.make(
-    //     makeFringe('+'), makeFringe('b'), makeInteger('4')));
-    // })();
     const retrieval = LetDeclarationsRetrieval.make(letA, generallyIntoDastBuild);
     const firstEl = (retrieval.elements() ?? [])[0];
     const res = stripNodesFrom(firstEl);

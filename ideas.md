@@ -496,3 +496,8 @@ Type inference, meta functions, and function boundries...
 Where we would see this: `let f := fn ...` and realize that we only need function handle things.
 
 What are my "big" questions...
+
+# 2060-0813-1433
+Need to make a decision on the meaning of "call names".
+Expressions like `table[fname](param)` still has a "`call`" call name. Its receiver is `table[fname]`. Same deal with `getFun()(param)`.
+So... I don't think call name could ever not be represented as a string.

@@ -2,7 +2,7 @@ import { CodeWriter } from '../../code_writer';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { TupleObjectFactory } from '../tuple_type_factory';
+import { TupleObjectType } from '../tuple_object_type';
 import { ExtendedAncestorInfo } from './used_ancestor_collection';
 
 export interface AncestorTupleEmission {
@@ -10,10 +10,11 @@ export interface AncestorTupleEmission {
 };
 
 const { freeze, memoize } = Helpers;
+const { emptyTuple } = TupleObjectType;
 
 function parentReferenceOf(obj: ObjectType): FunctionType {
   return obj.lookUp(FunctionNamingSchema.kParentName)?.
-             byParameters(TupleObjectFactory.emptyTuple()) ??
+             byParameters(emptyTuple()) ??
          raise('cannot find parent reference function <parent>');
 }
 
@@ -47,7 +48,7 @@ function make
       const isLastAncestor = idx + 1 === mAllOrderedAncestorsInfo.length;
       const ancParentRef = info.type.
         lookUp(FunctionNamingSchema.kParentName)?.
-        byParameters(TupleObjectFactory.emptyTuple());
+        byParameters(emptyTuple());
       if (!isLastAncestor && !ancParentRef)
         { raise('cannot get subsequent ancestor'); }
 

@@ -1,7 +1,7 @@
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { TupleObjectFactory } from '../tuple_type_factory';
+import { TupleObjectType } from '../tuple_object_type';
 import { AncestorInfo } from './ancestor_collection';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 
@@ -26,7 +26,7 @@ function make
   : ReceiverResolution_
 {
   const mReceiverResolutionTable: { [uid: symbol]: FunctionType | undefined } = {};
-  const { emptyTuple } = TupleObjectFactory;
+  const { emptyTuple } = TupleObjectType;
   const { kNoneName, kContextName, kParentName } = FunctionNamingSchema;
 
   function addToTable(receiverType: ObjectType, name: string): FunctionType {

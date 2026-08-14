@@ -1,18 +1,23 @@
 import { Helpers, raise } from './helpers';
 import { Token } from './token';
-import { TokenRange } from './token_range';
 import { CrawlStrategies } from './tokenization/crawl_strategies';
 import { CrawlerStrategy, SourceReader } from './tokenization/crawler_strategy';
+import { TokenFinisher } from './tokenization/token_finisher';
 import { TokenLoopState } from './tokenization/token_loop_state';
 
 const { memoize, freeze } = Helpers;
 
 export interface Tokenization {
   tokens(): Readonly<Token[]>;
-  tokenRange(): TokenRange;
 };
 
-function make(mSourceCode: string): Tokenization {
+type TokenFinisherConstructor = typeof TokenFinisher.make;
+
+function make
+  (mSourceCode: string,
+   mTokenFinisherConstructor: TokenFinisherConstructor = TokenFinisher.make)
+  : Tokenization
+{
   const mState = TokenLoopState.make(mSourceCode);
 
   const mSource: SourceReader = freeze({
@@ -41,14 +46,11 @@ function make(mSourceCode: string): Tokenization {
       if (mSource.codePointAt(nextState.position()) !== undefined)
         { continue; }
 
-      return mState.tokens();
+      return mTokenFinisherConstructor(mState.tokens()).finishedTokens();
     }
   });
 
-  const tokenRange = memoize((): TokenRange =>
-    TokenRange.makeStartingRange(tokens().slice()));
-
-  return freeze({ tokens, tokenRange });
+  return freeze({ tokens });
 }
 
 export const Tokenization = freeze({ make });

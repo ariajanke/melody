@@ -1,11 +1,11 @@
 import { CodeWriter } from '../code_writer';
 import { FunctionType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { TupleObjectFactory } from './tuple_type_factory';
+import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 const makeUid = () => memoize(Symbol);
-const { emptyTuple } = TupleObjectFactory;
+const { emptyTuple } = TupleObjectType;
 
 const common = memoize(() => freeze({
   parameters: emptyTuple,

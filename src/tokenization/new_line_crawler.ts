@@ -1,4 +1,5 @@
 import { Helpers, raise } from '../helpers';
+import { Token } from '../token';
 import { CharacterClass } from './character_class';
 import {
   CrawlerStrategy,
@@ -7,6 +8,7 @@ import {
 import { AdvancedTokenLoopState, TokenLoopState } from './token_loop_state';
 
 const { freeze, memoize } = Helpers;
+const kNewLineType = Token.types.grouping.separator;
 
 function make(): CrawlerStrategy {
   const kNlCode = CharacterClass.commonCharacterCodes().newLine;
@@ -33,7 +35,7 @@ function make(): CrawlerStrategy {
     if (!pos)
       { return state.advanceTo(position() + 1); }
 
-    return state.pushNewLine(pos - 1).advanceTo(pos);
+    return state.pushToken(pos - 1, pos, kNewLineType).advanceTo(pos);
   };
 
   return freeze({ findNext });

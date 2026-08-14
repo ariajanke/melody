@@ -4,7 +4,7 @@ import { Helpers, raise } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { WasmCompilation } from '../wasm_compilation';
 import { MutableFunctionTable } from './mutable_function_table';
-import { TupleObjectFactory } from './tuple_type_factory';
+import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -16,7 +16,7 @@ export interface FunctionIndexType {
 const sInsts: { [parentUid: symbol]: FunctionIndexType | undefined } = {};
 
 function makeNew(parent: ObjectType): FunctionIndexType {
-  const { emptyTuple } = TupleObjectFactory;
+  const { emptyTuple } = TupleObjectType;
   const representativeFunctionType = memoize((): FunctionType => freeze({
     parameters: emptyTuple,
     returns: emptyTuple,

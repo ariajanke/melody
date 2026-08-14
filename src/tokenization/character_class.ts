@@ -112,6 +112,8 @@ function classOfCharacter(charCode: number | undefined): CharacterClassName | un
 }
 
 export const CharacterClass = freeze({
+  kEscape,
+  kNewLine,
   commonCharacterCodes,
   isNumeric,
   isAlphabetic,

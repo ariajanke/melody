@@ -6,8 +6,8 @@ import { CodeWriter } from '../code_writer';
 import { WritableContextFrameStack } from './context_frame_stack';
 import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import { DefinitionBodyFunctionBuild } from './definition_body_function_build';
-import { TupleObjectFactory } from './tuple_type_factory';
 import { FunctionIndexType } from './function_index_type';
+import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -23,7 +23,7 @@ function make
 
   const { error } = defBuild;
   const { registerDefinitionBody } = mFunctionRegistry;
-  const { emptyTuple } = TupleObjectFactory;
+  const { emptyTuple } = TupleObjectType;
 
   const mCurrentDepth = mContextFrameStack.depth();
 

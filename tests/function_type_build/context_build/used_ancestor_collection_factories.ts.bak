@@ -1,5 +1,0 @@
-import { ExtendedAncestorInfo } from '../../../src/function_type_build/context_build/used_ancestor_collection';
-
-function make(e: ExtendedAncestorInfo[]) {
-
-}

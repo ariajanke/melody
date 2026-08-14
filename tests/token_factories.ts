@@ -7,7 +7,7 @@ const { freeze } = Helpers;
 
 function stripQuotes(s: string): string | undefined {
   if (s[0] === '\'' && s.endsWith('\''))
-    { return s.slice(1, s.length - 2); }
+    { return s.slice(1, s.length - 1); }
 
   return undefined;
 }
@@ -16,23 +16,27 @@ function makeFromStringOnly(s: string): Token {
   const asStr = stripQuotes(s);
   const type_ = (() => {
     if (asStr)
-      { return Token.types.stringLiteral; }
+      { return Token.types.literal.string; }
 
     if (!isNaN(parseFloat(s)))
-      { return Token.types.numericLiteral; }
+      { return Token.types.literal.numeric; }
 
-    if (GroupingNamingSchema.isGrouping(s))
-      { return Token.types.grouping; }
+    if (GroupingNamingSchema.isClosing(s))
+      { return Token.types.grouping.closing; }
 
-    if (s === '\n')
-      { return Token.types.newLine; }
+    if (GroupingNamingSchema.isOpening(s))
+      { return Token.types.grouping.opening; }
 
-    if (OperatorNamingSchema.isOperator(s))
+    if (s[0] === '\n')
+      { return Token.types.grouping.separator; }
+
+    if (OperatorNamingSchema.isOperator(s) ||
+        s === OperatorNamingSchema.kCall)
       { return Token.types.operator; }
 
     return Token.types.identifier;
   })();
-  const pos = (): number => raise('uh oh'); 
+  const pos = (): number => raise('uh oh');
 
   return freeze({
     content: () => asStr ?? s,
@@ -42,4 +46,8 @@ function makeFromStringOnly(s: string): Token {
   });
 }
 
-export const TokenFactories = freeze({ makeFromStringOnly });
+function stringsIntoTokens(strings: Readonly<string[]>): Readonly<Token[]> {
+  return strings.map(makeFromStringOnly);
+}
+
+export const TokenFactories = freeze({ makeFromStringOnly, stringsIntoTokens });

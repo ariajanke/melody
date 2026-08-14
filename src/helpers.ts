@@ -25,6 +25,12 @@ export interface StandardError {
 };
 
 function makeIsStringInLookUpTable(arr: Readonly<string[]>) {
+  if (arr.length === 1) {
+    return (sample: string): boolean => sample === arr[0];
+  } else if (arr.length === 2) {
+    return (sample: string): boolean =>
+      sample === arr[0] || sample === arr[1];
+  }
   type LookUpMap = { [op: string]: true | undefined };
   const map = arr.reduce((map: LookUpMap, op: string) => {
     map[op] = true;

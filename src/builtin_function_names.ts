@@ -3,10 +3,11 @@ import { Helpers } from './helpers';
 const { freeze, memoize } = Helpers;
 
 const kBuiltinNames = freeze({
+  kSystemIoTable: '.SystemIO',
   kPuts: 'puts'
 });
 
-type StringSet = { [name: string]: boolean | undefined };
+type StringSet = { [name: string]: true | undefined };
 const namesAsSet = memoize((): Readonly<StringSet> => Object.
   keys(kBuiltinNames).
   reduce((acc: StringSet, name: string) => {

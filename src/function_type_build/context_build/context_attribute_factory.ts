@@ -1,9 +1,9 @@
 import { Helpers, raise } from '../../helpers';
 import { FunctionType, ObjectType } from '../../function_type_build';
-import { TupleObjectFactory } from '../tuple_type_factory';
 import { CodeWriter } from '../../code_writer';
 import { FunctionTypeBase } from '../function_type_base';
 import { WasmCompilation } from '../../wasm_compilation';
+import { TupleObjectType } from '../tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -37,7 +37,7 @@ function forEachWord
 }
 
 function assertSingleItemReceiver(receiverFtype: FunctionType) {
-  const { emptyTuple } = TupleObjectFactory;
+  const { emptyTuple } = TupleObjectType;
   if (receiverFtype.parameters().uid() !== emptyTuple().uid() ||
       receiverFtype.receiver  ().uid() !== emptyTuple().uid() ||
       receiverFtype.returns   ().sizeInStackItems() !== 1)
@@ -163,7 +163,7 @@ function make(mReceiver: ObjectType): ContextAttributeFactory {
   }
 
   const receiver = () => mReceiver;
-  const { emptyTuple } = TupleObjectFactory;
+  const { emptyTuple } = TupleObjectType;
 
   function buildGetter
     (mAccessIndex: number, mType: ObjectType): FunctionType

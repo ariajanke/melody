@@ -16,7 +16,7 @@ function make(): CrawlerStrategy {
   const kHash = commonCharacterCodes().hash;
   const kOpenCurl = commonCharacterCodes().curlOpen;
   const kNlCode = commonCharacterCodes().newLine;
-  const kHashLiteral = Token.types.hashLiteral;
+  const kHashLiteral = Token.types.literal.hash;
 
   function handleEmbedComment
     (source: SourceReader, state: TokenLoopState): AdvancedTokenLoopState

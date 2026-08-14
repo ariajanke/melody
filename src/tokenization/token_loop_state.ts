@@ -13,8 +13,6 @@ export interface TokenLoopState {
   advanceTo(position: number): AdvancedTokenLoopState;
   pushToken(beg: number, end: number, type: TokenType): TokenLoopState;
   pushAlphaNumeric(beg: number, end: number): TokenLoopState;
-  pushEscape(): TokenLoopState;
-  pushNewLine(beg: number): TokenLoopState;
   pushStrategyPatch(patch: StrategyPatch): TokenLoopState;
   popStrategyPatch(patch: StrategyPatch): TokenLoopState;
 };
@@ -27,9 +25,7 @@ export interface AdvancedTokenLoopState extends TokenLoopState {
 const { freeze, memoize } = Helpers;
 
 function make(mSourceCode: string): AdvancedTokenLoopState {
-  let mPushToken = pushToken_;
   const mPatches: StrategyPatch[] = [];
-  let mNlEscape = false;
   let mPosition = 0;
   const mTokens: Token[] = [];
   const kDefaultPatch: StrategyPatch = freeze({
@@ -38,7 +34,6 @@ function make(mSourceCode: string): AdvancedTokenLoopState {
     uid: memoize(Symbol)
   });
   function pushToken_(tok: Token): TokenLoopState {
-    mNlEscape = false;
     mTokens.push(tok);
     return mState;
   }
@@ -47,34 +42,16 @@ function make(mSourceCode: string): AdvancedTokenLoopState {
     advanceTo(position: number): AdvancedTokenLoopState {
       if (position <= mPosition)
         { raise('position must be strictly increasing'); }
+
       mPosition = position;
       return mState;
     },
     pushToken(beg: number, end: number, type: TokenType): TokenLoopState {
-      return mPushToken(Token.make( mSourceCode, beg, end, type ));
+      return pushToken_(Token.make( mSourceCode, beg, end, type ));
     },
     pushAlphaNumeric(beg: number, end: number): TokenLoopState {
       const tok = Token.makeAlphaNumeric(mSourceCode, beg, end);
-      return mPushToken(tok);
-    },
-    pushEscape(): TokenLoopState {
-      mNlEscape = true;
-      return mState;
-    },
-    pushNewLine(beg: number): TokenLoopState {
-      if (mNlEscape)
-        { return mState; }
-
-      mPushToken = (tok: Token): TokenLoopState => {
-        const nlTok =
-          Token.make(mSourceCode, beg, tok.start(), Token.types.newLine);
-
-        pushToken_(nlTok);
-        pushToken_(tok);
-        mPushToken = pushToken_;
-        return mState;
-      };
-      return mState;
+      return pushToken_(tok);
     },
     pushStrategyPatch(patch: StrategyPatch): TokenLoopState {
       mPatches.push(patch);
@@ -86,6 +63,7 @@ function make(mSourceCode: string): AdvancedTokenLoopState {
       if (topPatch?.uid() !== patch.uid()) {
         raise('cannot pop, mismatching uids');
       }
+
       mPatches.pop();
       return mState;
     },

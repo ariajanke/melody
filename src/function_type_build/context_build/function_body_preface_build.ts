@@ -1,13 +1,13 @@
 import { Helpers, raise } from '../../helpers';
 import { CodeWriter } from '../../code_writer';
 import { FunctionTypeBase } from '../function_type_base';
-import { TupleObjectFactory } from '../tuple_type_factory';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 import { ContextAttributeFactory } from './context_attribute_factory';
 import { VariableAllocation } from './variable_allocation';
 import { FunctionType, ObjectType } from '../../function_type_build';
 import { AncestorTupleEmission } from './ancestor_tuple_emission';
+import { TupleObjectType } from '../tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -19,7 +19,7 @@ export interface FunctionBodyPrefaceBuild {
 
 function makeRefGet(name: string, why: string) {
   return (obj: ObjectType): FunctionType => obj.
-    lookUp(name)?.byParameters(TupleObjectFactory.emptyTuple()) ?? raise(why);
+    lookUp(name)?.byParameters(TupleObjectType.emptyTuple()) ?? raise(why);
 }
 
 const selfReferenceOf =
@@ -35,7 +35,7 @@ function make
   const { parent } = mUsedAncestorCollection;
 
   const ancestorTupleReturns = memoize(() =>
-    TupleObjectFactory.make(mUsedAncestorCollection.ancestors().map(({ type }) => type)));
+    TupleObjectType.instanceFor(mUsedAncestorCollection.ancestors().map(({ type }) => type)));
 
   const ancestorTupleEmission = memoize((): FunctionType => {
     if (!parent())
@@ -97,11 +97,9 @@ function make
     ...FunctionTypeBase.makeNewEmitlessEmpty(),
     simpleEmit(writer: CodeWriter) {
       writer.saveStackPointerToLocal();
-      // writer.pushStackPointer().printInteger();
 
       if (parentIndex() !== undefined) {
         writer.storeParentPointer(parentIndex()!);
-        // writer.pushStackPointer().loadInteger().printInteger();
       }
 
       ancestorInitialSet()?.simpleEmit(writer);

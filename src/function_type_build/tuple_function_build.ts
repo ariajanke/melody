@@ -3,7 +3,7 @@ import { DastNode } from '../dast_build';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
 import { FunctionTypeBase } from './function_type_base';
-import { TupleObjectFactory } from './tuple_type_factory';
+import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -39,8 +39,8 @@ function make
     if (!functionTypesFromNodes())
       { return; }
 
-    const ftypeReturns = memoize(() => TupleObjectFactory.
-      make(functionTypesFromNodes()!.map(ft => ft.returns())));
+    const ftypeReturns = memoize(() => TupleObjectType.
+      instanceFor(functionTypesFromNodes()!.map(ft => ft.returns())));
 
     return freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),

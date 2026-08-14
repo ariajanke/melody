@@ -1,7 +1,7 @@
 import { BuiltinFunctionNames } from '../../../src/builtin_function_names';
 import { FunctionNamingSchema } from '../../../src/function_naming_schema';
 import { ContextBaseStage } from '../../../src/function_type_build/context_build';
-import { TupleObjectFactory } from '../../../src/function_type_build/tuple_type_factory';
+import { TupleObjectType } from '../../../src/function_type_build/tuple_object_type';
 import { TestHelpers } from '../../test_helpers';
 
 const { describeNamed } = TestHelpers;
@@ -9,9 +9,10 @@ const { describeNamed } = TestHelpers;
 describeNamed({ ContextBaseStage }, () => {
   const inst = ContextBaseStage.make();
   const lookUp = inst.referenceType().lookUp;
-  const { emptyTuple } = TupleObjectFactory;
-  it('defines builtin function for "puts"', () => {
-    expect(lookUp(BuiltinFunctionNames.kPuts)).toBeDefined();
+  const { emptyTuple } = TupleObjectType;
+
+  it('defines builtin function for "SystemIO"', () => {
+    expect(lookUp(BuiltinFunctionNames.kSystemIoTable)).toBeDefined();
   });
 
   it('defines self referential function <context>', () => {

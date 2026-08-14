@@ -7,7 +7,7 @@ import { ContextAncestorAccessorsStage } from '../../../src/function_type_build/
 import { ContextLinkStage_ } from '../../../src/function_type_build/context_build/context_link_stage';
 import { WritableObjectType } from '../../../src/function_type_build/context_build/writable_object_type';
 import { ContextFrameStack, WritableContextFrameStack } from '../../../src/function_type_build/context_frame_stack';
-import { TupleObjectFactory } from '../../../src/function_type_build/tuple_type_factory';
+import { TupleObjectType } from '../../../src/function_type_build/tuple_object_type';
 import { Helpers, raise } from '../../../src/helpers';
 import { CallCountingCodeWriter } from '../../code_writer_factories';
 import { TestHelpers } from '../../test_helpers';
@@ -16,7 +16,7 @@ const { describeNamed } = TestHelpers;
 const { memoize, freeze } = Helpers;
 
 describeNamed({ ContextLinkStage_ }, () => {
-  const { emptyTuple } = TupleObjectFactory;
+  const { emptyTuple } = TupleObjectType;
   const makeStack = (): WritableContextFrameStack => ContextFrameStack.make(() => raise('no'));
   const { getSimpleEmitCallsFrom } = CallCountingCodeWriter;
   const { makeWithAncestors } = ContextLinkStage_.testing;

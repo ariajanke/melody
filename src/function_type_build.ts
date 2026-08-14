@@ -3,7 +3,7 @@ import { DastNode } from './dast_build';
 import { FunctionDefinitionRegistry } from './function_definition_registry';
 import { FunctionTypeBase } from './function_type_build/function_type_base';
 import { FunctionTypeBuildVisitor } from './function_type_build/function_type_build_visitor';
-import { TupleObjectFactory } from './function_type_build/tuple_type_factory';
+import { TupleObjectType } from './function_type_build/tuple_object_type';
 import { Helpers, StandardErrorMessage } from './helpers';
 
 const { freeze, memoize } = Helpers;
@@ -73,5 +73,5 @@ function make(mRoot: DastNode,
 
 export const FunctionTypeBuild = freeze({
   make,
-  emptyTupleType: TupleObjectFactory.emptyTuple,
+  emptyTupleType: TupleObjectType.emptyTuple
 });

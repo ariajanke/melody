@@ -166,6 +166,7 @@ describe('happy path end-to-end', () => {
           ~
           f1()
         `, ['20']);
+
         doRun(`can perform a mutation cross frame`, `
           let a := 5
           let b = 1
@@ -181,35 +182,47 @@ describe('happy path end-to-end', () => {
           puts(a)
           `, ['6', '7']);
 
-          doRun(`uh oh`, `
-            let a := 5
+        doRun(`Receiver pointer mix up case`, `
+          let a := 5
+          let f = fn
+            a := 6
+          ~
+          let g = fn
+            let g2 := f
+            g2()
+            puts(a)
+          ~
+          g()
+          `, ['6']);
+
+        doRun('table access', `
+          SystemIO.puts('table test!')
+          SystemIO.puts('asking for an Integer: ', SystemIO.askInteger())
+          let b = (SystemIO.assignable := 15)
+          SystemIO.puts('your assignable integer was ', b)
+        `, [
+          'table test!',
+          'asking for an Integer: ', '42',
+          'SystemIO assignable set with ', '15',
+          'your assignable integer was ', '15'
+        ]);
+
+        it(`Fails to find modifier for a different fType`, () => {
+          const source = `
             let f = fn
-              a := 6
             ~
             let g = fn
               let g2 := f
-              g2()
-              puts(a)
+              let g3 := fn
+              ~
+              g3 := g2
             ~
             g()
-            `, ['6']);
-
-          it(`Fails to find modifier for a different fType`, () => {
-            const source = `
-              let f = fn
-              ~
-              let g = fn
-                let g2 := f
-                let g3 := fn
-                ~
-                g3 := g2
-              ~
-              g()
-            `;
-            const compiler = Compiler.make(source);
-            expect(compiler.byteCode()).toBeUndefined();
-            expect(compiler.error()).toMatch('cannot find function "g3:=" on receiver*');
-          });
+          `;
+          const compiler = Compiler.make(source);
+          expect(compiler.byteCode()).toBeUndefined();
+          expect(compiler.error()).toMatch('cannot find function "g3:=" on receiver*');
+        });
       });
     });
   });

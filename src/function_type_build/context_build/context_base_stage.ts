@@ -6,11 +6,12 @@ import { Helpers } from '../../helpers';
 import { ContextFrameStack } from '../context_frame_stack';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
-import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { ContextLinkStage_ } from './context_link_stage';
 import { BuiltinTypeBase } from '../builtin_type_base';
 import { FunctionOpLookUp, WritableObjectType } from './writable_object_type';
 import { WasmCompilation } from '../../wasm_compilation';
+import { SystemIoType } from '../system_io_type';
+import { PutsFunctionLookUpTable } from '../puts_function_look_up_table';
 
 const { freeze, memoize } = Helpers;
 
@@ -23,37 +24,37 @@ export interface ContextBaseStage_ {
 
 function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
   const mTable: FunctionOpLookUp = {};
-  const makeEmptyFtype = FunctionTypeBase.makeNewEmitlessEmpty;
+  const { fromFunctionType } = MutableFunctionTable;
 
   const referenceGetter = ((): FunctionType => freeze({
-    ...makeEmptyFtype(),
+    ...FunctionTypeBase.makeNewEmitlessEmpty(),
     returns: (): ObjectType => writableReferenceType(),
     simpleEmit(codeWriter: CodeWriter) {
       return codeWriter.pushStackPointer();
     }
   }));
 
-  const noneGetter = ((): FunctionType => freeze({
-    ...makeEmptyFtype(),
-    simpleEmit(_0: CodeWriter) {}
-  }));
+  const addSystem = ((): FunctionLookUpTable =>
+    mTable[BuiltinFunctionNames.kSystemIoTable] =
+      fromFunctionType(SystemIoType.selfGetter()));
 
-  const addPuts = ((): FunctionLookUpTable =>
+  const addPuts  = ((): FunctionLookUpTable =>
     mTable[BuiltinFunctionNames.kPuts] = PutsFunctionLookUpTable.instance());
 
   const addContext = ((): FunctionLookUpTable =>
-    mTable[FunctionNamingSchema.kContextName] = MutableFunctionTable.
+    mTable[FunctionNamingSchema.kContextName] =
       fromFunctionType(referenceGetter()));
 
   // TODO might be unused
   const addNone = ((): FunctionLookUpTable =>
-    mTable[FunctionNamingSchema.kNoneName] = MutableFunctionTable.
-      fromFunctionType(noneGetter()));
+    mTable[FunctionNamingSchema.kNoneName] =
+      fromFunctionType(FunctionTypeBase.emitEmptyTuple()));
 
   const writableReferenceType = memoize((): WritableObjectType =>
-    addPuts() &&
+    addSystem() &&
     addContext() &&
     addNone() &&
+    addPuts() &&
     WritableObjectType.make(mTable, freeze({
       ...BuiltinTypeBase.makeNewWithDefaults(),
       name: () => mFrameName,
