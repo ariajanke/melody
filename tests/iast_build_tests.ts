@@ -668,7 +668,25 @@ describeNamed({ IastBuild }, () => {
     it(`nested.table.assignment := 5`, fail);
     it(`nested.foo(a, b).assignment := 5`, fail);
     it(`a(nested.table).assignment := 5`, fail);
-    it(`t.foo(let a = 5).assignment := 5`, fail);
+    it(`t.foo(let a = 5).assignment := 5`, () => {
+      tokens = [
+        't', '.', 'foo', '(', 'a', ',', '5', ')',// '.', 'assignment',
+        // 'f', '(', '5', ')', '.', 'a',
+        ':=', '5'
+      ].map(makeToken);
+      
+      const visitor = ({
+        ...ReseatableIastVisitor.makeDefaultingToContinue(),
+        visitCall(callName: Token, rec: IastNode, parm: IastNode): void {
+          expect(callName.content()).toEqual('.');
+          rec.visit(visitor);
+          parm.visit(visitor);
+        }
+      });
+      visitor.setInstRef(visitor);
+
+      buildAst().visit(visitor);
+    });
     it(`(let a = 5).assignment := 5`, fail);
     it(`(t.actually_okay) := 5`, fail);
     it(`nested.table.equality = 5`, fail);
