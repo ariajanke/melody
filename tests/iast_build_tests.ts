@@ -3,11 +3,12 @@ import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenRange } from '../src/token_range';
 import { IastNode, IastVisitor } from '../src/iast_node';
+import { TokenFactories } from './token_factories';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ IastBuild }, () => {
-  const makeToken = Token.forTesting.makeFromStringOnly;
+  const makeToken = TokenFactories.makeFromStringOnly;
 
   function makeBuildAst(tokens: () => Token[]) {
     return (): IastNode =>

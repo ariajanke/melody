@@ -2,13 +2,14 @@ import { TestHelpers } from '../test_helpers';
 import { ClosePositionRetrieval } from '../../src/iast_build/close_position_retrieval';
 import { TokenRange } from '../../src/token_range';
 import { Token } from '../../src/token';
+import { TokenFactories } from '../token_factories';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ ClosePositionRetrieval }, () => {
   const { make } = ClosePositionRetrieval;
   const { makeStartingRange } = TokenRange;
-  const makeToken = Token.forTesting.makeFromStringOnly;
+  const makeToken = TokenFactories.makeFromStringOnly;
   const asTokens = (...arr: string[]): Token[] =>
     arr.map((value: string) => makeToken(value));
   const asTokenRange = (...arr: string[]): TokenRange => {

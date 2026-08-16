@@ -1,6 +1,6 @@
 import { DastBuild } from '../dast_build';
-import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers, StandardError } from '../helpers';
+import { OperatorNamingSchema } from '../operator_naming_schema';
 import { DastNode_ } from './dast_node';
 import { DastCall } from './dast_node_specializations';
 import { ReceiverAssignmentStripping } from './receiver_assignment_stripping';
@@ -27,7 +27,7 @@ function make
     const callNode_ = callNode();
     const receiverNode_ = receiverNode();
     const isAssignmentOperator =
-      callNode_?.asString() === FunctionNamingSchema.kAssignmentOperator;
+      callNode_?.asString() === OperatorNamingSchema.kAssignment;
     if (callNode_ && receiverNode_ && isAssignmentOperator)
       { return ReceiverAssignmentStripping.make(receiverNode_); }
     return undefined;

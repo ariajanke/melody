@@ -4,13 +4,12 @@ import {
   LetNameElement,
 } from '../../src/dast_build/let_declarations_retrieval';
 import { IastNode, IastVisitor, ReseatableIastVisitor } from '../../src/iast_node';
-import { Token } from '../../src/token';
 import { DastNode_ } from '../../src/dast_build/dast_node';
-// import { DastBuildBase } from '../../src/dast_build/dast_build_base';
 import { DastBuild } from '../../src/dast_build';
 import { DastCall, DastTuple } from '../../src/dast_build/dast_node_specializations';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
 import { Helpers, StandardError } from '../../src/helpers';
+import { TokenFactories } from '../token_factories';
 
 const { describeNamed } = TestHelpers;
 
@@ -18,9 +17,8 @@ const { freeze } = Helpers;
 
 describeNamed({ LetDeclarationsRetrieval }, () => {
   const makeFringe = (v: string): IastNode =>
-    IastNode.makeFringe(Token.forTesting.makeFromStringOnly(v));
+    IastNode.makeFringe(TokenFactories.makeFromStringOnly(v));
   const { makeCall } = IastNode.forOperativeStatements;
-  // const { makeFunctionDefinition } = IastNode;
   const { makeTuple } = IastNode.forLetDeclarationRetrievals;
   function makeEqual(lhs: IastNode, rhs: IastNode): IastNode {
     return makeCallFromString('=', lhs, rhs);
@@ -33,11 +31,11 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     //      it here.
     return makeCallFromString(
       mapToAssignment(name),
-      makeFringe( Token.kContextToken.content() ),
+      makeFringe( FunctionNamingSchema.kContextName ),
       rhs);
   }
   function makeCallFromString(callName: string, rec: IastNode, args: IastNode): IastNode {
-    return makeCall(Token.forTesting.makeFromStringOnly(callName), rec, args);
+    return makeCall(TokenFactories.makeFromStringOnly(callName), rec, args);
   }
   function makeSingleDecl(name: string, node: IastNode): IastNode {
     const assignment = makeEqual(makeFringe(name), node);
@@ -106,7 +104,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
 
   it('captures a dependee that is a function call name', () => {
     // let a = f(x)
-    const call = makeCallFromString('f', makeFringe(Token.kContextToken.content()), makeFringe('x'));
+    const call = makeCallFromString('f', makeFringe(FunctionNamingSchema.kContextName), makeFringe('x'));
     const letDecl = makeSingleDecl('a', call);
     const retrieval = LetDeclarationsRetrieval.make(letDecl, generallyIntoDastBuild);
     const elements = retrieval.elements();

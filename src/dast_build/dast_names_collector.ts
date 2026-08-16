@@ -2,7 +2,6 @@ import { BuiltinFunctionNames } from '../builtin_function_names';
 import { DastFunctionNameMappings, DastNode, DastVisitor } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { GenericSet, Helpers, raise } from '../helpers';
-import { Token } from '../token';
 import { CarriedNamesRegistry } from './carried_names_registry';
 
 const { freeze } = Helpers;
@@ -22,7 +21,7 @@ function make
    mCarriedNamesRegistry?: CarriedNamesRegistry)
   : DastNamesCollector
 {
-  const contextName = Token.kContextToken.content;
+  const contextName = () => FunctionNamingSchema.kContextName;
   const mNames = GenericSet.make<string>();
   const mDescendentCarriedNames = GenericSet.make<string>();
   const {

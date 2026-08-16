@@ -1,3 +1,5 @@
+import { FunctionNamingSchema } from './function_naming_schema';
+import { GroupingNamingSchema } from './grouping_naming_schema';
 import { Helpers, raise } from './helpers';
 import { Token } from './token';
 
@@ -99,19 +101,31 @@ const IastDefinition = freeze({
 });
 
 const IastFringe = freeze({
-  contextNode: memoize((): IastNode => IastFringe.make( Token.kContextToken )),
+  contextNode: memoize((): IastNode => {
+    const tok: Token = freeze({
+      content: () => FunctionNamingSchema.kContextName,
+      type: () => Token.types.identifier,
+      start: () => raise('unhandled'),
+      end: () => raise('unhandled'),
+    });
+    return IastFringe.make( tok );
+  }),
   make(token: Token): IastNode {
     const tokenTypes = Token.types;
     const { content } = token;
     const visit = (() => {
+      if (token.type() === tokenTypes.grouping &&
+          (token.content() !== GroupingNamingSchema.kFunctionDefinition ||
+           token.content() !== GroupingNamingSchema.kBodyClose))
+      { raise('unhandled'); }
       switch (token.type()) {
       case tokenTypes.identifier:
       case tokenTypes.operator:
-      case tokenTypes.special:
+      case tokenTypes.grouping:
         return <T>(v: IastVisitor<T>) => v.visitFringe(content());
       case tokenTypes.stringLiteral:
         return <T>(v: IastVisitor<T>) => v.visitString(content());
-      case tokenTypes.integerLiteral:
+      case tokenTypes.numericLiteral:
         return <T>(v: IastVisitor<T>) => v.visitInteger(content());
       default:
         raise(`cannot build stringable node from token "${content()}"`);

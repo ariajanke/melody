@@ -4,9 +4,9 @@ import { LetNamesCollector } from './let_names_collector';
 import { NamingExpressionVisitor } from './naming_expression_visitor';
 import { Helpers, StandardError, StandardErrorMessage } from '../../helpers';
 import { IastNode } from '../../iast_node';
-import { FunctionNamingSchema } from '../../function_naming_schema';
 import { DastNamesCollector } from '../dast_names_collector';
 import { LetNameElement } from './let_names_splitter';
+import { OperatorNamingSchema } from '../../operator_naming_schema';
 
 const { freeze, memoize } = Helpers;
 
@@ -14,9 +14,9 @@ export interface DastLetDeclarationBuild {
   dastNode(): DastNode | undefined;
   elements(): Readonly<LetNameElement[]> | undefined;
   error(): StandardErrorMessage;
-}
+};
 
-const { kAssignmentOperator, kEqualityOperator } = FunctionNamingSchema;
+const { kAssignment, kEquality } = OperatorNamingSchema;
 
 function make
   (mCallName: IastNode,
@@ -29,8 +29,8 @@ function make
 
   const callNameStr = memoize(() => {
     const callNameStr = mCallName.asString();
-    if (callNameStr !== kEqualityOperator &&
-        callNameStr !== kAssignmentOperator)
+    if (callNameStr !== kEquality &&
+        callNameStr !== kAssignment)
     {
       return setErrorMessage(`unexpected operator "${callNameStr}" in let declaration`);
     }

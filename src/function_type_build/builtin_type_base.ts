@@ -3,7 +3,7 @@ import {
   ObjectType 
 } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { MemoryArray } from '../memory_array';
+import { WasmCompilation } from '../wasm_compilation';
 
 const { freeze, memoize } = Helpers;
 
@@ -13,7 +13,7 @@ const typeBaseDefaults = memoize((): ObjectType => freeze({
     { return undefined; },
   detuplify() { return undefined; },
   uid: () => raise('write me'),
-  sizeInBytes: () => MemoryArray.kWordSizeInBytes,
+  sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
   sizeInStackItems: () => 1,
 }));
 

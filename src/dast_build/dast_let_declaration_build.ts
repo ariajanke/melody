@@ -1,6 +1,7 @@
 import { DastDeclarationMap, WritableDastDeclarationMap } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
+import { OperatorNamingSchema } from '../operator_naming_schema';
 import { DastTuple } from './dast_node_specializations';
 import { LetNameElement } from './let_declarations_retrieval';
 
@@ -19,7 +20,6 @@ function make(mElement: LetNameElement): DastLetDeclarationBuild {
     mapToAssignment,
     mapToFringeAccessor,
     mapToInitialSetName,
-    kAssignmentOperator,
   } = FunctionNamingSchema;
 
   const tupleCount = memoize(() => 
@@ -58,7 +58,7 @@ function make(mElement: LetNameElement): DastLetDeclarationBuild {
   const mDastLetDeclarationMap: WritableDeclMap = {};
 
   const assignmentNames = memoize((): DastDeclarationMap => {
-    if (mElement.operator !== kAssignmentOperator) {
+    if (mElement.operator !== OperatorNamingSchema.kAssignment) {
       return mDastLetDeclarationMap;
     }
 
@@ -67,7 +67,6 @@ function make(mElement: LetNameElement): DastLetDeclarationBuild {
         value,
         assignment: { tupleRank, variableName: name }
       };
-      // console.log(mDastLetDeclarationMap[mapToAssignment(name)]);
     });
     return mDastLetDeclarationMap;
   });
@@ -78,7 +77,6 @@ function make(mElement: LetNameElement): DastLetDeclarationBuild {
         value,
         accessor: { tupleRank, variableName: name }
       };
-      // console.log(mDastLetDeclarationMap[mapToFringeAccessor(name)]);
     });
     return mDastLetDeclarationMap;
   });
@@ -95,7 +93,6 @@ function make(mElement: LetNameElement): DastLetDeclarationBuild {
           dependeeNames
         }
       };
-      // console.log(mDastLetDeclarationMap[initSetName]);
     }
     return mDastLetDeclarationMap;
   });

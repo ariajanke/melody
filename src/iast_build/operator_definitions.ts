@@ -1,6 +1,5 @@
-import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers } from '../helpers';
-import { Token } from '../token';
+import { OperatorNamingSchema } from '../operator_naming_schema';
 
 const { freeze, memoize, makeCounter } = Helpers;
 
@@ -48,25 +47,30 @@ export const OperatorDefinitions = freeze({
     return (): Readonly<OperatorDefinition[]> => {
       if (sFullListing) return sFullListing;
       const { binary, unary } = OperatorDefinitions.operandRelationships;
-      const call = Token.kCallToken.content();
-      const asgn = FunctionNamingSchema.kAssignmentOperator;
+      const call = OperatorNamingSchema.kCall;
+      const asgn = OperatorNamingSchema.kAssignment;
+      const eqsn = OperatorNamingSchema.kEquality;
+      const {
+        kLet, kAnd, kOr, kIs, kNot, kComma, kPlus, kMinus, kMultiply, kDivide,
+        kDot
+      } = OperatorNamingSchema;
       return sFullListing =
         [
-          { representation: 'let', operandRelation: unary  },
-          { representation: ','  , operandRelation: binary },
-          { representation: 'is' , operandRelation: binary },
-          { representation: '='  , operandRelation: binary },
-          { representation: asgn , operandRelation: binary },
-          { representation: '+'  , operandRelation: binary },
-          { representation: '-'  , operandRelation: binary },
-          { representation: '*'  , operandRelation: binary },
-          { representation: '-'  , operandRelation: unary  },
-          { representation: '/'  , operandRelation: binary },
-          { representation: 'not', operandRelation: unary  },
-          { representation: 'and', operandRelation: binary },
-          { representation: 'or' , operandRelation: binary },
-          { representation: call , operandRelation: binary },
-          { representation: '.'  , operandRelation: binary }
+          { representation: kLet     , operandRelation: unary  },
+          { representation: kComma   , operandRelation: binary },
+          { representation: kIs      , operandRelation: binary },
+          { representation: eqsn     , operandRelation: binary },
+          { representation: asgn     , operandRelation: binary },
+          { representation: kPlus    , operandRelation: binary },
+          { representation: kMinus   , operandRelation: binary },
+          { representation: kMultiply, operandRelation: binary },
+          { representation: kMinus   , operandRelation: unary  },
+          { representation: kDivide  , operandRelation: binary },
+          { representation: kNot     , operandRelation: unary  },
+          { representation: kAnd     , operandRelation: binary },
+          { representation: kOr      , operandRelation: binary },
+          { representation: call     , operandRelation: binary },
+          { representation: kDot     , operandRelation: binary }
         ].
           map(({ representation, operandRelation }:
                 { representation: string, operandRelation: string }) =>

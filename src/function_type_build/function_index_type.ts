@@ -1,8 +1,8 @@
 import { CodeWriter } from '../code_writer';
-import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { MemoryArray } from '../memory_array';
+import { OperatorNamingSchema } from '../operator_naming_schema';
+import { WasmCompilation } from '../wasm_compilation';
 import { MutableFunctionTable } from './mutable_function_table';
 import { TupleObjectFactory } from './tuple_type_factory';
 
@@ -34,13 +34,13 @@ function makeNew(parent: ObjectType): FunctionIndexType {
   const functionIndexType = memoize((): ObjectType => freeze({
     name: memoize(() => `${parent.name()}.Function()()`),
     lookUp(operation: string | symbol): FunctionLookUpTable | undefined {
-      if (operation !== FunctionNamingSchema.kCallName)
+      if (operation !== OperatorNamingSchema.kCall)
         { return undefined; }
       return lookUpTable();
     },
     detuplify: () => undefined,
     uid: memoize(Symbol),
-    sizeInBytes: () => MemoryArray.kWordSizeInBytes,
+    sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
     sizeInStackItems: () => 1
   }));
 

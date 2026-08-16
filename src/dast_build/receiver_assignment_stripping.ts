@@ -1,7 +1,6 @@
 import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
-import { Token } from '../token';
 import { DastNode_ } from './dast_node';
 import type { DastVisitor_ } from './dast_visitor';
 
@@ -41,7 +40,7 @@ export const ReceiverAssignmentStripping = freeze({
       interior: memoize((): DastNode | undefined => {
         if (!inst.nameTarget()) return undefined;
 
-        return DastNode_.makeFringe(Token.kContextToken.content());
+        return DastNode_.makeFringe(FunctionNamingSchema.kContextName);
       }),
       error
     });

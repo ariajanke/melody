@@ -1,4 +1,4 @@
-import { Helpers, StandardError, StandardErrorFn } from '../helpers';
+import { Helpers, StandardError, StandardErrorFn, raise } from '../helpers';
 import { Token, TokenType } from '../token';
 import { TokenRange } from '../token_range';
 import { ContinuingAfterOperatorBuild } from './continuing_after_operator_build';
@@ -46,7 +46,7 @@ export const TreePartBuild = (() => {
   const kTokenTypes = Token.types;
 
   type BsaFunc = () => BuildStateAddition | undefined;
-  const unimplemented: BsaFunc = () => { throw new Error('unimplemented'); };
+  const unimplemented: BsaFunc = () => raise('unimplemented');
 
   // sort of taken to mean "I want a node(s)"
   function make(mTokenRange: TokenRange): TreePartBuild {
@@ -63,11 +63,9 @@ export const TreePartBuild = (() => {
       { [type in TokenType]: BsaFunc } =
     freeze({
       [kTokenTypes.functionDefinition]: unimplemented,
-      [kTokenTypes.special           ]: unimplemented,
-
       [kTokenTypes.identifier    ]: switchToFringe,
       [kTokenTypes.stringLiteral ]: switchToFringe,
-      [kTokenTypes.integerLiteral]: switchToFringe,
+      [kTokenTypes.numericLiteral]: switchToFringe,
       [kTokenTypes.grouping      ]: () => {
         const start = startToken();
         const { build, error } = StartGroupBuild.

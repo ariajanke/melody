@@ -3,7 +3,6 @@ import { CodeWriter } from '../../code_writer';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers } from '../../helpers';
-import { MemoryArray } from '../../memory_array';
 import { ContextFrameStack } from '../context_frame_stack';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
@@ -11,6 +10,7 @@ import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { ContextLinkStage_ } from './context_link_stage';
 import { BuiltinTypeBase } from '../builtin_type_base';
 import { FunctionOpLookUp, WritableObjectType } from './writable_object_type';
+import { WasmCompilation } from '../../wasm_compilation';
 
 const { freeze, memoize } = Helpers;
 
@@ -58,7 +58,7 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
       ...BuiltinTypeBase.makeNewWithDefaults(),
       name: () => mFrameName,
       // NOTE: Just a pointer for the reference type.
-      sizeInBytes: () => MemoryArray.kWordSizeInBytes,
+      sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
       sizeInStackItems: () => 1
     })));
 

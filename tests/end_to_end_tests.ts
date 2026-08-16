@@ -34,6 +34,8 @@ describe('happy path end-to-end', () => {
          `, {
             ...Compiler.defaultInjections(),
             puts(str: string) {
+              if (str === '\n')
+                { return; }
               printedStrings.push(str);
             }
           });

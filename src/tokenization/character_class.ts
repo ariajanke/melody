@@ -1,86 +1,120 @@
+import { GroupingNamingSchema } from '../grouping_naming_schema';
 import { Helpers } from  '../helpers';
+import { OperatorNamingSchema } from '../operator_naming_schema';
 
-const characterClassNames =
-  [
-    'numeric'   ,
-    'alphabetic',
-    'operative' ,
-    'spacious'  ,
-    'newLine'   ,
-    'literal'
-  ] as const;
+export type CharacterClassName =
+  'alphabetic' |
+  'hash' |
+  'negative' |
+  'newLine' |
+  'numeric' |
+  'operative' |
+  'whitespace' |
+  'stringLiteral' |
+  'grouping' |
+  'identifierLiteral' |
+  'escape';
+type ExtendedCharacterClassName = CharacterClassName | 'special';
+type MutCodeMap = { [charCode: number]: ExtendedCharacterClassName | undefined };
+type CodeMap = Readonly<MutCodeMap>;
 
-export type CharacterClassName = typeof characterClassNames[number];
+const { freeze, memoize } = Helpers;
 
-export const CharacterClass = (() => {
+const kNewLine = '\n';
+const kNegative = OperatorNamingSchema.kMinus;
+const kHash = '#';
+const kSingleQuote = '\'';
+const kCurlOpen = '{';
+const kCurlClose = '}';
+const kEscape =  '\\';
+const kDollar = '$';
+const kColon = ':';
+const kNumericCharacters =
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] as const;
+const kWhitespace = [' ', '\t', '\r'] as const;
+const kOperativeCharacters = [
+  ...OperatorNamingSchema.kOperatorCharacters.filter(v => v !== kNegative),
+  kColon
+] as const;
+const kSpecial = [kCurlClose, kCurlOpen] as const;
 
-  const { freeze } = Helpers;
+function intoLookUpMap
+  (charClass: ExtendedCharacterClassName, charStrings: Readonly<string[]>)
+: CodeMap
+{
+  return freeze(charStrings.reduce((prev: MutCodeMap, char: string) => {
+    prev[char.codePointAt(0) as number] = charClass;
+    return prev;
+  }, {} as MutCodeMap));
+}
 
-  function safeOneCharJumpTable
-    (charsPairs: [number | undefined, CharacterClassName][]):
-    CharacterClassName[]
-  {
-    const arr: CharacterClassName[] = [];
-    charsPairs.forEach((pair: [number | undefined, CharacterClassName]) => {
-      if (pair[0])
-        arr[pair[0]] = pair[1];
-    });
+const numericCodes = memoize((): CodeMap =>
+  intoLookUpMap('numeric', kNumericCharacters));
 
-    return arr;
-  }
+const whitespaceCodes = memoize((): CodeMap =>
+  intoLookUpMap('whitespace', kWhitespace));
 
-  const classes = Helpers.toNamedMap(characterClassNames);
+const fullCodeMap = memoize((): CodeMap => freeze({
+  ...intoLookUpMap('hash', [kHash]),
+  ...intoLookUpMap('negative', [kNegative]),
+  ...intoLookUpMap('newLine', [kNewLine]),
+  ...numericCodes(),
+  ...intoLookUpMap('operative', kOperativeCharacters),
+  ...whitespaceCodes(),
+  ...intoLookUpMap('stringLiteral', [kSingleQuote]),
+  ...intoLookUpMap('special', kSpecial),
+  ...intoLookUpMap('grouping', GroupingNamingSchema.kGroupingCharacters),
+  ...intoLookUpMap('identifierLiteral', [kDollar]),
+  ...intoLookUpMap('escape', [kEscape])
+}));
 
-  function arrayAsCharacterSetFor
-    (arr: string[], characterClass: CharacterClassName):
-    [number | undefined, CharacterClassName][]
-  {
-    return arr.
-      map((k: string) => ([k.codePointAt(0), characterClass]));
-  }
-
-  const kCharacterToCharacterClass: [number | undefined, CharacterClassName][] =
-    [
-      ...arrayAsCharacterSetFor(
-        [
-          '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'
-        ],
-        classes.numeric),
-      ...arrayAsCharacterSetFor(
-        [
-          '=', ':', ',', '.', '(', ')', '{', '}', '*', '+', '*'
-        ],
-        classes.operative),
-      ...arrayAsCharacterSetFor(
-        [
-          ' ', '\t', '\r'
-        ],
-        classes.spacious),
-      ...arrayAsCharacterSetFor(
-        [
-          '\''
-        ],
-        classes.literal),
-      ...arrayAsCharacterSetFor(['\n'], classes.newLine)
-    ];
-
-  const jumpToClass = safeOneCharJumpTable(kCharacterToCharacterClass);
+const commonCharacterCodes = memoize(() => {
+  const asCode = (s: string) => s.codePointAt(0) as number;
 
   return freeze({
-    classes,
-
-    classOfString: (character: string): CharacterClassName => {
-      if (character.length !== 1) {
-        throw Error(`"${character}" is not one character`);
-      } else if (typeof character !== 'string') {        
-        throw Error(`must provide string only`);
-      }
-
-      return jumpToClass[character.codePointAt(0) as number] ??
-             classes.alphabetic;
-    },
-
-    classOfNonKeyword: (tokenContent: string): CharacterClassName =>
-      CharacterClass.classOfString(tokenContent[0]),
+    colon      : asCode(kColon),
+    equality   : asCode(OperatorNamingSchema.kEquality),
+    newLine    : asCode(kNewLine),
+    curlOpen   : asCode(kCurlOpen),
+    curlClose  : asCode(kCurlClose),
+    negative   : asCode(kNegative),
+    dot        : asCode(OperatorNamingSchema.kDot),
+    escape     : asCode(kEscape),
+    hash       : asCode(kHash),
+    singleQuote: asCode(kSingleQuote),
+    dollar     : asCode(kDollar),
+    tilde      : asCode(GroupingNamingSchema.kBodyClose)
   });
-})();
+});
+
+const isNumeric = (code: number | undefined): boolean =>
+  (code && numericCodes()[code]) !== undefined;
+
+const isWhitespace = (code: number | undefined): boolean =>
+  (code && whitespaceCodes()[code]) !== undefined;
+
+const isAlphabetic = (code: number | undefined) => {
+  if (code === undefined)
+    { return false; }
+
+  return fullCodeMap()[code] === undefined;
+};
+
+function classOfCharacter(charCode: number | undefined): CharacterClassName | undefined {
+  if (!charCode)
+    { return undefined; }
+
+  const class_ = fullCodeMap()[charCode];
+  if (class_ === 'special')
+    { return undefined; }
+
+  return class_ ?? 'alphabetic';
+}
+
+export const CharacterClass = freeze({
+  commonCharacterCodes,
+  isNumeric,
+  isAlphabetic,
+  isWhitespace,
+  classOfCharacter
+});

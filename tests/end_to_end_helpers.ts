@@ -13,6 +13,8 @@ function compileFromSource
   const compiler = Compiler.make(source, {
     ...Compiler.defaultInjections(),
     puts(str: string) {
+      if (str === '\n')
+        { return; }
       console.log(str);
       printedStrings.push(str);
     }

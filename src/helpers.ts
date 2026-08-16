@@ -9,11 +9,10 @@ export const Helpers = Object.freeze({
   expose,
   freeze: !kDebugMode ? Object.freeze : pass,
   makeCounter,
-  mapValues,
   memoize,
-  presenceAsserted,
   toNamedMap,
   verifyInTesting,
+  makeIsStringInLookUpTable
 });
 
 export type StandardErrorMessage = Readonly<{ message: string }>;
@@ -24,6 +23,16 @@ export interface StandardError {
   error: () => StandardErrorMessage,
   hasErrorSet(): boolean
 };
+
+function makeIsStringInLookUpTable(arr: Readonly<string[]>) {
+  type LookUpMap = { [op: string]: true | undefined };
+  const map = arr.reduce((map: LookUpMap, op: string) => {
+    map[op] = true;
+    return map;
+  }, {} as LookUpMap);
+
+  return (sample: string): boolean => map[sample] !== undefined;
+}
 
 export const StandardError = (() => {
   const { freeze } = Helpers;
@@ -54,28 +63,17 @@ export const StandardError = (() => {
   return freeze({ make });
 })();
 
-export interface StandardErrorCollection {
-  addErrorFn: (fn: StandardErrorFn) => undefined;
-  addError: (message: string) => undefined;
-  errors: () => Readonly<StandardErrorMessage[]>;
-};
+export const InternalNaming = Object.freeze({
+  mapToInternalName(name: string): string {
+    if (InternalNaming.isInternalName(name))
+      { raise(`"${name}" is already an internal name`); }
 
-// export const StandardErrorCollection = (() => {
-//   const { freeze } = Helpers;
-
-//   function make() {
-//     const mErrors: StandardErrorMessage[] = [];
-//     function addErrorMessage(message: string): undefined
-//       { mErrors.push({ message }); }
-//     function addErrorFn(fn: StandardErrorFn): undefined
-//       { addError(fn()); }
-//     function errors(): Readonly<StandardErrorMessage[]>
-//       { return mErrors; }
-//     return freeze({ addErrorFn, errors });
-//   }
-
-//   return freeze({ make });
-// })();
+    return `<${name}>`;
+  },
+  isInternalName(name: string): boolean {
+    return name[0] === '<' && name.endsWith('>');
+  }
+});
 
 export const FinishingMemoization = (() => {
   const kUninitializedGuard = (): void => {
@@ -116,35 +114,7 @@ function verifyInTesting() {
   throw Error('Cannot be called outside of a testing environment');
 }
 
-function presenceAsserted<Type>(fn: () => Type | undefined) {
-  return () => fn() ?? (() => {
-    throw new Error('Presence assertion failed');
-  })();
-}
-
 function pass<Type>(arg: Type): Readonly<Type> { return arg; }
-
-function forEachKeyIn<Type>
-  (obj: { [id: symbol | string]: Type },
-   fn: (key: string | symbol) => void)
-{
-  Object.getOwnPropertySymbols(obj).forEach(fn);
-  Object.getOwnPropertyNames(obj).forEach(fn);
-}
-
-function mapValues<FromType, ToType>
-  (obj: { [id: symbol | string]: FromType },
-   fn: (value: FromType, key: string | symbol) => ToType):
-  { [id: symbol | string]: ToType }
-{
-  const transformedObj = obj as
-    { [id: symbol | string]: unknown } as
-    { [id: symbol | string]: ToType };
-  forEachKeyIn(obj, (key: string | symbol): void => {
-    transformedObj[key] = fn(obj[key], key);
-  });
-  return transformedObj;
-}
 
 function expose(braceEnclosedVar: { [name: string]: object }): void {
   const setToWindow = (k: string) => {

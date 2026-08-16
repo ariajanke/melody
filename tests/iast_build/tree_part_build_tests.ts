@@ -3,6 +3,8 @@ import { Token } from '../../src/token';
 import { TokenRange } from '../../src/token_range';
 import { BuildStateAddition, TreePartBuild, type BuildSink } from '../../src/iast_build/tree_part_build';
 import { type IastNode } from '../../src/iast_node';
+import { TokenFactories } from '../token_factories';
+import { OperatorNamingSchema } from '../../src/operator_naming_schema';
 
 const { describeNamed } = TestHelpers;
 
@@ -11,7 +13,7 @@ describeNamed({ TreePartBuild }, () => {
   const make = (tokens: string[]): TreePartBuild =>
     TreePartBuild.
       make(TokenRange.
-           makeStartingRange(tokens.map(Token.forTesting.makeFromStringOnly)));
+           makeStartingRange(tokens.map(TokenFactories.makeFromStringOnly)));
 
   const makeBuildSink =
     ({
@@ -85,7 +87,7 @@ describeNamed({ TreePartBuild }, () => {
         const sink = makeBuildSink({
           pushToken(token: Token, operandRelation: string) {
             expect(operandRelation).toEqual('binary');
-            expect(token.content()).toEqual(Token.kCallToken.content());
+            expect(token.content()).toEqual(OperatorNamingSchema.kCall);
             hitsAtExactly(1);
             return sink;
           },

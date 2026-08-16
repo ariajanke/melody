@@ -1,9 +1,9 @@
 import { Helpers } from '../src/helpers';
 import { IastNode } from '../src/iast_node';
-import { Token } from '../src/token';
+import { TokenFactories } from './token_factories';
 
 const { freeze } = Helpers;
-const makeToken = Token.forTesting.makeFromStringOnly;
+const makeToken = TokenFactories.makeFromStringOnly;
 const makeFringe = (v: string): IastNode => IastNode.makeFringe(makeToken(v));
 const { makeLetDeclation } = IastNode.forOperativeStatements;
 const makeCallWithNodes = IastNode.forOperativeStatements.makeCall;

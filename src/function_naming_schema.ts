@@ -1,4 +1,5 @@
-import { Helpers, raise } from './helpers';
+import { Helpers, raise, InternalNaming } from './helpers';
+import { OperatorNamingSchema } from './operator_naming_schema';
 
 const { freeze } = Helpers;
 
@@ -14,24 +15,15 @@ function mapToInitialSetName(names: string | readonly string[]): string {
   return mapToInitialSetName(names.join(','));
 }
 
-function mapToInternalName(name: string): string {
-  if (name[0] === '<' || name.endsWith('>')) {
-    raise(`Unexpected internal name "${name}"`);
-  }
-  return `<${name}>`;
-}
-
-const kAssignmentOperator = ':=';
+const { mapToInternalName } = InternalNaming;
+const kAssignmentOperator = OperatorNamingSchema.kAssignment;
 
 export type ContextFunctionGroup = 'initialSet' | 'assignment' | 'accessor';
 
 export const FunctionNamingSchema = freeze({
-  kAssignmentOperator,
-  kEqualityOperator: '=',
   kContextName: mapToInternalName('context'),
   kParentName: mapToInternalName('parent'),
   kNoneName: mapToInternalName('none'),
-  kCallName: mapToInternalName('call'),
   uniqueFrameNameFor(n: number): string { return mapToInternalName(`frame:${n}`); },
   mapToInternalName,
   mapToInitialSetName,

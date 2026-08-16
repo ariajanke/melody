@@ -2,7 +2,7 @@ import { ReceiverAssignmentStripping } from '../../src/dast_build/receiver_assig
 import { TestHelpers } from '../test_helpers';
 import { DastNode_ } from '../../src/dast_build/dast_node';
 import { DastCall } from '../../src/dast_build/dast_node_specializations';
-import { Token } from '../../src/token';
+import { FunctionNamingSchema } from '../../src/function_naming_schema';
 
 const { describeNamed } = TestHelpers;
 
@@ -15,7 +15,7 @@ describeNamed({ ReceiverAssignmentStripping }, () => {
         make(makeFringe('a'));
       expect(nameTarget()).toEqual('a:=');
       const interior_ = interior();
-      expect(interior_?.asString()).toEqual(Token.kContextToken.content());
+      expect(interior_?.asString()).toEqual(FunctionNamingSchema.kContextName);
     });
   });
 

@@ -1,57 +1,54 @@
-import { CharacterCrawler } from './tokenization/character_crawler';
-import { CharacterClass, CharacterClassName }
-  from './tokenization/character_class';
-import { Helpers } from './helpers';
-import { Token, TokenType } from './token';
+import { Helpers, raise } from './helpers';
+import { Token } from './token';
 import { TokenRange } from './token_range';
+import { CrawlStrategies } from './tokenization/crawl_strategies';
+import { CrawlerStrategy, SourceReader } from './tokenization/crawler_strategy';
+import { TokenLoopState } from './tokenization/token_loop_state';
 
 const { memoize, freeze } = Helpers;
 
 export interface Tokenization {
-  tokenize: (input: string) => TokenRange
+  tokens(): Readonly<Token[]>;
+  tokenRange(): TokenRange;
+};
+
+function make(mSourceCode: string): Tokenization {
+  const mState = TokenLoopState.make(mSourceCode);
+
+  const mSource: SourceReader = freeze({
+    codePointAt(i: number): number | undefined {
+      const { length } = mSourceCode;
+      if (i > length + 1)
+        { raise(`Index too far out of bound (${i}, for length ${length}`); }
+
+      return mSourceCode.codePointAt(i);
+    },
+    strategyFor(position: number): CrawlerStrategy
+      { return CrawlStrategies.for_(mSource, position); }
+  });
+  
+  const tokens = memoize((): Readonly<Token[]> => {
+    while (true) {
+      const position = mState.position();
+      const crawler = mState.
+        topStrategyPatch().
+        strategyFor(mSource, position) ??
+        mSource.strategyFor(position);
+      const nextState = crawler.findNext(mSource, mState);
+      if (nextState.position() <= position)
+        { raise('must advance position!'); }
+
+      if (mSource.codePointAt(nextState.position()) !== undefined)
+        { continue; }
+
+      return mState.tokens();
+    }
+  });
+
+  const tokenRange = memoize((): TokenRange =>
+    TokenRange.makeStartingRange(tokens().slice()));
+
+  return freeze({ tokens, tokenRange });
 }
 
-const getCharacterClassToTokenTypeMap = (() => {
-  function makeCharacterClassToTokenTypeMap() {
-    const { classes } = CharacterClass;
-    const { types   } = Token;
-    return freeze({
-      [classes.numeric ]: (): TokenType => types.integerLiteral,
-      [classes.literal ]: (): TokenType => types.stringLiteral ,
-      [classes.spacious]: (): TokenType =>
-        { throw Error(`May not use whitespace as a token`); },
-      [classes.newLine ]: (): TokenType => types.newLine
-    }) as { [name in CharacterClassName]: () => TokenType };
-  }
-
-  let sMap: { [charClass in CharacterClassName]: () => TokenType } | undefined = undefined;
-  return () => sMap ??= makeCharacterClassToTokenTypeMap();
-})();
-
-const class_ = freeze({
-  defaultInjections: memoize(() => freeze({ CharacterCrawler, TokenRange })),
-  make:
-    ({ CharacterCrawler, TokenRange } = class_.defaultInjections()): Tokenization =>
-    freeze({
-      tokenize: (inp: string): TokenRange => {
-        const rv: Token[] = [];
-        const crawler = CharacterCrawler.make(inp);
-        while (!crawler.reachedEnd()) {
-          const readToken = crawler.crawl().readToken();
-          rv.push(readToken);
-        }
-        return TokenRange.makeStartingRange(rv);
-      }
-    }),
-  tokenTypeOfNonKeyword:
-    (tokenContent: string, charClassClass = CharacterClass): TokenType =>
-  {
-    const charClass = charClassClass.classOfNonKeyword(tokenContent);
-    const getter =
-      getCharacterClassToTokenTypeMap()[charClass] ?? 
-      ((): TokenType => Token.types.identifier);
-    return getter();
-  }
-});
-
-export const Tokenization = class_;
+export const Tokenization = freeze({ make });

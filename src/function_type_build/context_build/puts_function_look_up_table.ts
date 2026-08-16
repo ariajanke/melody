@@ -10,7 +10,7 @@ import { LiteralFunctionTypeBuild } from '../literal_function_type_build';
 const { freeze, memoize } = Helpers;
 
 const emitNlFtype = memoize(() =>
-  LiteralFunctionTypeBuild.makeForString('\'\n\'').functionType()!);
+  LiteralFunctionTypeBuild.makeForString('\n').functionType()!);
 
 // TODO accept nested tuples
 function make(): FunctionLookUpTable {
@@ -62,7 +62,7 @@ function make(): FunctionLookUpTable {
         return (cw: CodeWriter) => {
           p(cw);
           cw[c]();
-        }
+        };
     }, (_0: CodeWriter) => {});
 
   function makePutsFunctionFor(type: ObjectType): MappingEntry {

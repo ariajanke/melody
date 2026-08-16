@@ -1,4 +1,4 @@
-import { CallBackObjectHold } from '../call_back_object_hold';
+import { CallBackObjectHold } from './call_back_object_hold';
 import { DastBuild, DastNode, WritableDastDeclarationMap } from '../dast_build';
 import { GenericSet, StandardError, raise } from '../helpers';
 import { IastNode } from '../iast_node';

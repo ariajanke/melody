@@ -1,15 +1,15 @@
 import { TestHelpers } from '../test_helpers';
 import { TokenRange } from '../../src/token_range';
-import { Token } from '../../src/token';
 import {
   FnClosePositionRetrieval
 } from '../../src/iast_build/fn_close_position_retrieval';
+import { TokenFactories } from '../token_factories';
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ FnClosePositionRetrieval }, () => {
   const make = (...tokenStrings: string[]): FnClosePositionRetrieval => {
-    const { makeFromStringOnly } = Token.forTesting;
+    const { makeFromStringOnly } = TokenFactories;
     const range = TokenRange.makeStartingRange(tokenStrings.map(makeFromStringOnly));
     const open = range.startToken();
     return FnClosePositionRetrieval.make(range.step(), open);

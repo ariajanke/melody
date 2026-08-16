@@ -7,7 +7,7 @@ import { Helpers, StandardError } from '../helpers';
 import { IastNode, IastVisitor } from '../iast_node';
 import { DastCallBuild } from './dast_call_build';
 import { DastNode_ } from './dast_node';
-import { CallBackObjectHold } from '../call_back_object_hold';
+import { CallBackObjectHold } from './call_back_object_hold';
 import { DastFunctionDefintionBuild } from './dast_function_definition_build';
 import { DastTupleBuild } from './dast_tuple_build';
 import { DastLetBuild } from './dast_let_build';

@@ -2,6 +2,7 @@ import { DastDeclarationMap } from '../../dast_build';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionLookUpTable } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
+import { OperatorNamingSchema } from '../../operator_naming_schema';
 import { ContextDeclarationBuild } from '../context_build';
 import { TupleObjectFactory } from '../tuple_type_factory';
 import { ContextTypeProgression_ } from './context_declaration_build';
@@ -43,7 +44,7 @@ function make
       lookUp(fname)?.
       byParameters(TupleObjectFactory.emptyTuple())?.
       returns()?.
-      lookUp(FunctionNamingSchema.kCallName);
+      lookUp(OperatorNamingSchema.kCall);
     
     if (!isCallable)
       { return wobj; }

@@ -1,10 +1,11 @@
-import { Helpers, StandardError } from '../helpers';
+import { Helpers, raise, StandardError } from '../helpers';
 import { Token, TokenType } from '../token';
 import { TokenRange } from '../token_range';
 import { BuildSink, BuildStateAddition, TreePartBuild } from './tree_part_build';
 import { ContinuingAfterOperatorBuild } from './continuing_after_operator_build';
 import { StartGroupBuild } from './start_group_build';
 import { IastNode } from '../iast_node';
+import { GroupingNamingSchema } from '../grouping_naming_schema';
 
 const { freeze } = Helpers;
 const kTokenTypes = Token.types;
@@ -19,11 +20,17 @@ export const ContinuingAfterSingleValueBuild = freeze({
 
     const handleGrouping = () => {
       const start = startToken();
+      if (start.content() === GroupingNamingSchema.kFunctionDefinition) {
+        raise('unhandled');
+      } else if (start.content() === GroupingNamingSchema.kBodyClose) {
+        return handleFringeNext();
+      }
+      const callToken = Token.makeCallAfter(start);
       const tpb = StartGroupBuild.make(mTokenRange.step(), start);
       return BuildStateAddition.make((sink: BuildSink) => {
         sink.
           pushNode(mCompleteNode).
-          pushToken(Token.kCallToken, 'binary').
+          pushToken(callToken, 'binary').
           pushPart(tpb);
       });
     };
@@ -41,12 +48,9 @@ export const ContinuingAfterSingleValueBuild = freeze({
     const kNextTokenStrategies:
       { [type in TokenType]: () => BuildStateAddition | undefined } =
     freeze({
-      [kTokenTypes.special       ]: () => {
-        throw new Error('unimplemented');
-      },
       [kTokenTypes.identifier    ]: handleFringeNext,
       [kTokenTypes.stringLiteral ]: handleFringeNext,
-      [kTokenTypes.integerLiteral]: handleFringeNext,
+      [kTokenTypes.numericLiteral]: handleFringeNext,
       [kTokenTypes.grouping      ]: handleGrouping,
       [kTokenTypes.operator      ]: handleOperator,
       [kTokenTypes.newLine       ]: () => {

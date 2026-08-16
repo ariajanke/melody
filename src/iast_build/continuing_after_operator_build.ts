@@ -6,6 +6,7 @@ import { ContinuingAfterSingleValueBuild } from './continuing_after_single_value
 import { StartGroupBuild } from './start_group_build';
 import { StartFunctionDefinitionBuild } from './start_function_definition_build';
 import { IastNode } from '../iast_node';
+import { GroupingNamingSchema } from '../grouping_naming_schema';
 
 export const ContinuingAfterOperatorBuild = (() => {
   const { freeze } = Helpers;
@@ -29,11 +30,8 @@ export const ContinuingAfterOperatorBuild = (() => {
       const kPeakAheadStrategies:
         { [type in TokenType]: () => BuildStateAddition | undefined } =
       freeze({
-        [kTokenTypes.special       ]: () => {
-          throw new Error('unimplemented');
-        },
         [kTokenTypes.identifier    ]: handlePeekAheadFringe,
-        [kTokenTypes.integerLiteral]: handlePeekAheadFringe,
+        [kTokenTypes.numericLiteral]: handlePeekAheadFringe,
         [kTokenTypes.stringLiteral ]: handlePeekAheadFringe,
         [kTokenTypes.newLine       ]: () => {
           mTokenRange.skipNewLine();
@@ -42,6 +40,11 @@ export const ContinuingAfterOperatorBuild = (() => {
         },
         [kTokenTypes.grouping      ]: () => {
           const start_ = startToken();
+          if (start_.content() === GroupingNamingSchema.kFunctionDefinition) {
+            return kPeakAheadStrategies[kTokenTypes.functionDefinition]();
+          } else if (start_.content() === GroupingNamingSchema.kBodyClose) {
+            return kPeakAheadStrategies[kTokenTypes.identifier]();
+          }
           mTokenRange.step();
           if (mTokenRange.isEmpty()) {
             return setErrorMessage('unexpected end after operator starting grouping');

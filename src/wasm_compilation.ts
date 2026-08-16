@@ -134,4 +134,8 @@ function make(mRegistry: FunctionDefinitionRegistry,
   });
 }
 
-export const WasmCompilation = freeze({ make, defaultInjections });
+export const WasmCompilation = freeze({
+  make,
+  defaultInjections,
+  kWordSizeInBytes: 4
+});

@@ -1,4 +1,4 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { Token } from '../token';
 import {
   type OperativeStatementVisitable,
@@ -6,6 +6,7 @@ import {
 } from './operative_statement_builder';
 import { OperatorDefinitions } from './operator_definitions';
 import { IastNode } from '../iast_node';
+import { OperatorNamingSchema } from '../operator_naming_schema';
 
 const { freeze } = Helpers;
 
@@ -24,7 +25,7 @@ export const OperativeStatementAstCreation = freeze({
   make: (): OperativeStatementAstCreation => {
     const mNodeStack: IastNode[] = [];
     const popOrThrow = () => {
-      return mNodeStack.pop() ?? (() => { throw new Error('nodes depleted'); })();
+      return mNodeStack.pop() ?? raise('nodes depleted');
     };
     const binaryOperator = (token: Token) => {
       const first = popOrThrow();
@@ -50,8 +51,8 @@ export const OperativeStatementAstCreation = freeze({
     const { binaryListing, unaryListing } = OperatorDefinitions;
     const mSpecialOperatorFactories: { [op: string]: typeof letOperator } = {
       [','  ]: tupleOperator ,
-      ['let']: letOperator   ,
-      [Token.kCallToken.content()]: functionCall
+      [OperatorNamingSchema.kLet ]: letOperator ,
+      [OperatorNamingSchema.kCall]: functionCall
     };
     const inst = freeze({
       visitToken   : (token: Token) => {

@@ -4,6 +4,7 @@ import { Helpers, raise } from '../../helpers';
 import { FunctionTypeBase } from '../function_type_base';
 import { TupleObjectFactory } from '../tuple_type_factory';
 import { CodeWriter } from '../../code_writer';
+import { OperatorNamingSchema } from '../../operator_naming_schema';
 
 const { freeze } = Helpers;
 
@@ -31,7 +32,7 @@ function make
   : FunctionType | undefined
 {
   const lookUp = mPossibleIndexGetter.returns().
-    lookUp(FunctionNamingSchema.kCallName);
+    lookUp(OperatorNamingSchema.kCall);
   if (!lookUp)
     { return undefined; }
 

@@ -1,85 +1,40 @@
-import { CharacterClass } from './character_class';
+import { Helpers, raise } from '../helpers';
+import { CharacterClass, CharacterClassName } from './character_class';
+import {
+  CrawlerStrategy,
+  SourceReader,
+} from './crawler_strategy';
+import { HashCrawler } from './hash_crawler';
+import { NewLineCrawler } from './new_line_crawler';
+import { NumericCrawler } from './numeric_crawler';
+import { SimpleCrawlers } from './simple_crawlers';
+import { StringLiteralStrategy } from './string_literal_crawler';
 
-export const CrawlStrategies = (() => {
-  const { freeze } = Object;
-  const { classes, classOfString } = CharacterClass;
+const { freeze, memoize } = Helpers;
 
-  function crawlAlphanumeric(input: string, start: number): number {
-    const { length } = input;
-    for (let i = start + 1; i < length; ++i) {
-      switch (classOfString(input[i])) {
-      case classes.operative:
-      case classes.spacious:
-      case classes.literal:
-      case classes.newLine:
-        return i;
-      default: break;
-      }
-    }
-    return length;
-  }
+type CharacterClassToStrategyMap = Readonly<{
+  [cc in CharacterClassName]: () => CrawlerStrategy
+}>;
 
-  function crawlStringLiteral(input: string, start: number): number {
-    const { length } = input;
-    for (let i = start + 1; i < length; ++i) {
-      if (classOfString(input[i]) === classes.literal) {
-        return i + 1; // include the close quote
-      }
-    }
-    return length;
-  }
+const characterClassToStrategyMap = memoize((): CharacterClassToStrategyMap => freeze({
+  numeric: NumericCrawler.instance,
+  alphabetic: SimpleCrawlers.alphaNumericCrawler,
+  negative: SimpleCrawlers.negationStrategy,
+  operative: SimpleCrawlers.operatorCrawler,
+  whitespace: SimpleCrawlers.whitespaceStrategy,
+  newLine: NewLineCrawler.instance,
+  grouping: SimpleCrawlers.groupingCrawler,
+  stringLiteral: memoize(StringLiteralStrategy.make),
+  hash: HashCrawler.instance,
+  identifierLiteral: SimpleCrawlers.identifierLiteralCrawler,
+  escape: SimpleCrawlers.escapeCrawler
+}));
 
-  function crawlOperator(input: string, start: number): number {
-    if (start + 1 >= input.length) {
-      return start + 1;
-    } else if (input[start + 1] === '=' && input[start] !== '=') {
-      return start + 2;
-    }
-    return start + 1;
-  }
+function for_(parent: SourceReader, idx: number): CrawlerStrategy {
+  const code = parent.codePointAt(idx);
+  const class_ = CharacterClass.classOfCharacter(code) ??
+    raise(`unexpected unclassifiable character`);
+  return characterClassToStrategyMap()[class_]();
+}
 
-  function crawlSpace(input: string, start: number): number {
-    const { length } = input;
-    for (let i = start + 1; i < length; ++i) {
-      switch (classOfString(input[i])) {
-      case classes.alphabetic:
-      case classes.numeric:
-      case classes.operative:
-      case classes.literal:
-      case classes.newLine:
-        return i;
-      default: break;
-      }
-    }
-    return length;
-  }
-
-  function crawlNewLines(input: string, start: number): number {
-    const { length } = input;
-    for (let i = start + 1; i < length; ++i) {
-      if (classOfString(input[i]) !== classes.newLine) {
-        return i;
-      }
-    }
-    return length;
-  }
-
-  function crawlNumeric(input: string, start: number): number {
-    const { length } = input;
-    for (let i = start + 1; i < length; ++i) {
-      if (classOfString(input[i]) !== classes.numeric) {
-        return i;
-      }
-    }
-    return length;
-  }
-
-  return freeze({
-    [classes.alphabetic]: crawlAlphanumeric ,
-    [classes.literal   ]: crawlStringLiteral,
-    [classes.operative ]: crawlOperator     ,
-    [classes.numeric   ]: crawlNumeric      ,
-    [classes.spacious  ]: crawlSpace        ,
-    [classes.newLine   ]: crawlNewLines
-  });
-})();
+export const CrawlStrategies = freeze({ for_ });

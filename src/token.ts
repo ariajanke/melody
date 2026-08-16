@@ -1,96 +1,91 @@
-import { Tokenization } from './tokenization';
+import { GroupingNamingSchema } from './grouping_naming_schema';
 import { Helpers } from './helpers';
-import { FunctionNamingSchema } from './function_naming_schema';
+import { OperatorNamingSchema } from './operator_naming_schema';
 
-const { freeze, toNamedMap } = Helpers;
+const { freeze, memoize, toNamedMap } = Helpers;
 
 const tokenTypes = [
+  // TODO deprecate, remove pending IAST refactor
   'functionDefinition',
+  //      following remain okay
   'operator'          ,
   'newLine'           ,
   'grouping'          ,
   'identifier'        ,
   'stringLiteral'     ,
-  'integerLiteral'    ,
-  'special'
+  'numericLiteral'    ,
+  'hashLiteral'       ,
+  'concatenation'     
 ] as const;
 
 export type TokenType = typeof tokenTypes[number];
 
 export interface Token {
-  type   : () => TokenType,
-  content: () => string
-  start  : () => number,
-  end    : () => number
+  type   (): TokenType;
+  content(): string;
+  start  (): number;
+  end    (): number;
+};
+
+const types = toNamedMap(tokenTypes);
+
+function makeCallAfter(lastToken: Token): Token {
+  const lastEnd = lastToken.end;
+  return freeze({
+    type: (): TokenType => 'operator',
+    content: () => OperatorNamingSchema.kCall,
+    start: lastEnd,
+    end: lastEnd
+  });
 }
 
-export const Token = (() => {
-  const types = toNamedMap(tokenTypes);
-  const specialType = (): TokenType => 'special';
-  function unimplemented<Type>(desc: string): () => Type {
-    return (): Type => {
-      throw Error(`Cannot call ${desc} unimplemented`);
-    };
-  }
+function makeContentFunction
+  (mParentString: string,
+   mStart: number,
+   mEnd: number)
+{ return memoize((): string => mParentString.substring(mStart, mEnd)); }
 
-  function makeSpecialToken(content_: string): Token {
-    return freeze({
-      type   : specialType,
-      // TODO: try to get rid of this hack, blank token should
-      // never be used
-      content: () => content_,
-      start  : unimplemented<number>('start'),
-      end    : unimplemented<number>('end'  )
-    });
-  };
+function makeAlphaNumeric
+  (mParentString: string,
+   mStart: number,
+   mEnd: number)
+{
+  const content = makeContentFunction(mParentString, mStart, mEnd);
+  const type = memoize((): TokenType => {
+    if (OperatorNamingSchema.isAlphabeticOperator(content()))
+      { return types.operator; }
 
-  const kBlankToken: Token = makeSpecialToken('');
-  const kCallToken : Token = makeSpecialToken('call');
-  const kContextToken: Token = makeSpecialToken(FunctionNamingSchema.kContextName);
-  const kAsnOp = FunctionNamingSchema.kAssignmentOperator;
+    if (GroupingNamingSchema.isGrouping(content()))
+      { return types.grouping; }
 
-  const tokenTypeOf = (() => {
-    const kControlSeqs: { [sequence: string]: TokenType } = freeze({
-      ['let' ]: types.operator,
-      ['fn'  ]: types.functionDefinition,
-      ['('   ]: types.grouping,
-      [')'   ]: types.grouping,
-      [','   ]: types.operator,
-      ['+'   ]: types.operator,
-      ['-'   ]: types.operator,
-      ['*'   ]: types.operator,
-      [kAsnOp]: types.operator,
-      ['='   ]: types.operator
-    });
-
-    return (tokenContent: string, tokenizationClass = Tokenization) =>
-      kControlSeqs[tokenContent] ??
-      tokenizationClass.tokenTypeOfNonKeyword(tokenContent);
-  })();
-
-  function makeFromStringOnly(mContents: string): Token {
-    return construct(mContents, 0, 0);
-  }
-
-  function construct
-    (mTokenContent: string, mStart: number, mEnd: number): Token
-  {
-    let mType: TokenType | undefined = undefined;
-    return freeze({
-      content: (): string => mTokenContent,
-      start  : (): number => mStart,
-      end    : (): number => mEnd,
-      type   : (): TokenType => mType ??= tokenTypeOf(mTokenContent)
-    });
-  }
+    return types.identifier;
+  });
 
   return freeze({
-    make: (mInput: string, mStart: number, mEnd: number): Token =>
-      construct(mInput.substring(mStart, mEnd), mStart, mEnd),
-    types,
-    kBlankToken,
-    kCallToken,
-    kContextToken,
-    forTesting: { makeFromStringOnly }
+    start: () => mStart,
+    end: () => mEnd,
+    content,
+    type
   });
-})();
+}
+
+function make
+  (mParentString: string,
+   mStart: number,
+   mEnd: number,
+   mType: TokenType): Token
+{
+  return freeze({
+    content: makeContentFunction(mParentString, mStart, mEnd),
+    start: (): number => mStart,
+    end  : (): number => mEnd,
+    type : (): TokenType => mType
+  });
+}
+
+export const Token = freeze({
+  make,
+  types,
+  makeCallAfter,
+  makeAlphaNumeric
+});

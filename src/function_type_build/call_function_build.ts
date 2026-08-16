@@ -1,18 +1,18 @@
 import { CodeWriter } from '../code_writer';
 import { DastNode } from '../dast_build';
-import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError, raise } from '../helpers';
+import { OperatorNamingSchema } from '../operator_naming_schema';
 import { ContextFrameSnapshot } from './context_frame_stack';
 import { FunctionTypeBase } from './function_type_base';
 import { TupleObjectFactory } from './tuple_type_factory';
 
 const { freeze, memoize } = Helpers;
-const { kAssignmentOperator } = FunctionNamingSchema;
+const { kAssignment } = OperatorNamingSchema;
 
 const kLogToConsole = false;
 const kAssignmentNotAValidCallName =
-  `"${kAssignmentOperator}" is not a valid call name, DAST build should have ` +
+  `"${kAssignment}" is not a valid call name, DAST build should have ` +
   `stripped it out and replaced it with the appropriate fringe accessor`;
 
 function make
@@ -29,7 +29,7 @@ function make
     const callNameStr = mCallName.asString();
     if (!callNameStr) {
       return setErrorMessage('Cannot use node as a call name');
-    } else if (callNameStr === kAssignmentOperator) {
+    } else if (callNameStr === kAssignment) {
       raise(kAssignmentNotAValidCallName);
     }
 

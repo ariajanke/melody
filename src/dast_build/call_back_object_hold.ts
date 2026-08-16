@@ -1,4 +1,4 @@
-import { Helpers, raise } from './helpers';
+import { Helpers, raise } from '../helpers';
 
 const { freeze } = Helpers;
 

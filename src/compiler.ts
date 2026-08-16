@@ -21,10 +21,9 @@ function make(mSource: string,
   let mError: string | undefined = undefined;
 
   const astBuild = memoize(() => {
-    const tokenization = Tokenization.make();
-    const tokenRange = tokenization.tokenize(mSource);
+    const tokenization = Tokenization.make(mSource);
     
-    return IastBuild.make(tokenRange);
+    return IastBuild.make(tokenization.tokenRange());
   });
 
   const dastBuild = memoize(() => {
