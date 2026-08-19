@@ -15,7 +15,7 @@ import { ReseatableIastVisitor } from '../iast_visitor_factories';
 
 const { describeNamed } = TestHelpers;
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 describeNamed({ LetDeclarationsRetrieval }, () => {
   const makeFringe = (v: string): IastNode =>
@@ -73,8 +73,10 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
       (str: string): DastBuild =>
         makeFromNode(fn(str));
     const visitor: IastVisitor<DastBuild> = {
-      visitFringe: (tok: Token) =>
-        DastNode_.makeFringe(tok),
+      visitFringe: (tok: Token): DastBuild => freeze({
+        node: memoize(() => DastNode_.makeFringe(tok)),
+        error: () => StandardError.make().error(),
+      }),
       visitInteger: forFringe(DastNode_.makeInteger),
       visitTuple(nodes: Readonly<IastNode[]>): DastBuild {
         return makeFromNode(DastTuple.make(nodes.map(node => node.visit(visitor).node()!)));
