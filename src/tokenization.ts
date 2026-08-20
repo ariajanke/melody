@@ -41,6 +41,10 @@ function make(mSourceCode: string): Tokenization {
       if (mSource.codePointAt(nextState.position()) !== undefined)
         { continue; }
 
+      // TODO
+      // concept of a Tokens finisher service, whereby calls (and possible
+      // escapes) come into play, thereby creating a complete picture for TPB
+      // services
       return mState.tokens();
     }
   });

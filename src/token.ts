@@ -6,16 +6,20 @@ const { freeze, memoize, toNamedMap } = Helpers;
 
 const tokenTypes = [
   // TODO deprecate, remove pending IAST refactor
-  'functionDefinition',
+  'functionDefinition', // lose
   //      following remain okay
-  'operator'          ,
-  'newLine'           ,
-  'grouping'          ,
-  'identifier'        ,
-  'stringLiteral'     ,
-  'numericLiteral'    ,
-  'hashLiteral'       ,
-  'concatenation'     
+  'operator'          , // kept
+  'newLine'           , // lose
+  'grouping'          , // lose
+  // 'opening'
+  // 'closing'
+  // 'separator'
+  'identifier'        , // kept
+  // 'literal'           , new
+  'stringLiteral'     , // lose
+  'numericLiteral'    , // lose
+  'hashLiteral'       , // lose
+  'concatenation'       // lose
 ] as const;
 
 export type TokenType = typeof tokenTypes[number];

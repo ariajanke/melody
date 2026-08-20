@@ -49,17 +49,16 @@ export const OperatorDefinitions = freeze({
       const { binary, unary } = OperatorDefinitions.operandRelationships;
       const call = OperatorNamingSchema.kCall;
       const asgn = OperatorNamingSchema.kAssignment;
-      const eqsn = OperatorNamingSchema.kEquality;
       const {
         kLet, kAnd, kOr, kIs, kNot, kComma, kPlus, kMinus, kMultiply, kDivide,
-        kDot
+        kDot, kEquality
       } = OperatorNamingSchema;
       return sFullListing =
         [
           { representation: kLet     , operandRelation: unary  },
           { representation: kComma   , operandRelation: binary },
           { representation: kIs      , operandRelation: binary },
-          { representation: eqsn     , operandRelation: binary },
+          { representation: kEquality, operandRelation: binary },
           { representation: asgn     , operandRelation: binary },
           { representation: kPlus    , operandRelation: binary },
           { representation: kMinus   , operandRelation: binary },
