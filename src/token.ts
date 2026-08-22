@@ -4,25 +4,58 @@ import { OperatorNamingSchema } from './operator_naming_schema';
 
 const { freeze, memoize, toNamedMap } = Helpers;
 
+type LiteralType = 'string' | 'number' | 'hash';
+
 const tokenTypes = [
   // TODO deprecate, remove pending IAST refactor
-  'functionDefinition', // lose
+  // 'functionDefinition', // lose
   //      following remain okay
   'operator'          , // kept
-  'newLine'           , // lose
-  'grouping'          , // lose
-  // 'opening'
-  // 'closing'
-  // 'separator'
+  // 'newLine'           , // lose
+  // 'grouping'          , // lose
+  'opening', // fn, tbl, (
+  'closing', // ~, )
+  'separator', // \n
   'identifier'        , // kept
-  // 'literal'           , new
-  'stringLiteral'     , // lose
-  'numericLiteral'    , // lose
-  'hashLiteral'       , // lose
-  'concatenation'       // lose
+  'literal'           , // new (need sub types then)
+  // 'stringLiteral'     , // lose
+  // 'numericLiteral'    , // lose
+  // 'hashLiteral'       , // lose
+  // 'concatenation'       // lose
 ] as const;
 
+interface TokenTypeFragment {
+  type   (): TokenType;
+  literal(): LiteralType | undefined;
+};
+
 export type TokenType = typeof tokenTypes[number];
+
+const nonLiteraltokenTypes_ = memoize(():
+  Readonly<{ [tt in TokenType]: TokenTypeFragment | undefined }> =>
+freeze({
+  operator: freeze({
+    type   : () => 'operator',
+    literal: () => undefined
+  }),
+  opening: freeze({
+    type   : () => 'opening',
+    literal: () => undefined
+  }),
+  closing: freeze({
+    type   : () => 'closing',
+    literal: () => undefined
+  }),
+  separator: freeze({
+    type   : () => 'separator',
+    literal: () => undefined
+  }),
+  identifier: freeze({
+    type   : () => 'identifier',
+    literal: () => undefined
+  }),
+  literal: undefined
+}));
 
 export interface Token {
   type   (): TokenType;

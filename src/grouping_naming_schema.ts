@@ -4,10 +4,10 @@ const { freeze, makeIsStringInLookUpTable } = Helpers;
 
 const kFunctionDefinition = 'fn';
 const kTableDefinition = 'tbl';
-const kTupleOpen = '(';
-const kTupleClose = ')';
+const kParentheticalOpen = '(';
+const kParentheticalClose = ')';
 const kBodyClose = '~';
-const kGroupingCharacters = [kTupleOpen, kTupleClose, kBodyClose] as const;
+const kGroupingCharacters = [kParentheticalOpen, kParentheticalClose, kBodyClose] as const;
 const kAllGroupings = [...kGroupingCharacters, kFunctionDefinition, kTableDefinition] as const;
 
 export const GroupingNamingSchema = freeze({
@@ -16,5 +16,7 @@ export const GroupingNamingSchema = freeze({
   kAllGroupings,
   kFunctionDefinition,
   kTableDefinition,
+  kParentheticalOpen,
+  kParentheticalClose,
   kBodyClose
 });
