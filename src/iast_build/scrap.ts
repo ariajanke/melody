@@ -1,5 +1,6 @@
 import { GroupingNamingSchema } from '../grouping_naming_schema';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
+import { IastNode } from '../iast_node';
 import { Token } from '../token';
 
 const { freeze, memoize } = Helpers;
@@ -81,66 +82,43 @@ const TableSegmentation = freeze({
   }
 });
 
+interface ExpressionScanningStrategy {
+  groupingConstructorFor(token: Token): SegmentationConstructor | undefined;
+  assertIsOpening(token: Token | undefined): void;
+  isAbruptClosing(token: Token | undefined): boolean;
+  isProperClosing(token: Token | undefined): boolean;
+  continuesFor(token: Token): boolean;
+};
+
 const ParentheticalSegmentation = freeze({
   isOpening(token: Token): boolean {
     return token.content() === GroupingNamingSchema.kParentheticalOpen &&
            token.type() === 'opening';
   },
-  assertIsOpening(token: Token): void {
-    if (ParentheticalSegmentation.isOpening(token))
+  assertIsOpening(token: Token | undefined): void {
+    if (token && ParentheticalSegmentation.isOpening(token))
       { return; }
-    raise(`"${token.content()}" is not a parenthetical opening`);
+    raise(`"${token?.content() ?? '<EMPTY>'}" is not a parenthetical opening`);
   },
+  strategy: memoize((): ExpressionScanningStrategy => freeze({
+    assertIsOpening(token: Token | undefined) {
+      ParentheticalSegmentation.assertIsOpening(token);
+    },
+    isAbruptClosing: Segment.isClosing,
+    isProperClosing(token: Token | undefined): boolean {
+      return token?.type() === Token.types.closing &&
+             token?.content() === GroupingNamingSchema.kParentheticalClose;
+    },
+    continuesFor(token: Token): boolean {
+      const { type } = token;
+      return type() === Token.types.separator ||
+             LineSegmentation.strategy().continuesFor(token);
+    },
+    groupingConstructorFor: Segment.groupingConstructorFor
+  })),
   make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
-    ParentheticalSegmentation.assertIsOpening(mTokens[mStart]);
-    const { error, setErrorMessage, setErrorFn } = StandardError.make();
-    
-    const closingPair = memoize((): ClosingPair | undefined => {
-      let childGatherer = ChildSegmentGatherer.defaultEmpty();
-      for (let idx = mStart; idx < mEnd; ++idx) {
-        if (Segment.isClosing(mTokens[idx])) {
-          const tok: Token | undefined = mTokens[idx];
-          if (tok?.content() === GroupingNamingSchema.kParentheticalClose) {
-            return { index: idx, children: childGatherer.children };
-          }
-          return setErrorMessage(`unexpected close found at ${idx}`);
-        }
-
-        const token = mTokens[idx];
-        const { type, content } = mTokens[idx];
-
-        const ctor = Segment.groupingConstructorFor(token);
-        if (ctor) {
-          const { segment, error } = ctor(mTokens, idx, mEnd);
-          if (!segment()) {
-            return setErrorFn(error);
-          }
-          idx = segment()!.end() - 1;
-          childGatherer = childGatherer.ensureMutable().pushChild(segment()!);
-        }
-
-        if (type() === Token.types.separator)
-          { continue; }
-        if (type() === Token.types.identifier ||
-            type() === Token.types.literal ||
-            type() === Token.types.operator)
-        { continue; }
-        raise(`Unhandled token type "${type()}", content "${content()}"`);
-      }
-    });
-
-    const segment = memoize((): Segment | undefined => {
-      if (!closingPair())
-        { return undefined; }
-
-      return freeze({
-        start: () => mStart,
-        end  : () => closingPair()!.index,
-        children: closingPair()!.children
-      });
-    });
-
-    return freeze({ segment, error });
+    return ExpressionSegmentation.
+      make(mTokens, mStart, mEnd, ParentheticalSegmentation.strategy());
   }
 });
 
@@ -162,31 +140,30 @@ const FunctionDefinitionSegmentation = freeze({
   },
   make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
     FunctionDefinitionSegmentation.assertIsOpening(mTokens[mStart]);
-    // find the def closing...
-    // explicitly by "~"
-    // implicitly by "e" followed by "\n"
-    //   where "e" is a non parenthetical expression
+    const { error, setErrorFn } = StandardError.make();
     const heading = memoize((): Segmentation =>
       FunctionHeadSegmentation.make(mTokens, mStart, mEnd));
     const body = memoize(() => {
-      if (!heading().segment()) {
-        return 
-      }
+      const { segment } = heading();
+      if (!segment())
+        { return setErrorFn(heading().error); }
 
-      const segment_ = heading().segment()!;
-      // body start just beyond the head
-      // how the body closes depends on what the head stepped over...
-
+      const m = FunctionBodySegmentation.
+        make(mTokens, segment()!.start(), mEnd);
+      return m.segment() ?? setErrorFn(m.error);
     });
+
+    // NOTE ignore head for now
+    const segment = body;
+
+    return freeze({ segment, error });
   }
 });
 
 const FunctionHeadSegmentation = freeze({
   make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
     FunctionDefinitionSegmentation.assertIsOpening(mTokens[mStart]);
-    const { error, setErrorMessage, setErrorFn } = StandardError.make();
-
-    // next parenthetical segment is considered to be the parameter list
+    const { error, setErrorMessage } = StandardError.make();
 
     const headStart = memoize((): number | undefined => {
       let separatorCount = 0;
@@ -228,9 +205,9 @@ const FunctionHeadSegmentation = freeze({
       return parenthetical.segment();
     });
 
-    return freeze({ segment });
+    return freeze({ segment, error });
   }
-}); // fn onward
+});
 
 const FunctionBodySegmentation = freeze({
   assertIsClosing(token: Token | undefined) {
@@ -238,32 +215,142 @@ const FunctionBodySegmentation = freeze({
       { return; }
     raise('body must end on a closing');
   },
-  make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number) {
+  strategy: memoize((): ExpressionScanningStrategy => freeze({
+    assertIsOpening(token: Token | undefined) {
+      ParentheticalSegmentation.assertIsOpening(token);
+    },
+    isAbruptClosing(token: Token | undefined): boolean {
+      return Segment.isClosing(token);
+    },
+    isProperClosing(token: Token | undefined): boolean {
+      return token?.type() === Token.types.closing &&
+             token?.content() === GroupingNamingSchema.kParentheticalClose;
+    },
+    continuesFor(token: Token): boolean {
+      const { type } = token;
+      return type() === Token.types.separator ||
+             type() === Token.types.identifier ||
+             type() === Token.types.literal ||
+             type() === Token.types.operator;
+    },
+    groupingConstructorFor: Segment.groupingConstructorFor
+  })),
+  make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
     FunctionBodySegmentation.assertIsClosing(mTokens[mEnd]);
+    const { error, setErrorMessage, setErrorFn } = StandardError.make();
 
-    function nextLineFrom(idx: number): number {
-      for (; idx < mEnd; ++idx) {
-        const tok = mTokens[idx];
-        if (tok.type() === Token.types.separator) {
-          return idx;
-        }
-        // typical statement rules...
-      }
-      return idx;
-    }
-
-    const segments = memoize(() => {
+    const children = memoize(() => {
+      let childGatherer = ChildSegmentGatherer.defaultEmpty();
       for (let idx = mStart; idx < mEnd; ) {
-        idx = nextLineFrom(idx);
+        const { segment, error } = LineSegmentation.make(mTokens, idx, mEnd);
+        if (!segment()) {
+          return setErrorFn(error);
+        }
+        childGatherer = childGatherer.ensureMutable().pushChild(segment()!);
+        idx = segment()!.end();
       }
+      return childGatherer.children();
     });
     
 
   }
 });
-const ExpressionSegmentation;
+
+const LineSegmentation = freeze({
+  strategy: memoize((): ExpressionScanningStrategy => freeze({
+    assertIsOpening(token: Token | undefined) {
+      return token !== undefined;
+    },
+    isAbruptClosing(token: Token | undefined): boolean {
+      return Segment.isClosing(token);
+    },
+    isProperClosing(token: Token | undefined): boolean {
+      return token?.type() === Token.types.separator;
+    },
+    continuesFor(token: Token): boolean {
+      const { type } = token;
+      return type() === Token.types.identifier ||
+             type() === Token.types.literal ||
+             type() === Token.types.operator;
+    },
+    groupingConstructorFor: Segment.groupingConstructorFor
+  })),
+    make(mTokens: Readonly<Token[]>,
+         mStart: number,
+         mEnd: number
+    ): Segmentation
+    {
+      return ExpressionSegmentation.
+        make(mTokens, mStart, mEnd, LineSegmentation.strategy());
+    }
+});
+
+const ExpressionSegmentation = freeze({
+  make(mTokens: Readonly<Token[]>,
+       mStart: number,
+       mEnd: number,
+       mScanStrat: ExpressionScanningStrategy): Segmentation
+  {
+    mScanStrat.assertIsOpening(mTokens[mStart]);
+    const { error, setErrorMessage, setErrorFn } = StandardError.make();
+    
+    const closingPair = memoize((): ClosingPair | undefined => {
+      let childGatherer = ChildSegmentGatherer.defaultEmpty();
+      for (let idx = mStart; idx < mEnd; ) {
+        const token: Token | undefined = mTokens[idx];
+        if (mScanStrat.isAbruptClosing(mTokens[idx]))
+          { return setErrorMessage(`unexpected close found at ${idx}`); }
+
+        if (mScanStrat.isProperClosing(mTokens[idx]))
+          { return freeze({ index: idx, children: childGatherer.children }); }
+
+        const ctor = mScanStrat.groupingConstructorFor(token);
+        if (ctor) {
+          const { segment, error } = ctor(mTokens, idx, mEnd);
+          if (!segment()) {
+            return setErrorFn(error);
+          }
+          idx = segment()!.end();
+          childGatherer = childGatherer.ensureMutable().pushChild(segment()!);
+          continue;
+        }
+
+        if (mScanStrat.continuesFor(token)) {
+          ++idx;
+          continue;
+        }
+
+        raise(`Unhandled token type "${token.type()}", content "${token.content()}"`);
+      }
+      return setErrorMessage(`unexpectedly closed`);
+    });
+
+    const segment = memoize((): Segment | undefined => {
+      if (!closingPair())
+        { return undefined; }
+
+      const { index, children } = closingPair()!;
+      return freeze({
+        start: () => mStart,
+        end  : () => index,
+        children
+      });
+    });
+
+    return freeze({ segment, error });
+  }
+})
 
 // start at root fn body ->
 // - close body rule
 // - seperators for sub-groupings
 // 
+
+// segments -> IAST nodes
+// including operative statements into call trees
+
+function intoCallTree(segment: Segment) {
+  // each operator into a node "factory"
+  // each literal and identifier into a node directly
+  IastNode;
+}
