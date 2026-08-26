@@ -76,6 +76,12 @@ function makeCallAfter(lastToken: Token): Token {
   });
 }
 
+function isLiteral(tok: Token): boolean {
+  const { hashLiteral, stringLiteral, numericLiteral } = types;
+  const type_ = tok.type();
+  return hashLiteral === type_ || stringLiteral === type_ || numericLiteral === type_;
+}
+
 function makeContentFunction
   (mParentString: string,
    mStart: number,
@@ -124,5 +130,6 @@ export const Token = freeze({
   make,
   types,
   makeCallAfter,
-  makeAlphaNumeric
+  makeAlphaNumeric,
+  isLiteral
 });

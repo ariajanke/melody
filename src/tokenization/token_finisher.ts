@@ -2,3 +2,4 @@
 // - escape + new line cancelling
 // - call token emission
 // - nl identation
+// - eliminate blank lines

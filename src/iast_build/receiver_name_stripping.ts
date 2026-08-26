@@ -11,7 +11,7 @@ const { freeze, memoize } = Helpers;
 // specifically for getting call names
 // it is possible that no name exist (that is, it's not an error)
 // the best part is that I can reuse this service as is!
-export interface ReceiverAssignmentStripping {
+export interface ReceiverNameStripping {
   nameTarget(): Token | undefined;
   strippedTree(): IastNode | undefined;
   error(): StandardErrorMessage;
@@ -36,7 +36,7 @@ const { fullListing } = OperatorDefinitions;
   raise('The dot operator was assumed to be the tightest binding operator, but it is not');
 }
 
-function make(mRoot: IastNode): ReceiverAssignmentStripping {
+function make(mRoot: IastNode): ReceiverNameStripping {
   type Direction = 'not-right' | 'right';
   type Res = IastNode | 'not-modified' | undefined;
 
@@ -180,4 +180,4 @@ function make(mRoot: IastNode): ReceiverAssignmentStripping {
   });
 }
 
-export const ReceiverAssignmentStripping = freeze({ make });
+export const ReceiverNameStripping = freeze({ make });

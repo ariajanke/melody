@@ -159,9 +159,9 @@ describeNamed({ Tokenization }, () => {
         'string interpolation',
         `'#{nutrient} can be found in #{food}'`,
         [
-          'stringLiteral', 'concatenation', 'identifier',
-          'concatenation', 'stringLiteral', 'concatenation',
-          'identifier', 'concatenation', 'stringLiteral'
+          'stringLiteral', 'operator', 'identifier',
+          'operator', 'stringLiteral', 'operator',
+          'identifier', 'operator', 'stringLiteral'
         ]
       ]
     ]);

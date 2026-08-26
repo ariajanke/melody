@@ -4,11 +4,14 @@ import { IastNode, IastVisitor } from '../iast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
 import { OperatorDefinition, OperatorDefinitionsN } from './operator_definitions_n';
+import { ReceiverNameStripping } from './receiver_name_stripping';
 
 const { freeze, memoize } = Helpers;
 
+type SegmentType = 'functionDefinitionBody' | 'expression';
 // generally, segments are things that get turned into nodes
 interface Segment {
+  type    (): SegmentType;
   start   (): number;
   end     (): number;
   children(): Readonly<Segment[]>;
@@ -31,8 +34,8 @@ type SegmentationConstructor =
 const Segment = freeze({
   isFringe(tok: Token | undefined): boolean {
     return tok === undefined ||
-           tok.type() === Token.types.literal ||
-           tok.type() === Token.types.identifier;
+           tok.type() === Token.types.identifier ||
+           Token.isLiteral(tok);
   },
   isClosing(tok: Token | undefined) {
     return tok === undefined || tok.type() === Token.types.closing;
@@ -202,8 +205,8 @@ const FunctionHeadSegmentation = freeze({
 
       const start = mTokens[headStart()!];
       if (!ParentheticalSegmentation.isOpening(start)) {
-        // no head! not an error!
         return freeze({
+          type : () => 'expression',
           start: headStart as () => number,
           end  : headStart as () => number,
           children: ChildSegmentGatherer.defaultEmpty().children
@@ -244,7 +247,7 @@ const FunctionBodySegmentation = freeze({
       const { type } = token;
       return type() === Token.types.separator ||
              type() === Token.types.identifier ||
-             type() === Token.types.literal ||
+             Token.isLiteral(token) ||
              type() === Token.types.operator;
     },
     groupingConstructorFor: Segment.groupingConstructorFor
@@ -279,6 +282,7 @@ const FunctionBodySegmentation = freeze({
         { return undefined; }
 
       return freeze({
+        type    : () => 'functionDefinitionBody',
         start   : () => mStart,
         end     : () => closingPair()!.index,
         children: closingPair()!.children
@@ -304,19 +308,19 @@ const LineSegmentation = freeze({
     continuesFor(token: Token): boolean {
       const { type } = token;
       return type() === Token.types.identifier ||
-             type() === Token.types.literal ||
+             Token.isLiteral(token) ||
              type() === Token.types.operator;
     },
     groupingConstructorFor: Segment.groupingConstructorFor
   })),
-    make(mTokens: Readonly<Token[]>,
-         mStart: number,
-         mEnd: number
-    ): Segmentation
-    {
-      return ExpressionSegmentation.
-        make(mTokens, mStart, mEnd, LineSegmentation.strategy());
-    }
+  make(mTokens: Readonly<Token[]>,
+        mStart: number,
+        mEnd: number
+  ): Segmentation
+  {
+    return ExpressionSegmentation.
+      make(mTokens, mStart, mEnd, LineSegmentation.strategy());
+  }
 });
 
 export const ExpressionSegmentation = freeze({
@@ -365,6 +369,7 @@ export const ExpressionSegmentation = freeze({
 
       const { index, children } = closingPair()!;
       return freeze({
+        type : () => 'expression',
         start: () => mStart,
         end  : () => index,
         children
@@ -386,179 +391,378 @@ export const ExpressionSegmentation = freeze({
 // do not name strip for ":=" in lets (except rhs)
 // name strip for calls if possible
 
-interface Thing {
+interface IastBuild {
+  node(): IastNode | undefined;
+  errors(): Readonly<StandardErrorMessage[]>;
+};
+
+interface IastBuildSingleError {
+  node(): IastNode | undefined;
+  error(): StandardErrorMessage;
+};
+
+interface AstExpressionCollector {
   pushNode(node: IastNode): void;
   pushOperator(op: Token): void;
+  finish(): IastBuildSingleError;
 };
 
-interface MyCtor {
-  makeNode(ctors: MyCtor[]): IastNode;
-};
-
-interface MyCtorComplete extends MyCtor {
+interface NodeConstructor {
+  makeNode(ctors: NodeConstructor[]): IastNode;
   isOperator(): boolean;
 };
 
-interface MyOperator {
-  compare(other: MyOperator): number;
+interface OperatorConstructor extends NodeConstructor {
+  compare(other: OperatorConstructor): number;
 };
 
+const OperatorConstructor = freeze({
+  fromNode(node: IastNode): NodeConstructor {
+    return freeze({
+      isOperator: () => false,
+      makeNode(_0: NodeConstructor[]): IastNode {
+        return node;
+      }
+    });
+  }
+});
 
-type Precedence = { precedence: number; position: number; };
-interface MyOperatorC extends MyOperator, MyCtorComplete {
+interface OperatorConstructorBuild {
+  operatorConstructor(): OperatorConstructor | undefined;
+  error(): StandardErrorMessage;
 };
-function asOpC(op: MyOperator): Precedence | undefined {
-  return (op as unknown as { [kSecret]: Precedence | undefined })[kSecret];
-}
 
+const OperatorConstructorBuild = (() => {
 
-(() => {
+  const isOperator = () => true;
 
-  const mConstructors: MyCtorComplete[] = [];
-  const mOperators: MyOperatorC[] = [];
+  const kSecret = Symbol();
+
+  type OperatorPrecedence = { precedence: number; position: number; };
+
+  type BinaryConstructor = (rec: IastNode, params: IastNode) => IastNode;
+
+  type UnaryConstructor = (rec: IastNode) => IastNode;
+
+  type NodeArrayModifier = (ctors: NodeConstructor[]) => IastNode;
+
+  function asOpC(op: OperatorConstructor): OperatorPrecedence | undefined {
+    return (op as unknown as { [kSecret]: OperatorPrecedence | undefined })[kSecret];
+  }
+
+  function binaryNodeConstructorFor
+    (callName: Token): BinaryConstructor
+  {
+    const op = callName.content();
+    if (op === OperatorNamingSchema.kComma) {
+      return (lhs: IastNode, rhs: IastNode) =>
+        IastNode.forOperativeStatements.tuplify(lhs, rhs);
+    }
+    if (op === OperatorNamingSchema.kCall) {
+      return (rec: IastNode, params: IastNode) => {
+        const { nameTarget, strippedTree } = ReceiverNameStripping.make(rec);
+        if (nameTarget()) {
+          return IastNode.forOperativeStatements.
+            makeCall(nameTarget()!, strippedTree()!, params);  
+        }
+        return IastNode.forOperativeStatements.makeCall(callName, rec, params);
+      };
+    }
+    return (rec: IastNode, params: IastNode) =>
+      IastNode.forOperativeStatements.makeCall(callName, rec, params);
+  }
+
+  function unaryNodeConstructorFor
+    (op: Token): UnaryConstructor
+  {
+    if (op.content() === OperatorNamingSchema.kLet) {
+      return (inner: IastNode) =>
+        IastNode.forOperativeStatements.makeLetDeclation(inner);
+    }
+    const empty = IastNode.makeEmptyTuple();
+    return (rec: IastNode) =>
+      IastNode.forOperativeStatements.makeCall(op, rec, empty);
+  }
+
+  function makeCompareFunc(info: OperatorPrecedence): (other: OperatorConstructor) => number {
+    return (other: OperatorConstructor) => {
+      const otherInfo = asOpC(other) ?? raise('not a valid operator instance');
+      const diff = info!.precedence - otherInfo.precedence;
+      if (diff === 0) {
+        return info.position - otherInfo.position;
+      }
+      return diff;    
+    };
+  }
+
+  function makeArrayModifierForBinary
+    (nodeConstructor: BinaryConstructor, position: number): NodeArrayModifier 
+  {
+    return (ctors: NodeConstructor[]): IastNode => {
+      const recCtor = ctors[position - 1];
+      const paramsCtor = ctors[position + 1];
+      const rec = recCtor.makeNode(ctors);
+      const params = paramsCtor.makeNode(ctors);
+      const node = nodeConstructor(rec, params);
+      ctors[position - 1] = ctors[position + 1] = OperatorConstructor.fromNode(node);
+      return node;
+    };
+  }
+
+  function makeArrayModifierForUnary
+    (nodeConstructor: UnaryConstructor, position: number): NodeArrayModifier 
+  {
+    return (ctors: NodeConstructor[]): IastNode => {
+      const recCtor = ctors[position + 1];
+      const rec = recCtor.makeNode(ctors);
+      const node = nodeConstructor(rec);
+      ctors[position] = ctors[position + 1] = OperatorConstructor.fromNode(node);
+      return node;
+    };
+  }
+
+  function make(mOpToken: Token, mIsUnaryContext: boolean, mPosition: number): OperatorConstructorBuild {
+    OperatorDefinitionsN.assertIsOperator(mOpToken.content());
+    const { error, setErrorMessage } = StandardError.make();
+
+    const operatorDefinition = memoize((): OperatorDefinition | undefined => {
+      const getOperatorInfo = mIsUnaryContext ?
+        OperatorDefinitionsN.unaryMappings :
+        OperatorDefinitionsN.binaryMappings;
+      const info = getOperatorInfo()[mOpToken.content()];
+      if (!info) {
+        const context = mIsUnaryContext ? 'unary' : 'binary';
+        return setErrorMessage(
+          `"${mOpToken.content()}" is not a valid operator (at least for ` +
+          `the ${context} context)`);
+      }
+
+      return info;
+    });
+
+    const operatorPrecedence = memoize((): OperatorPrecedence | undefined => {
+      const info = operatorDefinition();
+      if (!info)
+        { return undefined; }
+
+      return freeze({
+        precedence: info.precedence,
+        position: mPosition
+      });
+    });
+
+    const makeNodeFunc = ((): NodeArrayModifier | undefined => {
+      operatorDefinition() ?? raise('bad branch');
+
+      if (operatorDefinition()!.relation === 'binary') {
+        const ctor = binaryNodeConstructorFor(mOpToken);
+        return makeArrayModifierForBinary(ctor, mPosition);
+      }
+
+      const ctor = unaryNodeConstructorFor(mOpToken);
+      return makeArrayModifierForUnary(ctor, mPosition);
+    });
+
+    const operatorConstructor = memoize((): OperatorConstructor | undefined => {
+      if (!operatorPrecedence())
+        { return undefined; }
+
+      return freeze({
+        [kSecret]: operatorPrecedence()!,
+        isOperator,
+        compare: makeCompareFunc(operatorPrecedence()!),
+        makeNode: makeNodeFunc()!
+      });
+    });
+    
+    return freeze({ operatorConstructor, error });
+  }
+
+  return freeze({ make });
+})();
+
+const AstExpressionCollector = freeze({
+  make(): AstExpressionCollector
+{
+  const { error, setErrorFn, hasErrorSet } = StandardError.make();
+  const mConstructors: NodeConstructor[] = [];
+  const mOperators: OperatorConstructor[] = [];
+  let mFinished = false;
+  function verifyUnfinished() {
+    if (!mFinished)
+      { return; }
+
+    raise('cannot add to collector after it is finished');
+  }
   
   function isInUnaryContext() {
     return mConstructors.length === 0 ||
            mConstructors[mConstructors.length - 1].isOperator();
   }
-  ({
-    pushNode(node: IastNode) {
-      mConstructors.push(freeze({
-        isOperator: () => false,
-        makeNode(_0: MyCtor[]): IastNode {
-          return node;
-        }
-      }));
+
+  return freeze({
+    pushNode(node: IastNode): void {
+      verifyUnfinished();
+      if (hasErrorSet())
+        { return; }
+
+      mConstructors.push(OperatorConstructor.fromNode(node));
     },
-    pushOperator(op: Token) {
-      OperatorDefinitionsN.assertIsOperator(op.content());
-      const getOperatorInfo = isInUnaryContext() ?
-        OperatorDefinitionsN.unaryMappings :
-        OperatorDefinitionsN.binaryMappings;
-      const info = getOperatorInfo()[op.content()];
-      if (!info) {
-        // <- set error, "" is not a valid operator in the "x" context
-        return;
+    pushOperator(op: Token): void {
+      verifyUnfinished();
+      if (hasErrorSet())
+        { return; }
+
+      const { operatorConstructor, error } = OperatorConstructorBuild.
+        make(op, isInUnaryContext(), mConstructors.length);
+
+      if (!operatorConstructor()) {
+        return setErrorFn(error); // <- set error
       }
-      const precInfo = freeze({
-        precedence: info.precedence,
-        position: mConstructors.length
+      const opCtor = operatorConstructor()!
+      mConstructors.push(opCtor);
+      mOperators.push(opCtor);
+    },
+    finish: memoize(() => {
+      mFinished = true;
+      if (hasErrorSet()) {
+        return freeze({
+          node: () => undefined,
+          error
+        });
+      }
+
+      const opsAtPrec = mOperators.
+        sort((a: OperatorConstructor, b: OperatorConstructor) => a.compare(b));
+      return freeze({
+        node: memoize(() => {
+          for (let i = 0; i < opsAtPrec.length - 1; ++i) {
+            opsAtPrec[i].makeNode(mConstructors);
+          }
+          return opsAtPrec[opsAtPrec.length - 1].makeNode(mConstructors);
+        }),
+        error
       });
-      const isOperator = () => true;
-      function compare(other: MyOperator) {
-        const otherInfo = asOpC(other) ?? raise('not a valid operator instance');
-        const diff = info!.precedence - otherInfo.precedence;
-        if (diff === 0) {
-          return precInfo.position - otherInfo.position;
-        }        
-        return diff;    
-      }
-      if (info.relation === 'binary') {
-        const inst: MyOperatorC = freeze({
-          [kSecret]: precInfo,
-          isOperator,
-          compare,
-          makeNode(ctors: MyCtor[]): IastNode {
-            const rec = ctors[precInfo.position - 1];
-            const params = ctors[precInfo.position + 1];
-            rec.makeNode(ctors);
-            params.makeNode(ctors);
-            // special behavior possible here...
-            // then replace
-            // ctors[precInfo.position - 1] = 
-          }
-        });
-        mConstructors.push(inst);
-        mOperators.push(inst);
-      } else {
-        const inst: MyOperatorC = freeze({
-          [kSecret]: precInfo,
-          isOperator,
-          compare,
-          makeNode(ctors: MyCtor[]): IastNode {
-            const self = ctors[precInfo.position];
-            const rec = ctors[precInfo.position + 1];
-            // special behavior possible here...
-          }
-        });
-        mConstructors.push(inst);
-        mOperators.push(inst);
-      }
-    }
-  })
+    })
+  });
+  }
 });
 
-function intoCallTree
-  (tokens: Readonly<Token[]>, segment: Segment, thing: Thing)
+type SegmentProcessor = (tokens: Readonly<Token[]>, segment: Segment) => IastBuild;
+
+const strats: Readonly<{ [st in SegmentType]: SegmentProcessor }> = freeze({
+  functionDefinitionBody: forFunctionDefinitionBody,
+  expression: forExpression
+});
+
+interface ErrorsCollector {
+  pushErrors(errors: Readonly<StandardErrorMessage[]>): void;
+  pushError(error: StandardErrorMessage): void;
+  errors(): Readonly<StandardErrorMessage[]>;
+};
+
+const ErrorsCollector = freeze({
+  make() {
+    const mErrors: StandardErrorMessage[] = [];
+    return freeze({
+      pushErrors(errors: Readonly<StandardErrorMessage[]>)
+        { mErrors.push(...errors); },
+      pushError(error: StandardErrorMessage)
+        { mErrors.push(error); },
+      errors(): Readonly<StandardErrorMessage[]>
+        { return mErrors; }
+    })
+  }
+});
+
+function forFunctionDefinitionBody
+  (tokens: Readonly<Token[]>, segment: Segment): IastBuild
 {
-  // each operator into a node "factory"
-  // each literal and identifier into a node directly
+  const errors = ErrorsCollector.make();
+  const nodes: IastNode[] = [];
+  const clen = segment.children().length;
+  for (let cidx = 0; cidx < clen; ++cidx) {
+    const child = segment.children()[cidx];
+    const ibuild = strats[child.type()](tokens, child);
+    if (ibuild.node()) {
+      nodes.push(ibuild.node()!);
+    } else {
+      errors.pushErrors(ibuild.errors());
+    }
+  }
+
+  return freeze({
+    node: memoize(() => {
+      if (errors.errors().length > 0)
+        { return undefined; }
+
+      return IastNode.makeFunctionDefinition(nodes);
+    }),
+    errors: errors.errors
+  });
+}
+
+// fine for nested parens...
+function forExpression
+  (tokens: Readonly<Token[]>, segment: Segment): IastBuild
+{
+  const errors = ErrorsCollector.make();
+  const collector = AstExpressionCollector.make();
   let cidx = 0;
   let child = segment.children()[cidx];
   for (let idx = segment.start(); idx < segment.end(); ) {
     if (idx === child?.start()) {
       idx = child.end();
       ++cidx;
-      raise('unhandled');
-      // thing.pushNode(/* recursive */);
+      const ibuild = strats[child.type()](tokens, child);
+      const node = ibuild.node();
+      if (node) {
+        collector.pushNode(node);
+      } else {
+        errors.pushErrors(ibuild.errors());
+      }
     } else {
       ++idx;
       if (tokens[idx].type() === Token.types.operator) {
-        thing.pushOperator(tokens[idx]);
+        collector.pushOperator(tokens[idx]);
       } else if (Segment.isFringe(tokens[idx])) {
         const node = IastNode.makeFringe(tokens[idx]);
-        thing.pushNode(node);
+        collector.pushNode(node);
       }
     }
   }
-  // into some kind of operator/node chain
-  // each operator needs "spactial awareness"
-  return thing;
+
+  return freeze({
+    node: memoize(() => {
+      if (errors.errors().length > 0)
+        { return undefined; }
+
+      const ibuild = collector.finish();
+      if (ibuild.node()) {
+        errors.pushError(ibuild.error());
+      }
+
+      return ibuild.node();
+    }),
+    errors: errors.errors
+  });
 }
 
-function intoTree
-  (mConstructors: MyCtorComplete[],
-   mOperators: MyOperatorC[])
-{
-  const opsAtPrec = mOperators.
-    sort((a: MyOperatorC, b: MyOperatorC) => a.compare(b));
-  for (let i = 0; i < opsAtPrec.length - 1; ++i) {
-    opsAtPrec[i].makeNode(mConstructors);
+const IastBuild = freeze({
+  make(tokens: Readonly<Token[]>): IastBuild {
+    const { segment, error } = FunctionBodySegmentation.
+      make(tokens, 0, tokens.length);
+    if (!segment()) {
+      raise(error().message);
+    }
+    return strats['functionDefinitionBody'](tokens, segment()!);
+  },
+  buildFor(tokens: Readonly<Token[]>): IastNode {
+    const inst = IastBuild.make(tokens);
+    const res = inst.node();
+    if (!res) {
+      raise(`Failed to build AST:\n${inst.errors()[0]?.message}`);
+    }
+    return res;
   }
-  opsAtPrec[opsAtPrec.length - 1].makeNode(mConstructors);
-}
-
-
-
-const kSecret = Symbol();
-// function makeMyCtor() {
-//   const inst = {
-//     [kSecret]: 0,
-//     compare(other: MyCtor): number {
-//       const n = (other as unknown as { [kSecret]: number | undefined })[kSecret] ?? raise('uh oh');
-      
-//     },
-//     makeNode(ctors: MyCtor[]): IastNode {}
-//   }
-// }
-
-function makeFringe(_0: MyCtor[]): IastNode {
-  return freeze({
-    asString: () => '',
-    visit<T>(_0: IastVisitor<T>): T { raise(''); }
-  });
-}
-
-function makeBinary(ctors: MyCtor[]): IastNode {
-  // ctors[i - 1]
-  // ctors[i + 1]
-  return freeze({
-    asString: () => '',
-    visit<T>(_0: IastVisitor<T>): T { raise(''); }
-  });
-}
-
-
-function stuff(ctors: MyCtor[]) {
-  ctors[0].makeNode(ctors);
-}
+});
