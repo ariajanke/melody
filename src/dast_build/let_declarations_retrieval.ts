@@ -4,6 +4,7 @@ import { DastBuild } from '../dast_build';
 import * as dldb from './let_declarations_retrieval/dast_let_declaration_build';
 import * as LetNamesSplitter from './let_declarations_retrieval/let_names_splitter';
 import { Token } from '../token';
+import { IastLiteralType } from '../iast_node/iast_types';
 
 const { freeze } = Helpers;
 
@@ -24,12 +25,15 @@ const CallLevelVisitor = ((): { make: CallLevelVisitorConstructor } => {
   const visitFringe = (_0: Token): DastLetDeclarationBuild =>
     makeError('name needs a "= ..." following it');
     
-  const visitString = (_0: string): DastLetDeclarationBuild =>
-    makeError('string node cannot be a name in a let declaration');
+  // const visitString = (_0: string): DastLetDeclarationBuild =>
+  //   makeError('string node cannot be a name in a let declaration');
   
-  const visitInteger = (_0: string): DastLetDeclarationBuild =>
-    makeError('integer node cannot be a name in a let declaration');
-  
+  // const visitInteger = (_0: string): DastLetDeclarationBuild =>
+  //   makeError('integer node cannot be a name in a let declaration');
+
+  const visitLiteral = (_0: Token, _1: IastLiteralType) =>
+    makeError('literal node cannot be a name in a let declaration');
+
   const visitTuple = (_0: Readonly<IastNode[]>): DastLetDeclarationBuild =>
     makeError('tuple needs a "= ..." following it');
   
@@ -46,8 +50,7 @@ const CallLevelVisitor = ((): { make: CallLevelVisitorConstructor } => {
       return freeze({
         visitLet,
         visitFringe,
-        visitString,
-        visitInteger,
+        visitLiteral,
         visitTuple,
         visitFunctionDefinition,
         visitCall

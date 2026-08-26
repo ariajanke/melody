@@ -1,5 +1,6 @@
 import { Helpers } from '../src/helpers';
 import { IastNode, IastVisitor } from '../src/iast_node';
+import { IastLiteralType } from '../src/iast_node/iast_types';
 import { Token } from '../src/token';
 
 const { freeze } = Helpers;
@@ -11,8 +12,7 @@ export interface ReseatableIastVisitor extends IastVisitor {
 export const ReseatableIastVisitor = freeze({
   makeDefaultingToContinue(): ReseatableIastVisitor {
     let inst = ({
-      visitString(_0: string) {},
-      visitInteger(_0: string) {},
+      visitLiteral(_0: Token, _1: IastLiteralType) {},
       visitFringe(_0: Token) {},
       visitTuple(nodes: Readonly<IastNode[]>)
         { nodes.forEach((v: IastNode) => v.visit(inst)); },

@@ -15,7 +15,6 @@ export const IastNode = freeze({
   makeFringe: IastFringe.make,
   forAssignmentStripping: {
     tokenize: IastFringe.tokenize,
-    // contextNode: IastFringe.contextNode,
     makeContextNodeAt: IastFringe.makeContextNodeAt,
     makeTuple: (node: IastNode) => IastTuple.make([node]),
     makeCall : IastCall.make,
@@ -26,7 +25,6 @@ export const IastNode = freeze({
     detuplify: IastTuple.detuplify
   },
   forOperativeStatements: {
-    // contextNode: IastFringe.contextNode,
     makeContextNodeAt: IastFringe.makeContextNodeAt,
     makeCall: IastCall.make,
     tokenize: IastFringe.tokenize,

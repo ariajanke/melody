@@ -1,9 +1,11 @@
 import { Token } from '../token';
 
+export type IastLiteralType = 'string' | 'number';
+
 export interface IastVisitor_<ResultType = void> {
   // visitString(v: string): ResultType;
   // visitInteger(v: string): ResultType;
-  visitLiteral(token: Token): ResultType;
+  visitLiteral(token: Token, type: IastLiteralType): ResultType;
   visitFringe(token: Token): ResultType;
   visitTuple(nodes: Readonly<IastNode_[]>): ResultType;
   visitLet(innerNode: IastNode_): ResultType;

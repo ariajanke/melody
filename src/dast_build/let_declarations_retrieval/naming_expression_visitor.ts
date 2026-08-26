@@ -1,5 +1,6 @@
 import { Helpers, StandardError } from '../../helpers';
 import { IastNode, IastVisitor } from '../../iast_node';
+import { IastLiteralType } from '../../iast_node/iast_types';
 import { Token } from '../../token';
 
 const { freeze, memoize } = Helpers;
@@ -27,12 +28,9 @@ const noVisitLetDeclaration = (_0: IastNode) =>
   NamingExpressionResult.makeErroneousWithMessage('nested lets not allowed');
 const noVisitFunctionDefinition = (_0: Readonly<IastNode[]>) =>
   NamingExpressionResult.makeErroneousWithMessage('function defs not allowed');
-const makeVisitFringe =
-  (type: string) =>
-    (v: string) => NamingExpressionResult.
-      makeErroneousWithMessage(`Fringe (${type}) "${v} not allowed`);
-const noVisitString = makeVisitFringe('string');
-const noVisitInteger = makeVisitFringe('integer');
+const noVisitLiteral = (token: Token, type: IastLiteralType) =>
+  NamingExpressionResult.
+    makeErroneousWithMessage(`Literal (${type}) "${token.content()} not allowed`);
 const visitFringe = (v: Token) => NamingExpressionResult.make([v.content()]);
 const noVisitTuple = (_0: Readonly<IastNode[]>) =>
   NamingExpressionResult.makeErroneousWithMessage('Cannot handle nested tuples');
@@ -43,8 +41,7 @@ export const NamingExpressionVisitor = freeze({
       visitCall: noVisitCall,
       visitLet: noVisitLetDeclaration,
       visitFunctionDefinition: noVisitFunctionDefinition,
-      visitString: noVisitString,
-      visitInteger: noVisitInteger,
+      visitLiteral: noVisitLiteral,
       visitFringe,
       visitTuple(nodes: Readonly<IastNode[]>) {
         const names: string[] = [];
@@ -52,8 +49,7 @@ export const NamingExpressionVisitor = freeze({
           visitCall: noVisitCall,
           visitLet: noVisitLetDeclaration,
           visitFunctionDefinition: noVisitFunctionDefinition,
-          visitString: noVisitString,
-          visitInteger: noVisitInteger,
+          visitLiteral: noVisitLiteral,
           visitFringe(v: Token)
             { names.push(v.content()); },
           visitTuple: noVisitTuple

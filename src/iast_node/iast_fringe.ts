@@ -21,9 +21,9 @@ function chooseVisitorFor(token: Token)
   case tokenTypes.operator:
     return <T>(v: IastVisitor_<T>): T => v.visitFringe(token);
   case tokenTypes.stringLiteral:
-    return <T>(v: IastVisitor_<T>): T => v.visitString(token.content());
+    return <T>(v: IastVisitor_<T>): T => v.visitLiteral(token, 'string');
   case tokenTypes.numericLiteral:
-    return <T>(v: IastVisitor_<T>): T => v.visitInteger(token.content());
+    return <T>(v: IastVisitor_<T>): T => v.visitLiteral(token, 'number');
   default:
     raise(`cannot build stringable node from token "${token.content()}"`);
   }

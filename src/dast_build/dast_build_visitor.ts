@@ -12,21 +12,22 @@ import { DastFunctionDefintionBuild } from './dast_function_definition_build';
 import { DastTupleBuild } from './dast_tuple_build';
 import { DastLetBuild } from './dast_let_build';
 import { CarriedNamesRegistry } from './carried_names_registry';
-import { ReceiverAssignmentStripping } from './receiver_assignment_stripping';
 import { Token } from '../token';
+import { IastLiteralType } from '../iast_node/iast_types';
 
 const { freeze, memoize } = Helpers;
 
-function makeVisitFringe(fn: (v: string) => DastNode): (v: string) => DastBuild {
-  return (v: string) => freeze({
-    node : memoize(() => fn(v)),
+const visitLiteral = (token: Token, type: IastLiteralType): DastBuild => {
+  const { content } = token;
+  const node_ = type === 'number' ?
+    DastNode_.makeInteger(content()) :
+    DastNode_.makeString (content());
+  
+  return freeze({
+    node : () => node_,
     error: () => StandardError.make().error()
   });
-}
-
-const visitString = makeVisitFringe(DastNode_.makeString);
-
-const visitInteger = makeVisitFringe(DastNode_.makeInteger);
+};
 
 const visitFringe = (token: Token) => freeze({
   node: memoize(() => DastNode_.makeFringe(token)),
@@ -64,11 +65,10 @@ function make(): IastVisitor<DastBuild> {
 
   const inst: IastVisitor<DastBuild> = freeze({
     visitLet,
-    visitString,
-    visitInteger,
     visitFringe,
     visitTuple,
     visitCall,
+    visitLiteral,
     visitFunctionDefinition
   });
   return inst;

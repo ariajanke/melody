@@ -8,54 +8,54 @@ type LiteralType = 'string' | 'number' | 'hash';
 
 const tokenTypes = [
   // TODO deprecate, remove pending IAST refactor
-  // 'functionDefinition', // lose
+  'functionDefinition', // lose
   //      following remain okay
   'operator'          , // kept
-  // 'newLine'           , // lose
-  // 'grouping'          , // lose
+  'newLine'           , // lose
+  'grouping'          , // lose
   'opening', // fn, tbl, (
   'closing', // ~, )
   'separator', // \n
   'identifier'        , // kept
-  'literal'           , // new (need sub types then)
-  // 'stringLiteral'     , // lose
-  // 'numericLiteral'    , // lose
-  // 'hashLiteral'       , // lose
+  // 'literal'           , // new (need sub types then)
+  'stringLiteral'     , // lose
+  'numericLiteral'    , // lose
+  'hashLiteral'       , // lose
   // 'concatenation'       // lose
 ] as const;
 
-interface TokenTypeFragment {
-  type   (): TokenType;
-  literal(): LiteralType | undefined;
-};
+// interface TokenTypeFragment {
+//   type   (): TokenType;
+//   literal(): LiteralType | undefined;
+// };
 
 export type TokenType = typeof tokenTypes[number];
 
-const nonLiteraltokenTypes_ = memoize(():
-  Readonly<{ [tt in TokenType]: TokenTypeFragment | undefined }> =>
-freeze({
-  operator: freeze({
-    type   : () => 'operator',
-    literal: () => undefined
-  }),
-  opening: freeze({
-    type   : () => 'opening',
-    literal: () => undefined
-  }),
-  closing: freeze({
-    type   : () => 'closing',
-    literal: () => undefined
-  }),
-  separator: freeze({
-    type   : () => 'separator',
-    literal: () => undefined
-  }),
-  identifier: freeze({
-    type   : () => 'identifier',
-    literal: () => undefined
-  }),
-  literal: undefined
-}));
+// const nonLiteraltokenTypes_ = memoize(():
+//   Readonly<{ [tt in TokenType]: TokenTypeFragment | undefined }> =>
+// freeze({
+//   operator: freeze({
+//     type   : () => 'operator',
+//     literal: () => undefined
+//   }),
+//   opening: freeze({
+//     type   : () => 'opening',
+//     literal: () => undefined
+//   }),
+//   closing: freeze({
+//     type   : () => 'closing',
+//     literal: () => undefined
+//   }),
+//   separator: freeze({
+//     type   : () => 'separator',
+//     literal: () => undefined
+//   }),
+//   identifier: freeze({
+//     type   : () => 'identifier',
+//     literal: () => undefined
+//   }),
+//   literal: undefined
+// }));
 
 export interface Token {
   type   (): TokenType;

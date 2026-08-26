@@ -1,7 +1,9 @@
 import { GroupingNamingSchema } from '../grouping_naming_schema';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
-import { IastNode } from '../iast_node';
+import { IastNode, IastVisitor } from '../iast_node';
+import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
+import { OperatorDefinition, OperatorDefinitionsN } from './operator_definitions_n';
 
 const { freeze, memoize } = Helpers;
 
@@ -27,6 +29,11 @@ type SegmentationConstructor =
   (mTokens: Readonly<Token[]>, mStart: number, mEnd: number) => Segmentation;
 
 const Segment = freeze({
+  isFringe(tok: Token | undefined): boolean {
+    return tok === undefined ||
+           tok.type() === Token.types.literal ||
+           tok.type() === Token.types.identifier;
+  },
   isClosing(tok: Token | undefined) {
     return tok === undefined || tok.type() === Token.types.closing;
   },
@@ -82,7 +89,7 @@ const TableSegmentation = freeze({
   }
 });
 
-interface ExpressionScanningStrategy {
+export interface ExpressionScanningStrategy {
   groupingConstructorFor(token: Token): SegmentationConstructor | undefined;
   assertIsOpening(token: Token | undefined): void;
   isAbruptClosing(token: Token | undefined): boolean;
@@ -90,7 +97,7 @@ interface ExpressionScanningStrategy {
   continuesFor(token: Token): boolean;
 };
 
-const ParentheticalSegmentation = freeze({
+export const ParentheticalSegmentation = freeze({
   isOpening(token: Token): boolean {
     return token.content() === GroupingNamingSchema.kParentheticalOpen &&
            token.type() === 'opening';
@@ -104,7 +111,10 @@ const ParentheticalSegmentation = freeze({
     assertIsOpening(token: Token | undefined) {
       ParentheticalSegmentation.assertIsOpening(token);
     },
-    isAbruptClosing: Segment.isClosing,
+    isAbruptClosing(token: Token | undefined): boolean {
+      return token === undefined ||
+             FunctionBodySegmentation.isBodyClosing(token);
+    },
     isProperClosing(token: Token | undefined): boolean {
       return token?.type() === Token.types.closing &&
              token?.content() === GroupingNamingSchema.kParentheticalClose;
@@ -165,7 +175,7 @@ const FunctionHeadSegmentation = freeze({
     FunctionDefinitionSegmentation.assertIsOpening(mTokens[mStart]);
     const { error, setErrorMessage } = StandardError.make();
 
-    const headStart = memoize((): number | undefined => {
+  const headStart = memoize((): number | undefined => {
       let separatorCount = 0;
       for (let idx = mStart; idx < mEnd; ++idx) {
         if (Segment.isClosing(mTokens[idx])) {
@@ -210,6 +220,10 @@ const FunctionHeadSegmentation = freeze({
 });
 
 const FunctionBodySegmentation = freeze({
+  isBodyClosing(token: Token | undefined) {
+    return token?.type() === Token.types.closing &&
+           token?.content() === GroupingNamingSchema.kBodyClose;
+  },
   assertIsClosing(token: Token | undefined) {
     if (token === undefined || token.type() === Token.types.closing)
       { return; }
@@ -237,22 +251,41 @@ const FunctionBodySegmentation = freeze({
   })),
   make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
     FunctionBodySegmentation.assertIsClosing(mTokens[mEnd]);
-    const { error, setErrorMessage, setErrorFn } = StandardError.make();
+    const { error, setErrorFn } = StandardError.make();
 
-    const children = memoize(() => {
+    const closingPair = memoize((): ClosingPair | undefined => {
       let childGatherer = ChildSegmentGatherer.defaultEmpty();
-      for (let idx = mStart; idx < mEnd; ) {
+      let idx = mStart
+      while (idx < mEnd) {
+        if (FunctionBodySegmentation.isBodyClosing(mTokens[idx]))
+          { break; }
+
         const { segment, error } = LineSegmentation.make(mTokens, idx, mEnd);
-        if (!segment()) {
-          return setErrorFn(error);
-        }
+        if (!segment())
+          { return setErrorFn(error); }
+
         childGatherer = childGatherer.ensureMutable().pushChild(segment()!);
         idx = segment()!.end();
       }
-      return childGatherer.children();
+
+      return freeze({
+        index: idx,
+        children: childGatherer.children,
+      });
+    });
+
+    const segment = memoize((): Segment | undefined => {
+      if (!closingPair())
+        { return undefined; }
+
+      return freeze({
+        start   : () => mStart,
+        end     : () => closingPair()!.index,
+        children: closingPair()!.children
+      });
     });
     
-
+    return freeze({ segment, error });
   }
 });
 
@@ -265,7 +298,8 @@ const LineSegmentation = freeze({
       return Segment.isClosing(token);
     },
     isProperClosing(token: Token | undefined): boolean {
-      return token?.type() === Token.types.separator;
+      return token?.type() === Token.types.separator ||
+             FunctionBodySegmentation.isBodyClosing(token);
     },
     continuesFor(token: Token): boolean {
       const { type } = token;
@@ -285,7 +319,7 @@ const LineSegmentation = freeze({
     }
 });
 
-const ExpressionSegmentation = freeze({
+export const ExpressionSegmentation = freeze({
   make(mTokens: Readonly<Token[]>,
        mStart: number,
        mEnd: number,
@@ -296,13 +330,13 @@ const ExpressionSegmentation = freeze({
     
     const closingPair = memoize((): ClosingPair | undefined => {
       let childGatherer = ChildSegmentGatherer.defaultEmpty();
-      for (let idx = mStart; idx < mEnd; ) {
+      for (let idx = mStart + 1; idx < mEnd; ) {
         const token: Token | undefined = mTokens[idx];
         if (mScanStrat.isAbruptClosing(mTokens[idx]))
           { return setErrorMessage(`unexpected close found at ${idx}`); }
 
         if (mScanStrat.isProperClosing(mTokens[idx]))
-          { return freeze({ index: idx, children: childGatherer.children }); }
+          { return freeze({ index: idx + 1, children: childGatherer.children }); }
 
         const ctor = mScanStrat.groupingConstructorFor(token);
         if (ctor) {
@@ -349,8 +383,182 @@ const ExpressionSegmentation = freeze({
 // segments -> IAST nodes
 // including operative statements into call trees
 
-function intoCallTree(segment: Segment) {
+// do not name strip for ":=" in lets (except rhs)
+// name strip for calls if possible
+
+interface Thing {
+  pushNode(node: IastNode): void;
+  pushOperator(op: Token): void;
+};
+
+interface MyCtor {
+  makeNode(ctors: MyCtor[]): IastNode;
+};
+
+interface MyCtorComplete extends MyCtor {
+  isOperator(): boolean;
+};
+
+interface MyOperator {
+  compare(other: MyOperator): number;
+};
+
+
+type Precedence = { precedence: number; position: number; };
+interface MyOperatorC extends MyOperator, MyCtorComplete {
+};
+function asOpC(op: MyOperator): Precedence | undefined {
+  return (op as unknown as { [kSecret]: Precedence | undefined })[kSecret];
+}
+
+
+(() => {
+
+  const mConstructors: MyCtorComplete[] = [];
+  const mOperators: MyOperatorC[] = [];
+  
+  function isInUnaryContext() {
+    return mConstructors.length === 0 ||
+           mConstructors[mConstructors.length - 1].isOperator();
+  }
+  ({
+    pushNode(node: IastNode) {
+      mConstructors.push(freeze({
+        isOperator: () => false,
+        makeNode(_0: MyCtor[]): IastNode {
+          return node;
+        }
+      }));
+    },
+    pushOperator(op: Token) {
+      OperatorDefinitionsN.assertIsOperator(op.content());
+      const getOperatorInfo = isInUnaryContext() ?
+        OperatorDefinitionsN.unaryMappings :
+        OperatorDefinitionsN.binaryMappings;
+      const info = getOperatorInfo()[op.content()];
+      if (!info) {
+        // <- set error, "" is not a valid operator in the "x" context
+        return;
+      }
+      const precInfo = freeze({
+        precedence: info.precedence,
+        position: mConstructors.length
+      });
+      const isOperator = () => true;
+      function compare(other: MyOperator) {
+        const otherInfo = asOpC(other) ?? raise('not a valid operator instance');
+        const diff = info!.precedence - otherInfo.precedence;
+        if (diff === 0) {
+          return precInfo.position - otherInfo.position;
+        }        
+        return diff;    
+      }
+      if (info.relation === 'binary') {
+        const inst: MyOperatorC = freeze({
+          [kSecret]: precInfo,
+          isOperator,
+          compare,
+          makeNode(ctors: MyCtor[]): IastNode {
+            const rec = ctors[precInfo.position - 1];
+            const params = ctors[precInfo.position + 1];
+            rec.makeNode(ctors);
+            params.makeNode(ctors);
+            // special behavior possible here...
+            // then replace
+            // ctors[precInfo.position - 1] = 
+          }
+        });
+        mConstructors.push(inst);
+        mOperators.push(inst);
+      } else {
+        const inst: MyOperatorC = freeze({
+          [kSecret]: precInfo,
+          isOperator,
+          compare,
+          makeNode(ctors: MyCtor[]): IastNode {
+            const self = ctors[precInfo.position];
+            const rec = ctors[precInfo.position + 1];
+            // special behavior possible here...
+          }
+        });
+        mConstructors.push(inst);
+        mOperators.push(inst);
+      }
+    }
+  })
+});
+
+function intoCallTree
+  (tokens: Readonly<Token[]>, segment: Segment, thing: Thing)
+{
   // each operator into a node "factory"
   // each literal and identifier into a node directly
-  IastNode;
+  let cidx = 0;
+  let child = segment.children()[cidx];
+  for (let idx = segment.start(); idx < segment.end(); ) {
+    if (idx === child?.start()) {
+      idx = child.end();
+      ++cidx;
+      raise('unhandled');
+      // thing.pushNode(/* recursive */);
+    } else {
+      ++idx;
+      if (tokens[idx].type() === Token.types.operator) {
+        thing.pushOperator(tokens[idx]);
+      } else if (Segment.isFringe(tokens[idx])) {
+        const node = IastNode.makeFringe(tokens[idx]);
+        thing.pushNode(node);
+      }
+    }
+  }
+  // into some kind of operator/node chain
+  // each operator needs "spactial awareness"
+  return thing;
+}
+
+function intoTree
+  (mConstructors: MyCtorComplete[],
+   mOperators: MyOperatorC[])
+{
+  const opsAtPrec = mOperators.
+    sort((a: MyOperatorC, b: MyOperatorC) => a.compare(b));
+  for (let i = 0; i < opsAtPrec.length - 1; ++i) {
+    opsAtPrec[i].makeNode(mConstructors);
+  }
+  opsAtPrec[opsAtPrec.length - 1].makeNode(mConstructors);
+}
+
+
+
+const kSecret = Symbol();
+// function makeMyCtor() {
+//   const inst = {
+//     [kSecret]: 0,
+//     compare(other: MyCtor): number {
+//       const n = (other as unknown as { [kSecret]: number | undefined })[kSecret] ?? raise('uh oh');
+      
+//     },
+//     makeNode(ctors: MyCtor[]): IastNode {}
+//   }
+// }
+
+function makeFringe(_0: MyCtor[]): IastNode {
+  return freeze({
+    asString: () => '',
+    visit<T>(_0: IastVisitor<T>): T { raise(''); }
+  });
+}
+
+function makeBinary(ctors: MyCtor[]): IastNode {
+  // ctors[i - 1]
+  // ctors[i + 1]
+  return freeze({
+    asString: () => '',
+    visit<T>(_0: IastVisitor<T>): T { raise(''); }
+  });
+}
+
+
+function stuff(ctors: MyCtor[]) {
+  ctors[0].makeNode(ctors);
 }
