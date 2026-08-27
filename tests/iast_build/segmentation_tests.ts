@@ -5,8 +5,8 @@ import { BuildStateAddition, TreePartBuild, type BuildSink } from '../../src/ias
 import { type IastNode } from '../../src/iast_node';
 import { TokenFactories } from '../token_factories';
 import { OperatorNamingSchema } from '../../src/operator_naming_schema';
-import { ExpressionSegmentation, ParentheticalSegmentation } from '../../src/iast_build/scrap';
 import { Helpers } from '../../src/helpers';
+import { ParentheticalSegmentation } from '../../src/iast_build/parenthetical_segmentation';
 
 const { describeNamed } = TestHelpers;
 const { freeze } = Helpers;

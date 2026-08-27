@@ -1,10 +1,11 @@
-import { IastBuild } from '../src/iast_build';
+// import { IastBuild } from '../src/iast_build';
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
 import { TokenRange } from '../src/token_range';
 import { IastNode } from '../src/iast_node';
 import { TokenFactories } from './token_factories';
 import { ReseatableIastVisitor } from './iast_visitor_factories';
+import { IastBuild } from '../src/iast_build/scrap';
 
 const { describeNamed } = TestHelpers;
 
@@ -13,7 +14,7 @@ describeNamed({ IastBuild }, () => {
 
   function makeBuildAst(tokens: () => Token[]) {
     return (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens()));
+      IastBuild.buildFor(tokens());
   }
 
   describe('builds a mutli-line ast', () => {
@@ -192,8 +193,7 @@ describeNamed({ IastBuild }, () => {
       makeToken('a'), makeToken('+'), makeToken('b'), makeToken('+'),
       makeToken('c')
     ];
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => IastBuild.buildFor(tokens);
 
     includeAllNIdentifiers(buildAst, ['a', 'b', 'c']);
 
@@ -286,8 +286,7 @@ describeNamed({ IastBuild }, () => {
       makeToken('b'),
       makeToken(')'), makeToken('\n')
     ];
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => IastBuild.buildFor(tokens);
 
     it('creates a function node', () => {
       const { verifyHit, hitsAtExactly } = ReachPoint.make();
@@ -343,8 +342,7 @@ describeNamed({ IastBuild }, () => {
       '~', '\n',
       'queue', '(', 'a', ')'
     ].map(makeToken);
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => IastBuild.buildFor(tokens);
 
     it('has two references to variable "a"', () => {
       let aCount = 0;
@@ -442,7 +440,7 @@ describeNamed({ IastBuild }, () => {
     ].map(makeToken);
 
     const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+      IastBuild.buildFor(tokens);
     it('builds two nested function definitions', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const rootNode = buildAst();
@@ -462,8 +460,7 @@ describeNamed({ IastBuild }, () => {
 
   describe('single line ast', () => {
     let tokens: Token[] = [];
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => IastBuild.buildFor(tokens);
 
     const expectFunctionsCalledInOrder = (...names: string[]): void => {
       const gottenNames: string[] = [];
@@ -642,8 +639,7 @@ describeNamed({ IastBuild }, () => {
 
   describe('table expressions', () => {
     let tokens: Token[] = [];
-    const buildAst = (): IastNode =>
-      IastBuild.buildFor(TokenRange.makeStartingRange(tokens));
+    const buildAst = (): IastNode => IastBuild.buildFor(tokens);
 
     it(`simple.table`, () => {
       tokens = [
