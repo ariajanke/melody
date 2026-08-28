@@ -30,7 +30,12 @@ export const LineSegmentation = freeze({
         mStart: number,
         mEnd: number): Segmentation
   {
-    return ExpressionSegmentation.
+    // TODO rm me when finished debugging
+    const inst = ExpressionSegmentation.
       make(mTokens, mStart, mEnd, LineSegmentation.strategy());
+    return freeze({
+      segment: () => inst.segment(),
+      error: inst.error
+    });
   }
 });
