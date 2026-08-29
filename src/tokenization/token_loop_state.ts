@@ -67,7 +67,7 @@ function make(mSourceCode: string): AdvancedTokenLoopState {
 
       mPushToken = (tok: Token): TokenLoopState => {
         const nlTok =
-          Token.make(mSourceCode, beg, tok.start(), Token.types.newLine);
+          Token.make(mSourceCode, beg, tok.start(), Token.types.grouping.separator);
 
         pushToken_(nlTok);
         pushToken_(tok);

@@ -4,7 +4,7 @@ import { IastNode, IastVisitor } from '../iast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
 import { FunctionBodySegmentation } from './function_body_segmentation';
-import { OperatorDefinition, OperatorDefinitionsN } from './operator_definitions_n';
+import { OperatorDefinition, OperatorDefinitions } from './operator_definitions';
 import { ReceiverNameStripping } from './receiver_name_stripping';
 import { Segment, SegmentType } from './segment';
 
@@ -32,7 +32,7 @@ const { freeze, memoize } = Helpers;
 // do not name strip for ":=" in lets (except rhs)
 // name strip for calls if possible
 
-interface IastBuild {
+export interface IastBuild_ {
   node(): IastNode | undefined;
   errors(): Readonly<StandardErrorMessage[]>;
 };
@@ -163,13 +163,13 @@ const OperatorConstructorBuild = (() => {
   }
 
   function make(mOpToken: Token, mIsUnaryContext: boolean, mPosition: number): OperatorConstructorBuild {
-    OperatorDefinitionsN.assertIsOperator(mOpToken.content());
+    OperatorDefinitions.assertIsOperator(mOpToken.content());
     const { error, setErrorMessage } = StandardError.make();
 
     const operatorDefinition = memoize((): OperatorDefinition | undefined => {
       const getOperatorInfo = mIsUnaryContext ?
-        OperatorDefinitionsN.unaryMappings :
-        OperatorDefinitionsN.binaryMappings;
+        OperatorDefinitions.unaryMappings :
+        OperatorDefinitions.binaryMappings;
       const info = getOperatorInfo()[mOpToken.content()];
       if (!info) {
         const context = mIsUnaryContext ? 'unary' : 'binary';
@@ -289,7 +289,7 @@ const AstExpressionCollector = freeze({
   }
 });
 
-type SegmentProcessor = (tokens: Readonly<Token[]>, segment: Segment) => IastBuild;
+type SegmentProcessor = (tokens: Readonly<Token[]>, segment: Segment) => IastBuild_;
 
 const strats: Readonly<{ [st in SegmentType]: SegmentProcessor }> = freeze({
   functionDefinitionBody: forFunctionDefinitionBody,
@@ -317,7 +317,7 @@ const ErrorsCollector = freeze({
 });
 
 function forFunctionDefinitionBody
-  (tokens: Readonly<Token[]>, segment: Segment): IastBuild
+  (tokens: Readonly<Token[]>, segment: Segment): IastBuild_
 {
   const errors = ErrorsCollector.make();
   const nodes: IastNode[] = [];
@@ -345,7 +345,7 @@ function forFunctionDefinitionBody
 
 // fine for nested parens...
 function forExpression
-  (tokens: Readonly<Token[]>, segment: Segment): IastBuild
+  (tokens: Readonly<Token[]>, segment: Segment): IastBuild_
 {
   const errors = ErrorsCollector.make();
   const collector = AstExpressionCollector.make();
@@ -392,8 +392,8 @@ function forExpression
   });
 }
 
-export const IastBuild = freeze({
-  make(tokens: Readonly<Token[]>): IastBuild {
+export const IastBuild_ = freeze({
+  make(tokens: Readonly<Token[]>): IastBuild_ {
     const { segment, error } = FunctionBodySegmentation.
       make(tokens, 0, tokens.length);
     if (!segment()) {
@@ -402,7 +402,7 @@ export const IastBuild = freeze({
     return strats['functionDefinitionBody'](tokens, segment()!);
   },
   buildFor(tokens: Readonly<Token[]>): IastNode {
-    const inst = IastBuild.make(tokens);
+    const inst = IastBuild_.make(tokens);
     const res = inst.node();
     if (!res) {
       raise(`Failed to build AST:\n${inst.errors()[0]?.message}`);

@@ -25,7 +25,7 @@ function make(): CrawlerStrategy {
   const kCurlOpen = commonCharacterCodes().curlOpen;
 
   const kConcatenation = Token.types.operator;
-  const kStringLiteral = Token.types.stringLiteral;
+  const kStringLiteral = Token.types.literal.string;
 
   const reentry = memoize((): CrawlerStrategy => freeze({
     findNext: makeFindNextFunction(makeReentry(strategyPatch))

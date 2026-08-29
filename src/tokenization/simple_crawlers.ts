@@ -1,5 +1,5 @@
 import { Helpers, raise } from '../helpers';
-import { Token } from '../token';
+import { Token, TokenType } from '../token';
 import { CharacterClass } from './character_class';
 import { NumericCrawler } from './numeric_crawler';
 import {
@@ -7,6 +7,7 @@ import {
   SourceReader,
 } from './crawler_strategy';
 import { AdvancedTokenLoopState, TokenLoopState } from './token_loop_state';
+import { GroupingNamingSchema } from '../grouping_naming_schema';
 
 const { freeze, memoize } = Helpers;
 const { commonCharacterCodes, isWhitespace, isNumeric, isAlphabetic } =
@@ -62,11 +63,27 @@ const operatorCrawler = memoize((): CrawlerStrategy => {
   return freeze({ findNext });
 });
 
+const groupingCodeIntoType = (() => {
+  type CodeMap = { [code: number]: TokenType | undefined };
+  const intoCodes = (arr: Readonly<string[]>): Readonly<number[]> =>
+    arr.filter(s => s.length === 1).map(s => s.codePointAt(0) as number);
+  const intoMaps = (arr: Readonly<string[]>, type: TokenType): CodeMap[] =>
+    intoCodes(arr).map((code: number) => ({ [code]: type }));
+  
+  const map: CodeMap = Object.assign({},
+    ...intoMaps(GroupingNamingSchema.kAllClosings, Token.types.grouping.closing),
+    ...intoMaps(GroupingNamingSchema.kAllOpenings, Token.types.grouping.opening));
+  return (code: number): TokenType =>
+    map[code] ?? raise('not a valid grouping');
+})();
+
 const groupingCrawler = memoize((): CrawlerStrategy => freeze({
-  findNext(_0: SourceReader, state: TokenLoopState): AdvancedTokenLoopState {
+  findNext(source: SourceReader, state: TokenLoopState): AdvancedTokenLoopState {
     const start = state.position();
+    const code = source.codePointAt(start) ??
+                 raise('must start on a character');
     return state.
-      pushToken(start, start + 1, Token.types.grouping).
+      pushToken(start, start + 1, groupingCodeIntoType(code)).
       advanceTo(start + 1);
   }
 }));

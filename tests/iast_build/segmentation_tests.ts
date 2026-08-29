@@ -1,10 +1,5 @@
-import { TestHelpers, ReachPoint } from '../test_helpers';
+import { TestHelpers } from '../test_helpers';
 import { Token } from '../../src/token';
-import { TokenRange } from '../../src/token_range';
-import { BuildStateAddition, TreePartBuild, type BuildSink } from '../../src/iast_build/tree_part_build';
-import { type IastNode } from '../../src/iast_node';
-import { TokenFactories } from '../token_factories';
-import { OperatorNamingSchema } from '../../src/operator_naming_schema';
 import { Helpers } from '../../src/helpers';
 import { ParentheticalSegmentation } from '../../src/iast_build/parenthetical_segmentation';
 
@@ -30,13 +25,13 @@ describeNamed({ ParentheticalSegmentation }, () => {
     start: pos,
     end: pos,
     content: () => '(',
-    type: () => Token.types.opening
+    type: () => Token.types.grouping.opening
   });
   const closeT: Token = freeze({
     start: pos,
     end: pos,
     content: () => ')',
-    type: () => Token.types.closing
+    type: () => Token.types.grouping.closing
   });
   describe('stuff', () => {
     it('stuff', () => {

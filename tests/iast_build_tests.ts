@@ -1,11 +1,9 @@
-// import { IastBuild } from '../src/iast_build';
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token } from '../src/token';
-import { TokenRange } from '../src/token_range';
 import { IastNode } from '../src/iast_node';
 import { TokenFactories } from './token_factories';
 import { ReseatableIastVisitor } from './iast_visitor_factories';
-import { IastBuild } from '../src/iast_build/scrap';
+import { IastBuild } from '../src/iast_build';
 
 const { describeNamed } = TestHelpers;
 

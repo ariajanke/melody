@@ -23,11 +23,11 @@ function make(mSource: string,
   const astBuild = memoize(() => {
     const tokenization = Tokenization.make(mSource);
     
-    return IastBuild.make(tokenization.tokenRange());
+    return IastBuild.make(tokenization.tokens());
   });
 
   const dastBuild = memoize(() => {
-    const iast = astBuild().build();
+    const iast = astBuild().node();
     if (!iast) {
       mError = `Failed to build IAST: ${astBuild().errors().map(e => e.message).join(', ')}`;
       return undefined;

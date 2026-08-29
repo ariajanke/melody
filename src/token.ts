@@ -2,60 +2,20 @@ import { GroupingNamingSchema } from './grouping_naming_schema';
 import { Helpers } from './helpers';
 import { OperatorNamingSchema } from './operator_naming_schema';
 
-const { freeze, memoize, toNamedMap } = Helpers;
+const { freeze, memoize, toNamedMap, makeIsStringInLookUpTable } = Helpers;
 
-type LiteralType = 'string' | 'number' | 'hash';
+const groupings = ['opening', 'closing', 'separator'] as const;
+const literals = ['string', 'numeric', 'hash'] as const;
+const otherTypes = ['operator', 'concatenation', 'identifier'] as const;
 
-const tokenTypes = [
-  // TODO deprecate, remove pending IAST refactor
-  'functionDefinition', // lose
-  //      following remain okay
-  'operator'          , // kept
-  'newLine'           , // lose
-  'grouping'          , // lose
-  'opening', // fn, tbl, (
-  'closing', // ~, )
-  'separator', // \n
-  'identifier'        , // kept
-  // 'literal'           , // new (need sub types then)
-  'stringLiteral'     , // lose
-  'numericLiteral'    , // lose
-  'hashLiteral'       , // lose
-  // 'concatenation'       // lose
-] as const;
+const types = freeze({
+  literal: toNamedMap(literals),
+  grouping: toNamedMap(groupings),
+  ...toNamedMap(otherTypes)
+});
 
-// interface TokenTypeFragment {
-//   type   (): TokenType;
-//   literal(): LiteralType | undefined;
-// };
-
-export type TokenType = typeof tokenTypes[number];
-
-// const nonLiteraltokenTypes_ = memoize(():
-//   Readonly<{ [tt in TokenType]: TokenTypeFragment | undefined }> =>
-// freeze({
-//   operator: freeze({
-//     type   : () => 'operator',
-//     literal: () => undefined
-//   }),
-//   opening: freeze({
-//     type   : () => 'opening',
-//     literal: () => undefined
-//   }),
-//   closing: freeze({
-//     type   : () => 'closing',
-//     literal: () => undefined
-//   }),
-//   separator: freeze({
-//     type   : () => 'separator',
-//     literal: () => undefined
-//   }),
-//   identifier: freeze({
-//     type   : () => 'identifier',
-//     literal: () => undefined
-//   }),
-//   literal: undefined
-// }));
+export type TokenType =
+  typeof groupings[number] | typeof literals[number] | typeof otherTypes[number];
 
 export interface Token {
   type   (): TokenType;
@@ -63,8 +23,6 @@ export interface Token {
   start  (): number;
   end    (): number;
 };
-
-const types = toNamedMap(tokenTypes);
 
 function makeCallAfter(lastToken: Token): Token {
   const lastEnd = lastToken.end;
@@ -76,10 +34,10 @@ function makeCallAfter(lastToken: Token): Token {
   });
 }
 
+const isLiteralType = makeIsStringInLookUpTable(literals);
+
 function isLiteral(tok: Token): boolean {
-  const { hashLiteral, stringLiteral, numericLiteral } = types;
-  const type_ = tok.type();
-  return hashLiteral === type_ || stringLiteral === type_ || numericLiteral === type_;
+  return isLiteralType(tok.type());
 }
 
 function makeContentFunction
@@ -98,8 +56,11 @@ function makeAlphaNumeric
     if (OperatorNamingSchema.isAlphabeticOperator(content()))
       { return types.operator; }
 
-    if (GroupingNamingSchema.isGrouping(content()))
-      { return types.grouping; }
+    if (GroupingNamingSchema.isClosing(content()))
+      { return types.grouping.closing; }
+
+    if (GroupingNamingSchema.isOpening(content()))
+      { return types.grouping.opening; }
 
     return types.identifier;
   });

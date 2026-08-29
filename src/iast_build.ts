@@ -1,62 +1,67 @@
-import { TreePartBuild } from './iast_build/tree_part_build';
-import { BuildState } from './iast_build/build_state';
-import { TokenRange } from './token_range';
-import { Helpers, raise } from './helpers';
-import { IastNode } from './iast_node';
+// import { TreePartBuild } from './iast_build/tree_part_build';
+// import { BuildState } from './iast_build/build_state';
+// import { TokenRange } from './token_range';
+// import { Helpers, raise } from './helpers';
+// import { IastNode } from './iast_node';
+import { IastBuild_ } from "./iast_build/scrap";
 
-const { freeze, memoize } = Helpers;
+export type  IastBuild = IastBuild_;
+export const IastBuild = IastBuild_;
 
-let sPrintOutTpbs = false;
+// const { freeze, memoize } = Helpers;
 
-function setPrintOutsEnabled(b: boolean): void {
-  sPrintOutTpbs = b;
-}
+// let sPrintOutTpbs = false;
 
-export interface IastBuild {
-  build: () => IastNode | undefined,
-  errors: () => Readonly<{ message: string }>[] 
-}
+// function setPrintOutsEnabled(b: boolean): void {
+//   sPrintOutTpbs = b;
+// }
 
-function make(mTokens: TokenRange): IastBuild {
-  const mErrors: Readonly<{ message: string }>[] = [];
-  const mBuildState = BuildState.make(mErrors);
+// export interface IastBuild {
+//   build: () => IastNode | undefined,
+//   errors: () => Readonly<{ message: string }>[] 
+// }
 
-  const inst = freeze({
-    build: memoize((): IastNode | undefined => {
-      mBuildState.pushPart( TreePartBuild.make(mTokens) );
-      if (sPrintOutTpbs) {
-        console.log(`init ${mBuildState.asString()}`);
-      }
-      while (mBuildState.hasRemainingParts()) {
-        if (sPrintOutTpbs) {
-          console.log(mBuildState.asString());
-        }
-        const part = mBuildState.popPart();
-        const addition = part.build();
-        if (!addition) {
-          mErrors.push( part.error() );
-          return;
-        }
-        addition.pushTo(mBuildState);
-      }
-      if (sPrintOutTpbs) {
-        console.log(`on complete ${mBuildState.asString()}`);
-      }
-      return mBuildState.complete();
-    }),
-    errors: () => mErrors
-  });
+// function make(mTokens: TokenRange): IastBuild {
+//   const mErrors: Readonly<{ message: string }>[] = [];
+//   const mBuildState = BuildState.make(mErrors);
 
-  return inst;
-}
+//   const inst = freeze({
+//     build: memoize((): IastNode | undefined => {
+//       mBuildState.pushPart( TreePartBuild.make(mTokens) );
+//       if (sPrintOutTpbs) {
+//         console.log(`init ${mBuildState.asString()}`);
+//       }
+//       while (mBuildState.hasRemainingParts()) {
+//         if (sPrintOutTpbs) {
+//           console.log(mBuildState.asString());
+//         }
+//         const part = mBuildState.popPart();
+//         const addition = part.build();
+//         if (!addition) {
+//           mErrors.push( part.error() );
+//           return;
+//         }
+//         addition.pushTo(mBuildState);
+//       }
+//       if (sPrintOutTpbs) {
+//         console.log(`on complete ${mBuildState.asString()}`);
+//       }
+//       return mBuildState.complete();
+//     }),
+//     errors: () => mErrors
+//   });
 
-function buildFor(tokens: TokenRange): IastNode {
-  const inst = make(tokens);
-  const res = inst.build();
-  if (!res) {
-    raise(`Failed to build AST:\n${inst.errors()[0]?.message}`);
-  }
-  return res;
-}
+//   return inst;
+// }
 
-export const IastBuild = freeze({ make, buildFor, setPrintOutsEnabled });
+// function buildFor(tokens: TokenRange): IastNode {
+//   const inst = make(tokens);
+//   const res = inst.build();
+//   if (!res) {
+//     raise(`Failed to build AST:\n${inst.errors()[0]?.message}`);
+//   }
+//   return res;
+// }
+
+// export const IastBuild = freeze({ make, buildFor, setPrintOutsEnabled });
+

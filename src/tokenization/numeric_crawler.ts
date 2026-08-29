@@ -13,12 +13,13 @@ function make(): CrawlerStrategy {
   const { commonCharacterCodes, isNumeric } = CharacterClass;
   const kNeg = commonCharacterCodes().negative;
   const kDot = commonCharacterCodes().dot;
+  const kNumericLiteral = Token.types.literal.numeric;
 
   function advanceWithToken
     (state: TokenLoopState, start: number, idx: number): AdvancedTokenLoopState
   {
     return state.
-      pushToken(start, idx, Token.types.numericLiteral).advanceTo(idx);
+      pushToken(start, idx, kNumericLiteral).advanceTo(idx);
   }
 
   function findNext(source: SourceReader, state: TokenLoopState)

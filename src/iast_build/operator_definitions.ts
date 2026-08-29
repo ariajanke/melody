@@ -1,13 +1,15 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 
 const { freeze, memoize, makeCounter } = Helpers;
 
+type OperatorRelation = 'binary' | 'unary';
+
 interface OperatorDefinitionMut {
-  representation: string,
-  precedence: number,
-  operandRelation: string
-}
+  representation: string;
+  precedence: number;
+  relation: OperatorRelation;
+};
 
 export type OperatorDefinition = Readonly<OperatorDefinitionMut>;
 
@@ -15,81 +17,63 @@ export type OperatorDefinitionDictionary = Readonly<{
   [representation: string]: OperatorDefinition | undefined
 }>;
 
-const makeListingFunction = (operandRelation: string) => {
-  let sListing: OperatorDefinitionDictionary | undefined;
-  return (): OperatorDefinitionDictionary => {
-    if (sListing)
-      { return sListing; }
-    const listingArray = OperatorDefinitions.
-      fullListing().
-      reduce((prev: OperatorDefinition[], def: OperatorDefinition) => {
-        if (def.operandRelation === operandRelation)
-          { return [...prev, def]; }
-        return prev;
-      }, [] as OperatorDefinition[]).
-      map((def: OperatorDefinition) => ({ [def.representation]: def }));
-    return sListing =
-      Object.assign({} as OperatorDefinitionDictionary, ...listingArray);
-  };
-};
-
 const operandRelationships = freeze({
   binary: 'binary',
-  unary : 'unary' ,
-  fringe: 'fringe'
+  unary : 'unary'
 });
 
-export const OperatorDefinitions = freeze({
-  fullListing: (() => {
-    const counter = makeCounter();
-    
-    let sFullListing: OperatorDefinition[] | undefined;
-    return (): Readonly<OperatorDefinition[]> => {
-      if (sFullListing) return sFullListing;
-      const { binary, unary } = OperatorDefinitions.operandRelationships;
-      const call = OperatorNamingSchema.kCall;
-      const asgn = OperatorNamingSchema.kAssignment;
-      const {
-        kLet, kAnd, kOr, kIs, kNot, kComma, kPlus, kMinus, kMultiply, kDivide,
-        kDot, kEquality
-      } = OperatorNamingSchema;
-      return sFullListing =
-        [
-          { representation: kLet     , operandRelation: unary  },
-          { representation: kComma   , operandRelation: binary },
-          { representation: kIs      , operandRelation: binary },
-          { representation: kEquality, operandRelation: binary },
-          { representation: asgn     , operandRelation: binary },
-          { representation: kPlus    , operandRelation: binary },
-          { representation: kMinus   , operandRelation: binary },
-          { representation: kMultiply, operandRelation: binary },
-          { representation: kMinus   , operandRelation: unary  },
-          { representation: kDivide  , operandRelation: binary },
-          { representation: kNot     , operandRelation: unary  },
-          { representation: kAnd     , operandRelation: binary },
-          { representation: kOr      , operandRelation: binary },
-          { representation: call     , operandRelation: binary },
-          { representation: kDot     , operandRelation: binary }
-        ].
-          map(({ representation, operandRelation }:
-                { representation: string, operandRelation: string }) =>
-              ({ representation, precedence: counter(), operandRelation }));
-    };
-  })(),
-  isAnOperator : (() => {
-    let sRepresentations: { [representation: string]: boolean } | undefined;
-    const fn = (str: string) => {
-      if (sRepresentations) return !!sRepresentations[str];
+function intoMappingFor(pred: (s: OperatorRelation) => boolean)
+  : OperatorDefinitionDictionary
+{
+  const mappings = OperatorDefinitions.
+    fullListing().
+    filter(({ relation }) => pred(relation)).
+    map((def: OperatorDefinition): OperatorDefinitionDictionary =>
+      ({ [def.representation]: def }));
+  return Object.assign({}, ...mappings);
+}
 
-      const repArray = OperatorDefinitions.
-        fullListing().
-        map((def: OperatorDefinition) => ({ [def.representation] : true }));
-      sRepresentations = Object.assign({}, ...repArray);
-      return fn(str);
-    };
-    return fn;
-  })(),
-  unaryListing : memoize(makeListingFunction(operandRelationships.unary )),
-  binaryListing: memoize(makeListingFunction(operandRelationships.binary)),
-  operandRelationships
+const unaryMappings = memoize((): OperatorDefinitionDictionary =>
+  intoMappingFor((rel: OperatorRelation) => rel === 'unary'));
+const binaryMappings = memoize((): OperatorDefinitionDictionary =>
+  intoMappingFor((rel: OperatorRelation) => rel === 'binary'));
+const allMappings = memoize((): OperatorDefinitionDictionary =>
+  intoMappingFor((_0: OperatorRelation) => true));
+
+export const OperatorDefinitions = freeze({
+  unaryMappings,
+  binaryMappings,
+  assertIsOperator(op: string): void {
+    if (allMappings()[op] !== undefined)
+      { return; }
+
+    raise(`"${op}" is not on the operator definition map`);
+  },
+  fullListing: memoize((): Readonly<OperatorDefinition[]> => {
+    const counter = makeCounter();
+    const { binary, unary } = operandRelationships;
+    const {
+      kLet, kAnd, kOr, kIs, kNot, kComma, kPlus, kMinus, kMultiply, kDivide,
+      kDot, kEquality, kCall, kAssignment
+    } = OperatorNamingSchema;
+    return [
+      { representation: kLet       , relation: unary  },
+      { representation: kComma     , relation: binary },
+      { representation: kIs        , relation: binary },
+      { representation: kEquality  , relation: binary },
+      { representation: kAssignment, relation: binary },
+      { representation: kPlus      , relation: binary },
+      { representation: kMinus     , relation: binary },
+      { representation: kMultiply  , relation: binary },
+      { representation: kMinus     , relation: unary  },
+      { representation: kDivide    , relation: binary },
+      { representation: kNot       , relation: unary  },
+      { representation: kAnd       , relation: binary },
+      { representation: kOr        , relation: binary },
+      { representation: kDot       , relation: binary },
+      { representation: kCall      , relation: binary },
+    ].map(({ representation, relation }:
+            { representation: string, relation: OperatorRelation }) =>
+          ({ representation, precedence: counter(), relation }));
+  }),
 });
