@@ -9,13 +9,15 @@ import { Segment, Segmentation } from './segment';
 
 const { freeze, memoize } = Helpers;
 
+const kClosing = Token.types.grouping.closing;
+
 export const FunctionBodySegmentation = freeze({
   isBodyClosing(token: Token | undefined) {
-    return token?.type() === Token.types.closing &&
+    return token?.type() === kClosing &&
            token?.content() === GroupingNamingSchema.kBodyClose;
   },
   assertIsClosing(token: Token | undefined) {
-    if (token === undefined || token.type() === Token.types.closing)
+    if (token === undefined || token.type() === kClosing)
       { return; }
     raise('body must end on a closing');
   },
@@ -27,12 +29,12 @@ export const FunctionBodySegmentation = freeze({
       return Segment.isClosing(token);
     },
     isProperClosing(token: Token | undefined): boolean {
-      return token?.type() === Token.types.closing &&
+      return token?.type() === kClosing &&
              token?.content() === GroupingNamingSchema.kParentheticalClose;
     },
     continuesFor(token: Token): boolean {
       const { type } = token;
-      return type() === Token.types.separator ||
+      return type() === kClosing ||
              type() === Token.types.identifier ||
              Token.isLiteral(token) ||
              type() === Token.types.operator;

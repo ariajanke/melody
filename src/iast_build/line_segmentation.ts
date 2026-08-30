@@ -15,7 +15,7 @@ export const LineSegmentation = freeze({
       return Segment.isClosing(token);
     },
     isProperClosing(token: Token | undefined): boolean {
-      return token?.type() === Token.types.separator ||
+      return token?.type() === Token.types.grouping.separator ||
              FunctionBodySegmentation.isBodyClosing(token);
     },
     continuesFor(token: Token): boolean {

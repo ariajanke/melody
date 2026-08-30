@@ -27,12 +27,12 @@ export const ParentheticalSegmentation = freeze({
              FunctionBodySegmentation.isBodyClosing(token);
     },
     isProperClosing(token: Token | undefined): boolean {
-      return token?.type() === Token.types.closing &&
+      return token?.type() === Token.types.grouping.closing &&
              token?.content() === GroupingNamingSchema.kParentheticalClose;
     },
     continuesFor(token: Token): boolean {
       const { type } = token;
-      return type() === Token.types.separator ||
+      return type() === Token.types.grouping.separator ||
              LineSegmentation.strategy().continuesFor(token);
     },
     groupingConstructorFor: Segment.groupingConstructorFor

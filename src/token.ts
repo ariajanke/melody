@@ -40,6 +40,8 @@ function isLiteral(tok: Token): boolean {
   return isLiteralType(tok.type());
 }
 
+const lenOf = (tok: Token) => tok.end() - tok.start();
+
 function makeContentFunction
   (mParentString: string,
    mStart: number,
@@ -89,6 +91,7 @@ function make
 
 export const Token = freeze({
   make,
+  lenOf,
   types,
   makeCallAfter,
   makeAlphaNumeric,

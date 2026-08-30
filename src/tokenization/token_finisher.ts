@@ -10,40 +10,17 @@
 // - modification
 //   - nl identation
 
-import { GroupingNamingSchema } from '../grouping_naming_schema';
 import { Helpers, raise } from '../helpers';
+import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token, TokenType } from '../token';
 import { CharacterClass } from './character_class';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
-function isEscape(tok: Token | undefined) {
-  return tok !== undefined &&
-         tok.type() === Token.types.operator &&
+function isEscape(tok: Token) {
+  return tok.type() === Token.types.operator &&
          tok.content() === CharacterClass.kEscape;
 }
-
-// function isNewLine(tok: Token | undefined) {
-//   return tok !== undefined &&
-//          tok.type() === Token.types.grouping.separator;
-// }
-
-// function isStringLiteral(tok: Token | undefined) {
-//   return tok?.type() === Token.types.literal.string;
-// }
-
-// function isConcatenation(tok: Token | undefined) {
-//   return tok?.type() === Token.types.concatenation;
-// }
-
-// function isIdentifier(tok: Token | undefined) {
-//   return tok?.type() === Token.types.identifier;
-// }
-
-// function isCallOpening(tok: Token | undefined) {
-//   return tok?.type() === Token.types.grouping.opening &&
-//          tok?.content() === GroupingNamingSchema.kParentheticalOpen;
-// }
 
 interface FinisherState {
   advanceBy(n: number): FinisherState;
@@ -51,6 +28,41 @@ interface FinisherState {
   replaceRight(tok: Token | undefined): FinisherState;
   pushCallEmissionAfter(): FinisherState;
 };
+
+interface CompleteFinisherState extends FinisherState {
+  index(): number;
+  tokens(): (Token | undefined)[];
+  callEmissions(): number[];
+};
+
+const CompleteFinisherState = freeze({
+  make(mTokens: (Token | undefined)[]): CompleteFinisherState {
+    let mIdx = 0;
+    const mCallEmissionsAfter: number[] = [];
+    const inst: CompleteFinisherState = freeze({
+      advanceBy(n: number): FinisherState {
+        mIdx += n;
+        return inst;
+      },
+      replaceLeft(tok: Token | undefined): FinisherState {
+        mTokens[mIdx] = tok;
+        return inst;
+      },
+      replaceRight(tok: Token | undefined): FinisherState {
+        mTokens[mIdx + 1] = tok;
+        return inst;
+      },
+      pushCallEmissionAfter(): FinisherState {
+        mCallEmissionsAfter.push(mIdx);
+        return inst;
+      },
+      index: () => mIdx,
+      tokens: () => mTokens,
+      callEmissions: () => mCallEmissionsAfter
+    });
+    return inst;
+  }
+})
 
 type AdjacentStepFunction =
   (left: Token, right: Token, state: FinisherState) => FinisherState;
@@ -72,21 +84,23 @@ const kDefaultInner: { [tt in TokenType]: undefined } = {
 const eliminateBoth = (state: FinisherState): FinisherState =>
   state.replaceLeft(undefined).replaceRight(undefined).advanceBy(2);
 
+const lenOfTok = Token.lenOf;
+
 const extendForIndentation = (nl: Token, anything: Token, state: FinisherState): FinisherState => {
   const { start, content, type } = nl;
-  const { end } = anything;
+  const end = anything.start;
   return state.replaceLeft(freeze({ start, end, content, type })).advanceBy(1);
 };
 
-const kAdjacentTokensRuleMap: OuterMap = {
+const kAdjacentTokensRuleMap: OuterMap = freeze({
   ...kDefaultInner,
   operator: {
     ...kDefaultInner,
     separator(left: Token, _1: Token, state: FinisherState): FinisherState {
-      if (isEscape(left)) {
-        state.replaceLeft(undefined);
-      }
-      return state.replaceRight(undefined).advanceBy(1);
+      if (!isEscape(left))
+        { return state; }
+
+      return eliminateBoth(state);
     }
   },
   separator: {
@@ -105,69 +119,92 @@ const kAdjacentTokensRuleMap: OuterMap = {
   concatenation: {
     ...kDefaultInner,
     string(_0: Token, str: Token, state: FinisherState): FinisherState {
-      return str.content().length === 0 ?
+      return lenOfTok(str) === 0 ?
         eliminateBoth(state) :
-        state;
+        state.advanceBy(1);
     }
   },
   string: {
     ...kDefaultInner,
     concatenation(str: Token, _1: Token, state: FinisherState): FinisherState {
-      return str.content().length === 0 ?
+      return lenOfTok(str) === 0 ?
         eliminateBoth(state) :
-        state;
+        state.advanceBy(1);
     }
   },
   identifier: {
     ...kDefaultInner,
     opening(idTok: Token, opening: Token, state: FinisherState): FinisherState {
       if (idTok.end() !== opening.start())
-        { return state; }
+        { return state.advanceBy(1); }
 
-      return state.pushCallEmissionAfter();
+      return state.pushCallEmissionAfter().advanceBy(1);
     }
   }
-};
+});
 
-function doIt(mTokens: Readonly<Token[]>) {
-  const mToks: (Token | undefined)[] = mTokens.slice();
-  const mCallEmissionsAfter: number[] = [];
-  
-  let mIdx = 0;
-  let mState: FinisherState = {
-    advanceBy(n: number): FinisherState {
-      mIdx += n;
-      return mState;
-    },
-    replaceLeft(tok: Token | undefined): FinisherState {
-      mToks[mIdx] = tok;
-      return mState;
-    },
-    replaceRight(tok: Token | undefined): FinisherState {
-      mToks[mIdx + 1] = tok;
-      return mState;
-    },
-    pushCallEmissionAfter(): FinisherState {
-      mCallEmissionsAfter.push(mIdx);
-      return mState;
-    }
-  };
-
-  const len = mToks.length;
-  while (idx < len) {
-    const left = mToks[idx];
-    const right = mToks[idx + 1];
-    if (left === undefined)
-      { raise('index not properly incremented'); }
-    if (right === undefined)
-      { break; }
-
-    const handlerFn =
-      (kAdjacentTokensRuleMap[left.type()] ?? kDefaultInner)[right.type()];
-    if (handlerFn) {
-      state = handlerFn(left, right, state);
-    } else {
-      ++idx;
-    }
-  }
+// NOTE array maybe empty
+function backOf<T>(arr: Readonly<T[]>): T | undefined {
+  return arr[arr.length - 1];
 }
+
+export interface TokenFinisher { finishedTokens(): Readonly<Token[]>; };
+
+function make(mTokens: Readonly<Token[]>) {
+  const mLen = mTokens.length;
+  const finishAdjacencyRules = ((): CompleteFinisherState => {
+    const mState = CompleteFinisherState.make(mTokens.slice());
+    const { tokens, index } = mState;
+    while (index() < mLen) {
+      const oldIdx = index();
+      const left = tokens()[index()];
+      const right = tokens()[index() + 1];
+      if (left === undefined)
+        { raise('index not properly incremented'); }
+
+      if (right === undefined)
+        { break; }
+
+      const handlerFn =
+        (kAdjacentTokensRuleMap[left.type()] ?? kDefaultInner)[right.type()];
+      if (handlerFn) {
+        handlerFn(left, right, mState);
+        tokens()[index()] ?? raise('index not properly incremented...');
+      } else {
+        mState.advanceBy(1);
+      }
+      if (oldIdx === index()) {
+        raise('index not properly incremented...');
+      }
+    }
+    return mState;
+  });
+
+  const finishedTokens = memoize((): Readonly<Token[]> => {
+    const state = finishAdjacencyRules();
+    const finishedTokens: Token[] = [];
+    const callEmissionsAfter = state.callEmissions().reverse();
+    for (let idx = 0; idx < mLen; ++idx) {
+      const tok = state.tokens()[idx];
+      if (tok)
+        { finishedTokens.push(tok); }
+      if (backOf(callEmissionsAfter) === idx) {
+        const pos =
+          backOf(finishedTokens)?.end ??
+          (() => 0);
+        finishedTokens.push(freeze({
+          start: pos,
+          end: pos,
+          content: () => OperatorNamingSchema.kCall,
+          type: () => Token.types.operator
+        }));
+        callEmissionsAfter.pop();
+      }
+    }
+    return finishedTokens;
+  });
+
+  return freeze({ finishedTokens });
+}
+
+export const TokenFinisher = freeze({ make });

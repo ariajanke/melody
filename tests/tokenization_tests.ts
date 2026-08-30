@@ -1,7 +1,6 @@
 import { TestHelpers } from './test_helpers';
 import { Tokenization } from '../src/tokenization';
-import { TokenRange } from '../src/token_range';
-import { TokenType } from '../src/token';
+import { Token, TokenType } from '../src/token';
 
 const { describeNamed } = TestHelpers;
 
@@ -10,12 +9,8 @@ describeNamed({ Tokenization }, () => {
   type ContentTokenCaseSet = Readonly<ContentTokenCase[]>;
   type TypeTokenCase = [string, string, TokenType[]];
   type TypeTokenCaseSet = Readonly<TypeTokenCase[]>;
-  const getTokens = (inp: string): string[] => {
-    const strings: string[] = [];
-    const range = Tokenization.make(inp).tokenRange();
-    TokenRange.forEachIn(range, (str: string) => strings.push(str));
-    return strings;
-  };
+  const getTokens = (inp: string): string[] =>
+    Tokenization.make(inp).tokens().map(t => t.content());
 
   function doContentSplitTestsFor(set: ContentTokenCaseSet) {
     set.forEach((tuple: [string, string, string[]]) => {
@@ -119,7 +114,7 @@ describeNamed({ Tokenization }, () => {
         'comment becomes part of the indentation',
         'fn()\n#{ :3 } let b',
         [
-          'grouping', 'grouping', 'grouping', 'newLine',
+          'opening', 'opening', 'closing', 'separator',
           'operator', 'identifier'
         ]
       ]
@@ -132,6 +127,11 @@ describeNamed({ Tokenization }, () => {
         'typical string',
         `a = 'hello'`,
         ['a', '=', 'hello']
+      ],
+      [
+        'does not omit an empty string, just because it is empty',
+        `a = ''`,
+        ['a', '=', ''],
       ],
       [
         'escaped string',
@@ -159,9 +159,7 @@ describeNamed({ Tokenization }, () => {
         'string interpolation',
         `'#{nutrient} can be found in #{food}'`,
         [
-          'stringLiteral', 'operator', 'identifier',
-          'operator', 'stringLiteral', 'operator',
-          'identifier', 'operator', 'stringLiteral'
+          'identifier', 'concatenation', 'string', 'concatenation', 'identifier'
         ]
       ]
     ]);
@@ -200,17 +198,17 @@ describeNamed({ Tokenization }, () => {
       [
         'hash literal',
         'color := #333',
-        ['identifier', 'operator', 'hashLiteral']
+        ['identifier', 'operator', 'hash']
       ],
       [
         'integer with call',
         '12.to_string()',
-        ['numericLiteral', 'operator', 'identifier', 'grouping', 'grouping']
+        ['numeric', 'operator', 'identifier', 'opening', 'closing']
       ],
       [
         'decimal with call',
         '12.0.to_string()',
-        ['numericLiteral', 'operator', 'identifier', 'grouping', 'grouping']
+        ['numeric', 'operator', 'identifier', 'opening', 'closing']
       ]
     ]);
   });
@@ -262,7 +260,7 @@ describeNamed({ Tokenization }, () => {
       [
         'capture operator',
         '$+ = fn',
-        ['identifier', 'operator', 'grouping']
+        ['identifier', 'operator', 'opening']
       ]
     ]);
   });
@@ -273,10 +271,10 @@ describeNamed({ Tokenization }, () => {
         'groupings are identified correctly',
         'tbl \n a = fn () ~ \n ~',
         [
-          'grouping', 'newLine',
-          'identifier', 'operator', 'grouping',
-          'grouping', 'grouping', 'grouping', 'newLine',
-          'grouping'
+          'opening', 'separator',
+          'identifier', 'operator', 'opening',
+          'opening', 'closing', 'closing', 'separator',
+          'closing'
         ]
       ],
     ]);

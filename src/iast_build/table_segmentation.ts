@@ -7,7 +7,7 @@ const { freeze, memoize } = Helpers;
 
 export const TableSegmentation = freeze({
   isOpening(tok: Token): boolean {
-    return tok.type() === Token.types.opening &&
+    return tok.type() === Token.types.grouping.opening &&
            tok.content() === GroupingNamingSchema.kTableDefinition;
   },
   make(_0: Readonly<Token[]>, _1: number, _2: number): Segmentation {

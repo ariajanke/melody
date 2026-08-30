@@ -7,6 +7,8 @@ import { Segment, Segmentation } from './segment';
 
 const { freeze, memoize } = Helpers;
 
+const kSeparator = Token.types.grouping.separator;
+
 function make
   (mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation
 {
@@ -20,7 +22,7 @@ function make
         return idx;
       }
 
-      if (mTokens[idx].type() === Token.types.separator) {
+      if (mTokens[idx].type() === kSeparator) {
         // at most one separator until the head!
         ++separatorCount;
         if (separatorCount > 1) {

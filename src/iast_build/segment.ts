@@ -39,7 +39,7 @@ export const Segment = freeze({
            Token.isLiteral(tok);
   },
   isClosing(tok: Token | undefined) {
-    return tok === undefined || tok.type() === Token.types.closing;
+    return tok === undefined || tok.type() === Token.types.grouping.closing;
   },
   groupingConstructorFor(token: Token): SegmentationConstructor | undefined {
     return sInitializable!.groupingConstructorFor(token);
