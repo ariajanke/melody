@@ -1,19 +1,8 @@
-// wrap up tokenization:
-// - cancellations:
-//   - escape + new line
-//   - eliminate blank lines
-//   - empty string literal + concatenation
-//   - concatenation + empty string literal
-//   - operator + new line
-// - emisisions
-//   - call token emission
-// - modification
-//   - nl identation
-
 import { Helpers, raise } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token, TokenType } from '../token';
 import { CharacterClass } from './character_class';
+import { FinisherState, FinisherStateWithData } from './finisher_state';
 
 const { freeze, memoize } = Helpers;
 
@@ -21,48 +10,6 @@ function isEscape(tok: Token) {
   return tok.type() === Token.types.operator &&
          tok.content() === CharacterClass.kEscape;
 }
-
-interface FinisherState {
-  advanceBy(n: number): FinisherState;
-  replaceLeft(tok: Token | undefined): FinisherState;
-  replaceRight(tok: Token | undefined): FinisherState;
-  pushCallEmissionAfter(): FinisherState;
-};
-
-interface CompleteFinisherState extends FinisherState {
-  index(): number;
-  tokens(): (Token | undefined)[];
-  callEmissions(): number[];
-};
-
-const CompleteFinisherState = freeze({
-  make(mTokens: (Token | undefined)[]): CompleteFinisherState {
-    let mIdx = 0;
-    const mCallEmissionsAfter: number[] = [];
-    const inst: CompleteFinisherState = freeze({
-      advanceBy(n: number): FinisherState {
-        mIdx += n;
-        return inst;
-      },
-      replaceLeft(tok: Token | undefined): FinisherState {
-        mTokens[mIdx] = tok;
-        return inst;
-      },
-      replaceRight(tok: Token | undefined): FinisherState {
-        mTokens[mIdx + 1] = tok;
-        return inst;
-      },
-      pushCallEmissionAfter(): FinisherState {
-        mCallEmissionsAfter.push(mIdx);
-        return inst;
-      },
-      index: () => mIdx,
-      tokens: () => mTokens,
-      callEmissions: () => mCallEmissionsAfter
-    });
-    return inst;
-  }
-})
 
 type AdjacentStepFunction =
   (left: Token, right: Token, state: FinisherState) => FinisherState;
@@ -144,16 +91,15 @@ const kAdjacentTokensRuleMap: OuterMap = freeze({
 });
 
 // NOTE array maybe empty
-function backOf<T>(arr: Readonly<T[]>): T | undefined {
-  return arr[arr.length - 1];
-}
+function backOf<T>(arr: Readonly<T[]>): T | undefined
+  { return arr[arr.length - 1]; }
 
 export interface TokenFinisher { finishedTokens(): Readonly<Token[]>; };
 
 function make(mTokens: Readonly<Token[]>) {
   const mLen = mTokens.length;
-  const finishAdjacencyRules = ((): CompleteFinisherState => {
-    const mState = CompleteFinisherState.make(mTokens.slice());
+  const finishAdjacencyRules = ((): FinisherStateWithData => {
+    const mState = FinisherState.make(mTokens.slice());
     const { tokens, index } = mState;
     while (index() < mLen) {
       const oldIdx = index();
@@ -169,7 +115,6 @@ function make(mTokens: Readonly<Token[]>) {
         (kAdjacentTokensRuleMap[left.type()] ?? kDefaultInner)[right.type()];
       if (handlerFn) {
         handlerFn(left, right, mState);
-        tokens()[index()] ?? raise('index not properly incremented...');
       } else {
         mState.advanceBy(1);
       }

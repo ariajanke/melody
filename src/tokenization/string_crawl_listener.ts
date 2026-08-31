@@ -29,7 +29,7 @@ export const StringCrawlListener = freeze({
     });
   },
   makeReentry(popClose: () => StrategyPatch): StringCrawlListener {
-    const kConcatenation = Token.types.operator;
+    const kConcatenation = Token.types.concatenation;
     const kCurlClose = CharacterClass.commonCharacterCodes().curlClose;
     return freeze({
       assumedStartingCharacter: () => kCurlClose,

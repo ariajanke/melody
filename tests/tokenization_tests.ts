@@ -1,6 +1,7 @@
 import { TestHelpers } from './test_helpers';
 import { Tokenization } from '../src/tokenization';
-import { Token, TokenType } from '../src/token';
+import { TokenType } from '../src/token';
+import { OperatorNamingSchema } from '../src/operator_naming_schema';
 
 const { describeNamed } = TestHelpers;
 
@@ -32,7 +33,8 @@ describeNamed({ Tokenization }, () => {
   }
 
   it('splits a hello world program', () => {
-    expect(getTokens("puts('hello')")).toEqual(['puts', '(', 'hello', ')']);
+    expect(getTokens("puts('hello')")).
+      toEqual(['puts', OperatorNamingSchema.kCall, '(', 'hello', ')']);
   });
 
   describe('operators', () => {
@@ -136,12 +138,12 @@ describeNamed({ Tokenization }, () => {
       [
         'escaped string',
         `foo('\\'\\#{')`,
-        ['foo', '(', `\\'\\#{`, ')']
+        ['foo', OperatorNamingSchema.kCall, '(', `\\'\\#{`, ')']
       ],
       [
         'string interpolation',
         `foo('Good #{tod} to you!')`,
-        ['foo', '(', 'Good ', '#{', 'tod', '}', ' to you!', ')']
+        ['foo', OperatorNamingSchema.kCall, '(', 'Good ', '#{', 'tod', '}', ' to you!', ')']
       ],
       [
         'complex string interpolation',
@@ -151,7 +153,7 @@ describeNamed({ Tokenization }, () => {
       [
         'nested interpolation',
         `'b#{'hello #{name}'}'`,
-        ['b', '#{', 'hello ', '#{', 'name', '}', '', '}', '']
+        ['b', '#{', 'hello ', '#{', 'name']
       ]
     ] as [string, string, string[]][]);
     doTypeSplitTestsFor([
@@ -203,12 +205,12 @@ describeNamed({ Tokenization }, () => {
       [
         'integer with call',
         '12.to_string()',
-        ['numeric', 'operator', 'identifier', 'opening', 'closing']
+        ['numeric', 'operator', 'identifier', 'operator', 'opening', 'closing']
       ],
       [
         'decimal with call',
         '12.0.to_string()',
-        ['numeric', 'operator', 'identifier', 'opening', 'closing']
+        ['numeric', 'operator', 'identifier', 'operator', 'opening', 'closing']
       ]
     ]);
   });
@@ -218,7 +220,7 @@ describeNamed({ Tokenization }, () => {
       [
         'the shebang comment',
         '#!/somewhere/stuff\nhello()',
-        ['\n', 'hello', '(', ')']
+        ['\n', 'hello', OperatorNamingSchema.kCall, '(', ')']
       ],
       [
         'typical comment',

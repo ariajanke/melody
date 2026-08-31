@@ -24,7 +24,7 @@ function make(): CrawlerStrategy {
   const kHash = commonCharacterCodes().hash;
   const kCurlOpen = commonCharacterCodes().curlOpen;
 
-  const kConcatenation = Token.types.operator;
+  const kConcatenation = Token.types.concatenation;
   const kStringLiteral = Token.types.literal.string;
 
   const reentry = memoize((): CrawlerStrategy => freeze({

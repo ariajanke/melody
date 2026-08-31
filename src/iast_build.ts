@@ -1,67 +1,134 @@
-// import { TreePartBuild } from './iast_build/tree_part_build';
-// import { BuildState } from './iast_build/build_state';
-// import { TokenRange } from './token_range';
-// import { Helpers, raise } from './helpers';
-// import { IastNode } from './iast_node';
-import { IastBuild_ } from "./iast_build/scrap";
+import { Helpers, raise, StandardErrorMessage } from './helpers';
+import { AstExpressionCollector } from './iast_build/ast_expression_collector';
+import { FunctionBodySegmentation } from './iast_build/function_body_segmentation';
+import { Segment, SegmentType } from './iast_build/segment';
+import { IastNode } from './iast_node';
+import { Token } from './token';
 
-export type  IastBuild = IastBuild_;
-export const IastBuild = IastBuild_;
+const { freeze, memoize } = Helpers;
 
-// const { freeze, memoize } = Helpers;
+export interface IastBuild {
+  node(): IastNode | undefined;
+  errors(): Readonly<StandardErrorMessage[]>;
+};
 
-// let sPrintOutTpbs = false;
+type SegmentProcessor = (tokens: Readonly<Token[]>, segment: Segment) => IastBuild;
 
-// function setPrintOutsEnabled(b: boolean): void {
-//   sPrintOutTpbs = b;
-// }
+const strats: Readonly<{ [st in SegmentType]: SegmentProcessor }> = freeze({
+  functionDefinitionBody: forFunctionDefinitionBody,
+  expression: forExpression
+});
 
-// export interface IastBuild {
-//   build: () => IastNode | undefined,
-//   errors: () => Readonly<{ message: string }>[] 
-// }
+interface ErrorsCollector {
+  pushErrors(errors: Readonly<StandardErrorMessage[]>): void;
+  pushError(error: StandardErrorMessage): void;
+  errors(): Readonly<StandardErrorMessage[]>;
+};
 
-// function make(mTokens: TokenRange): IastBuild {
-//   const mErrors: Readonly<{ message: string }>[] = [];
-//   const mBuildState = BuildState.make(mErrors);
+const ErrorsCollector = freeze({
+  make() {
+    const mErrors: StandardErrorMessage[] = [];
+    return freeze({
+      pushErrors(errors: Readonly<StandardErrorMessage[]>)
+        { mErrors.push(...errors); },
+      pushError(error: StandardErrorMessage)
+        { mErrors.push(error); },
+      errors(): Readonly<StandardErrorMessage[]>
+        { return mErrors; }
+    })
+  }
+});
 
-//   const inst = freeze({
-//     build: memoize((): IastNode | undefined => {
-//       mBuildState.pushPart( TreePartBuild.make(mTokens) );
-//       if (sPrintOutTpbs) {
-//         console.log(`init ${mBuildState.asString()}`);
-//       }
-//       while (mBuildState.hasRemainingParts()) {
-//         if (sPrintOutTpbs) {
-//           console.log(mBuildState.asString());
-//         }
-//         const part = mBuildState.popPart();
-//         const addition = part.build();
-//         if (!addition) {
-//           mErrors.push( part.error() );
-//           return;
-//         }
-//         addition.pushTo(mBuildState);
-//       }
-//       if (sPrintOutTpbs) {
-//         console.log(`on complete ${mBuildState.asString()}`);
-//       }
-//       return mBuildState.complete();
-//     }),
-//     errors: () => mErrors
-//   });
+function forFunctionDefinitionBody
+  (tokens: Readonly<Token[]>, segment: Segment): IastBuild
+{
+  const errors = ErrorsCollector.make();
+  const nodes: IastNode[] = [];
+  const clen = segment.children().length;
+  for (let cidx = 0; cidx < clen; ++cidx) {
+    const child = segment.children()[cidx];
+    const ibuild = strats[child.type()](tokens, child);
+    if (ibuild.node()) {
+      nodes.push(ibuild.node()!);
+    } else {
+      errors.pushErrors(ibuild.errors());
+    }
+  }
 
-//   return inst;
-// }
+  return freeze({
+    node: memoize(() => {
+      if (errors.errors().length > 0)
+        { return undefined; }
 
-// function buildFor(tokens: TokenRange): IastNode {
-//   const inst = make(tokens);
-//   const res = inst.build();
-//   if (!res) {
-//     raise(`Failed to build AST:\n${inst.errors()[0]?.message}`);
-//   }
-//   return res;
-// }
+      return IastNode.makeFunctionDefinition(nodes);
+    }),
+    errors: errors.errors
+  });
+}
 
-// export const IastBuild = freeze({ make, buildFor, setPrintOutsEnabled });
+function forExpression
+  (tokens: Readonly<Token[]>, segment: Segment): IastBuild
+{
+  const errors = ErrorsCollector.make();
+  const collector = AstExpressionCollector.make();
+  let cidx = 0;
+  let child = segment.children()[cidx];
+  for (let idx = segment.start(); idx < segment.end(); ) {
+    if (tokens[idx] === undefined) {
+      raise('went too far?!');
+    }
+    if (idx === child?.start()) {
+      idx = child.end();
+      ++cidx;
+      const ibuild = strats[child.type()](tokens, child);
+      const node = ibuild.node();
+      if (node) {
+        collector.pushNode(node);
+      } else {
+        errors.pushErrors(ibuild.errors());
+      }
+    } else {
+      if (tokens[idx].type() === Token.types.operator) {
+        collector.pushOperator(tokens[idx]);
+      } else if (Segment.isFringe(tokens[idx])) {
+        const node = IastNode.makeFringe(tokens[idx]);
+        collector.pushNode(node);
+      }
+      ++idx;
+    }
+  }
 
+  return freeze({
+    node: memoize(() => {
+      if (errors.errors().length > 0)
+        { return undefined; }
+
+      const ibuild = collector.finish();
+      if (!ibuild.node()) {
+        errors.pushError(ibuild.error());
+      }
+
+      return ibuild.node();
+    }),
+    errors: errors.errors
+  });
+}
+
+export const IastBuild = freeze({
+  make(tokens: Readonly<Token[]>): IastBuild {
+    const { segment, error } = FunctionBodySegmentation.
+      make(tokens, 0, tokens.length);
+    if (!segment()) {
+      raise(error().message);
+    }
+    return strats['functionDefinitionBody'](tokens, segment()!);
+  },
+  buildFor(tokens: Readonly<Token[]>): IastNode {
+    const inst = IastBuild.make(tokens);
+    const res = inst.node();
+    if (!res) {
+      raise(`Failed to build AST:\n${inst.errors()[0]?.message}`);
+    }
+    return res;
+  }
+});
