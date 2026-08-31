@@ -35,7 +35,7 @@ function makeFromStringOnly(s: string): Token {
 
     return Token.types.identifier;
   })();
-  const pos = (): number => raise('uh oh'); 
+  const pos = (): number => raise('uh oh');
 
   return freeze({
     content: () => asStr ?? s,
@@ -45,4 +45,8 @@ function makeFromStringOnly(s: string): Token {
   });
 }
 
-export const TokenFactories = freeze({ makeFromStringOnly });
+function stringsIntoTokens(strings: Readonly<string[]>): Readonly<Token[]> {
+  return strings.map(makeFromStringOnly);
+}
+
+export const TokenFactories = freeze({ makeFromStringOnly, stringsIntoTokens });

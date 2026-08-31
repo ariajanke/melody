@@ -40,6 +40,14 @@ function isLiteral(tok: Token): boolean {
   return isLiteralType(tok.type());
 }
 
+const isOperativeType = makeIsStringInLookUpTable([
+  'operator', 'concatenation'
+] satisfies TokenType[]);
+
+function isOperative(tok: Token): boolean {
+  return isOperativeType(tok.type());
+}
+
 const lenOf = (tok: Token) => tok.end() - tok.start();
 
 function makeContentFunction
@@ -95,5 +103,6 @@ export const Token = freeze({
   types,
   makeCallAfter,
   makeAlphaNumeric,
-  isLiteral
+  isLiteral,
+  isOperative
 });

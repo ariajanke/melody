@@ -27,8 +27,8 @@ export const LineSegmentation = freeze({
     groupingConstructorFor: Segment.groupingConstructorFor
   })),
   make(mTokens: Readonly<Token[]>,
-        mStart: number,
-        mEnd: number): Segmentation
+       mStart: number,
+       mEnd: number): Segmentation
   {
     // TODO rm me when finished debugging
     const inst = ExpressionSegmentation.
