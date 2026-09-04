@@ -32,6 +32,10 @@ export const FunctionDefinitionSegmentation = freeze({
       return m.segment() ?? setErrorFn(m.error);
     });
 
+    const segment = memoize(() => {
+      
+    });
+
     // NOTE ignore head for now
     const segment = body;
 
