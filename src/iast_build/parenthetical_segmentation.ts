@@ -1,7 +1,7 @@
 import { GroupingNamingSchema } from '../grouping_naming_schema';
 import { Helpers, raise } from '../helpers';
 import { Token } from '../token';
-import { ClosingPair, ExpressionScanningStrategy, ExpressionSegmentation } from './expression_segmentation';
+import { ClosingPair, ExpressionClosingType, ExpressionScanningStrategy, ExpressionSegmentation } from './expression_segmentation';
 import { FunctionBodySegmentation } from './function_body_segmentation';
 import { LineSegmentation } from './line_segmentation';
 import { Segment, Segmentation } from './segment';
@@ -22,29 +22,40 @@ export const ParentheticalSegmentation = freeze({
     assertIsOpening(token: Token | undefined) {
       ParentheticalSegmentation.assertIsOpening(token);
     },
-    isAbruptClosing(token: Token | undefined): boolean {
-      return token === undefined ||
-             FunctionBodySegmentation.isBodyClosing(token);
+    closingTypeOf(token: Token | undefined): ExpressionClosingType | undefined {
+      if (token === undefined ||
+          FunctionBodySegmentation.isBodyClosing(token))
+        { return 'abrupt'; }
+
+      if (token.type() === Token.types.grouping.closing &&
+          token.content() === GroupingNamingSchema.kParentheticalClose)
+        { return 'proper'; }
+
+      return undefined;
     },
-    isProperClosing(token: Token | undefined): boolean {
-      return token?.type() === Token.types.grouping.closing &&
-             token?.content() === GroupingNamingSchema.kParentheticalClose;
-    },
+    // isAbruptClosing(token: Token | undefined): boolean {
+    //   return token === undefined ||
+    //          FunctionBodySegmentation.isBodyClosing(token);
+    // },
+    // isProperClosing(token: Token | undefined): boolean {
+    //   return token?.type() === Token.types.grouping.closing &&
+    //          token?.content() === GroupingNamingSchema.kParentheticalClose;
+    // },
     continuesFor(token: Token): boolean {
       const { type } = token;
       return type() === Token.types.grouping.separator ||
              LineSegmentation.strategy().continuesFor(token);
     },
     groupingConstructorFor: Segment.groupingConstructorFor,
-    intoSegment(start: number, pair: ClosingPair): Segment {
-      const { index, children } = pair;
-      return freeze({
-        type : () => 'expression',
-        start: () => start + 1,
-        end  : () => index,
-        children
-      });
-    }
+    // intoSegment(start: number, pair: ClosingPair): Segment {
+    //   const { index, children } = pair;
+    //   return freeze({
+    //     type : () => 'expression',
+    //     start: () => start + 1,
+    //     end  : () => index,
+    //     children
+    //   });
+    // }
   })),
   make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
     // TODO rm me when finished debugging

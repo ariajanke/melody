@@ -69,18 +69,21 @@ function forFunctionDefinitionBody
 function forExpression
   (tokens: Readonly<Token[]>, segment: Segment): IastBuild
 {
+  if (segment.type() !== 'expression') {
+    raise('segment must be an expression');
+  }
   const errors = ErrorsCollector.make();
   const collector = AstExpressionCollector.make();
   let cidx = 0;
-  const child = segment.children()[cidx];
+  const child = () => segment.children()[cidx];
   for (let idx = segment.start(); idx < segment.end(); ) {
     if (tokens[idx] === undefined) {
       raise('went too far?!');
     }
-    if (idx === child?.start()) {
-      idx = child.end();
+    if (idx === child()?.start()) {
+      idx = child().end();
       ++cidx;
-      const ibuild = strats[child.type()](tokens, child);
+      const ibuild = strats[child().type()](tokens, child());
       const node = ibuild.node();
       if (node) {
         collector.pushNode(node);
@@ -94,6 +97,7 @@ function forExpression
         const node = IastNode.makeFringe(tokens[idx]);
         collector.pushNode(node);
       }
+      // tolerate and ignore any groupings
       ++idx;
     }
   }

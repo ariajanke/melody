@@ -1,6 +1,10 @@
 import { Helpers } from '../helpers';
 import { Token } from '../token';
-import { ClosingPair, ExpressionScanningStrategy, ExpressionSegmentation } from './expression_segmentation';
+import {
+  ExpressionClosingType,
+  ExpressionScanningStrategy,
+  ExpressionSegmentation
+} from './expression_segmentation';
 import { FunctionBodySegmentation } from './function_body_segmentation';
 import { Segment, Segmentation } from './segment';
 
@@ -11,13 +15,23 @@ export const LineSegmentation = freeze({
     assertIsOpening(token: Token | undefined) {
       return token !== undefined;
     },
-    isAbruptClosing(token: Token | undefined): boolean {
-      return Segment.isClosing(token);
+    closingTypeOf(token: Token | undefined): ExpressionClosingType | undefined {
+      if (token === undefined ||
+          FunctionBodySegmentation.isBodyClosing(token))
+        { return 'hard'; }
+
+      if (token.type() === Token.types.grouping.separator)
+        { return 'proper'; }
+
+      return undefined;
     },
-    isProperClosing(token: Token | undefined): boolean {
-      return token?.type() === Token.types.grouping.separator ||
-             FunctionBodySegmentation.isBodyClosing(token);
-    },
+    // isAbruptClosing(token: Token | undefined): boolean {
+    //   return Segment.isClosing(token);
+    // },
+    // isProperClosing(token: Token | undefined): boolean {
+    //   return token?.type() === Token.types.grouping.separator ||
+    //          FunctionBodySegmentation.isBodyClosing(token);
+    // },
     continuesFor(token: Token): boolean {
       const { type } = token;
       return type() === Token.types.identifier ||
@@ -25,15 +39,15 @@ export const LineSegmentation = freeze({
              type() === Token.types.operator;
     },
     groupingConstructorFor: Segment.groupingConstructorFor,
-    intoSegment(start: number, pair: ClosingPair): Segment {
-      const { index, children } = pair;
-      return freeze({
-        type : () => 'expression',
-        start: () => start,
-        end  : () => index,
-        children
-      });
-    }
+    // intoSegment(start: number, pair: ClosingPair): Segment {
+    //   const { index, children } = pair;
+    //   return freeze({
+    //     type : () => 'expression',
+    //     start: () => start,
+    //     end  : () => index,
+    //     children
+    //   });
+    // }
   })),
   make(mTokens: Readonly<Token[]>,
        mStart: number,
