@@ -15,7 +15,7 @@ describeNamed({ ParentheticalSegmentation }, () => {
       content: () => content,
       type: () => type
     });
-  }
+  };
   const pos = () => 0;
   const opT: Token = makeToken('op', Token.types.operator);
   const idT: Token = makeToken('id', Token.types.identifier);
@@ -36,22 +36,22 @@ describeNamed({ ParentheticalSegmentation }, () => {
   describe('base case', () => {
     const inst = makeInst([openT, idT, closeT, opT]);
 
-    isSegmentEnclosed(inst, 0, 3);
+    isSegmentEnclosed(inst, 1, 2);
   });
   describe('shallow nested case', () => {
     const inst = makeInst([
       openT, idT, opT, openT, idT, opT, idT, closeT, idT, closeT, opT
     ]);
 
-    isSegmentEnclosed(inst, 0, 10);
+    isSegmentEnclosed(inst, 1, 9);
 
     it('has a single child segment', () => {      
       if (!inst().segment())
         { return fail(); }
       
       expect(inst().segment()!.children().length).toEqual(1);
-      expect(inst().segment()!.children()[0]?.start()).toEqual(3);
-      expect(inst().segment()!.children()[0]?.end()).toEqual(8);
+      expect(inst().segment()!.children()[0]?.start()).toEqual(4);
+      expect(inst().segment()!.children()[0]?.end()).toEqual(7);
     });
   });
 
@@ -62,7 +62,7 @@ describeNamed({ ParentheticalSegmentation }, () => {
     const childCount = () => inst().segment()?.children().length;
     const children = () => inst().segment()!.children();
 
-    isSegmentEnclosed(inst, 0, 7);
+    isSegmentEnclosed(inst, 1, 6);
 
     it('has two children', () => {
       expect(childCount()).toEqual(2);
@@ -72,16 +72,16 @@ describeNamed({ ParentheticalSegmentation }, () => {
       if (childCount() !== 2)
         { return fail(); }
       
-      expect(children()[0]?.start()).toEqual(1);
-      expect(children()[0]?.end()).toEqual(3);
+      expect(children()[0]?.start()).toEqual(2);
+      expect(children()[0]?.end()).toEqual(2);
     });
 
     it('has second child of correct start and end', () => {
       if (childCount() !== 2)
         { return fail(); }
 
-      expect(children()[1]?.start()).toEqual(4);
-      expect(children()[1]?.end()).toEqual(6);
+      expect(children()[1]?.start()).toEqual(5);
+      expect(children()[1]?.end()).toEqual(5);
     });
   });
 

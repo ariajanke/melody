@@ -1,7 +1,7 @@
 import { GroupingNamingSchema } from '../grouping_naming_schema';
 import { Helpers, raise } from '../helpers';
 import { Token } from '../token';
-import { ExpressionScanningStrategy, ExpressionSegmentation } from './expression_segmentation';
+import { ClosingPair, ExpressionScanningStrategy, ExpressionSegmentation } from './expression_segmentation';
 import { FunctionBodySegmentation } from './function_body_segmentation';
 import { LineSegmentation } from './line_segmentation';
 import { Segment, Segmentation } from './segment';
@@ -35,7 +35,16 @@ export const ParentheticalSegmentation = freeze({
       return type() === Token.types.grouping.separator ||
              LineSegmentation.strategy().continuesFor(token);
     },
-    groupingConstructorFor: Segment.groupingConstructorFor
+    groupingConstructorFor: Segment.groupingConstructorFor,
+    intoSegment(start: number, pair: ClosingPair): Segment {
+      const { index, children } = pair;
+      return freeze({
+        type : () => 'expression',
+        start: () => start + 1,
+        end  : () => index,
+        children
+      });
+    }
   })),
   make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
     // TODO rm me when finished debugging

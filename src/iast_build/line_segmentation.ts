@@ -1,6 +1,6 @@
 import { Helpers } from '../helpers';
 import { Token } from '../token';
-import { ExpressionScanningStrategy, ExpressionSegmentation } from './expression_segmentation';
+import { ClosingPair, ExpressionScanningStrategy, ExpressionSegmentation } from './expression_segmentation';
 import { FunctionBodySegmentation } from './function_body_segmentation';
 import { Segment, Segmentation } from './segment';
 
@@ -24,7 +24,16 @@ export const LineSegmentation = freeze({
              Token.isLiteral(token) ||
              type() === Token.types.operator;
     },
-    groupingConstructorFor: Segment.groupingConstructorFor
+    groupingConstructorFor: Segment.groupingConstructorFor,
+    intoSegment(start: number, pair: ClosingPair): Segment {
+      const { index, children } = pair;
+      return freeze({
+        type : () => 'expression',
+        start: () => start,
+        end  : () => index,
+        children
+      });
+    }
   })),
   make(mTokens: Readonly<Token[]>,
        mStart: number,

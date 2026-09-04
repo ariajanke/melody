@@ -35,7 +35,7 @@ const ErrorsCollector = freeze({
         { mErrors.push(error); },
       errors(): Readonly<StandardErrorMessage[]>
         { return mErrors; }
-    })
+    });
   }
 });
 
@@ -72,7 +72,7 @@ function forExpression
   const errors = ErrorsCollector.make();
   const collector = AstExpressionCollector.make();
   let cidx = 0;
-  let child = segment.children()[cidx];
+  const child = segment.children()[cidx];
   for (let idx = segment.start(); idx < segment.end(); ) {
     if (tokens[idx] === undefined) {
       raise('went too far?!');

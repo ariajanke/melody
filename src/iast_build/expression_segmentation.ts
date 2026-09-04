@@ -11,6 +11,7 @@ export interface ExpressionScanningStrategy {
   isAbruptClosing(token: Token | undefined): boolean;
   isProperClosing(token: Token | undefined): boolean;
   continuesFor(token: Token): boolean;
+  intoSegment(start: number, pair: ClosingPair): Segment;
 };
 
 export type ClosingPair = Readonly<{
@@ -31,11 +32,11 @@ function make
     let childGatherer = ChildSegmentGatherer.defaultEmpty();
     for (let idx = mStart + 1; idx < mEnd; ) {
       const token: Token | undefined = mTokens[idx];
-      if (mScanStrat.isAbruptClosing(mTokens[idx]))
-        { return setErrorMessage(`unexpected close found at ${idx}`); }
+      if (mScanStrat.isProperClosing(token))
+        { return freeze({ index: idx, children: childGatherer.children }); }
 
-      if (mScanStrat.isProperClosing(mTokens[idx]))
-        { return freeze({ index: idx + 1, children: childGatherer.children }); }
+      if (mScanStrat.isAbruptClosing(token))
+        { return setErrorMessage(`unexpected close found at ${idx}`); }
 
       const ctor = mScanStrat.groupingConstructorFor(token);
       if (ctor) {
@@ -62,13 +63,7 @@ function make
     if (!closingPair())
       { return undefined; }
 
-    const { index, children } = closingPair()!;
-    return freeze({
-      type : () => 'expression',
-      start: () => mStart,
-      end  : () => index,
-      children
-    });
+    return mScanStrat.intoSegment(mStart, closingPair()!);
   });
 
   return freeze({ segment, error });
