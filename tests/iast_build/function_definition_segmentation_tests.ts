@@ -75,7 +75,8 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       ...kHeadlessAddition, '\n',
       ...kMiscLine
     ]);
-    it('must be written', fail);
+    isSegmentEnclosed(inst, 0, 4);
+    hasLineSegment(inst, 1, 4);
   });
 
   describe('fn () 2 + 1 \\n ...', () => {
@@ -83,7 +84,8 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       ...kHeadedAddition, '\n',
       ...kMiscLine
     ]);
-    it('must be written', fail);
+    isSegmentEnclosed(inst, 0, 6);
+    hasLineSegment(inst, 3, 6);
   });
 
   describe('fn () () \\n ...', () => {
@@ -91,7 +93,8 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       ...kHeadedEmptyTuple, '\n',
       ...kMiscLine
     ]);
-    it('must be written', fail);
+    isSegmentEnclosed(inst, 0, 5);
+    hasLineSegment(inst, 3, 6);
   });
   
   describe('multiline headless', () => {
@@ -100,7 +103,8 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       'stuff', '\n',
       '~'
     ]);
-    it('must be written', fail);
+    isSegmentEnclosed(inst, 0, 4);
+    hasLineSegment(inst, 1, 2);
   });
   
   describe('multiline same line head', () => {
