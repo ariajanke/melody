@@ -10,28 +10,26 @@ import { Segment, Segmentation } from './segment';
 
 const { freeze, memoize } = Helpers;
 
+const kSeparator = Token.types.grouping.separator;
+
 export const LineSegmentation = freeze({
+  isProperClose(token: Token | undefined): boolean {
+    return token?.type() === kSeparator;
+  },
   strategy: memoize((): ExpressionScanningStrategy => freeze({
-    assertIsOpening(token: Token | undefined) {
-      return token !== undefined;
-    },
+    isOpening(_0: Token | undefined)
+      { return false; },
     closingTypeOf(token: Token | undefined): ExpressionClosingType | undefined {
       if (token === undefined ||
-          FunctionBodySegmentation.isBodyClosing(token))
+          FunctionBodySegmentation.isBodyClosing(token) ||
+          LineSegmentation.isProperClose(token))
         { return 'hard'; }
 
-      if (token.type() === Token.types.grouping.separator)
-        { return 'proper'; }
+      // if (LineSegmentation.isProperClose(token))
+      //   { return 'proper'; }
 
       return undefined;
     },
-    // isAbruptClosing(token: Token | undefined): boolean {
-    //   return Segment.isClosing(token);
-    // },
-    // isProperClosing(token: Token | undefined): boolean {
-    //   return token?.type() === Token.types.grouping.separator ||
-    //          FunctionBodySegmentation.isBodyClosing(token);
-    // },
     continuesFor(token: Token): boolean {
       const { type } = token;
       return type() === Token.types.identifier ||
@@ -39,15 +37,6 @@ export const LineSegmentation = freeze({
              type() === Token.types.operator;
     },
     groupingConstructorFor: Segment.groupingConstructorFor,
-    // intoSegment(start: number, pair: ClosingPair): Segment {
-    //   const { index, children } = pair;
-    //   return freeze({
-    //     type : () => 'expression',
-    //     start: () => start,
-    //     end  : () => index,
-    //     children
-    //   });
-    // }
   })),
   make(mTokens: Readonly<Token[]>,
        mStart: number,

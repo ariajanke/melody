@@ -1,11 +1,11 @@
 import { TestHelpers } from '../test_helpers';
-import { Token, TokenType } from '../../src/token';
+import { Token } from '../../src/token';
 import { Helpers } from '../../src/helpers';
 import { FunctionDefinitionSegmentation } from '../../src/iast_build/function_definition_segmentation';
 import { TokenFactories } from '../token_factories';
 
 const { describeNamed } = TestHelpers;
-const { freeze, memoize } = Helpers;
+const { memoize } = Helpers;
 
 describeNamed({ FunctionDefinitionSegmentation }, () => {
   // single line, explicit
@@ -14,7 +14,6 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       memoize(() => FunctionDefinitionSegmentation.make(toks, 0, toks.length));
   const makeInst = (strings: Readonly<string[]>) =>
     makeInstFromTokens(stringsIntoTokens(strings));
-  // TODO DRY me
   type InstFn = ReturnType<typeof makeInst>;
 
   function isSegmentEnclosed(inst: InstFn, exStart: number, exEnd: number) {
@@ -25,19 +24,28 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
     });
   }
 
-  function hasLineSegment(inst: InstFn, exStart: number, exEnd: number) {
+  function hasUniqueChildSegment(inst: InstFn, exStart: number, exEnd: number) {
+    hasNChildren(inst, 1);
+    forNthChild(inst, 0, exStart, exEnd);
+  }
+
+  function hasNChildren(inst: InstFn, count: number) {
+    const children = memoize(() => inst().segment()?.children());
+
+    it(`has exactly ${count} child segment(s)`, () =>
+      expect(children()?.length).toEqual(count));
+  }
+
+  function forNthChild(inst: InstFn, nthChild: number, exStart: number, exEnd: number) {
     const children = memoize(() => inst().segment()?.children());
     const child = memoize(() => {
       if (!children()) { return undefined; }
 
-      return children()![0];
+      return children()![nthChild];
     });
-
-    it('has a single child segment', () =>
-      expect(children()?.length).toEqual(1));
-    it(`has child segment that is typed as 'expression'`, () =>
+    it(`child (${nthChild}) segment that is typed as 'expression'`, () =>
       expect(child()?.type()).toEqual('expression'));
-    it(`has child segment within [${exStart} ${exEnd})`, () => {
+    it(`child (${nthChild}) segment within [${exStart} ${exEnd})`, () => {
       expect(child()?.start()).toEqual(exStart);
       expect(child()?.end()).toEqual(exEnd);
     });
@@ -55,19 +63,19 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
   describe('fn 2 + 1 ~', () => {
     const inst = makeInst([...kHeadlessAddition, '~']);
     isSegmentEnclosed(inst, 0, 5);
-    hasLineSegment(inst, 1, 4);
+    hasUniqueChildSegment(inst, 1, 4);
   });
 
   describe('fn () 2 + 1 ~', () => {
     const inst = makeInst([...kHeadedAddition, '~']);
     isSegmentEnclosed(inst, 0, 7);
-    hasLineSegment(inst, 3, 6);
+    hasUniqueChildSegment(inst, 3, 6);
   });
 
   describe('fn () () ~', () => {
     const inst = makeInst([...kHeadedEmptyTuple, '~']);
     isSegmentEnclosed(inst, 0, 6);
-    hasLineSegment(inst, 3, 5);
+    hasUniqueChildSegment(inst, 3, 5);
   });
 
   describe('fn 2 + 1 \\n ...', () => {
@@ -76,7 +84,7 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       ...kMiscLine
     ]);
     isSegmentEnclosed(inst, 0, 4);
-    hasLineSegment(inst, 1, 4);
+    hasUniqueChildSegment(inst, 1, 4);
   });
 
   describe('fn () 2 + 1 \\n ...', () => {
@@ -85,7 +93,7 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       ...kMiscLine
     ]);
     isSegmentEnclosed(inst, 0, 6);
-    hasLineSegment(inst, 3, 6);
+    hasUniqueChildSegment(inst, 3, 6);
   });
 
   describe('fn () () \\n ...', () => {
@@ -94,26 +102,30 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       ...kMiscLine
     ]);
     isSegmentEnclosed(inst, 0, 5);
-    hasLineSegment(inst, 3, 6);
+    hasUniqueChildSegment(inst, 3, 5);
   });
   
   describe('multiline headless', () => {
     const inst = makeInst([
       'fn', '\n  ',
       'stuff', '\n',
-      '~'
+      '~',
+      ...kMiscLine
     ]);
-    isSegmentEnclosed(inst, 0, 4);
-    hasLineSegment(inst, 1, 2);
+    isSegmentEnclosed(inst, 0, 5);
+    hasUniqueChildSegment(inst, 2, 3);
   });
   
   describe('multiline same line head', () => {
     const inst = makeInst([
       'fn', '(', ')', '\n  ',
       'stuff', '\n',
-      '~'
+      '~',
+      ...kMiscLine
     ]);
-    it('must be written', fail);
+
+    isSegmentEnclosed(inst, 0, 7);
+    hasUniqueChildSegment(inst, 4, 5);
   });
   
   describe('multiline separate line head', () => {
@@ -123,7 +135,9 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       'stuff', '\n',
       '~'
     ]);
-    it('must be written', fail);
+
+    isSegmentEnclosed(inst, 0, 8);
+    hasUniqueChildSegment(inst, 5, 6);
   });
 
   const kSimpleFnDef = ['let', 'f', '=', 'fn', '~'];
@@ -131,21 +145,33 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
     const inst = makeInst([
       'fn', '\n  ',
       ...kSimpleFnDef, '\n',
-      '~'
+      '~',
+      ...kMiscLine
     ]);
-    it('must be written', fail);
+
+    isSegmentEnclosed(inst, 0, 9);
+    hasUniqueChildSegment(inst, 2, 7);
   });
   
   describe('multiline multiple nested', () => {
     const inst = makeInst([
-      'fn', '\n  ',
-      '(', ')', '\n  ',
-      ...kSimpleFnDef, '\n  ',
-      'let', 'g', '=', 'fn', '(', ')', '\n    ',
-      'stuff', '\n  ',
-      '~', '\n',
-      '~'
+      'fn', '\n  ', // 2
+      '(', ')', '\n  ', // 5
+      ...kSimpleFnDef, '\n  ', // 11
+      'let', 'g', '=', 'fn', '(', ')', '\n    ', // 18
+      'stuff', '\n  ', // 20
+      '~', '\n', // 22
+      'hello', '\n', // 24
+      '~', // 25
+      ...kMiscLine
     ]);
-    it('must be written', fail);
+    
+    isSegmentEnclosed(inst, 0, 25);
+
+    hasNChildren(inst, 3);
+
+    forNthChild(inst, 0, 5, 10);
+    forNthChild(inst, 1, 11, 21);
+    forNthChild(inst, 2, 22, 23);
   });
 });

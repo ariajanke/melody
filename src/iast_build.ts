@@ -187,8 +187,9 @@ function forExpression
 
 export const IastBuild = freeze({
   make(tokens: Readonly<Token[]>): IastBuild {
+    const { isEndOfInput } = FunctionBodySegmentation;
     const { segment, error } = FunctionBodySegmentation.
-      make(tokens, 0, tokens.length);
+      make(tokens, 0, tokens.length, isEndOfInput);
     if (!segment()) {
       raise(error().message);
     }

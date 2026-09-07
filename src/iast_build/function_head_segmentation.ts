@@ -43,7 +43,7 @@ function make
         continue;
       }
 
-      return idx;
+      return idx - separatorCount;
     }
     return mEnd;
   });

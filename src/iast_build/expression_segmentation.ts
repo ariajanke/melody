@@ -9,12 +9,9 @@ export type ExpressionClosingType = 'proper' | 'hard' | 'abrupt';
 
 export interface ExpressionScanningStrategy {
   groupingConstructorFor(token: Token): SegmentationConstructor | undefined;
-  assertIsOpening(token: Token | undefined): void;
-  // isAbruptClosing(token: Token | undefined): boolean;
-  // isProperClosing(token: Token | undefined): boolean;
+  isOpening(token: Token | undefined): boolean;
   closingTypeOf(token: Token | undefined): ExpressionClosingType | undefined;
   continuesFor(token: Token): boolean;
-  // intoSegment(start: number, pair: ClosingPair): Segment;
 };
 
 export type ClosingPair = Readonly<{
@@ -28,31 +25,25 @@ function make
    mEnd: number,
    mScanStrat: ExpressionScanningStrategy): Segmentation
 {
-  mScanStrat.assertIsOpening(mTokens[mStart]);
   const { error, setErrorMessage, setErrorFn } = StandardError.make();
   
   const closingPair = memoize((): ClosingPair | undefined => {
     let childGatherer = ChildSegmentGatherer.defaultEmpty();
-    for (let idx = mStart + 1; idx < mEnd; ) {
+    let idx = mStart;
+    if (mScanStrat.isOpening(mTokens[idx]))
+      { idx++; }
+
+    while (idx < mEnd) {
       const token: Token | undefined = mTokens[idx];
       const closing = mScanStrat.closingTypeOf(token);
       if (closing === 'abrupt')
         { return setErrorMessage(`abruptly closed at ${idx}`); }
-      if (closing === 'proper')
-        { return freeze({ index: idx, children: childGatherer.children }); }
+      if (closing === 'proper') { 
+        // NOTE closing is part of the expression
+        return freeze({ index: idx + 1, children: childGatherer.children });
+      }
       if (closing === 'hard')
-        { return freeze({ index: idx - 1, children: childGatherer.children }); }
-
-      // if (mScanStrat.isProperClosing(token))
-        
-
-      // abrupt closing is not an error?
-      // does this imply that the closing index is "-1" instread?
-      // parans must be closed properly!
-      // running out of tokens is a proper close in the function def/line case
-      // but running out is "abrupt" in the paren case
-      // if (mScanStrat.isAbruptClosing(token))
-      //   { return setErrorMessage(`unexpected close found at ${idx}`); }
+        { return freeze({ index: idx, children: childGatherer.children }); }
 
       const ctor = mScanStrat.groupingConstructorFor(token);
       if (ctor) {
@@ -83,8 +74,7 @@ function make
     return freeze({
       children,
       start: () => mStart,
-      // NOTE closing is part of the expression
-      end: () => index + 1,
+      end: () => index,
       type: () => 'expression'
     });
   });

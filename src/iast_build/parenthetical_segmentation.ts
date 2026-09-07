@@ -9,19 +9,19 @@ import { Segment, Segmentation } from './segment';
 const { freeze, memoize } = Helpers;
 
 export const ParentheticalSegmentation = freeze({
-  isOpening(token: Token): boolean {
-    return token.content() === GroupingNamingSchema.kParentheticalOpen &&
+  isOpening(token: Token | undefined): boolean {
+    return token !== undefined &&
+           token.content() === GroupingNamingSchema.kParentheticalOpen &&
            token.type() === 'opening';
   },
   assertIsOpening(token: Token | undefined): void {
-    if (token && ParentheticalSegmentation.isOpening(token))
+    if (ParentheticalSegmentation.isOpening(token))
       { return; }
+
     raise(`"${token?.content() ?? '<EMPTY>'}" is not a parenthetical opening`);
   },
   strategy: memoize((): ExpressionScanningStrategy => freeze({
-    assertIsOpening(token: Token | undefined) {
-      ParentheticalSegmentation.assertIsOpening(token);
-    },
+    isOpening: ParentheticalSegmentation.isOpening,
     closingTypeOf(token: Token | undefined): ExpressionClosingType | undefined {
       if (token === undefined ||
           FunctionBodySegmentation.isBodyClosing(token))
@@ -33,34 +33,19 @@ export const ParentheticalSegmentation = freeze({
 
       return undefined;
     },
-    // isAbruptClosing(token: Token | undefined): boolean {
-    //   return token === undefined ||
-    //          FunctionBodySegmentation.isBodyClosing(token);
-    // },
-    // isProperClosing(token: Token | undefined): boolean {
-    //   return token?.type() === Token.types.grouping.closing &&
-    //          token?.content() === GroupingNamingSchema.kParentheticalClose;
-    // },
     continuesFor(token: Token): boolean {
       const { type } = token;
       return type() === Token.types.grouping.separator ||
              LineSegmentation.strategy().continuesFor(token);
     },
     groupingConstructorFor: Segment.groupingConstructorFor,
-    // intoSegment(start: number, pair: ClosingPair): Segment {
-    //   const { index, children } = pair;
-    //   return freeze({
-    //     type : () => 'expression',
-    //     start: () => start + 1,
-    //     end  : () => index,
-    //     children
-    //   });
-    // }
   })),
   make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
     // TODO rm me when finished debugging
+    ParentheticalSegmentation.assertIsOpening(mTokens[mStart]);
     const inst = ExpressionSegmentation.
       make(mTokens, mStart, mEnd, ParentheticalSegmentation.strategy());
+
     return freeze({
       segment: () => inst.segment(),
       error: inst.error

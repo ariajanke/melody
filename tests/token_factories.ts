@@ -27,7 +27,7 @@ function makeFromStringOnly(s: string): Token {
     if (GroupingNamingSchema.isOpening(s))
       { return Token.types.grouping.opening; }
 
-    if (s === '\n')
+    if (s[0] === '\n')
       { return Token.types.grouping.separator; }
 
     if (OperatorNamingSchema.isOperator(s))
