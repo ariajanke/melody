@@ -2,9 +2,10 @@ import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers'
 import { IastNode } from '../iast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
-import { NodeConstructor, OperatorConstructor } from './operator_constructor';
+import { NodeConstructorCollection } from './node_constructor_collection';
+import { OperatorConstructor } from './operator_constructor';
 import { OperatorDefinition, OperatorDefinitions } from './operator_definitions';
-import { ReceiverNameStripping } from './receiver_name_stripping';
+// import { ReceiverNameStripping } from './receiver_name_stripping';
 
 const { freeze, memoize } = Helpers;
 
@@ -23,7 +24,7 @@ type BinaryConstructor = (rec: IastNode, params: IastNode) => IastNode;
 
 type UnaryConstructor = (rec: IastNode) => IastNode;
 
-type NodeArrayModifier = (ctors: NodeConstructor[]) => IastNode;
+type NodeArrayModifier = (ctors: NodeConstructorCollection) => IastNode;
 
 function asOpC(op: OperatorConstructor): OperatorPrecedence | undefined {
   return (op as unknown as { [kSecret]: OperatorPrecedence | undefined })[kSecret];
@@ -39,11 +40,11 @@ function binaryNodeConstructorFor
   }
   if (op === OperatorNamingSchema.kCall) {
     return (rec: IastNode, params: IastNode) => {
-      const { nameTarget, strippedTree } = ReceiverNameStripping.make(rec);
-      if (nameTarget()) {
-        return IastNode.forOperativeStatements.
-          makeCall(nameTarget()!, strippedTree()!, params);  
-      }
+      // const { nameTarget, strippedTree } = ReceiverNameStripping.make(rec);
+      // if (nameTarget()) {
+      //   return IastNode.forOperativeStatements.
+      //     makeCall(nameTarget()!, strippedTree()!, params);  
+      // }
       return IastNode.forOperativeStatements.makeCall(callName, rec, params);
     };
   }
@@ -77,13 +78,16 @@ function makeCompareFunc(info: OperatorPrecedence): (other: OperatorConstructor)
 function makeArrayModifierForBinary
   (nodeConstructor: BinaryConstructor, position: number): NodeArrayModifier 
 {
-  return (ctors: NodeConstructor[]): IastNode => {
-    const recCtor = ctors[position - 1];
-    const paramsCtor = ctors[position + 1];
+  return (ctors: NodeConstructorCollection): IastNode => {
+    const recCtor = ctors.at(position - 1);
+    const paramsCtor = ctors.at(position + 1);
     const rec = recCtor.makeNode(ctors);
     const params = paramsCtor.makeNode(ctors);
     const node = nodeConstructor(rec, params);
-    ctors[position - 1] = ctors[position + 1] = OperatorConstructor.fromNode(node);
+    const opc = OperatorConstructor.fromNode(node);
+    ctors.replace(position - 1, opc);
+    ctors.replace(position    , opc);
+    ctors.replace(position + 1, opc);
     return node;
   };
 }
@@ -91,11 +95,13 @@ function makeArrayModifierForBinary
 function makeArrayModifierForUnary
   (nodeConstructor: UnaryConstructor, position: number): NodeArrayModifier 
 {
-  return (ctors: NodeConstructor[]): IastNode => {
-    const recCtor = ctors[position + 1];
+  return (ctors: NodeConstructorCollection): IastNode => {
+    const recCtor = ctors.at(position + 1);
     const rec = recCtor.makeNode(ctors);
     const node = nodeConstructor(rec);
-    ctors[position] = ctors[position + 1] = OperatorConstructor.fromNode(node);
+    const opc = OperatorConstructor.fromNode(node);
+    ctors.replace(position    , opc);
+    ctors.replace(position + 1, opc);
     return node;
   };
 }
@@ -150,7 +156,8 @@ function make(mOpToken: Token, mIsUnaryContext: boolean, mPosition: number): Ope
       [kSecret]: operatorPrecedence()!,
       isOperator,
       compare: makeCompareFunc(operatorPrecedence()!),
-      makeNode: makeNodeFunc()!
+      makeNode: makeNodeFunc()!,
+      asToken: () => mOpToken
     });
   });
   

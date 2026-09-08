@@ -1,6 +1,5 @@
 import { Helpers, StandardError } from '../../helpers';
-import { IastNode, IastVisitor } from '../../iast_node';
-import { IastLiteralType } from '../../iast_node/iast_types';
+import { IastLiteralType, IastNode, IastVisitor } from '../../iast_node';
 import { Token } from '../../token';
 
 const { freeze, memoize } = Helpers;

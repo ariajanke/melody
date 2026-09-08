@@ -1,7 +1,6 @@
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
 import { OperatorDefinitions } from '../iast_build/operator_definitions';
-import { IastNode, IastVisitor } from '../iast_node';
-import { IastLiteralType } from '../iast_node/iast_types';
+import { IastLiteralType, IastNode, IastVisitor } from '../iast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
 

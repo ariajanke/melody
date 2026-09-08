@@ -1,6 +1,7 @@
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
 import { IastNode } from '../iast_node';
 import { Token } from '../token';
+import { NodeConstructorCollection } from './node_constructor_collection';
 import { NodeConstructor, OperatorConstructor } from './operator_constructor';
 import { OperatorConstructorBuild } from './operator_constructor_build';
 
@@ -17,13 +18,53 @@ export interface AstExpressionCollector {
   finish(): IastBuildSingleError;
 };
 
-export const AstExpressionCollector = freeze({
-  make(): AstExpressionCollector
+// everything needs to be replaced, except in two cases: 1 and 0 nodes
+
+// TODO validate (produce an error) if tokens do not hook up right...
+
+function makeSomething
+  (mConstructors: NodeConstructor[], mOperators: OperatorConstructor[])
+  : IastBuildSingleError
 {
+  const { error, setErrorMessage } = StandardError.make();
+
+  const sortedOperators = memoize(() => 
+    mOperators.sort((a: OperatorConstructor, b: OperatorConstructor) => -a.compare(b)));
+
+  const collection = memoize(() =>
+    NodeConstructorCollection.make(mConstructors));
+
+  const node = memoize(() => {
+    if (mConstructors.length === 0)
+      { return IastNode.makeEmptyTuple(); }
+
+    const sortedLen = sortedOperators().length;
+    if (sortedLen === 0)
+      { return mConstructors[0].makeNode(collection()); }
+
+    for (let i = 0; i < sortedLen; ++i) {
+      sortedOperators()[i].makeNode(collection());
+    }
+
+    const ctor = sortedOperators()[sortedLen - 1];
+    const node_ = ctor.makeNode(collection());
+    const missedCtor = collection().firstUnreplaced();
+    if (missedCtor !== undefined) {
+      const token = missedCtor.asToken();
+      return setErrorMessage(`stray "${token?.content() ?? '<UNKNOWN>'}" not absorbed into tree`);
+    }
+    return node_;
+  });
+
+  return freeze({ node, error });
+}
+
+function make(): AstExpressionCollector {
   const { error, setErrorFn, hasErrorSet } = StandardError.make();
   const mConstructors: NodeConstructor[] = [];
   const mOperators: OperatorConstructor[] = [];
   let mFinished = false;
+
   function verifyUnfinished() {
     if (!mFinished)
       { return; }
@@ -68,22 +109,9 @@ export const AstExpressionCollector = freeze({
         });
       }
 
-      const opsAtPrec = mOperators.
-        sort((a: OperatorConstructor, b: OperatorConstructor) => a.compare(b));
-
-      const node = memoize(() => {
-        if (opsAtPrec.length === 0) {
-          return mConstructors[0].makeNode(mConstructors);
-        }
-
-        for (let i = 0; i < opsAtPrec.length - 1; ++i) {
-          opsAtPrec[i].makeNode(mConstructors);
-        }
-        return opsAtPrec[opsAtPrec.length - 1].makeNode(mConstructors);
-      });
-
-      return freeze({ node, error });
+      return makeSomething(mConstructors, mOperators);
     })
   });
-  }
-});
+}
+
+export const AstExpressionCollector = freeze({ make });

@@ -28,6 +28,7 @@ function make(tokens: Readonly<Token[]>, segment: Segment, mThing: IastBuildCons
   });
 
   const node = memoize(() => {
+    nodes();
     if (errors.errors().length > 0)
       { return undefined; }
 

@@ -1,4 +1,5 @@
 import { Helpers, raise } from './helpers';
+import { AssignemntOperatorStripping } from './iast_build/assignment_operator_stripping';
 import { FunctionBodySegmentation } from './iast_build/function_body_segmentation';
 import {
   IastBuild_,
@@ -11,7 +12,7 @@ import { SegmentType } from './iast_build/segment';
 import { IastNode } from './iast_node';
 import { Token } from './token';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export type IastBuild = IastBuild_;
 
@@ -30,13 +31,43 @@ IastBuildConstructorRetrieval.initialize(((): IastBuildConstructorRetrieval => {
 
 function make(tokens: Readonly<Token[]>): IastBuild {
   const { isEndOfInput } = FunctionBodySegmentation;
+
   const { segment, error } = FunctionBodySegmentation.
     make(tokens, 0, tokens.length, isEndOfInput);
-  if (!segment()) {
-    raise(error().message);
-  }
-  return IastFunctionDefinitionBuild.
-    make(tokens, segment()!, IastBuildConstructorRetrieval.instance());
+
+  const build = memoize(() => {
+    if (!segment())
+      { return undefined; }
+
+    return IastFunctionDefinitionBuild.
+      make(tokens, segment()!, IastBuildConstructorRetrieval.instance());
+  });
+
+  const assignmentStripping = memoize((): IastBuild | undefined => {
+    const node_ = build()?.node();
+    if (!node_)
+      { return undefined; }
+
+    return AssignemntOperatorStripping.make(node_);
+  });
+
+  const node = ((): IastNode | undefined =>
+    assignmentStripping()?.node());
+
+  return freeze({
+    node,
+    errors: memoize(() => {
+      if (!build()) {
+        return [error()];
+      }
+
+      if (!assignmentStripping()) {
+        return build()!.errors();
+      }
+
+      return assignmentStripping()!.errors();
+    })
+  });  
 }
 
 function buildFor(tokens: Readonly<Token[]>): IastNode {

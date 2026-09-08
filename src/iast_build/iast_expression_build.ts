@@ -61,6 +61,7 @@ function make
     const ibuild = collector().finish();
     if (!ibuild.node()) {
       mErrors.pushError(ibuild.error());
+      return undefined;
     }
 
     return ibuild.node();

@@ -1,10 +1,9 @@
 import { Helpers } from '../helpers';
-import { IastNode, IastVisitor } from '../iast_node';
+import { IastLiteralType, IastNode, IastVisitor } from '../iast_node';
 import { DastBuild } from '../dast_build';
 import * as dldb from './let_declarations_retrieval/dast_let_declaration_build';
 import * as LetNamesSplitter from './let_declarations_retrieval/let_names_splitter';
 import { Token } from '../token';
-import { IastLiteralType } from '../iast_node/iast_types';
 
 const { freeze } = Helpers;
 
