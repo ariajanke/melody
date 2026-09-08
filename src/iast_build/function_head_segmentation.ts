@@ -35,7 +35,7 @@ function make
         { return idx; }
 
       if (token.type() === kSeparator) {
-        // at most one separator until the head!
+        // NOTE at most one separator until the head
         ++separatorCount;
         if (separatorCount > 1) {
           return setErrorMessage('Too many new lines with no head/body found');

@@ -1,14 +1,25 @@
 import { ReachPoint, TestHelpers } from './test_helpers';
-import { Token } from '../src/token';
+import { Token, TokenType } from '../src/token';
 import { IastNode } from '../src/iast_node';
 import { TokenFactories } from './token_factories';
 import { ReseatableIastVisitor } from './iast_visitor_factories';
 import { IastBuild } from '../src/iast_build';
+import { Helpers, raise } from '../src/helpers';
+import { OperatorNamingSchema } from '../src/operator_naming_schema';
+
+const { freeze } = Helpers;
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ IastBuild }, () => {
   const makeToken = TokenFactories.makeFromStringOnly;
+
+  const kCallToken: Token = freeze({
+    start  : (): number => raise('!!'),
+    end    : (): number => raise('!!'),
+    type   : (): TokenType => Token.types.operator,
+    content: (): string => OperatorNamingSchema.kCall
+  });
 
   function makeBuildAst(tokens: () => Token[]) {
     return (): IastNode =>
@@ -21,11 +32,13 @@ describeNamed({ IastBuild }, () => {
 
     it('builds two function calls', () => {
       const { points, verifyAllHit } = ReachPoint.makeCollection(1);
+      const kPutsCall = [
+        makeToken('puts'), kCallToken, makeToken('('), makeToken('a'), makeToken(')'),
+        makeToken('\n')
+      ];
       tokens = [
-        makeToken('puts'), makeToken('('), makeToken('a'), makeToken(')'),
-        makeToken('\n'),
-        makeToken('puts'), makeToken('('), makeToken('a'), makeToken(')'),
-        makeToken('\n'),
+        ...kPutsCall,
+        ...kPutsCall
       ];
 
       const visitor = ({
@@ -635,7 +648,7 @@ describeNamed({ IastBuild }, () => {
 
   });
 
-  describe('table expressions', () => {
+  describe('table access expressions', () => {
     let tokens: Token[] = [];
     const buildAst = (): IastNode => IastBuild.buildFor(tokens);
 

@@ -70,15 +70,19 @@ export const AstExpressionCollector = freeze({
 
       const opsAtPrec = mOperators.
         sort((a: OperatorConstructor, b: OperatorConstructor) => a.compare(b));
-      return freeze({
-        node: memoize(() => {
-          for (let i = 0; i < opsAtPrec.length - 1; ++i) {
-            opsAtPrec[i].makeNode(mConstructors);
-          }
-          return opsAtPrec[opsAtPrec.length - 1].makeNode(mConstructors);
-        }),
-        error
+
+      const node = memoize(() => {
+        if (opsAtPrec.length === 0) {
+          return mConstructors[0].makeNode(mConstructors);
+        }
+
+        for (let i = 0; i < opsAtPrec.length - 1; ++i) {
+          opsAtPrec[i].makeNode(mConstructors);
+        }
+        return opsAtPrec[opsAtPrec.length - 1].makeNode(mConstructors);
       });
+
+      return freeze({ node, error });
     })
   });
   }

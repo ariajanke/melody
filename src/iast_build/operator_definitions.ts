@@ -70,8 +70,9 @@ export const OperatorDefinitions = freeze({
       { representation: kNot       , relation: unary  },
       { representation: kAnd       , relation: binary },
       { representation: kOr        , relation: binary },
-      { representation: kDot       , relation: binary },
       { representation: kCall      , relation: binary },
+      { representation: kDot       , relation: binary },
+      
     ].map(({ representation, relation }:
             { representation: string, relation: OperatorRelation }) =>
           ({ representation, precedence: counter(), relation }));
