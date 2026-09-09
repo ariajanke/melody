@@ -3,7 +3,7 @@ import { IastNode } from '../iast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
 import { NodeConstructorCollection } from './node_constructor_collection';
-import { OperatorConstructor } from './operator_constructor';
+import { NodeConstructor, OperatorConstructor } from './operator_constructor';
 import { OperatorDefinition, OperatorDefinitions } from './operator_definitions';
 // import { ReceiverNameStripping } from './receiver_name_stripping';
 
@@ -15,6 +15,11 @@ export interface OperatorConstructorBuild {
 };
 
 const isOperator = () => true;
+const isNotOperator = () => false;
+const asNoToken = (): Token | undefined => undefined;
+function makeNodeMakerFor(node: IastNode) {
+  return (_0: NodeConstructorCollection): IastNode => node;
+}
 
 const kSecret = Symbol();
 
@@ -59,7 +64,7 @@ function unaryNodeConstructorFor
     return (inner: IastNode) =>
       IastNode.forOperativeStatements.makeLetDeclation(inner);
   }
-  const empty = IastNode.makeEmptyTuple();
+  const empty = IastNode.emptyTupleInstance();
   return (rec: IastNode) =>
     IastNode.forOperativeStatements.makeCall(op, rec, empty);
 }
@@ -84,10 +89,16 @@ function makeArrayModifierForBinary
     const rec = recCtor.makeNode(ctors);
     const params = paramsCtor.makeNode(ctors);
     const node = nodeConstructor(rec, params);
-    const opc = OperatorConstructor.fromNode(node);
-    ctors.replace(position - 1, opc);
-    ctors.replace(position    , opc);
-    ctors.replace(position + 1, opc);
+    const opc: NodeConstructor = freeze({
+      isOperator: isNotOperator,
+      asToken: asNoToken,
+      makeNode: makeNodeMakerFor(node),
+      lowPosition: recCtor.lowPosition,
+      highPosition: paramsCtor.highPosition
+    });
+    // replace positions here are wrong, you must replace extreme left and right
+    // and rec/params maybe further than -1 or +1!
+    ctors.replace(opc);
     return node;
   };
 }
@@ -99,9 +110,14 @@ function makeArrayModifierForUnary
     const recCtor = ctors.at(position + 1);
     const rec = recCtor.makeNode(ctors);
     const node = nodeConstructor(rec);
-    const opc = OperatorConstructor.fromNode(node);
-    ctors.replace(position    , opc);
-    ctors.replace(position + 1, opc);
+    const opc: NodeConstructor = freeze({
+      isOperator: isNotOperator,
+      asToken: asNoToken,
+      makeNode: makeNodeMakerFor(node),
+      lowPosition: () => position,
+      highPosition: recCtor.highPosition,
+    });
+    ctors.replace(opc);
     return node;
   };
 }
@@ -109,6 +125,8 @@ function makeArrayModifierForUnary
 function make(mOpToken: Token, mIsUnaryContext: boolean, mPosition: number): OperatorConstructorBuild {
   OperatorDefinitions.assertIsOperator(mOpToken.content());
   const { error, setErrorMessage } = StandardError.make();
+
+  const position = () => mPosition;
 
   const operatorDefinition = memoize((): OperatorDefinition | undefined => {
     const getOperatorInfo = mIsUnaryContext ?
@@ -157,7 +175,9 @@ function make(mOpToken: Token, mIsUnaryContext: boolean, mPosition: number): Ope
       isOperator,
       compare: makeCompareFunc(operatorPrecedence()!),
       makeNode: makeNodeFunc()!,
-      asToken: () => mOpToken
+      asToken: () => mOpToken,
+      lowPosition: position,
+      highPosition: position
     });
   });
   

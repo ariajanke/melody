@@ -1,15 +1,19 @@
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { IastNode_, IastVisitor_ } from './iast_types';
 
-const { freeze } = Helpers;
+const { freeze, makeCounter, memoize } = Helpers;
 
 const kIsATuple = Symbol();
 
 interface IastTuple extends IastNode_ {
-  kIsATuple: symbol,
-  append(n: IastNode_): void,
-  detuplify(): Readonly<IastNode_[]>
-}
+  kIsATuple: symbol;
+  append(n: IastNode_): void;
+  detuplify(): Readonly<IastNode_[]>;
+  uid(): number;
+};
+
+const nodeAsString = (n: IastNode_) => n.asString();
+const counter = makeCounter();
 
 export const IastTuple = freeze({
   tuplify(tOrN1: IastNode_ | IastTuple, n2: IastNode_): IastNode_ {
@@ -28,15 +32,30 @@ export const IastTuple = freeze({
     return [n];
   },
   make(mMembers: IastNode_[] = []): IastTuple {
-    return freeze({
+    function verifyNotSelfNested() {
+      for (let i = 0; i < mMembers.length; ++i) {
+        const node = mMembers[i];
+        if ('kIsATuple' in node && node.kIsATuple === kIsATuple) {
+          if ((node as IastTuple).uid() === inst.uid()) {
+            raise('must not self nest tuple');
+          }
+        }
+      }
+    }
+    const inst = freeze({
       kIsATuple,
       detuplify: (): Readonly<IastNode_[]> => mMembers,
-      append(n: IastNode_)
-        { mMembers.push(n); },
+      append(n: IastNode_) {
+        mMembers.push(n);
+        verifyNotSelfNested();
+      },
       visit: <T>(visitor: IastVisitor_<T>): T =>
         visitor.visitTuple(mMembers),
       asString: () =>
-        `Tuple { ${mMembers.map(v => v.asString()).join(', ')} }`,
+        `Tuple { ${mMembers.map(nodeAsString).join(', ')} }`,
+      uid: memoize(counter)
     });
+    verifyNotSelfNested();
+    return inst;
   }
 });

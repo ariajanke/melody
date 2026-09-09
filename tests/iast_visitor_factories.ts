@@ -30,5 +30,8 @@ export const ReseatableIastVisitor = freeze({
       }
     });
     return inst;
+  },
+  makeSelfModified(visitor: ReseatableIastVisitor): ReseatableIastVisitor {
+    return visitor.setInstRef(visitor);
   }
 });

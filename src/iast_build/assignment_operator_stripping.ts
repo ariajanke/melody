@@ -1,4 +1,4 @@
-import { Helpers, raise } from '../helpers';
+import { Helpers, raise, StandardError } from '../helpers';
 import { IastLiteralType, IastNode } from '../iast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
@@ -7,6 +7,10 @@ import { IastBuild_ } from './iast_build_constructor_retrieval';
 import { ReceiverNameStripping } from './receiver_name_stripping';
 
 const { freeze, memoize } = Helpers;
+
+interface LetMarkings {
+  isOutsideOfLetStatement(): boolean;
+};
 
 const LetMarkingStack = freeze({
   make() {
@@ -35,6 +39,60 @@ const LetMarkingStack = freeze({
   }
 });
 
+type CallNameTransform = (fn: () => string) => (() => string);
+function transformCallNameFunctionOf
+  (callName: Token, letStack: LetMarkings):
+  CallNameTransform | undefined
+{
+  if (callName.content() === OperatorNamingSchema.kAssignment &&
+      letStack.isOutsideOfLetStatement())
+  {
+    return (contentFn: () => string) =>
+      () => `${contentFn()}${OperatorNamingSchema.kAssignment}`;
+  }
+
+  if (callName.content() === OperatorNamingSchema.kCall)
+    { return (contentFn: () => string) => contentFn; }
+
+  return undefined;
+}
+
+function makeNameStripping
+  (mCallName: Token, mReceiver: IastNode, mTransform: CallNameTransform)
+{
+  const { setErrorFn, error } = StandardError.make();
+  
+  const mStripping = ReceiverNameStripping.make(mReceiver);
+  
+  const callName = memoize((): Token | undefined => {
+    const { nameTarget, error } = mStripping;
+
+    if (!nameTarget())
+      { return setErrorFn(error); }
+
+    return freeze({
+      content: nameTarget()!.content,
+      type   : nameTarget()!.type,
+      start  : nameTarget()!.start,
+      end    : mCallName.end
+    });
+  });
+  
+  const receiver = memoize((): IastNode | undefined => {    
+    const { strippedTree, error } = mStripping;
+
+    return setErrorFn(error) ?? strippedTree();
+  });
+
+  return freeze({
+    callName,
+    receiver,
+    error
+  });
+}
+
+// strip *all* ":=", except right inside a let
+// strip *all* calls, for stripable names
 function make(mRawTreeRoot: IastNode): IastBuild_ {
   type ResultType = IastNode | 'not-modified' | undefined;
 
@@ -86,25 +144,16 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
   function visitCall
     (callName: Token, receiver: IastNode, args: IastNode): ResultType
   {
-    if (callName.content() === OperatorNamingSchema.kAssignment &&
-        mLetsStack.isOutsideOfLetStatement()
-    ) {
-      const { nameTarget, strippedTree, error } =
-        ReceiverNameStripping.make(receiver);
-      if (!nameTarget()) {
-        mErrorCollection.pushError(error());
+    const callNameTransform = transformCallNameFunctionOf(callName, mLetsStack);
+    if (callNameTransform !== undefined) {
+      const stripping = makeNameStripping(callName, receiver, callNameTransform);
+      if (!stripping.callName() || !stripping.receiver()){
+        mErrorCollection.pushError(stripping.error());
         return undefined;
       }
 
-      const callNameToken: Token = freeze({
-        content: () => `${nameTarget()!.content()}${OperatorNamingSchema.kAssignment}`,
-        type   : nameTarget()!.type,
-        start  : nameTarget()!.start,
-        end    : callName.end
-      });
-      mLetsStack.popMarking();
-      return IastNode.forOperativeStatements.
-        makeCall(callNameToken, strippedTree()!, args);
+      callName = stripping.callName()!;
+      receiver = stripping.receiver()!;
     }
     mLetsStack.markOutsideLetStatement();
     const recGv = receiver.visit(mVisitor);

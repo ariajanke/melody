@@ -1,16 +1,12 @@
-import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
+import { Helpers, raise, StandardError } from '../helpers';
 import { IastNode } from '../iast_node';
 import { Token } from '../token';
-import { NodeConstructorCollection } from './node_constructor_collection';
+import { IastBuildSingleError, IastOperationBuild } from './iast_operation_build';
+import { type NodeConstructorCollection } from './node_constructor_collection';
 import { NodeConstructor, OperatorConstructor } from './operator_constructor';
 import { OperatorConstructorBuild } from './operator_constructor_build';
 
 const { freeze, memoize } = Helpers;
-
-export interface IastBuildSingleError {
-  node(): IastNode | undefined;
-  error(): StandardErrorMessage;
-};
 
 export interface AstExpressionCollector {
   pushNode(node: IastNode): void;
@@ -21,43 +17,6 @@ export interface AstExpressionCollector {
 // everything needs to be replaced, except in two cases: 1 and 0 nodes
 
 // TODO validate (produce an error) if tokens do not hook up right...
-
-function makeSomething
-  (mConstructors: NodeConstructor[], mOperators: OperatorConstructor[])
-  : IastBuildSingleError
-{
-  const { error, setErrorMessage } = StandardError.make();
-
-  const sortedOperators = memoize(() => 
-    mOperators.sort((a: OperatorConstructor, b: OperatorConstructor) => -a.compare(b)));
-
-  const collection = memoize(() =>
-    NodeConstructorCollection.make(mConstructors));
-
-  const node = memoize(() => {
-    if (mConstructors.length === 0)
-      { return IastNode.makeEmptyTuple(); }
-
-    const sortedLen = sortedOperators().length;
-    if (sortedLen === 0)
-      { return mConstructors[0].makeNode(collection()); }
-
-    for (let i = 0; i < sortedLen; ++i) {
-      sortedOperators()[i].makeNode(collection());
-    }
-
-    const ctor = sortedOperators()[sortedLen - 1];
-    const node_ = ctor.makeNode(collection());
-    const missedCtor = collection().firstUnreplaced();
-    if (missedCtor !== undefined) {
-      const token = missedCtor.asToken();
-      return setErrorMessage(`stray "${token?.content() ?? '<UNKNOWN>'}" not absorbed into tree`);
-    }
-    return node_;
-  });
-
-  return freeze({ node, error });
-}
 
 function make(): AstExpressionCollector {
   const { error, setErrorFn, hasErrorSet } = StandardError.make();
@@ -83,7 +42,17 @@ function make(): AstExpressionCollector {
       if (hasErrorSet())
         { return; }
 
-      mConstructors.push(OperatorConstructor.fromNode(node));
+      const len = mConstructors.length;
+      const position = () => len;
+
+      mConstructors.push(freeze({
+        isOperator: () => false,
+        asToken: () => undefined,
+        makeNode(_0: NodeConstructorCollection): IastNode
+          { return node; },
+        lowPosition: position,
+        highPosition: position
+      }));
     },
     pushOperator(op: Token): void {
       verifyUnfinished();
@@ -100,7 +69,7 @@ function make(): AstExpressionCollector {
       mConstructors.push(opCtor);
       mOperators.push(opCtor);
     },
-    finish: memoize(() => {
+    finish: memoize((): IastBuildSingleError => {
       mFinished = true;
       if (hasErrorSet()) {
         return freeze({
@@ -109,7 +78,7 @@ function make(): AstExpressionCollector {
         });
       }
 
-      return makeSomething(mConstructors, mOperators);
+      return IastOperationBuild.make(mConstructors, mOperators);
     })
   });
 }

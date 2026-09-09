@@ -65,11 +65,11 @@ export const OperatorDefinitions = freeze({
       { representation: kPlus      , relation: binary },
       { representation: kMinus     , relation: binary },
       { representation: kMultiply  , relation: binary },
-      { representation: kMinus     , relation: unary  },
       { representation: kDivide    , relation: binary },
       { representation: kNot       , relation: unary  },
       { representation: kAnd       , relation: binary },
       { representation: kOr        , relation: binary },
+      { representation: kMinus     , relation: unary  },
       { representation: kCall      , relation: binary },
       { representation: kDot       , relation: binary },
       

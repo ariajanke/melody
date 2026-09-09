@@ -5,32 +5,39 @@ const { freeze } = Helpers;
 
 export interface NodeConstructorCollection {
   at(idx: number): NodeConstructor;
-  replace(idx: number, nc: NodeConstructor): void;
+  replace(nc: NodeConstructor): void;
   firstUnreplaced(): NodeConstructor | undefined;
 };
 
-const isFalse = (b: boolean) => b === false;
-
 function make(mConstructors: NodeConstructor[]): NodeConstructorCollection {
-  const mReplaced: boolean[] = mConstructors.map(() => false);
   const mLen = mConstructors.length;
   function at(idx: number): NodeConstructor
     { return mConstructors[idx] ?? raise(`${idx} is out of bounds`); }
 
-  function replace(idx: number, nc: NodeConstructor): void {
+  function replace_(idx: number, nc: NodeConstructor): void {
     if (idx >= mLen)
       { raise(`${idx} is out of bounds`); }
 
-    mReplaced[idx] = true;
     mConstructors[idx] = nc;
   }
 
-  function firstUnreplaced(): NodeConstructor | undefined {
-    const idx = mReplaced.findIndex(isFalse);
-    if (idx === -1)
-      { return undefined; }
+  function replace(nc: NodeConstructor): void {
+    replace_(nc.lowPosition (), nc);
+    replace_(nc.highPosition(), nc);
+  }
 
-    return mConstructors[idx];
+  // TODO this isn't a complete solution!
+  function firstUnreplaced(): NodeConstructor | undefined {
+    let idx = 0;
+    while (idx < mConstructors.length - 1) {
+      const ctor = mConstructors[idx];
+      const next = ctor.highPosition();
+      if (next <= idx) {
+        return ctor;
+      }
+      idx = next;
+    }
+    return undefined;
   }
 
   return freeze({ at, replace, firstUnreplaced });

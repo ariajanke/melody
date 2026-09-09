@@ -41,14 +41,13 @@ describeNamed({ IastBuild }, () => {
         ...kPutsCall
       ];
 
-      const visitor = ({
+      const visitor = ReseatableIastVisitor.makeSelfModified({
         ...ReseatableIastVisitor.makeDefaultingToContinue(),
         visitCall(_0: Token, _1: IastNode, args: IastNode): void {
           points()[0].hitsAtExactly(2);
           args.visit(visitor);
         }
       });
-      visitor.setInstRef(visitor);
 
       buildAst().visit(visitor);
       expect(verifyAllHit()).toBeTruthy();
@@ -233,13 +232,13 @@ describeNamed({ IastBuild }, () => {
 
     includeAllNIdentifiers(buildAst, ['a', 'b']);
 
-    it('includes a "a:=" call', () => {
+    it('includes a ":=" call', () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const visitor = ({
         ...ReseatableIastVisitor.makeDefaultingToContinue(),
         visitCall(callName: Token, receiver: IastNode, args: IastNode): void {
           hitsAtExactly(1);
-          expect(callName.content()).toEqual('a:=');
+          expect(callName.content()).toEqual(':=');
           receiver.visit(visitor);
           args.visit(visitor);
         }
@@ -293,7 +292,7 @@ describeNamed({ IastBuild }, () => {
 
   describe('puts(a, b)\\n', () => {
     const tokens = [
-      makeToken('puts'), makeToken('('), makeToken('a'), makeToken(','),
+      makeToken('puts'), kCallToken, makeToken('('), makeToken('a'), makeToken(','),
       makeToken('b'),
       makeToken(')'), makeToken('\n')
     ];
@@ -494,12 +493,12 @@ describeNamed({ IastBuild }, () => {
     it('builds a simple function call', () => {
       tokens = [
         makeToken('\n'),
-        makeToken('askString'), makeToken('('), makeToken(')'), makeToken('\n')
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')'), makeToken('\n')
       ];
       expectFunctionsCalledInOrder('askString');
     });
 
-    it('"let a := askString()"', () => {
+    it('let a := askString()', () => {
       tokens = [
         makeToken('let'), makeToken('a'), makeToken(':='),
         makeToken('askString'), makeToken('('), makeToken(')')
@@ -508,10 +507,10 @@ describeNamed({ IastBuild }, () => {
       expectFunctionsCalledInOrder(':=', 'askString');
     });
 
-    it('"puts(askString())"', () => {
+    it('puts(askString())', () => {
       tokens = [
-        makeToken('puts'), makeToken('('),
-        makeToken('askString'), makeToken('('), makeToken(')'),
+        makeToken('puts'), kCallToken, makeToken('('),
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')'),
         makeToken(')')
       ];
 

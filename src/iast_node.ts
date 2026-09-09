@@ -15,7 +15,7 @@ export type IastNode = IastNode_;
 export type IastVisitor<T = void> = IastVisitor_<T>;
 
 export const IastNode = freeze({
-  makeEmptyTuple: memoize(IastTuple.make),
+  emptyTupleInstance: memoize(IastTuple.make),
   makeFunctionDefinition: IastDefinition.make,
   makeFringe: IastFringe.make,
   forAssignmentStripping: {
