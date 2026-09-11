@@ -671,10 +671,33 @@ describeNamed({ IastBuild }, () => {
       expect(pt1.verifyHit()).toBeTruthy();
     });
 
-    it(`nested.table.accessor`, fail);
-    it(`nested.table.assignment := 5`, fail);
-    it(`nested.foo(a, b).assignment := 5`, fail);
-    it(`a(nested.table).assignment := 5`, fail);
+    it(`nested.table.accessor`, () => {
+      // call '.nested' on <context> with ()
+      // call '.table' on <result> with ()
+      // call '.accessor' on <result> with ()
+      fail();
+    });
+
+    it(`nested.table.assignment := 5`, () => {
+      // call '.nested' on <context> with ()
+      // call '.table' on <result> with ()
+      // call 'assignment:=' on <result> with 5
+      fail();
+    });
+
+    it(`nested.foo(a, b).assignment := 5`, () => {
+      // call '.nested' on <context> with ()
+      // call 'foo' on <result> with {tuple}
+      // call 'assignment:=' on <result> with 5
+      fail();
+    });
+
+    it(`a(nested.table).assignment := 5`, () => {
+      // call 'a' on <context> with {table}
+      // call 'assignment:=' on <result> with 5
+      fail();
+    });
+
     it(`t.foo(let a = 5).assignment := 5`, () => {
       tokens = [
         't', '.', 'foo', '(', 'a', ',', '5', ')',// '.', 'assignment',

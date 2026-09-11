@@ -1,3 +1,4 @@
+import { FunctionNamingSchema } from '../function_naming_schema';
 import { Helpers, raise, StandardError } from '../helpers';
 import { IastLiteralType, IastNode } from '../iast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
@@ -51,6 +52,11 @@ function transformCallNameFunctionOf
       () => `${contentFn()}${OperatorNamingSchema.kAssignment}`;
   }
 
+  if (callName.content() === OperatorNamingSchema.kDot) {
+    return (contentFn: () => string) =>
+      () => FunctionNamingSchema.mapToFringeAccessor(contentFn());
+  }
+
   if (callName.content() === OperatorNamingSchema.kCall)
     { return (contentFn: () => string) => contentFn; }
 
@@ -71,7 +77,7 @@ function makeNameStripping
       { return setErrorFn(error); }
 
     return freeze({
-      content: nameTarget()!.content,
+      content: mTransform(nameTarget()!.content),
       type   : nameTarget()!.type,
       start  : nameTarget()!.start,
       end    : mCallName.end
@@ -90,6 +96,48 @@ function makeNameStripping
     error
   });
 }
+
+type StripConstructor =
+  <ResultType>(recurseOn: (n: IastNode) => ResultType, receiver: IastNode, args: IastNode) => IastBuild_;
+
+function makeCallAssignmentClass(sNameTransform: CallNameTransform) {
+  function make<ResultType>
+    (mRecurseOn: (n: IastNode) => ResultType,
+     mOriginalCallName: Token,
+     mReceiver: IastNode,
+     mArgs: IastNode)
+  {
+    const mErrorCollection = ErrorsCollector.make();
+    const mStripping = makeNameStripping(mOriginalCallName, mReceiver, sNameTransform);
+      // if (!stripping.callName() || !stripping.receiver()){
+      //   mErrorCollection.pushError(stripping.error());
+      //   return undefined;
+      // }
+
+      callName = stripping.callName()!;
+      receiver = stripping.receiver()!;
+
+
+    const node = memoize(() => {
+      if (!mStripping.callName() || !mStripping.receiver()) {
+        mErrorCollection.pushError(mStripping.error());
+        return undefined;
+      }
+      const receiver = mRecurseOn(mStripping.receiver()!);
+      const args = mRecurseOn(mArgs)
+      return IastNode.forOperativeStatements.
+        makeCall(callName, receiver, args);
+    });
+  }
+}
+
+function chooseSpecialization
+  (callName: Token, markings: LetMarkings): StripConstructor
+
+{
+
+}
+// TODO and we'll need another for "dot", which appends "args" as a name
 
 // strip *all* ":=", except right inside a let
 // strip *all* calls, for stripable names
@@ -141,29 +189,51 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
     return IastNode.forOperativeStatements.makeLetDeclation(gv);
   }
 
+  const recurseOn = (node: IastNode): ResultType => {
+    mLetsStack.markOutsideLetStatement();
+    const gv = node.visit(mVisitor);
+    return mLetsStack.popMarking(gv);
+  }
+
+  function visitCallSpecial
+    (callName: Token, receiver: IastNode, args: IastNode): ResultType
+  {
+    const thingie = chooseSpecialization(callName, mLetsStack)<ResultType>(recurseOn, receiver, args);
+    const node = thingie.node();
+    node ?? mErrorCollection.pushErrors(thingie.errors());
+    return node;
+  }
+
   function visitCall
     (callName: Token, receiver: IastNode, args: IastNode): ResultType
   {
-    const callNameTransform = transformCallNameFunctionOf(callName, mLetsStack);
-    if (callNameTransform !== undefined) {
-      const stripping = makeNameStripping(callName, receiver, callNameTransform);
-      if (!stripping.callName() || !stripping.receiver()){
-        mErrorCollection.pushError(stripping.error());
-        return undefined;
-      }
+    // '.', ':=', '<call>'
+    // must strip ':=' if not immediately inside a let
+    // optionally strip '<call>' if we can
+    // must strip '.' always, which affects args side
+    // const callNameTransform = transformCallNameFunctionOf(callName, mLetsStack);
+    // if (callNameTransform !== undefined) {
+    //   const stripping = makeNameStripping(callName, receiver, callNameTransform);
+    //   if (!stripping.callName() || !stripping.receiver()){
+    //     mErrorCollection.pushError(stripping.error());
+    //     return undefined;
+    //   }
 
-      callName = stripping.callName()!;
-      receiver = stripping.receiver()!;
-    }
+    //   callName = stripping.callName()!;
+    //   receiver = stripping.receiver()!;
+    // }
     mLetsStack.markOutsideLetStatement();
     const recGv = receiver.visit(mVisitor);
     const argGv = args.visit(mVisitor);
     mLetsStack.popMarking();
-    if (recGv === argGv && recGv === 'not-modified')
-      { return mLetsStack.popMarking('not-modified'); }
+    if (callName.content() === OperatorNamingSchema.kDot) {
+      // ...combine with arguement as name
+    }
+    if (callNameTransform === undefined && recGv === argGv && recGv === 'not-modified')
+      { return 'not-modified'; }
 
     if (recGv === undefined || argGv === undefined)
-      { return mLetsStack.popMarking(undefined); }
+      { return undefined; }
 
     if (recGv !== 'not-modified')
       { receiver = recGv; }
@@ -196,4 +266,4 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
   });
 }
 
-export const AssignemntOperatorStripping = freeze({ make });
+export const IastOperatorStripping = freeze({ make });

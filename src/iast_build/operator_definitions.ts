@@ -1,7 +1,7 @@
 import { Helpers, raise } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 
-const { freeze, memoize, makeCounter } = Helpers;
+const { freeze, memoize } = Helpers;
 
 type OperatorRelation = 'binary' | 'unary';
 
@@ -40,6 +40,59 @@ const binaryMappings = memoize((): OperatorDefinitionDictionary =>
 const allMappings = memoize((): OperatorDefinitionDictionary =>
   intoMappingFor((_0: OperatorRelation) => true));
 
+interface OperatorDefinitionFactory {
+  holdIncrement(): OperatorDefinitionFactory;
+  continueIncrement(): OperatorDefinitionFactory;
+  binary(representation: string): OperatorDefinitionFactory;    
+  unary(representation: string): OperatorDefinitionFactory;
+  finish(): Readonly<OperatorDefinition[]>;
+};
+
+const OperatorDefinitionFactory = freeze({
+  make(): OperatorDefinitionFactory
+  {
+    let mPrecValue = 0;
+    let mIncrement = 1;
+    let mFinished = false;
+    let mOperators: OperatorDefinition[] = [];
+    const verifyNotFinished = () => {
+      if (!mFinished)
+        { return inst; }
+
+      raise('Already finished!');
+    };
+    const increment = () => {
+      mPrecValue += mIncrement;
+      return mPrecValue;
+    };
+    const push = (representation: string, relation: OperatorRelation) => {
+      const precedence = increment();
+      mOperators.push(freeze({ representation, relation, precedence }));
+      return verifyNotFinished();
+    };
+    const { binary, unary } = operandRelationships;
+    const inst = freeze({
+      holdIncrement() {
+        mIncrement = 0;
+        return verifyNotFinished();
+      },
+      continueIncrement() {
+        mIncrement = 1;
+        return verifyNotFinished();
+      },
+      binary: (representation: string) =>
+        push(representation, binary),
+      unary: (representation: string) =>
+        push(representation, unary),
+      finish: memoize((): Readonly<OperatorDefinition[]> => {
+        mFinished = true;
+        return mOperators;
+      })
+    });
+    return inst;
+  }
+});
+
 export const OperatorDefinitions = freeze({
   unaryMappings,
   binaryMappings,
@@ -50,31 +103,26 @@ export const OperatorDefinitions = freeze({
     raise(`"${op}" is not on the operator definition map`);
   },
   fullListing: memoize((): Readonly<OperatorDefinition[]> => {
-    const counter = makeCounter();
-    const { binary, unary } = operandRelationships;
     const {
       kLet, kAnd, kOr, kIs, kNot, kComma, kPlus, kMinus, kMultiply, kDivide,
       kDot, kEquality, kCall, kAssignment
     } = OperatorNamingSchema;
-    return [
-      { representation: kLet       , relation: unary  },
-      { representation: kComma     , relation: binary },
-      { representation: kIs        , relation: binary },
-      { representation: kEquality  , relation: binary },
-      { representation: kAssignment, relation: binary },
-      { representation: kPlus      , relation: binary },
-      { representation: kMinus     , relation: binary },
-      { representation: kMultiply  , relation: binary },
-      { representation: kDivide    , relation: binary },
-      { representation: kNot       , relation: unary  },
-      { representation: kAnd       , relation: binary },
-      { representation: kOr        , relation: binary },
-      { representation: kMinus     , relation: unary  },
-      { representation: kCall      , relation: binary },
-      { representation: kDot       , relation: binary },
-      
-    ].map(({ representation, relation }:
-            { representation: string, relation: OperatorRelation }) =>
-          ({ representation, precedence: counter(), relation }));
+    const factory = OperatorDefinitionFactory.make();
+    return factory.
+      unary (kLet).
+      binary(kComma).
+      binary(kIs).
+      binary(kEquality).
+      binary(kAssignment).
+      binary(kPlus).
+      binary(kMinus).
+      binary(kMultiply).
+      binary(kDivide).
+      unary(kNot).
+      binary(kAnd).
+      binary(kOr).
+      unary(kMinus).holdIncrement().
+      binary(kCall).binary(kDot).continueIncrement().
+      finish();
   }),
 });

@@ -8,6 +8,16 @@ import {
   IastVisitor_
 } from './iast_node/iast_types';
 
+/// IAST, or "Introductory/Immediate" AST
+/// schema:
+/// Generally there are no:
+/// <call>s
+/// - except for areas where no call name is possible
+/// ':='s
+/// - except in first level lets (i.e. to classify that decl is a modifable)
+/// '.'s
+/// - without exception
+
 const { freeze, memoize } = Helpers;
 
 export type IastLiteralType = IastLiteralType_;

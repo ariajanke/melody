@@ -1,5 +1,4 @@
 import { Helpers, raise } from './helpers';
-import { AssignemntOperatorStripping } from './iast_build/assignment_operator_stripping';
 import { FunctionBodySegmentation } from './iast_build/function_body_segmentation';
 import {
   IastBuild_,
@@ -8,6 +7,7 @@ import {
 } from './iast_build/iast_build_constructor_retrieval';
 import { IastExpressionBuild } from './iast_build/iast_expression_build';
 import { IastFunctionDefinitionBuild } from './iast_build/iast_function_definition_build';
+import { IastOperatorStripping } from './iast_build/iast_operator_stripping';
 import { SegmentType } from './iast_build/segment';
 import { IastNode } from './iast_node';
 import { Token } from './token';
@@ -48,7 +48,7 @@ function make(tokens: Readonly<Token[]>): IastBuild {
     if (!node_)
       { return undefined; }
 
-    return AssignemntOperatorStripping.make(node_);
+    return IastOperatorStripping.make(node_);
   });
 
   const node = ((): IastNode | undefined =>
