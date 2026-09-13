@@ -148,7 +148,8 @@ function make(mOpToken: Token, mIsUnaryContext: boolean, mPosition: number): Ope
   });
 
   const makeNodeFunc = ((): NodeArrayModifier | undefined => {
-    operatorDefinition() ?? raise('bad branch');
+    if (!operatorDefinition()) 
+      { raise('bad branch'); }
 
     if (operatorDefinition()!.relation === 'binary') {
       const ctor = binaryNodeConstructorFor(mOpToken);

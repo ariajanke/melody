@@ -51,9 +51,8 @@ interface OperatorDefinitionFactory {
 const OperatorDefinitionFactory = freeze({
   make(): OperatorDefinitionFactory {
     let mPrecValue = 0;
-    let mIncrement = 1;
     let mFinished = false;
-    let mOperators: OperatorDefinition[] = [];
+    const mOperators: OperatorDefinition[] = [];
     let mPositionReverse: boolean = false;
     const verifyNotFinished = () => {
       if (!mFinished)
@@ -62,7 +61,7 @@ const OperatorDefinitionFactory = freeze({
       raise('Already finished!');
     };
     const increment = () => {
-      mPrecValue += mIncrement;
+      mPrecValue += 1;
       return mPrecValue;
     };
     const push = (representation: string, relation: OperatorRelation) => {

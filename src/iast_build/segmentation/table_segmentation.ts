@@ -15,6 +15,6 @@ export const TableSegmentation = freeze({
       segment: (): Segment | undefined => undefined,
       error  : memoize((): StandardErrorMessage =>
         freeze({ message: 'tables are not supported' }))
-    })
+    });
   }
 });

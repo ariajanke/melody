@@ -61,7 +61,7 @@ function make(): AstExpressionCollector {
       if (!operatorConstructor()) {
         return setErrorFn(error);
       }
-      const opCtor = operatorConstructor()!
+      const opCtor = operatorConstructor()!;
       mConstructors.push(opCtor);
       mOperators.push(opCtor);
     },

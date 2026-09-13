@@ -16,8 +16,8 @@ function make
    mArgs: IastNode)
   : StripBuild
 {
-  const mStripping = StripBuild.makeBaseNameStripping
-    (mOriginalCallName, mReceiver, kTransformOfAssignment);
+  const mStripping = StripBuild.
+    makeBaseNameStripping(mOriginalCallName, mReceiver, kTransformOfAssignment);
 
   const node = memoize(() => {
     // NOTE assignment stripping is mandatory

@@ -87,7 +87,7 @@ describeNamed({ TokenFinisher }, () => {
         kFuncId, kFarOffOpening
       ]);
       expect(contents).toEqual(['foo', '(']);
-    })
+    });
   });
 
   describe('modification', () => {

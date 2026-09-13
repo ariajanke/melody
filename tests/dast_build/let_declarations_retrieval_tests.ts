@@ -90,7 +90,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
         if (type === 'number') {
           return intoIntNode(token.content());
         }
-        raise('strings not handled in these tests')
+        raise('strings not handled in these tests');
       },
       visitLet(_0: IastNode): DastBuild
         { raise('not handled for testing'); },
@@ -135,26 +135,10 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     expect(elements![0].dependeeNames).toEqual(['b:=']);
   });
 
-  // it('captures a couple of declaration', () => {
-  //   // let a = 1
-  //   // let b = 1
-  //   const letA = makeSingleDecl('a', makeFringe('1'));
-  //   const letB = makeSingleDecl('b', makeFringe('1'));
-  //   const def = makeFunctionDefinition([letA, letB]);
-  //   const res = LetDeclarationsRetrieval.
-  //     make(def).elements()?.map(toName);
-  //   expect(res).toEqual(['a', 'b']);
-  // });
-
   it('handles a declaration with a dependee', () => {
     // let a = b + 4
     const addition = makeCallFromString('+', makeFringe('b'), makeFringe('4'));
     const letA = makeSingleDecl('a', addition);
-    // const makeArg = (() => {
-    //   const { makeFringe, makeInteger } = DastNode_;
-    //   return makeFromDastNode(DastCall.make(
-    //     makeFringe('+'), makeFringe('b'), makeInteger('4')));
-    // })();
     const retrieval = LetDeclarationsRetrieval.make(letA, generallyIntoDastBuild);
     const firstEl = (retrieval.elements() ?? [])[0];
     const res = stripNodesFrom(firstEl);

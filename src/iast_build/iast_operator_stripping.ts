@@ -66,7 +66,7 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
       return node;
     }
     return gv;
-  }
+  };
 
   function visitRegularCall
     (callName: Token, receiver: IastNode, args: IastNode): StripBuildResult
