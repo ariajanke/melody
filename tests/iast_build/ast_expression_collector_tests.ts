@@ -3,7 +3,7 @@ import { AstExpressionCollector } from '../../src/iast_build/ast_expression_coll
 import { IastNode } from '../../src/iast_node';
 import { OperatorNamingSchema } from '../../src/operator_naming_schema';
 import { Token } from '../../src/token';
-import { ReseatableIastVisitor } from '../iast_visitor_factories';
+import { IastHelpers } from '../iast_helpers';
 import { TestHelpers } from '../test_helpers';
 import { TokenFactories } from '../token_factories';
 
@@ -12,8 +12,6 @@ const { freeze, memoize } = Helpers;
 const { describeNamed } = TestHelpers;
 
 describeNamed({ AstExpressionCollector }, () => {
-  const makeVisitor = ReseatableIastVisitor.makeSelfModified;
-  const makeDefaultVisitor = ReseatableIastVisitor.makeDefaultingToContinue;
   const makeToken = TokenFactories.makeFromStringOnly;
   const kCallToken: Token = freeze({
     content: () => OperatorNamingSchema.kCall,
@@ -45,17 +43,7 @@ describeNamed({ AstExpressionCollector }, () => {
   });
 
   function identifiersFromInst(inst: () => AstExpressionCollector): string[] {
-    const strings: string[] = [];
-    const visitor = makeVisitor({
-      ...makeDefaultVisitor(),
-      visitFringe(t: Token) {
-        strings.push(t.content());
-      }
-    });
-    const { node } = inst().finish();
-    expect(node()).toBeDefined();
-    node()?.visit(visitor);
-    return strings;
+    return IastHelpers.identifiersFromInst(inst().finish().node);
   }
 
   function identifiersFrom(tokStrings: Readonly<string[]>): string[] {
@@ -63,23 +51,7 @@ describeNamed({ AstExpressionCollector }, () => {
   }
 
   function callsFromInst(inst: () => AstExpressionCollector): string[] {
-    const { node } = inst().finish();
-    const calls: string[] = [];
-    const visitor = makeVisitor({
-      ...makeDefaultVisitor(),
-      visitLet(innerNode: IastNode) {
-        calls.push('let');
-        innerNode.visit(visitor);
-      },
-      visitCall(callName: Token, receiver: IastNode, args: IastNode) {
-        calls.push(callName.content());
-        receiver.visit(visitor);
-        args.visit(visitor);
-      }
-    });
-    expect(node()).toBeDefined();
-    node()?.visit(visitor);
-    return calls;
+    return IastHelpers.callsFromInst(inst().finish().node);
   }
 
   function callsFrom(tokStrings: Readonly<string[]>): string[] {

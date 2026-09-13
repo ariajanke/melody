@@ -1,21 +1,16 @@
 import { TestHelpers } from '../test_helpers';
-import { Token, TokenType } from '../../src/token';
 import { Helpers } from '../../src/helpers';
-import { ParentheticalSegmentation } from '../../src/iast_build/parenthetical_segmentation';
-import { Segment } from '../../src/iast_build/segment';
 import { IastOperatorStripping } from '../../src/iast_build/iast_operator_stripping';
 import { IastFragments } from '../iast_fragments';
 import { IastNode } from '../../src/iast_node';
 import { OperatorNamingSchema } from '../../src/operator_naming_schema';
-import { ReseatableIastVisitor } from '../iast_visitor_factories';
 import { IastBuild_ } from '../../src/iast_build/iast_build_constructor_retrieval';
+import { IastHelpers } from '../iast_helpers';
 
 const { describeNamed } = TestHelpers;
-const { freeze, memoize } = Helpers;
+const { memoize } = Helpers;
 
 describeNamed({ IastOperatorStripping }, () => {
-  const makeVisitor = ReseatableIastVisitor.makeSelfModified;
-  const makeDefaultVisitor = ReseatableIastVisitor.makeDefaultingToContinue;
   const { makeFringe } = IastFragments;
   const puts = memoize(() => makeFringe('puts'));
   const emptyTuple = memoize(IastFragments.makeTuple);
@@ -26,49 +21,23 @@ describeNamed({ IastOperatorStripping }, () => {
   const makeBareCall = makeCallMaker(OperatorNamingSchema.kCall);
   const makeDotCall = makeCallMaker(OperatorNamingSchema.kDot);
   const makeAssignCall = makeCallMaker(OperatorNamingSchema.kAssignment);
-  
-  // TODO DRY with AstExpressionCollector
+  const aDotB = memoize(() => makeDotCall(makeFringe('a'), makeFringe('b')));
+
   function callsFromInst(inst: () => IastBuild_): string[] {
-    const { node } = inst();
-    const calls: string[] = [];
-    const visitor = makeVisitor({
-      ...makeDefaultVisitor(),
-      visitLet(innerNode: IastNode) {
-        calls.push('let');
-        innerNode.visit(visitor);
-      },
-      visitCall(callName: Token, receiver: IastNode, args: IastNode) {
-        calls.push(callName.content());
-        receiver.visit(visitor);
-        args.visit(visitor);
-      }
-    });
-    expect(node()).toBeDefined();
-    node()?.visit(visitor);
-    return calls;
+    return IastHelpers.callsFromInst(inst().node);
   }
 
   function identifiersFromInst(inst: () => IastBuild_): string[] {
-    const strings: string[] = [];
-    const visitor = makeVisitor({
-      ...makeDefaultVisitor(),
-      visitFringe(t: Token) {
-        strings.push(t.content());
-      }
-    });
-    const { node } = inst();
-    expect(node()).toBeDefined();
-    node()?.visit(visitor);
-    return strings;
+    return IastHelpers.identifiersFromInst(inst().node);
   }
 
-  const aDotB = memoize(() => makeDotCall(makeFringe('a'), makeFringe('b')));
   function hasCorrectCalls(inst: () => IastBuild_, exCalls: Readonly<string[]>) {
     it('has correct calls', () => {
       const calls = callsFromInst(inst);
       expect(calls).toEqual(exCalls);
     });
   }
+
   function hasCorrectIdentifiers(inst: () => IastBuild_, exIds: Readonly<string[]>) {
     it('has correct identifiers', () => {
       const ids = identifiersFromInst(inst);

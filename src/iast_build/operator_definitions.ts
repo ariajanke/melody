@@ -9,6 +9,7 @@ interface OperatorDefinitionMut {
   representation: string;
   precedence: number;
   relation: OperatorRelation;
+  isPositionReversed: boolean;
 };
 
 export type OperatorDefinition = Readonly<OperatorDefinitionMut>;
@@ -43,6 +44,7 @@ const allMappings = memoize((): OperatorDefinitionDictionary =>
 interface OperatorDefinitionFactory {
   holdIncrement(): OperatorDefinitionFactory;
   continueIncrement(): OperatorDefinitionFactory;
+  reversePositionalPrecedence(): OperatorDefinitionFactory;
   binary(representation: string): OperatorDefinitionFactory;    
   unary(representation: string): OperatorDefinitionFactory;
   finish(): Readonly<OperatorDefinition[]>;
@@ -55,6 +57,7 @@ const OperatorDefinitionFactory = freeze({
     let mIncrement = 1;
     let mFinished = false;
     let mOperators: OperatorDefinition[] = [];
+    let mPositionReverse: boolean = false;
     const verifyNotFinished = () => {
       if (!mFinished)
         { return inst; }
@@ -67,11 +70,21 @@ const OperatorDefinitionFactory = freeze({
     };
     const push = (representation: string, relation: OperatorRelation) => {
       const precedence = increment();
-      mOperators.push(freeze({ representation, relation, precedence }));
+      const isPositionReversed = mPositionReverse;
+      mOperators.push(freeze({
+        representation,
+        relation,
+        precedence,
+        isPositionReversed
+      }));
       return verifyNotFinished();
     };
     const { binary, unary } = operandRelationships;
     const inst = freeze({
+      reversePositionalPrecedence() {
+        mPositionReverse = !mPositionReverse;
+        return verifyNotFinished();
+      },
       holdIncrement() {
         mIncrement = 0;
         return verifyNotFinished();
@@ -122,8 +135,8 @@ export const OperatorDefinitions = freeze({
       binary(kAnd).
       binary(kOr).
       unary(kMinus).
-      binary(kCall).
-      binary(kDot).
+      binary(kCall).reversePositionalPrecedence().
+      binary(kDot).reversePositionalPrecedence().
       finish();
   }),
 });

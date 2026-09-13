@@ -1,5 +1,6 @@
 import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
-import { IastNode } from '../iast_node';
+import { IastLiteralType, IastNode, IastVisitor } from '../iast_node';
+import { Token } from '../token';
 import { NodeConstructorCollection } from './node_constructor_collection';
 import { NodeConstructor, OperatorConstructor } from './operator_constructor';
 
@@ -9,6 +10,23 @@ export interface IastBuildSingleError {
 };
 
 const { freeze, memoize } = Helpers;
+
+const nodeCounter = memoize((): IastVisitor<number> => {
+  const reduceNodes = (p: number, n: IastNode) => p + n.visit(inst);
+  const inst = freeze({
+    visitLiteral: (_0: Token, _1: IastLiteralType): number => 1,
+    visitFringe: (_0: Token): number => 1,
+    visitTuple: (nodes: Readonly<IastNode[]>): number =>
+      nodes.reduce(reduceNodes, nodes.length),
+    visitLet: (innerNode: IastNode): number =>
+      1 + innerNode.visit(inst),
+    visitCall: (_1: Token, receiver: IastNode, args: IastNode): number =>
+      1 + receiver.visit(inst) + args.visit(inst),
+    visitFunctionDefinition: (nodes: Readonly<IastNode[]>): number =>
+      1 + nodes.reduce(reduceNodes, nodes.length)
+  });
+  return inst;
+});
 
 function make
   (mConstructors: NodeConstructor[], mOperators: OperatorConstructor[])
@@ -27,8 +45,12 @@ function make
       { return IastNode.emptyTupleInstance(); }
 
     const sortedLen = sortedOperators().length;
-    if (sortedLen === 0)
-      { return mConstructors[0].makeNode(collection()); }
+    if (sortedLen === 0) {
+      if (mConstructors.length === 1)
+        { return mConstructors[0].makeNode(collection()); }
+
+      return setErrorMessage(`expression ends too soon around ""`);
+    }
 
     for (let i = 0; i < sortedLen - 1; ++i) {
       sortedOperators()[i].makeNode(collection());
@@ -39,8 +61,11 @@ function make
     const missedCtor = collection().firstUnreplaced();
     if (missedCtor !== undefined) {
       const token = missedCtor.asToken();
-      return setErrorMessage(`stray "${token?.content() ?? '<UNKNOWN>'}" not absorbed into tree`);
+      return setErrorMessage(`expression ends too soon around "${token?.content() ?? '<UNKNOWN>'}"`);
     }
+    // if (node_.visit(nodeCounter()) !== collection().count()) {
+    //   return setErrorMessage(`could not create single expression from ...`);
+    // }
     return node_;
   });
 

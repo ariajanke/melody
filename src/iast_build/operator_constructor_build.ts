@@ -147,10 +147,11 @@ function make(mOpToken: Token, mIsUnaryContext: boolean, mPosition: number): Ope
     const info = operatorDefinition();
     if (!info)
       { return undefined; }
+    const position = mPosition*( info.isPositionReversed ? -1 : 1 );
 
     return freeze({
       precedence: info.precedence,
-      position: mPosition
+      position
     });
   });
 
