@@ -1,8 +1,8 @@
-import { TestHelpers } from '../test_helpers';
-import { Token, TokenType } from '../../src/token';
-import { Helpers } from '../../src/helpers';
-import { ParentheticalSegmentation } from '../../src/iast_build/segmentation/parenthetical_segmentation';
-import { Segment } from '../../src/iast_build/segmentation';
+import { TestHelpers } from '../../test_helpers';
+import { Token, TokenType } from '../../../src/token';
+import { Helpers } from '../../../src/helpers';
+import { ParentheticalSegmentation } from '../../../src/iast_build/segmentation/parenthetical_segmentation';
+import { Segment } from '../../../src/iast_build/segmentation';
 
 const { describeNamed } = TestHelpers;
 const { freeze, memoize } = Helpers;
