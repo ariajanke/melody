@@ -21,7 +21,6 @@ function identifiersFromNode(node: () => IastNode | undefined): string[] {
   return strings;
 }
 
-
 function callsFromNode(node: () => IastNode | undefined): string[] {
   const calls: string[] = [];
   const visitor = makeVisitor({

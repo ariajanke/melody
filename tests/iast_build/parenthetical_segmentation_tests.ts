@@ -8,7 +8,6 @@ const { describeNamed } = TestHelpers;
 const { freeze, memoize } = Helpers;
 
 describeNamed({ ParentheticalSegmentation }, () => {
-  // TODO ParentheticalSegmentation must not include its delimiters
   const makeToken = (content: string, type: TokenType): Token => {
     return freeze({
       start: pos,
@@ -47,6 +46,7 @@ describeNamed({ ParentheticalSegmentation }, () => {
 
     isSegmentEnclosed(inst, 0, 3);
   });
+
   describe('shallow nested case', () => {
     const inst = makeInst([
       openT, idT, opT, openT, idT, opT, idT, closeT, idT, closeT, opT

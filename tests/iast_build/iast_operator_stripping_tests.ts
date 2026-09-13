@@ -1,7 +1,7 @@
 import { TestHelpers } from '../test_helpers';
 import { Helpers } from '../../src/helpers';
 import { IastOperatorStripping } from '../../src/iast_build/iast_operator_stripping';
-import { IastFragments } from '../iast_fragments';
+import { IastFactories } from '../iast_factories';
 import { IastNode } from '../../src/iast_node';
 import { OperatorNamingSchema } from '../../src/operator_naming_schema';
 import { IastBuild_ } from '../../src/iast_build/iast_build_constructor_retrieval';
@@ -11,13 +11,13 @@ const { describeNamed } = TestHelpers;
 const { memoize } = Helpers;
 
 describeNamed({ IastOperatorStripping }, () => {
-  const { makeFringe } = IastFragments;
+  const { makeFringe } = IastFactories;
   const puts = memoize(() => makeFringe('puts'));
-  const emptyTuple = memoize(IastFragments.makeTuple);
+  const emptyTuple = memoize(IastFactories.makeTuple);
   const makeCallMaker =
     (callName: string) =>
       (rec: IastNode, args: IastNode) =>
-        IastFragments.makeCall(callName, rec, args);
+        IastFactories.makeCall(callName, rec, args);
   const makeBareCall = makeCallMaker(OperatorNamingSchema.kCall);
   const makeDotCall = makeCallMaker(OperatorNamingSchema.kDot);
   const makeAssignCall = makeCallMaker(OperatorNamingSchema.kAssignment);
@@ -52,7 +52,6 @@ describeNamed({ IastOperatorStripping }, () => {
     const calls = callsFromInst(() => inst);
     expect(calls).toEqual(['puts']);
   });
-
 
   describe('a.b.c', () => {    
     const iast = memoize(() => makeDotCall(aDotB(), makeFringe('c')));

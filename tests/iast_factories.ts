@@ -29,7 +29,7 @@ function makeFunctionDefinition(...nodes: Readonly<(string | IastNode)[]>): Iast
   return IastNode.makeFunctionDefinition(nodes.map(ensureFringe));
 }
 
-export const IastFragments = freeze({
+export const IastFactories = freeze({
   letAEqual1,
   makeTuple,
   makeFringe,

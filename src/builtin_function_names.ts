@@ -3,7 +3,7 @@ import { Helpers } from './helpers';
 const { freeze, memoize } = Helpers;
 
 const kBuiltinNames = freeze({
-  kSystemIoTable: '.SystemIO',
+  kSystemIoTable: 'SystemIO',
   kPuts: 'puts'
 });
 

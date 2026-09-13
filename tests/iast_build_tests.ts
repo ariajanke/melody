@@ -396,7 +396,6 @@ describeNamed({ IastBuild }, () => {
       rootNode.visit(visitor);
       expect(verifyHit()).toBeTruthy();
     });
-    // TODO strip "<call>" call names
 
     it('queue call is outside the function definition', () => {
       const rootNode = buildAst();
@@ -611,8 +610,6 @@ describeNamed({ IastBuild }, () => {
   });
 
   describe('table access expressions', () => {
-    
-
     it(`simple.table`, () => {
       const inst = makeInstFromStrings(['simple', '.', 'table']);
       const calls = callsFromNode(inst().node);

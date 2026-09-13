@@ -45,7 +45,6 @@ const contentTokenBase = memoize((): Token => freeze({
 
 export const IastFringe = freeze({
   tokenize,
-  // contextNode: memoize((): IastNode_ => IastFringe.make( Token.kContextToken )),
   makeContextNodeAt(mCallName: Token) {
     const contentToken = freeze({
       ...contentTokenBase(),

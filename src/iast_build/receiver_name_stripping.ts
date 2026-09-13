@@ -7,25 +7,11 @@ import { OperatorDefinitions } from './operator_definitions';
 
 const { freeze, memoize } = Helpers;
 
-// I need this for calls
-// specifically for getting call names
-// it is possible that no name exist (that is, it's not an error)
-// the best part is that I can reuse this service as is!
 export interface ReceiverNameStripping {
   nameTarget(): Token | undefined;
   strippedTree(): IastNode | undefined;
   error(): StandardErrorMessage;
 };
-
-// TODO test me
-// There are only two cases that will be handled here
-// - A base case, the receiver is just a simple fringe name node
-// - The table travesal case
-//   1. Go to the bottom right most corner of the tree
-//   2. It must end in a single binary call with a '.' call name
-//   3. Extract the node from the RHS
-//   4. The RHS MUST BE a fringe node (tokenizable)
-//   5. Replace this call node with the LHS alone
 
 function assumeDotIsTightest() {
 const { fullListing } = OperatorDefinitions;

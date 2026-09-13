@@ -8,7 +8,6 @@ const { describeNamed } = TestHelpers;
 const { memoize } = Helpers;
 
 describeNamed({ FunctionDefinitionSegmentation }, () => {
-  // single line, explicit
   const { stringsIntoTokens } = TokenFactories;
   const makeInstFromTokens = (toks: Readonly<Token[]>) =>
       memoize(() => FunctionDefinitionSegmentation.make(toks, 0, toks.length));

@@ -8,7 +8,7 @@ import {
   ReseatableDastVisitor
 } from '../src/dast_build';
 import { Helpers, StandardError, raise } from '../src/helpers';
-import { IastFragments } from './iast_fragments';
+import { IastFactories } from './iast_factories';
 import { DastTuple } from '../src/dast_build/dast_node_specializations';
 
 const { describeNamed } = TestHelpers;
@@ -27,7 +27,7 @@ describeNamed({ DastBuild }, () => {
     makeFunctionDefinition,
     makeTuple,
     letAEqual1
-  } = IastFragments;
+  } = IastFactories;
   function intoDastNode(root: IastNode): DastNode {
     const dbuild = DastBuild.make(root, undefined, (root: DastNode) =>
       freeze({ node: () => root, error: () => StandardError.make().error() }));

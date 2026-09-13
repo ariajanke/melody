@@ -23,12 +23,6 @@ const CallLevelVisitor = ((): { make: CallLevelVisitorConstructor } => {
 
   const visitFringe = (_0: Token): DastLetDeclarationBuild =>
     makeError('name needs a "= ..." following it');
-    
-  // const visitString = (_0: string): DastLetDeclarationBuild =>
-  //   makeError('string node cannot be a name in a let declaration');
-  
-  // const visitInteger = (_0: string): DastLetDeclarationBuild =>
-  //   makeError('integer node cannot be a name in a let declaration');
 
   const visitLiteral = (_0: Token, _1: IastLiteralType) =>
     makeError('literal node cannot be a name in a let declaration');

@@ -84,7 +84,7 @@ describeNamed({ AstExpressionCollector }, () => {
   });
 
   it('not a or b and c', () => {
-    // this is: "not ((a or b) and c)" in this language
+    // NOTE this is: "not ((a or b) and c)" in this language
     const calls = callsFrom(['not', 'a', 'or', 'b', 'and', 'c']);
     expect(calls).toEqual(['not', 'and', 'or']);
   });
@@ -99,10 +99,10 @@ describeNamed({ AstExpressionCollector }, () => {
     expect(calls).toEqual(['/', '-']);
   });
 
-  // it('let a, b = not c, d', () => {
-  //   const calls = callsFrom(['let', 'a', ',', 'b', '=', 'not', 'c', ',', 'd']);
-  //   expect(calls).toEqual(['let']);
-  // });
+  xit('let a, b = not c, d', () => {
+    const calls = callsFrom(['let', 'a', ',', 'b', '=', 'not', 'c', ',', 'd']);
+    expect(calls).toEqual(['let']);
+  });
 
   it('foo()', () => {
     const in_ = [
