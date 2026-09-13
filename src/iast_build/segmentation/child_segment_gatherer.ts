@@ -1,5 +1,5 @@
-import { Helpers, raise } from '../helpers';
-import { Segment } from './segment';
+import { Helpers, raise } from '../../helpers';
+import { Segment } from '../segmentation';
 
 const { freeze, memoize } = Helpers;
 

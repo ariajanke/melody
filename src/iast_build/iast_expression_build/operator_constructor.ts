@@ -1,5 +1,5 @@
-import { IastNode } from '../iast_node';
-import { Token } from '../token';
+import { IastNode } from '../../iast_node';
+import { Token } from '../../token';
 import { type NodeConstructorCollection } from './node_constructor_collection';
 
 export interface NodeConstructor {

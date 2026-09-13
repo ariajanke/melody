@@ -1,5 +1,5 @@
 import { Helpers, raise } from '../../src/helpers';
-import { AstExpressionCollector } from '../../src/iast_build/ast_expression_collector';
+import { AstExpressionCollector } from '../../src/iast_build/iast_expression_build/ast_expression_collector';
 import { IastNode } from '../../src/iast_node';
 import { OperatorNamingSchema } from '../../src/operator_naming_schema';
 import { Token } from '../../src/token';

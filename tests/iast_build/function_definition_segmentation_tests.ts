@@ -1,8 +1,8 @@
 import { TestHelpers } from '../test_helpers';
 import { Token } from '../../src/token';
 import { Helpers } from '../../src/helpers';
-import { FunctionDefinitionSegmentation } from '../../src/iast_build/function_definition_segmentation';
 import { TokenFactories } from '../token_factories';
+import { FunctionDefinitionSegmentation } from '../../src/iast_build/segmentation/function_definition_segmentation';
 
 const { describeNamed } = TestHelpers;
 const { memoize } = Helpers;

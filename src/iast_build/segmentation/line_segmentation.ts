@@ -1,12 +1,12 @@
-import { Helpers } from '../helpers';
-import { Token } from '../token';
+import { Helpers } from '../../helpers';
+import { Token } from '../../token';
 import {
   ExpressionClosingType,
   ExpressionScanningStrategy,
   ExpressionSegmentation
 } from './expression_segmentation';
 import { FunctionBodySegmentation } from './function_body_segmentation';
-import { Segment, Segmentation } from './segment';
+import { Segment, Segmentation } from '../segmentation';
 
 const { freeze, memoize } = Helpers;
 

@@ -1,10 +1,10 @@
-import { GroupingNamingSchema } from '../grouping_naming_schema';
-import { Helpers, raise, StandardError } from '../helpers';
-import { Token } from '../token';
+import { GroupingNamingSchema } from '../../grouping_naming_schema';
+import { Helpers, raise, StandardError } from '../../helpers';
+import { Token } from '../../token';
 import { ChildSegmentGatherer } from './child_segment_gatherer';
 import { ClosingPair } from './expression_segmentation';
 import { LineSegmentation } from './line_segmentation';
-import { Segment, Segmentation } from './segment';
+import { Segment, Segmentation } from '../segmentation';
 
 const { freeze, memoize } = Helpers;
 

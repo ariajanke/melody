@@ -1,5 +1,5 @@
 import { Helpers } from '../helpers';
-import { Segment } from './segment';
+import { Segment } from './segmentation';
 import { IastNode } from '../iast_node';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
@@ -10,14 +10,18 @@ import {
 
 const { freeze, memoize } = Helpers;
 
-function make(tokens: Readonly<Token[]>, segment: Segment, mThing: IastBuildConstructorRetrieval): IastBuild_ {
+function make
+  (mTokens: Readonly<Token[]>,
+   mSegment: Segment,
+   mCtorRetrieval: IastBuildConstructorRetrieval): IastBuild_
+{
   const errors = ErrorsCollector.make();
   const nodes = (() => {
     const nodes: IastNode[] = [];
-    const clen = segment.children().length;
+    const clen = mSegment.children().length;
     for (let cidx = 0; cidx < clen; ++cidx) {
-      const child = segment.children()[cidx];
-      const ibuild = mThing.constructorFor(child.type())(tokens, child, mThing);
+      const child = mSegment.children()[cidx];
+      const ibuild = mCtorRetrieval.constructorFor(child.type())(mTokens, child, mCtorRetrieval);
       if (ibuild.node()) {
         nodes.push(ibuild.node()!);
       } else {

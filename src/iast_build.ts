@@ -1,5 +1,4 @@
 import { Helpers, raise } from './helpers';
-import { FunctionBodySegmentation } from './iast_build/function_body_segmentation';
 import {
   IastBuild_,
   IastBuildConstructor,
@@ -8,7 +7,7 @@ import {
 import { IastExpressionBuild } from './iast_build/iast_expression_build';
 import { IastFunctionDefinitionBuild } from './iast_build/iast_function_definition_build';
 import { IastOperatorStripping } from './iast_build/iast_operator_stripping';
-import { SegmentType } from './iast_build/segment';
+import { Segmentation, SegmentType } from './iast_build/segmentation';
 import { IastNode } from './iast_node';
 import { Token } from './token';
 
@@ -29,18 +28,15 @@ IastBuildConstructorRetrieval.initialize(((): IastBuildConstructorRetrieval => {
   });
 })());
 
-function make(tokens: Readonly<Token[]>): IastBuild {
-  const { isEndOfInput } = FunctionBodySegmentation;
-
-  const { segment, error } = FunctionBodySegmentation.
-    make(tokens, 0, tokens.length, isEndOfInput);
+function make(mTokens: Readonly<Token[]>): IastBuild {  
+  const { segment, error } = Segmentation.makeInitialSegmentation(mTokens);
 
   const build = memoize(() => {
     if (!segment())
       { return undefined; }
 
     return IastFunctionDefinitionBuild.
-      make(tokens, segment()!, IastBuildConstructorRetrieval.instance());
+      make(mTokens, segment()!, IastBuildConstructorRetrieval.instance());
   });
 
   const assignmentStripping = memoize((): IastBuild | undefined => {

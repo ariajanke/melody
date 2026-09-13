@@ -1,6 +1,5 @@
-import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
-import { IastLiteralType, IastNode, IastVisitor } from '../iast_node';
-import { Token } from '../token';
+import { Helpers, StandardError, StandardErrorMessage } from '../../helpers';
+import { IastNode } from '../../iast_node';
 import { NodeConstructorCollection } from './node_constructor_collection';
 import { NodeConstructor, OperatorConstructor } from './operator_constructor';
 

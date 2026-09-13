@@ -1,10 +1,14 @@
-import { GroupingNamingSchema } from '../grouping_naming_schema';
-import { Helpers, raise } from '../helpers';
-import { Token } from '../token';
-import { ClosingPair, ExpressionClosingType, ExpressionScanningStrategy, ExpressionSegmentation } from './expression_segmentation';
+import { GroupingNamingSchema } from '../../grouping_naming_schema';
+import { Helpers, raise } from '../../helpers';
+import { Token } from '../../token';
+import {
+  ExpressionClosingType,
+  ExpressionScanningStrategy,
+  ExpressionSegmentation
+} from './expression_segmentation';
 import { FunctionBodySegmentation } from './function_body_segmentation';
 import { LineSegmentation } from './line_segmentation';
-import { Segment, Segmentation } from './segment';
+import { Segment, Segmentation } from '../segmentation';
 
 const { freeze, memoize } = Helpers;
 

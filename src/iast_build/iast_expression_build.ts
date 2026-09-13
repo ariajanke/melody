@@ -1,18 +1,20 @@
 import { Helpers, raise } from '../helpers';
 import { IastNode } from '../iast_node';
 import { Token } from '../token';
-import { AstExpressionCollector } from './ast_expression_collector';
+import { AstExpressionCollector } from './iast_expression_build/ast_expression_collector';
 import { ErrorsCollector } from './errors_collector';
 import {
   IastBuild_,
   IastBuildConstructorRetrieval
 } from './iast_build_constructor_retrieval';
-import { Segment } from './segment';
+import { Segment } from './segmentation';
 
 const { freeze, memoize } = Helpers;
 
 function make
-  (mTokens: Readonly<Token[]>, mSegment: Segment, mThing: IastBuildConstructorRetrieval)
+  (mTokens: Readonly<Token[]>,
+   mSegment: Segment,
+   mCtorRetreival: IastBuildConstructorRetrieval)
   : IastBuild_
 {
   if (mSegment.type() !== 'expression')
@@ -29,7 +31,7 @@ function make
         { raise('went too far?!'); }
       const child = mSegment.children()[cidx];
       if (idx === child?.start()) {
-        const ibuild = mThing.constructorFor(child.type())(mTokens, child, mThing);
+        const ibuild = mCtorRetreival.constructorFor(child.type())(mTokens, child, mCtorRetreival);
         const node = ibuild.node();
         if (node) {
           collector_.pushNode(node);
@@ -75,4 +77,3 @@ function make
 }
 
 export const IastExpressionBuild = freeze({ make });
-

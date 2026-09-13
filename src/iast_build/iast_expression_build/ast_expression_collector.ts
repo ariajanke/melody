@@ -1,6 +1,6 @@
-import { Helpers, raise, StandardError } from '../helpers';
-import { IastNode } from '../iast_node';
-import { Token } from '../token';
+import { Helpers, raise, StandardError } from '../../helpers';
+import { IastNode } from '../../iast_node';
+import { Token } from '../../token';
 import { IastBuildSingleError, IastOperationBuild } from './iast_operation_build';
 import { type NodeConstructorCollection } from './node_constructor_collection';
 import { NodeConstructor, OperatorConstructor } from './operator_constructor';

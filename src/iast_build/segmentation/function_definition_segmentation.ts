@@ -1,10 +1,10 @@
-import { GroupingNamingSchema } from '../grouping_naming_schema';
-import { Helpers, raise, StandardError } from '../helpers';
-import { Token } from '../token';
+import { GroupingNamingSchema } from '../../grouping_naming_schema';
+import { Helpers, raise, StandardError } from '../../helpers';
+import { Token } from '../../token';
 import { FunctionBodySegmentation } from './function_body_segmentation';
 import { FunctionHeadSegmentation } from './function_head_segmentation';
 import { LineSegmentation } from './line_segmentation';
-import { Segment, Segmentation } from './segment';
+import { Segment, Segmentation } from '../segmentation';
 
 type BodyClosingFunc = (token: Token | undefined) => boolean;
 
@@ -48,7 +48,7 @@ function make
       isBodyClosing : isSeparatorOrBodyClose;
   });
 
-  const body_ = memoize(() => {
+  const body_ = memoize((): Segment | undefined => {
     if (!isBodyClosingFunc())
       { return undefined; }
 

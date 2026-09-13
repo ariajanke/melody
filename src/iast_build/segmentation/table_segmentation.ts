@@ -1,7 +1,7 @@
-import { GroupingNamingSchema } from '../grouping_naming_schema';
-import { Helpers, StandardErrorMessage } from '../helpers';
-import { Token } from '../token';
-import { Segment, Segmentation } from './segment';
+import { GroupingNamingSchema } from '../../grouping_naming_schema';
+import { Helpers, StandardErrorMessage } from '../../helpers';
+import { Token } from '../../token';
+import { Segment, Segmentation } from '../segmentation';
 
 const { freeze, memoize } = Helpers;
 

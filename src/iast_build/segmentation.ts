@@ -63,3 +63,23 @@ export const Segment = freeze({
     return sInitializable!.groupingConstructorFor(token);
   }
 });
+
+export interface SegmentationClass {
+  makeInitialSegmentation(mTokens: Readonly<Token[]>): Segmentation;
+};
+
+let sInitializableTn: SegmentationClass | undefined = undefined;
+
+export const Segmentation = freeze({
+  initializeThisClass(i: SegmentationClass) {
+    if (sInitializableTn) {
+      raise('Segmentation already initialized');
+    }
+
+    sInitializableTn = i;
+  },
+  makeInitialSegmentation(mTokens: Readonly<Token[]>) {
+    return (sInitializableTn ?? raise('uninitialized class')).
+      makeInitialSegmentation(mTokens);
+  }
+});

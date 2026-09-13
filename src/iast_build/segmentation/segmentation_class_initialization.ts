@@ -1,8 +1,9 @@
 import { TableSegmentation } from './table_segmentation';
 import { FunctionDefinitionSegmentation } from './function_definition_segmentation';
 import { ParentheticalSegmentation } from './parenthetical_segmentation';
-import { Segment, SegmentationConstructor } from './segment';
-import { Token } from '../token';
+import { Segment, Segmentation, SegmentationConstructor } from '../segmentation';
+import { Token } from '../../token';
+import { FunctionBodySegmentation } from './function_body_segmentation';
 
 Segment.initializeThisClass({
   groupingConstructorFor(token: Token): SegmentationConstructor | undefined { 
@@ -17,4 +18,13 @@ Segment.initializeThisClass({
 
     return undefined;
   }
+});
+
+const { isEndOfInput } = FunctionBodySegmentation;
+
+Segmentation.initializeThisClass({
+  makeInitialSegmentation(mTokens: Readonly<Token[]>): Segmentation {
+    return FunctionBodySegmentation.
+      make(mTokens, 0, mTokens.length, isEndOfInput);
+  },
 });

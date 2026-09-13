@@ -1,10 +1,10 @@
-import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
-import { IastNode } from '../iast_node';
-import { OperatorNamingSchema } from '../operator_naming_schema';
-import { Token } from '../token';
+import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
+import { IastNode } from '../../iast_node';
+import { OperatorNamingSchema } from '../../operator_naming_schema';
+import { Token } from '../../token';
 import { NodeConstructorCollection } from './node_constructor_collection';
 import { NodeConstructor, OperatorConstructor } from './operator_constructor';
-import { OperatorDefinition, OperatorDefinitions } from './operator_definitions';
+import { OperatorDefinition, OperatorDefinitions } from '../operator_definitions';
 
 const { freeze, memoize } = Helpers;
 

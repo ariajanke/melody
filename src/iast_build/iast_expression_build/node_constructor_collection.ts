@@ -1,4 +1,4 @@
-import { Helpers, raise } from '../helpers';
+import { Helpers, raise } from '../../helpers';
 import { NodeConstructor } from './operator_constructor';
 
 const { freeze } = Helpers;

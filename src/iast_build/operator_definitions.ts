@@ -49,8 +49,7 @@ interface OperatorDefinitionFactory {
 };
 
 const OperatorDefinitionFactory = freeze({
-  make(): OperatorDefinitionFactory
-  {
+  make(): OperatorDefinitionFactory {
     let mPrecValue = 0;
     let mIncrement = 1;
     let mFinished = false;

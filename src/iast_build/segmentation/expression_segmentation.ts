@@ -1,7 +1,7 @@
-import { Helpers, raise, StandardError } from '../helpers';
-import { Token } from '../token';
+import { Helpers, raise, StandardError } from '../../helpers';
+import { Token } from '../../token';
 import { ChildSegmentGatherer } from './child_segment_gatherer';
-import { Segment, Segmentation, SegmentationConstructor } from './segment';
+import { Segment, Segmentation, SegmentationConstructor } from '../segmentation';
 
 const { freeze, memoize } = Helpers;
 

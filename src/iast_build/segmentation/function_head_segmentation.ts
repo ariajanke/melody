@@ -1,9 +1,9 @@
-import { Helpers, raise, StandardError } from '../helpers';
-import { Token } from '../token';
+import { Helpers, raise, StandardError } from '../../helpers';
+import { Token } from '../../token';
 import { ChildSegmentGatherer } from './child_segment_gatherer';
 import { FunctionDefinitionSegmentation } from './function_definition_segmentation';
 import { ParentheticalSegmentation } from './parenthetical_segmentation';
-import { Segment, Segmentation } from './segment';
+import { Segment, Segmentation } from '../segmentation';
 
 const { freeze, memoize } = Helpers;
 

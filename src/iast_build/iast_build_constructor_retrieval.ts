@@ -1,5 +1,5 @@
 import { Helpers, raise, StandardErrorMessage } from '../helpers';
-import { Segment, SegmentType } from './segment';
+import { Segment, SegmentType } from './segmentation';
 import { IastNode } from '../iast_node';
 import { Token } from '../token';
 
@@ -11,7 +11,9 @@ export interface IastBuild_ {
 };
 
 export type IastBuildConstructor =
-  (mTokens: Readonly<Token[]>, mSegment: Segment, mThing: IastBuildConstructorRetrieval) =>
+  (mTokens: Readonly<Token[]>,
+   mSegment: Segment,
+   mCtorRetrieval: IastBuildConstructorRetrieval) =>
   IastBuild_;
 
 export interface IastBuildConstructorRetrieval {
