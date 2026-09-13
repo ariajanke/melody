@@ -11,23 +11,6 @@ export interface IastBuildSingleError {
 
 const { freeze, memoize } = Helpers;
 
-const nodeCounter = memoize((): IastVisitor<number> => {
-  const reduceNodes = (p: number, n: IastNode) => p + n.visit(inst);
-  const inst = freeze({
-    visitLiteral: (_0: Token, _1: IastLiteralType): number => 1,
-    visitFringe: (_0: Token): number => 1,
-    visitTuple: (nodes: Readonly<IastNode[]>): number =>
-      nodes.reduce(reduceNodes, nodes.length),
-    visitLet: (innerNode: IastNode): number =>
-      1 + innerNode.visit(inst),
-    visitCall: (_1: Token, receiver: IastNode, args: IastNode): number =>
-      1 + receiver.visit(inst) + args.visit(inst),
-    visitFunctionDefinition: (nodes: Readonly<IastNode[]>): number =>
-      1 + nodes.reduce(reduceNodes, nodes.length)
-  });
-  return inst;
-});
-
 function make
   (mConstructors: NodeConstructor[], mOperators: OperatorConstructor[])
   : IastBuildSingleError
@@ -63,9 +46,7 @@ function make
       const token = missedCtor.asToken();
       return setErrorMessage(`expression ends too soon around "${token?.content() ?? '<UNKNOWN>'}"`);
     }
-    // if (node_.visit(nodeCounter()) !== collection().count()) {
-    //   return setErrorMessage(`could not create single expression from ...`);
-    // }
+
     return node_;
   });
 

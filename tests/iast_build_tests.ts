@@ -13,6 +13,10 @@ const { freeze, memoize } = Helpers;
 const { describeNamed } = TestHelpers;
 
 describeNamed({ IastBuild }, () => {
+  const makeInstFromStrings = (strs: Readonly<string[]>): () => IastBuild =>
+    memoize(() => IastBuild.make(strs.map(makeToken)));
+  const callsFromNode = IastHelpers.callsFromInst;
+  const idsFromNode = IastHelpers.identifiersFromInst;
   const makeVisitor = ReseatableIastVisitor.makeSelfModified;
   const makeDefaultVisitor = ReseatableIastVisitor.makeDefaultingToContinue;
   const makeToken = TokenFactories.makeFromStringOnly;
@@ -151,32 +155,25 @@ describeNamed({ IastBuild }, () => {
       expect(foundOperators).toEqual([':=', '+']);
     });
 
-    xit('builds ast with multiple lines end on an unary operator', () => {
-      tokens = [
-        makeToken('a'),
-        makeToken('\n'),
-        makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2')
-      ];
-      // const rootNode = buildAst();
-      // if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {
-      //   return fail();
-      // }
-      // expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(2);
+    const letALine = [
+      'let', 'a', ':=', '2'
+    ] as const;
+
+    it('builds ast with multiple lines end on an unary operator', () => {
+      const inst = makeInstFromStrings(['a', '\n', ...letALine]);
+      const calls = callsFromNode(inst().node);
+      expect(calls).toEqual(['let', ':=']);
     });
 
-    xit('builds ast with multiple lines of unary operators', () => {
-      tokens = [
-        makeToken('let'), makeToken('b'), makeToken(':='), makeToken('2'),
-        makeToken('\n'),
-        makeToken('let'), makeToken('a'), makeToken(':='), makeToken('2'),
-        makeToken('\n'),
-        makeToken('a')
-      ];
-      // const rootNode = buildAst();
-      // if (!AstFunctionDefinitionNode.hasCreated( rootNode )) {
-      //   return fail();
-      // }
-      // expect((rootNode as AstFunctionDefinitionNode).count()).toEqual(3);
+    it('builds ast with multiple lines of unary operators', () => {
+      const inst = makeInstFromStrings([
+        'let', 'b', ':=', '2',
+        '\n',
+        ...letALine, '\n',
+        'a'
+      ]);
+      const calls = callsFromNode(inst().node);
+      expect(calls).toEqual(['let', ':=', 'let', ':=']);
     });
   });
 
@@ -563,20 +560,6 @@ describeNamed({ IastBuild }, () => {
     });
 
     it('puts(askString(), askString())', () => {
-      // more sees puts(askString()), askString()
-      // 0.) tpb -> frg -> st frg
-      // 1.) cont af frg -> grp
-      // 2.) st grp
-      // 3.) tpb -> frg -> st frg
-      // 4.) con af frg -> grp
-      // 5.) st grp
-      // 6.) tpb
-      // 7.) con af frg
-      // 8.) con af op
-      // 9.) con af frg
-      // 10.) st grp
-      // 11.) tpb
-      // FINISH
       tokens = [
         makeToken('puts'), kCallToken, makeToken('('),
         makeToken('askString'), kCallToken, makeToken('('), makeToken(')'), makeToken(','),
@@ -628,10 +611,7 @@ describeNamed({ IastBuild }, () => {
   });
 
   describe('table access expressions', () => {
-    const makeInstFromStrings = (strs: Readonly<string[]>): () => IastBuild =>
-      memoize(() => IastBuild.make(strs.map(makeToken)));
-    const callsFromNode = IastHelpers.callsFromInst;
-    const idsFromNode = IastHelpers.identifiersFromInst;
+    
 
     it(`simple.table`, () => {
       const inst = makeInstFromStrings(['simple', '.', 'table']);

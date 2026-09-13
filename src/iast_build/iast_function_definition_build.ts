@@ -27,15 +27,12 @@ function make(tokens: Readonly<Token[]>, segment: Segment, mThing: IastBuildCons
     return nodes;
   });
 
-  const node = memoize(() => {
-    
-    nodes();
+  const node = memoize(() => {    
+    nodes(); // NOTE must build first to accumulate errors
     if (errors.errors().length > 0)
       { return undefined; }
-    console.log(`fdef: ${tokens.slice(segment.start(), segment.end()).map(t => t.content())}`);
-    const node_ = IastNode.makeFunctionDefinition(nodes());
-    console.log(node_.asString())
-    return node_;
+
+    return IastNode.makeFunctionDefinition(nodes());
   });  
 
   return freeze({ node, errors: errors.errors });

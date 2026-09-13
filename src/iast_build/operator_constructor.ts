@@ -16,17 +16,3 @@ export interface NodeConstructor {
 export interface OperatorConstructor extends NodeConstructor {
   compare(other: OperatorConstructor): number;
 };
-
-// const isNotOperator = () => false;
-// const asNoToken = (): Token | undefined => undefined;
-
-// function fromNode(node: IastNode): NodeConstructor {
-//   return freeze({
-//     isOperator: isNotOperator,
-//     asToken: asNoToken,
-//     makeNode(_0: NodeConstructorCollection): IastNode
-//       { return node; }
-//   });
-// }
-
-// export const OperatorConstructor = freeze({ fromNode });

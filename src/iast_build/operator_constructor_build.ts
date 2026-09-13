@@ -5,7 +5,6 @@ import { Token } from '../token';
 import { NodeConstructorCollection } from './node_constructor_collection';
 import { NodeConstructor, OperatorConstructor } from './operator_constructor';
 import { OperatorDefinition, OperatorDefinitions } from './operator_definitions';
-// import { ReceiverNameStripping } from './receiver_name_stripping';
 
 const { freeze, memoize } = Helpers;
 
@@ -45,11 +44,6 @@ function binaryNodeConstructorFor
   }
   if (op === OperatorNamingSchema.kCall) {
     return (rec: IastNode, params: IastNode) => {
-      // const { nameTarget, strippedTree } = ReceiverNameStripping.make(rec);
-      // if (nameTarget()) {
-      //   return IastNode.forOperativeStatements.
-      //     makeCall(nameTarget()!, strippedTree()!, params);  
-      // }
       return IastNode.forOperativeStatements.makeCall(callName, rec, params);
     };
   }
@@ -96,8 +90,6 @@ function makeArrayModifierForBinary
       lowPosition: recCtor.lowPosition,
       highPosition: paramsCtor.highPosition
     });
-    // replace positions here are wrong, you must replace extreme left and right
-    // and rec/params maybe further than -1 or +1!
     ctors.replace(opc);
     return node;
   };

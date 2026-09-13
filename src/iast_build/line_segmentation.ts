@@ -25,9 +25,6 @@ export const LineSegmentation = freeze({
           LineSegmentation.isProperClose(token))
         { return 'hard'; }
 
-      // if (LineSegmentation.isProperClose(token))
-      //   { return 'proper'; }
-
       return undefined;
     },
     continuesFor(token: Token): boolean {

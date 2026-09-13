@@ -11,6 +11,7 @@ import { BuiltinTypeBase } from '../builtin_type_base';
 import { FunctionOpLookUp, WritableObjectType } from './writable_object_type';
 import { WasmCompilation } from '../../wasm_compilation';
 import { SystemIoType } from '../system_io_type';
+import { PutsFunctionLookUpTable } from '../puts_function_look_up_table';
 
 const { freeze, memoize } = Helpers;
 
@@ -37,6 +38,9 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
     mTable[BuiltinFunctionNames.kSystemIoTable] =
       fromFunctionType(SystemIoType.selfGetter()));
 
+  const addPuts  = ((): FunctionLookUpTable =>
+    mTable[BuiltinFunctionNames.kPuts] = PutsFunctionLookUpTable.instance());
+
   const addContext = ((): FunctionLookUpTable =>
     mTable[FunctionNamingSchema.kContextName] =
       fromFunctionType(referenceGetter()));
@@ -50,6 +54,7 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
     addSystem() &&
     addContext() &&
     addNone() &&
+    addPuts() &&
     WritableObjectType.make(mTable, freeze({
       ...BuiltinTypeBase.makeNewWithDefaults(),
       name: () => mFrameName,

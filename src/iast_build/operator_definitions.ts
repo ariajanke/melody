@@ -42,8 +42,6 @@ const allMappings = memoize((): OperatorDefinitionDictionary =>
   intoMappingFor((_0: OperatorRelation) => true));
 
 interface OperatorDefinitionFactory {
-  holdIncrement(): OperatorDefinitionFactory;
-  continueIncrement(): OperatorDefinitionFactory;
   reversePositionalPrecedence(): OperatorDefinitionFactory;
   binary(representation: string): OperatorDefinitionFactory;    
   unary(representation: string): OperatorDefinitionFactory;
@@ -83,14 +81,6 @@ const OperatorDefinitionFactory = freeze({
     const inst = freeze({
       reversePositionalPrecedence() {
         mPositionReverse = !mPositionReverse;
-        return verifyNotFinished();
-      },
-      holdIncrement() {
-        mIncrement = 0;
-        return verifyNotFinished();
-      },
-      continueIncrement() {
-        mIncrement = 1;
         return verifyNotFinished();
       },
       binary: (representation: string) =>

@@ -47,7 +47,7 @@ function make
           const node = IastNode.makeFringe(token);
           collector_.pushNode(node);
         }
-        // tolerate and ignore any groupings
+        // NOTE tolerate and ignore any groupings
         ++idx;
       }
     }
@@ -64,8 +64,6 @@ function make
       mErrors.pushError(ibuild.error());
       return undefined;
     }
-    console.log(`exp: ${mTokens.slice(mSegment.start(), mSegment.end()).map(t => t.content())}`);
-    console.log(ibuild.node()?.asString());
 
     return ibuild.node();
   });

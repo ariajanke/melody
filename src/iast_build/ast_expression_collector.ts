@@ -14,11 +14,6 @@ export interface AstExpressionCollector {
   finish(): IastBuildSingleError;
 };
 
-
-// everything needs to be replaced, except in two cases: 1 and 0 nodes
-
-// TODO validate (produce an error) if tokens do not hook up right...
-
 function make(): AstExpressionCollector {
   const { error, setErrorFn, hasErrorSet } = StandardError.make();
   const mConstructors: NodeConstructor[] = [];
@@ -64,7 +59,7 @@ function make(): AstExpressionCollector {
         make(op, isInUnaryContext(), mConstructors.length);
 
       if (!operatorConstructor()) {
-        return setErrorFn(error); // <- set error
+        return setErrorFn(error);
       }
       const opCtor = operatorConstructor()!
       mConstructors.push(opCtor);

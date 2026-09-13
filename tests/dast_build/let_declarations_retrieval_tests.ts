@@ -7,8 +7,8 @@ import { DastNode_ } from '../../src/dast_build/dast_node';
 import { DastBuild } from '../../src/dast_build';
 import { DastCall, DastTuple } from '../../src/dast_build/dast_node_specializations';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
-import { Helpers, StandardError } from '../../src/helpers';
-import { IastNode, IastVisitor } from '../../src/iast_node';
+import { Helpers, raise, StandardError } from '../../src/helpers';
+import { IastLiteralType, IastNode, IastVisitor } from '../../src/iast_node';
 import { TokenFactories } from '../token_factories';
 import { Token } from '../../src/token';
 import { ReseatableIastVisitor } from '../iast_visitor_factories';
@@ -72,12 +72,12 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
     const forFringe = (fn: (v: string) => DastNode_) =>
       (str: string): DastBuild =>
         makeFromNode(fn(str));
+    const intoIntNode = forFringe(DastNode_.makeInteger);
     const visitor: IastVisitor<DastBuild> = {
       visitFringe: (tok: Token): DastBuild => freeze({
         node: memoize(() => DastNode_.makeFringe(tok)),
         error: () => StandardError.make().error(),
       }),
-      visitInteger: forFringe(DastNode_.makeInteger),
       visitTuple(nodes: Readonly<IastNode[]>): DastBuild {
         return makeFromNode(DastTuple.make(nodes.map(node => node.visit(visitor).node()!)));
       },
@@ -85,9 +85,18 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
         makeFromNode(DastCall.
           make(callName.content(),
                rec.visit(visitor).node()!,
-               fArgs.visit(visitor).node()!))
-      // let that f****er raise if that function is undefined
-    } as unknown as IastVisitor<DastBuild>;
+               fArgs.visit(visitor).node()!)),
+      visitLiteral(token: Token, type: IastLiteralType) {
+        if (type === 'number') {
+          return intoIntNode(token.content());
+        }
+        raise('strings not handled in these tests')
+      },
+      visitLet(_0: IastNode): DastBuild
+        { raise('not handled for testing'); },
+      visitFunctionDefinition(_0: Readonly<IastNode[]>): DastBuild
+        { raise('not handled for testing'); }
+    };
     if ('setInstRef' in visitor) {
       const asReseatable = visitor as ReseatableIastVisitor;
       asReseatable.setInstRef(asReseatable);

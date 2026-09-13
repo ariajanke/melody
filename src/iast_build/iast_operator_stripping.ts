@@ -44,26 +44,6 @@ type CallNameTransform = (fn: () => string) => (() => string);
 const kTransformOfAssignment = (contentFn: () => string) =>
   () => `${contentFn()}${OperatorNamingSchema.kAssignment}`;
 const kTransformCall = (contentFn: () => string) => contentFn;
-function transformCallNameFunctionOf
-  (callName: Token, letStack: LetMarkings):
-  CallNameTransform | undefined
-{
-  if (callName.content() === OperatorNamingSchema.kAssignment &&
-      letStack.isOutsideOfLetStatement())
-  {
-    return kTransformOfAssignment;
-  }
-
-  if (callName.content() === OperatorNamingSchema.kDot) {
-    return (contentFn: () => string) =>
-      () => FunctionNamingSchema.mapToFringeAccessor(contentFn());
-  }
-
-  if (callName.content() === OperatorNamingSchema.kCall)
-    { return kTransformCall; }
-
-  return undefined;
-}
 
 function makeNameStripping
   (mCallName: Token, mReceiver: IastNode, mTransform: CallNameTransform)
@@ -123,7 +103,7 @@ function makeAssignmentStripping
   const mStripping = makeNameStripping(mOriginalCallName, mReceiver, kTransformOfAssignment);
 
   const node = memoize(() => {
-    // assignment stripping is mandatory
+    // NOTE assignment stripping is mandatory
     if (!mStripping.callName() || !mStripping.receiver()) {
       return setErrorFn(mStripping.error);
     }
@@ -151,7 +131,7 @@ function makeCallStripping
 {
   const mStripping = makeNameStripping(mOriginalCallName, mReceiver, kTransformCall);
   const node = memoize((): StripBuildResult => {
-    // call stripping is optional
+    // NOTE call stripping is optional
     if (!mStripping.callName() || !mStripping.receiver()) {
       return 'not-modified';
     }
@@ -230,10 +210,7 @@ function chooseSpecialization
 
   return undefined;
 }
-// TODO and we'll need another for "dot", which appends "args" as a name
 
-// strip *all* ":=", except right inside a let
-// strip *all* calls, for stripable names
 function make(mRawTreeRoot: IastNode): IastBuild_ {
   type ResultType = IastNode | 'not-modified' | undefined;
 
@@ -292,15 +269,6 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
     return gv;
   }
 
-  // function visitCallSpecial
-  //   (callName: Token, receiver: IastNode, args: IastNode): ResultType
-  // {
-  //   // const thingie = chooseSpecialization(callName, mLetsStack)<ResultType>(recurseOn, receiver, args);
-  //   // const node = thingie.node();
-  //   // node ?? mErrorCollection.pushErrors(thingie.errors());
-  //   // return node;
-  // }
-
   function visitRegularCall
     (callName: Token, receiver: IastNode, args: IastNode): ResultType
   {
@@ -341,40 +309,6 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
     }
 
     return node();
-    // '.', ':=', '<call>'
-    // must strip ':=' if not immediately inside a let
-    // optionally strip '<call>' if we can
-    // must strip '.' always, which affects args side
-    // const callNameTransform = transformCallNameFunctionOf(callName, mLetsStack);
-    // if (callNameTransform !== undefined) {
-    //   const stripping = makeNameStripping(callName, receiver, callNameTransform);
-    //   if (!stripping.callName() || !stripping.receiver()){
-    //     mErrorCollection.pushError(stripping.error());
-    //     return undefined;
-    //   }
-
-    //   callName = stripping.callName()!;
-    //   receiver = stripping.receiver()!;
-    // }
-    // mLetsStack.markOutsideLetStatement();
-    // const recGv = receiver.visit(mVisitor);
-    // const argGv = args.visit(mVisitor);
-    // mLetsStack.popMarking();
-    // if (callName.content() === OperatorNamingSchema.kDot) {
-    //   // ...combine with arguement as name
-    // }
-    // if (callNameTransform === undefined && recGv === argGv && recGv === 'not-modified')
-    //   { return 'not-modified'; }
-
-    // if (recGv === undefined || argGv === undefined)
-    //   { return undefined; }
-
-    // if (recGv !== 'not-modified')
-    //   { receiver = recGv; }
-    // if (argGv !== 'not-modified')
-    //   { args = argGv; }
-    // return IastNode.forOperativeStatements.
-    //   makeCall(callName, receiver, args);
   }
 
   const mVisitor = freeze({
