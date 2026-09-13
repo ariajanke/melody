@@ -1,5 +1,5 @@
 import { FunctionNamingSchema } from '../function_naming_schema';
-import { Helpers, raise, StandardError } from '../helpers';
+import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
 import { IastLiteralType, IastNode } from '../iast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
@@ -41,6 +41,9 @@ const LetMarkingStack = freeze({
 });
 
 type CallNameTransform = (fn: () => string) => (() => string);
+const kTransformOfAssignment = (contentFn: () => string) =>
+  () => `${contentFn()}${OperatorNamingSchema.kAssignment}`;
+const kTransformCall = (contentFn: () => string) => contentFn;
 function transformCallNameFunctionOf
   (callName: Token, letStack: LetMarkings):
   CallNameTransform | undefined
@@ -48,8 +51,7 @@ function transformCallNameFunctionOf
   if (callName.content() === OperatorNamingSchema.kAssignment &&
       letStack.isOutsideOfLetStatement())
   {
-    return (contentFn: () => string) =>
-      () => `${contentFn()}${OperatorNamingSchema.kAssignment}`;
+    return kTransformOfAssignment;
   }
 
   if (callName.content() === OperatorNamingSchema.kDot) {
@@ -58,7 +60,7 @@ function transformCallNameFunctionOf
   }
 
   if (callName.content() === OperatorNamingSchema.kCall)
-    { return (contentFn: () => string) => contentFn; }
+    { return kTransformCall; }
 
   return undefined;
 }
@@ -97,45 +99,136 @@ function makeNameStripping
   });
 }
 
+type StripBuildResult = IastNode | 'not-modified' | undefined;
+
+interface StripBuild {
+  node(): StripBuildResult;
+  error(): StandardErrorMessage;
+};
+
 type StripConstructor =
-  <ResultType>(recurseOn: (n: IastNode) => ResultType, receiver: IastNode, args: IastNode) => IastBuild_;
+  (recurseOn: (n: IastNode) => IastNode | undefined, 
+   originalCallName: Token,
+   receiver: IastNode,
+   args: IastNode) => StripBuild;
 
-function makeCallAssignmentClass(sNameTransform: CallNameTransform) {
-  function make<ResultType>
-    (mRecurseOn: (n: IastNode) => ResultType,
-     mOriginalCallName: Token,
-     mReceiver: IastNode,
-     mArgs: IastNode)
-  {
-    const mErrorCollection = ErrorsCollector.make();
-    const mStripping = makeNameStripping(mOriginalCallName, mReceiver, sNameTransform);
-      // if (!stripping.callName() || !stripping.receiver()){
-      //   mErrorCollection.pushError(stripping.error());
-      //   return undefined;
-      // }
+function makeAssignmentStripping
+  (mRecurseOn: (n: IastNode) => IastNode | undefined,
+   mOriginalCallName: Token,
+   mReceiver: IastNode,
+   mArgs: IastNode)
+  : StripBuild
+{
+  const { error, setErrorFn } = StandardError.make();
+  const mStripping = makeNameStripping(mOriginalCallName, mReceiver, kTransformOfAssignment);
 
-      callName = stripping.callName()!;
-      receiver = stripping.receiver()!;
+  const node = memoize(() => {
+    // assignment stripping is mandatory
+    if (!mStripping.callName() || !mStripping.receiver()) {
+      return setErrorFn(mStripping.error);
+    }
+    const callName = mStripping.callName()!;
+    const receiver = mRecurseOn(mStripping.receiver()!);
+    const args = mRecurseOn(mArgs);
+    if (receiver === undefined || args === undefined)
+      { return undefined; }
 
+    return IastNode.forOperativeStatements.
+      makeCall(callName, receiver, args);
+  });
 
-    const node = memoize(() => {
-      if (!mStripping.callName() || !mStripping.receiver()) {
-        mErrorCollection.pushError(mStripping.error());
-        return undefined;
-      }
-      const receiver = mRecurseOn(mStripping.receiver()!);
-      const args = mRecurseOn(mArgs)
-      return IastNode.forOperativeStatements.
-        makeCall(callName, receiver, args);
+  return freeze({
+    node, error
+  });
+}
+
+function makeCallStripping
+  (mRecurseOn: (n: IastNode) => IastNode | undefined,
+   mOriginalCallName: Token,
+   mReceiver: IastNode,
+   mArgs: IastNode)
+  : StripBuild
+{
+  const mStripping = makeNameStripping(mOriginalCallName, mReceiver, kTransformCall);
+  const node = memoize((): StripBuildResult => {
+    // call stripping is optional
+    if (!mStripping.callName() || !mStripping.receiver()) {
+      return 'not-modified';
+    }
+
+    const callName = mStripping.callName()!;
+    const receiver = mRecurseOn(mStripping.receiver()!);
+    const args = mRecurseOn(mArgs);
+    if (receiver === undefined || args === undefined)
+      { return undefined; }
+
+    return IastNode.forOperativeStatements.
+      makeCall(callName, receiver, args);
+  });
+
+  return freeze({
+    node,
+    error: () => StandardError.make().error()
+  });
+}
+
+function makeDotStripping
+  (mRecurseOn: (n: IastNode) => IastNode | undefined,
+   mOriginalCallName: Token,
+   mReceiver: IastNode,
+   mArgs: IastNode)
+  : StripBuild
+{
+  const { error, setErrorMessage } = StandardError.make();
+  const idName = () =>
+    IastNode.forOperativeStatements.tokenize(mArgs) ??
+    setErrorMessage(`Token following (${mOriginalCallName.end()}) must be an identifier`);
+  const callName = memoize((): Token | undefined => {
+    const name = idName();
+    if (name === undefined)
+      { return undefined; }
+
+    return freeze({
+      start: mOriginalCallName.start,
+      end  : name.end,
+      content: memoize(() =>
+        FunctionNamingSchema.mapToFringeAccessor(name.content())),
+      type: name.type
     });
-  }
+  });
+  const node = memoize((): StripBuildResult => {
+    if (!callName())
+      { return undefined; }
+    const rec = mRecurseOn(mReceiver);
+    if (!rec)
+      { return undefined; }
+
+    
+    return IastNode.forOperativeStatements.
+      makeCall(callName()!, rec, IastNode.emptyTupleInstance());
+  });
+
+  return freeze({ node, error });
 }
 
 function chooseSpecialization
-  (callName: Token, markings: LetMarkings): StripConstructor
+  (callName: Token, markings: LetMarkings): StripConstructor | undefined
 
 {
+  if (callName.content() === OperatorNamingSchema.kAssignment &&
+      markings.isOutsideOfLetStatement())
+  {
+    return makeAssignmentStripping;
+  }
 
+  if (callName.content() === OperatorNamingSchema.kDot) {
+    return makeDotStripping;
+  }
+
+  if (callName.content() === OperatorNamingSchema.kCall)
+    { return makeCallStripping; }
+
+  return undefined;
 }
 // TODO and we'll need another for "dot", which appends "args" as a name
 
@@ -189,24 +282,65 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
     return IastNode.forOperativeStatements.makeLetDeclation(gv);
   }
 
-  const recurseOn = (node: IastNode): ResultType => {
+  const recurseOn = (node: IastNode): IastNode | undefined => {
     mLetsStack.markOutsideLetStatement();
     const gv = node.visit(mVisitor);
-    return mLetsStack.popMarking(gv);
+    mLetsStack.popMarking();
+    if (gv === 'not-modified') {
+      return node;
+    }
+    return gv;
   }
 
-  function visitCallSpecial
+  // function visitCallSpecial
+  //   (callName: Token, receiver: IastNode, args: IastNode): ResultType
+  // {
+  //   // const thingie = chooseSpecialization(callName, mLetsStack)<ResultType>(recurseOn, receiver, args);
+  //   // const node = thingie.node();
+  //   // node ?? mErrorCollection.pushErrors(thingie.errors());
+  //   // return node;
+  // }
+
+  function visitRegularCall
     (callName: Token, receiver: IastNode, args: IastNode): ResultType
   {
-    const thingie = chooseSpecialization(callName, mLetsStack)<ResultType>(recurseOn, receiver, args);
-    const node = thingie.node();
-    node ?? mErrorCollection.pushErrors(thingie.errors());
-    return node;
+    mLetsStack.markOutsideLetStatement();
+    const recGv = receiver.visit(mVisitor);
+    const argGv = args.visit(mVisitor);
+    mLetsStack.popMarking();
+
+    if (recGv === argGv && recGv === 'not-modified')
+      { return 'not-modified'; }
+
+    if (recGv === undefined || argGv === undefined)
+      { return undefined; }
+
+    if (recGv !== 'not-modified')
+      { receiver = recGv; }
+    if (argGv !== 'not-modified')
+      { args = argGv; }
+    return IastNode.forOperativeStatements.
+      makeCall(callName, receiver, args);
   }
 
   function visitCall
     (callName: Token, receiver: IastNode, args: IastNode): ResultType
   {
+    const ctor = chooseSpecialization(callName, mLetsStack);
+    if (!ctor)
+      { return visitRegularCall(callName, receiver, args); }
+
+    const { node, error } = ctor(recurseOn, callName, receiver, args);
+    if (node() === undefined) {
+      mErrorCollection.pushError(error());
+      return undefined;
+    }
+    
+    if (node() === 'not-modified') {
+      return visitRegularCall(callName, receiver, args);
+    }
+
+    return node();
     // '.', ':=', '<call>'
     // must strip ':=' if not immediately inside a let
     // optionally strip '<call>' if we can
@@ -222,25 +356,25 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
     //   callName = stripping.callName()!;
     //   receiver = stripping.receiver()!;
     // }
-    mLetsStack.markOutsideLetStatement();
-    const recGv = receiver.visit(mVisitor);
-    const argGv = args.visit(mVisitor);
-    mLetsStack.popMarking();
-    if (callName.content() === OperatorNamingSchema.kDot) {
-      // ...combine with arguement as name
-    }
-    if (callNameTransform === undefined && recGv === argGv && recGv === 'not-modified')
-      { return 'not-modified'; }
+    // mLetsStack.markOutsideLetStatement();
+    // const recGv = receiver.visit(mVisitor);
+    // const argGv = args.visit(mVisitor);
+    // mLetsStack.popMarking();
+    // if (callName.content() === OperatorNamingSchema.kDot) {
+    //   // ...combine with arguement as name
+    // }
+    // if (callNameTransform === undefined && recGv === argGv && recGv === 'not-modified')
+    //   { return 'not-modified'; }
 
-    if (recGv === undefined || argGv === undefined)
-      { return undefined; }
+    // if (recGv === undefined || argGv === undefined)
+    //   { return undefined; }
 
-    if (recGv !== 'not-modified')
-      { receiver = recGv; }
-    if (argGv !== 'not-modified')
-      { args = argGv; }
-    return IastNode.forOperativeStatements.
-      makeCall(callName, receiver, args);
+    // if (recGv !== 'not-modified')
+    //   { receiver = recGv; }
+    // if (argGv !== 'not-modified')
+    //   { args = argGv; }
+    // return IastNode.forOperativeStatements.
+    //   makeCall(callName, receiver, args);
   }
 
   const mVisitor = freeze({

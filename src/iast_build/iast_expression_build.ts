@@ -55,6 +55,7 @@ function make
   };
 
   const node = memoize(() => {
+    
     if (mErrors.errors().length > 0)
       { return undefined; }
 
@@ -63,6 +64,8 @@ function make
       mErrors.pushError(ibuild.error());
       return undefined;
     }
+    console.log(`exp: ${mTokens.slice(mSegment.start(), mSegment.end()).map(t => t.content())}`);
+    console.log(ibuild.node()?.asString());
 
     return ibuild.node();
   });

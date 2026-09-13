@@ -1,6 +1,6 @@
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token, TokenType } from '../src/token';
-import { IastNode } from '../src/iast_node';
+import { IastLiteralType, IastNode } from '../src/iast_node';
 import { TokenFactories } from './token_factories';
 import { ReseatableIastVisitor } from './iast_visitor_factories';
 import { IastBuild } from '../src/iast_build';
@@ -501,7 +501,7 @@ describeNamed({ IastBuild }, () => {
     it('let a := askString()', () => {
       tokens = [
         makeToken('let'), makeToken('a'), makeToken(':='),
-        makeToken('askString'), makeToken('('), makeToken(')')
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')')
       ];
 
       expectFunctionsCalledInOrder(':=', 'askString');
@@ -543,7 +543,7 @@ describeNamed({ IastBuild }, () => {
 
     it('puts(2 + 3, 5 + 9)', () => {
       tokens = [
-        makeToken('puts'), makeToken('('),
+        makeToken('puts'), kCallToken, makeToken('('),
         makeToken('2'), makeToken('+'), makeToken('3'), makeToken(','),
         makeToken('5'), makeToken('+'), makeToken('9'),
         makeToken(')')
@@ -570,7 +570,10 @@ describeNamed({ IastBuild }, () => {
             expect(hitInteger).toBeTruthy();
           }
         },
-        visitInteger(_0: string): void {
+        visitLiteral(_0: Token, type: IastLiteralType): void {
+          if (type !== 'number')
+            { return; }
+
           hitInteger = true;
           pt1.hitsAtExactly(4);
         }
@@ -597,9 +600,9 @@ describeNamed({ IastBuild }, () => {
       // 11.) tpb
       // FINISH
       tokens = [
-        makeToken('puts'), makeToken('('),
-        makeToken('askString'), makeToken('('), makeToken(')'), makeToken(','),
-        makeToken('askString'), makeToken('('), makeToken(')'),
+        makeToken('puts'), kCallToken, makeToken('('),
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')'), makeToken(','),
+        makeToken('askString'), kCallToken, makeToken('('), makeToken(')'),
         makeToken(')')
       ];
       const { verifyAllHit, points } = ReachPoint.makeCollection(2);
@@ -628,7 +631,7 @@ describeNamed({ IastBuild }, () => {
 
     it(`puts(('hello'))`, () => {
       tokens = [
-        makeToken('puts'), makeToken('('), makeToken('('),
+        makeToken('puts'), kCallToken, makeToken('('), makeToken('('),
         makeToken(`'hello'`), makeToken(')'), makeToken(')')
       ];
 

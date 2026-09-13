@@ -153,13 +153,18 @@ describeNamed({ AstExpressionCollector }, () => {
     it('has correct calls', () => {  
       const calls = callsFromInst(inst);
       expect(calls).toEqual(['<call>', '.', '.']);
-      fail(); // this is wrong :(
     });
 
     it('has correct identifiers', () => {
       const ids = identifiersFromInst(inst);
       expect(ids).toEqual(['foo', 'bar', 'baz']);
     });
+  });
+
+  it('<fails> a b c', () => {
+    const { node } =
+      makeInst(['a', 'b', 'c'].map(makeToken))().finish();
+    expect(node()).toBeUndefined();
   });
 
   it('<fails> a + + b', () => {

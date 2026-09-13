@@ -7,7 +7,7 @@ const { freeze } = Helpers;
 
 function stripQuotes(s: string): string | undefined {
   if (s[0] === '\'' && s.endsWith('\''))
-    { return s.slice(1, s.length - 2); }
+    { return s.slice(1, s.length - 1); }
 
   return undefined;
 }
@@ -30,7 +30,8 @@ function makeFromStringOnly(s: string): Token {
     if (s[0] === '\n')
       { return Token.types.grouping.separator; }
 
-    if (OperatorNamingSchema.isOperator(s))
+    if (OperatorNamingSchema.isOperator(s) ||
+        s === OperatorNamingSchema.kCall)
       { return Token.types.operator; }
 
     return Token.types.identifier;

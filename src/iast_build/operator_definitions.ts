@@ -121,8 +121,9 @@ export const OperatorDefinitions = freeze({
       unary(kNot).
       binary(kAnd).
       binary(kOr).
-      unary(kMinus).holdIncrement().
-      binary(kCall).binary(kDot).continueIncrement().
+      unary(kMinus).
+      binary(kCall).
+      binary(kDot).
       finish();
   }),
 });
