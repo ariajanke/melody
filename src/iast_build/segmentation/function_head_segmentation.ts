@@ -40,11 +40,13 @@ function make
         if (separatorCount > 1) {
           return setErrorMessage('Too many new lines with no head/body found');
         }
+
         continue;
       }
 
       return idx - separatorCount;
     }
+
     return mEnd;
   });
 

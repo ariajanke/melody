@@ -101,9 +101,9 @@ describeNamed({ AstExpressionCollector }, () => {
     expect(calls).toEqual(['/', '-']);
   });
 
-  xit('let a, b = not c, d', () => {
+  it('let a, b = not c, d', () => {
     const calls = callsFrom(['let', 'a', ',', 'b', '=', 'not', 'c', ',', 'd']);
-    expect(calls).toEqual(['let']);
+    expect(calls).toEqual(['let', '=', 'not']);
   });
 
   it('foo()', () => {

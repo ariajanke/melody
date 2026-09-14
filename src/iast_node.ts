@@ -17,20 +17,20 @@ export type IastVisitor<T = void> = IastVisitor_<T>;
 
 export const IastNode = freeze({
   forOperatorStripping: {
-    makeFunctionDefinition: IastDefinition.make,
-    makeTuple: IastTuple.make,
-    makeLetDeclation: IastLet.make,
-    makeCall : IastCall.make,
-    tokenize: IastFringe.tokenize,
     emptyTupleInstance,
+    makeCall : IastCall.make,
     makeContextNodeAt: IastFringe.makeContextNodeAt,
+    makeFunctionDefinition: IastDefinition.make,
+    makeLetDeclation: IastLet.make,
+    makeTuple: IastTuple.make,
+    tokenize: IastFringe.tokenize,
   },
   forIastExpressionBuild: {
     emptyTupleInstance,
-    tuplify: IastTuple.tuplify,
     makeCall : IastCall.make,
-    makeLetDeclation: IastLet.make,
     makeFringe: IastFringe.make,
+    makeLetDeclation: IastLet.make,
+    tuplify: IastTuple.tuplify,
   },
   forIastFunctionDefinitionBuild: {
     makeFunctionDefinition: IastDefinition.make,

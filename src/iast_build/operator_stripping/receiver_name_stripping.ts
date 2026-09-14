@@ -14,11 +14,11 @@ export interface ReceiverNameStripping {
 };
 
 function assumeDotIsTightest() {
-const { fullListing } = OperatorDefinitions;
+  const { fullListing } = OperatorDefinitions;
   const tightestBindingOperator = fullListing()[fullListing().length - 1];
-  if (tightestBindingOperator.representation === OperatorNamingSchema.kDot) {
-    return;
-  }
+  if (tightestBindingOperator.representation === OperatorNamingSchema.kDot)
+    { return; }
+
   raise('The dot operator was assumed to be the tightest binding operator, but it is not');
 }
 
