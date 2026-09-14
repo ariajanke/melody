@@ -46,7 +46,7 @@ function make
         if (token.type() === Token.types.operator) {
           collector_.pushOperator(token);
         } else if (Segment.isFringe(token)) {
-          const node = IastNode.makeFringe(token);
+          const node = IastNode.forIastExpressionBuild.makeFringe(token);
           collector_.pushNode(node);
         }
         // NOTE tolerate and ignore any groupings

@@ -45,14 +45,8 @@ export const ParentheticalSegmentation = freeze({
     groupingConstructorFor: Segment.groupingConstructorFor,
   })),
   make(mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation {
-    // TODO rm me when finished debugging
     ParentheticalSegmentation.assertIsOpening(mTokens[mStart]);
-    const inst = ExpressionSegmentation.
+    return ExpressionSegmentation.
       make(mTokens, mStart, mEnd, ParentheticalSegmentation.strategy());
-
-    return freeze({
-      segment: () => inst.segment(),
-      error: inst.error
-    });
   }
 });

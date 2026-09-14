@@ -11,6 +11,8 @@ import { Segment, Segmentation } from '../segmentation';
 const { freeze, memoize } = Helpers;
 
 const kSeparator = Token.types.grouping.separator;
+const kIdentifier = Token.types.identifier;
+const kOperator = Token.types.operator;
 
 export const LineSegmentation = freeze({
   isProperClose(token: Token | undefined): boolean {
@@ -28,10 +30,10 @@ export const LineSegmentation = freeze({
       return undefined;
     },
     continuesFor(token: Token): boolean {
-      const { type } = token;
-      return type() === Token.types.identifier ||
+      const type = token.type();
+      return type === kIdentifier ||
              Token.isLiteral(token) ||
-             type() === Token.types.operator;
+             type === kOperator;
     },
     groupingConstructorFor: Segment.groupingConstructorFor,
   })),
@@ -39,12 +41,7 @@ export const LineSegmentation = freeze({
        mStart: number,
        mEnd: number): Segmentation
   {
-    // TODO rm me when finished debugging
-    const inst = ExpressionSegmentation.
+    return ExpressionSegmentation.
       make(mTokens, mStart, mEnd, LineSegmentation.strategy());
-    return freeze({
-      segment: () => inst.segment(),
-      error: inst.error
-    });
   }
 });

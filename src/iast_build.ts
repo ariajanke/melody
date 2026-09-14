@@ -6,7 +6,7 @@ import {
 } from './iast_build/iast_build_constructor_retrieval';
 import { IastExpressionBuild } from './iast_build/iast_expression_build';
 import { IastFunctionDefinitionBuild } from './iast_build/iast_function_definition_build';
-import { IastOperatorStripping } from './iast_build/iast_operator_stripping';
+import { OperatorStripping } from './iast_build/operator_stripping';
 import { Segmentation, SegmentType } from './iast_build/segmentation';
 import { IastNode } from './iast_node';
 import { Token } from './token';
@@ -44,7 +44,7 @@ function make(mTokens: Readonly<Token[]>): IastBuild {
     if (!node_)
       { return undefined; }
 
-    return IastOperatorStripping.make(node_);
+    return OperatorStripping.make(node_);
   });
 
   const node = ((): IastNode | undefined =>

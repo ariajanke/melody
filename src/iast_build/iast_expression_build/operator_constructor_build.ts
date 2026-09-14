@@ -16,6 +16,12 @@ export interface OperatorConstructorBuild {
 const isOperator = () => true;
 const isNotOperator = () => false;
 const asNoToken = (): Token | undefined => undefined;
+const {
+  tuplify,
+  makeCall,
+  makeLetDeclation,
+  emptyTupleInstance
+} = IastNode.forIastExpressionBuild;
 function makeNodeMakerFor(node: IastNode) {
   return (_0: NodeConstructorCollection): IastNode => node;
 }
@@ -39,37 +45,33 @@ function binaryNodeConstructorFor
 {
   const op = callName.content();
   if (op === OperatorNamingSchema.kComma) {
-    return (lhs: IastNode, rhs: IastNode) =>
-      IastNode.forOperativeStatements.tuplify(lhs, rhs);
+    return (lhs: IastNode, rhs: IastNode) => tuplify(lhs, rhs);
   }
+
   if (op === OperatorNamingSchema.kCall) {
-    return (rec: IastNode, params: IastNode) => {
-      return IastNode.forOperativeStatements.makeCall(callName, rec, params);
-    };
+    return (rec: IastNode, params: IastNode) => makeCall(callName, rec, params);
   }
+
   return (rec: IastNode, params: IastNode) =>
-    IastNode.forOperativeStatements.makeCall(callName, rec, params);
+    makeCall(callName, rec, params);
 }
 
 function unaryNodeConstructorFor
   (op: Token): UnaryConstructor
 {
-  if (op.content() === OperatorNamingSchema.kLet) {
-    return (inner: IastNode) =>
-      IastNode.forOperativeStatements.makeLetDeclation(inner);
-  }
-  const empty = IastNode.emptyTupleInstance();
-  return (rec: IastNode) =>
-    IastNode.forOperativeStatements.makeCall(op, rec, empty);
+  if (op.content() === OperatorNamingSchema.kLet)
+    { return (inner: IastNode) => makeLetDeclation(inner); }
+
+  return (rec: IastNode) => makeCall(op, rec, emptyTupleInstance());
 }
 
 function makeCompareFunc(info: OperatorPrecedence): (other: OperatorConstructor) => number {
   return (other: OperatorConstructor) => {
     const otherInfo = asOpC(other) ?? raise('not a valid operator instance');
     const diff = info!.precedence - otherInfo.precedence;
-    if (diff === 0) {
-      return info.position - otherInfo.position;
-    }
+    if (diff === 0)
+      { return info.position - otherInfo.position; }
+
     return diff;    
   };
 }
@@ -139,8 +141,8 @@ function make(mOpToken: Token, mIsUnaryContext: boolean, mPosition: number): Ope
     const info = operatorDefinition();
     if (!info)
       { return undefined; }
-    const position = mPosition*( info.isPositionReversed ? -1 : 1 );
 
+    const position = mPosition*( info.isPositionReversed ? -1 : 1 );
     return freeze({
       precedence: info.precedence,
       position

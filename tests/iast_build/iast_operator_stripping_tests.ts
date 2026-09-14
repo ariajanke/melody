@@ -1,6 +1,6 @@
 import { TestHelpers } from '../test_helpers';
 import { Helpers } from '../../src/helpers';
-import { IastOperatorStripping } from '../../src/iast_build/iast_operator_stripping';
+import { OperatorStripping } from '../../src/iast_build/operator_stripping';
 import { IastFactories } from '../iast_factories';
 import { IastNode } from '../../src/iast_node';
 import { OperatorNamingSchema } from '../../src/operator_naming_schema';
@@ -10,7 +10,7 @@ import { IastHelpers } from '../iast_helpers';
 const { describeNamed } = TestHelpers;
 const { memoize } = Helpers;
 
-describeNamed({ IastOperatorStripping }, () => {
+describeNamed({ IastOperatorStripping: OperatorStripping }, () => {
   const { makeFringe } = IastFactories;
   const puts = memoize(() => makeFringe('puts'));
   const emptyTuple = memoize(IastFactories.makeTuple);
@@ -48,14 +48,14 @@ describeNamed({ IastOperatorStripping }, () => {
   it('puts()', () => {
     const iast = memoize(() =>
       makeBareCall(puts(), emptyTuple()));
-    const inst = IastOperatorStripping.make(iast());
+    const inst = OperatorStripping.make(iast());
     const calls = callsFromInst(() => inst);
     expect(calls).toEqual(['puts']);
   });
 
   describe('a.b.c', () => {    
     const iast = memoize(() => makeDotCall(aDotB(), makeFringe('c')));
-    const inst = memoize(() => IastOperatorStripping.make(iast()));
+    const inst = memoize(() => OperatorStripping.make(iast()));
 
     hasCorrectCalls(inst, ['.c', '.b']);
 
@@ -65,7 +65,7 @@ describeNamed({ IastOperatorStripping }, () => {
   describe('t.puts(a)', () => {
     const tDotPuts = () => makeDotCall(makeFringe('t'), puts());
     const callWithA = () => makeBareCall(tDotPuts(), makeFringe('a'));
-    const inst = memoize(() => IastOperatorStripping.make(callWithA()));
+    const inst = memoize(() => OperatorStripping.make(callWithA()));
     
     hasCorrectCalls(inst, ['puts']);
 
@@ -75,7 +75,7 @@ describeNamed({ IastOperatorStripping }, () => {
   describe('a.b(c).d', () => {
     const cDotD = () => makeDotCall(makeFringe('c'), makeFringe('d'));
     const iast = () => makeBareCall(aDotB(), cDotD());
-    const inst = memoize(() => IastOperatorStripping.make(iast()));
+    const inst = memoize(() => OperatorStripping.make(iast()));
 
     hasCorrectCalls(inst, ['b', '.d']);
 
@@ -84,7 +84,7 @@ describeNamed({ IastOperatorStripping }, () => {
 
   it('a := 5', () => {
     const iast = makeAssignCall(makeFringe('a'), makeFringe('5'));
-    const inst = memoize(() => IastOperatorStripping.make(iast));
+    const inst = memoize(() => OperatorStripping.make(iast));
     const calls = callsFromInst(inst);
     expect(calls).toEqual(['a:=']);
   });
@@ -92,7 +92,7 @@ describeNamed({ IastOperatorStripping }, () => {
   describe('t.a := 5', () => {
     const tDotA = () => makeDotCall(makeFringe('t'), makeFringe('a'));
     const iast = () => makeAssignCall(tDotA(), makeFringe('5'));
-    const inst = memoize(() => IastOperatorStripping.make(iast()));
+    const inst = memoize(() => OperatorStripping.make(iast()));
 
     hasCorrectCalls(inst, ['a:=']);
 
@@ -102,7 +102,7 @@ describeNamed({ IastOperatorStripping }, () => {
   it('get_func()()', () => {    
     const firstCall = () => makeBareCall(makeFringe('get_func'), emptyTuple());
     const iast = () => makeBareCall(firstCall(), emptyTuple());
-    const inst = memoize(() => IastOperatorStripping.make(iast()));
+    const inst = memoize(() => OperatorStripping.make(iast()));
     const calls = callsFromInst(inst);
     expect(calls).toEqual([OperatorNamingSchema.kCall, 'get_func']);
   });
@@ -110,7 +110,7 @@ describeNamed({ IastOperatorStripping }, () => {
   it('foo() := 5', () => {
     const fooCall = () => makeBareCall(makeFringe('foo'), emptyTuple());
     const iast = () => makeAssignCall(fooCall(), makeFringe('5'));
-    const inst = memoize(() => IastOperatorStripping.make(iast()));
+    const inst = memoize(() => OperatorStripping.make(iast()));
     expect(inst().node()).toBeUndefined();
   });
 });

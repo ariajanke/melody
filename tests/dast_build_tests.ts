@@ -25,9 +25,11 @@ describeNamed({ DastBuild }, () => {
     makeFringe,
     makeCall,
     makeFunctionDefinition,
-    makeTuple,
     letAEqual1
   } = IastFactories;
+  const makeTuple = (...strings: Readonly<string[]>): IastNode =>
+    IastFactories.makeTuple(strings.map(s => makeFringe(s)));
+
   function intoDastNode(root: IastNode): DastNode {
     const dbuild = DastBuild.make(root, undefined, (root: DastNode) =>
       freeze({ node: () => root, error: () => StandardError.make().error() }));

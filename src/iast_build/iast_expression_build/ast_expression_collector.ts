@@ -14,6 +14,10 @@ export interface AstExpressionCollector {
   finish(): IastBuildSingleError;
 };
 
+const asNoToken = (): Token | undefined => undefined;
+const asNoNode = (): IastNode | undefined => undefined;
+const isNotOperator = (): boolean => false;
+
 function make(): AstExpressionCollector {
   const { error, setErrorFn, hasErrorSet } = StandardError.make();
   const mConstructors: NodeConstructor[] = [];
@@ -42,8 +46,8 @@ function make(): AstExpressionCollector {
       const position = () => len;
 
       mConstructors.push(freeze({
-        isOperator: () => false,
-        asToken: () => undefined,
+        isOperator: isNotOperator,
+        asToken: asNoToken,
         makeNode(_0: NodeConstructorCollection): IastNode
           { return node; },
         lowPosition: position,
@@ -58,21 +62,17 @@ function make(): AstExpressionCollector {
       const { operatorConstructor, error } = OperatorConstructorBuild.
         make(op, isInUnaryContext(), mConstructors.length);
 
-      if (!operatorConstructor()) {
-        return setErrorFn(error);
-      }
+      if (!operatorConstructor())
+        { return setErrorFn(error); }
+
       const opCtor = operatorConstructor()!;
       mConstructors.push(opCtor);
       mOperators.push(opCtor);
     },
     finish: memoize((): IastBuildSingleError => {
       mFinished = true;
-      if (hasErrorSet()) {
-        return freeze({
-          node: () => undefined,
-          error
-        });
-      }
+      if (hasErrorSet())
+        { return freeze({ node: asNoNode, error }); }
 
       return IastOperationBuild.make(mConstructors, mOperators);
     })

@@ -10,9 +10,9 @@ const { freeze, memoize } = Helpers;
 const kSeparator = Token.types.grouping.separator;
 
 const kEmptyHead = freeze({
-  type : () => 'expression',
-  start: (): number => raise('must define start'),
-  end  : (): number => raise('must define end'),
+  type    : () => 'expression',
+  start   : (): number => raise('must define start'),
+  end     : (): number => raise('must define end'),
   children: ChildSegmentGatherer.defaultEmpty().children
 });
 

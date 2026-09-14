@@ -4,9 +4,10 @@ import { TokenFactories } from './token_factories';
 
 const { freeze } = Helpers;
 const makeToken = TokenFactories.makeFromStringOnly;
-const makeFringe = (v: string): IastNode => IastNode.makeFringe(makeToken(v));
-const { makeLetDeclation } = IastNode.forOperativeStatements;
-const makeCallWithNodes = IastNode.forOperativeStatements.makeCall;
+const makeFringe = (v: string): IastNode =>
+  IastNode.forIastExpressionBuild.makeFringe(makeToken(v));
+const { makeLetDeclation } = IastNode.forIastExpressionBuild;
+const makeCallWithNodes = IastNode.forIastExpressionBuild.makeCall;
 function ensureFringe(node: string | IastNode): IastNode {
   return typeof node === 'string' ? makeFringe(node) : node;
 }
@@ -21,19 +22,16 @@ const makeCall =
 
 const letAEqual1 = (): IastNode => makeLetEquals('a', '1');
 
-function makeTuple(...nodes: Readonly<(string | IastNode)[]>): IastNode {
-  return IastNode.forLetDeclarationRetrievals.makeTuple(nodes.map(ensureFringe));
-}
-
 function makeFunctionDefinition(...nodes: Readonly<(string | IastNode)[]>): IastNode {
-  return IastNode.makeFunctionDefinition(nodes.map(ensureFringe));
+  return IastNode.forIastFunctionDefinitionBuild.makeFunctionDefinition(nodes.map(ensureFringe));
 }
 
 export const IastFactories = freeze({
   letAEqual1,
-  makeTuple,
   makeFringe,
   makeLetEquals,
   makeCall,
-  makeFunctionDefinition
+  makeFunctionDefinition,
+  makeTuple: IastNode.forOperatorStripping.makeTuple,
+  emptyTupleInstance: IastNode.forIastExpressionBuild.emptyTupleInstance
 });

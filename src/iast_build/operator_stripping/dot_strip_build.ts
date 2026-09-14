@@ -8,6 +8,12 @@ const { freeze, memoize } = Helpers;
 
 const { mapToFringeAccessor } = FunctionNamingSchema;
 
+const {
+  tokenize,
+  makeCall,
+  emptyTupleInstance
+} = IastNode.forOperatorStripping;
+
 function make
   (mRecurseOn: (n: IastNode) => IastNode | undefined,
    mOriginalCallName: Token,
@@ -17,7 +23,7 @@ function make
 {
   const { error, setErrorMessage } = StandardError.make();
   const idName = () =>
-    IastNode.forOperativeStatements.tokenize(mArgs) ??
+    tokenize(mArgs) ??
     setErrorMessage(`Token following (${mOriginalCallName.end()}) must be an identifier`);
 
   const callName = memoize((): Token | undefined => {
@@ -36,13 +42,13 @@ function make
   const node = memoize((): StripBuildResult => {
     if (!callName())
       { return undefined; }
+
     const rec = mRecurseOn(mReceiver);
     if (!rec)
       { return undefined; }
 
     
-    return IastNode.forOperativeStatements.
-      makeCall(callName()!, rec, IastNode.emptyTupleInstance());
+    return makeCall(callName()!, rec, emptyTupleInstance());
   });
 
   return freeze({ node, error });

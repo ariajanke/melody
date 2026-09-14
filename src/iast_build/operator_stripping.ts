@@ -3,11 +3,11 @@ import { IastLiteralType, IastNode } from '../iast_node';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
 import { IastBuild_ } from './iast_build_constructor_retrieval';
-import { LetMarkingStack } from './iast_operator_stripping/let_markings_stack';
+import { LetMarkingStack } from './operator_stripping/let_markings_stack';
 import {
   StripBuild,
   StripBuildResult
-} from './iast_operator_stripping/strip_build';
+} from './operator_stripping/strip_build';
 
 const { freeze, memoize } = Helpers;
 
@@ -16,6 +16,13 @@ function visitLiteral(_0: Token, _1: IastLiteralType): StripBuildResult
 
 function visitFringe(_0: Token): StripBuildResult
   { return 'not-modified'; }
+
+const {
+  makeFunctionDefinition,
+  makeTuple,
+  makeLetDeclation,
+  makeCall,
+} = IastNode.forOperatorStripping;
 
 function make(mRawTreeRoot: IastNode): IastBuild_ {
   const mLetsStack = LetMarkingStack.make();
@@ -43,9 +50,9 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
   }
 
   const visitFunctionDefinition =
-    makeNodesVisitFunction(IastNode.makeFunctionDefinition);
-  const visitTuple =
-    makeNodesVisitFunction(IastNode.forLetDeclarationRetrievals.makeTuple);
+    makeNodesVisitFunction(makeFunctionDefinition);
+
+  const visitTuple = makeNodesVisitFunction(makeTuple);
 
   function visitLet(innerNode: IastNode): StripBuildResult {
     mLetsStack.markInsideLetStatement();
@@ -55,7 +62,7 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
     if (gv === 'not-modified' || gv === undefined)
       { return gv; }
 
-    return IastNode.forOperativeStatements.makeLetDeclation(gv);
+    return makeLetDeclation(gv);
   }
 
   const recurseOn = (node: IastNode): IastNode | undefined => {
@@ -86,8 +93,7 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
       { receiver = recGv; }
     if (argGv !== 'not-modified')
       { args = argGv; }
-    return IastNode.forOperativeStatements.
-      makeCall(callName, receiver, args);
+    return makeCall(callName, receiver, args);
   }
 
   function visitCall
@@ -133,4 +139,4 @@ function make(mRawTreeRoot: IastNode): IastBuild_ {
   });
 }
 
-export const IastOperatorStripping = freeze({ make });
+export const OperatorStripping = freeze({ make });

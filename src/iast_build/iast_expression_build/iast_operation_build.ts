@@ -10,6 +10,8 @@ export interface IastBuildSingleError {
 
 const { freeze, memoize } = Helpers;
 
+const { emptyTupleInstance } = IastNode.forIastExpressionBuild;
+
 function make
   (mConstructors: NodeConstructor[], mOperators: OperatorConstructor[])
   : IastBuildSingleError
@@ -24,7 +26,7 @@ function make
 
   const node = memoize(() => {
     if (mConstructors.length === 0)
-      { return IastNode.emptyTupleInstance(); }
+      { return emptyTupleInstance(); }
 
     const sortedLen = sortedOperators().length;
     if (sortedLen === 0) {

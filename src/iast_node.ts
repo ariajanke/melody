@@ -9,31 +9,30 @@ import {
 } from './iast_node/iast_types';
 
 const { freeze, memoize } = Helpers;
+const emptyTupleInstance = memoize(IastTuple.make);
 
 export type IastLiteralType = IastLiteralType_;
 export type IastNode = IastNode_;
 export type IastVisitor<T = void> = IastVisitor_<T>;
 
 export const IastNode = freeze({
-  emptyTupleInstance: memoize(IastTuple.make),
-  makeFunctionDefinition: IastDefinition.make,
-  makeFringe: IastFringe.make,
-  forAssignmentStripping: {
-    tokenize: IastFringe.tokenize,
-    makeContextNodeAt: IastFringe.makeContextNodeAt,
-    makeTuple: (node: IastNode) => IastTuple.make([node]),
-    makeCall : IastCall.make,
-    makeLetDeclation: IastLet.make
-  },
-  forLetDeclarationRetrievals: {
+  forOperatorStripping: {
+    makeFunctionDefinition: IastDefinition.make,
     makeTuple: IastTuple.make,
-    detuplify: IastTuple.detuplify
-  },
-  forOperativeStatements: {
-    makeContextNodeAt: IastFringe.makeContextNodeAt,
-    makeCall: IastCall.make,
+    makeLetDeclation: IastLet.make,
+    makeCall : IastCall.make,
     tokenize: IastFringe.tokenize,
+    emptyTupleInstance,
+    makeContextNodeAt: IastFringe.makeContextNodeAt,
+  },
+  forIastExpressionBuild: {
+    emptyTupleInstance,
     tuplify: IastTuple.tuplify,
-    makeLetDeclation: IastLet.make
+    makeCall : IastCall.make,
+    makeLetDeclation: IastLet.make,
+    makeFringe: IastFringe.make,
+  },
+  forIastFunctionDefinitionBuild: {
+    makeFunctionDefinition: IastDefinition.make,
   }
 });

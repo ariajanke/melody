@@ -32,25 +32,26 @@ function make
     let idx = mStart;
     if (mScanStrat.isOpening(mTokens[idx]))
       { idx++; }
-
     while (idx < mEnd) {
       const token: Token | undefined = mTokens[idx];
       const closing = mScanStrat.closingTypeOf(token);
       if (closing === 'abrupt')
         { return setErrorMessage(`abruptly closed at ${idx}`); }
+
       if (closing === 'proper') { 
         // NOTE closing is part of the expression
         return freeze({ index: idx + 1, children: childGatherer.children });
       }
+
       if (closing === 'hard')
         { return freeze({ index: idx, children: childGatherer.children }); }
 
       const ctor = mScanStrat.groupingConstructorFor(token);
       if (ctor) {
         const { segment, error } = ctor(mTokens, idx, mEnd);
-        if (!segment()) {
-          return setErrorFn(error);
-        }
+        if (!segment())
+          { return setErrorFn(error); }
+
         idx = segment()!.end();
         childGatherer = childGatherer.ensureMutable().pushChild(segment()!);
         continue;
@@ -74,8 +75,8 @@ function make
     return freeze({
       children,
       start: () => mStart,
-      end: () => index,
-      type: () => 'expression'
+      end  : () => index,
+      type : () => 'expression'
     });
   });
 

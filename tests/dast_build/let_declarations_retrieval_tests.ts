@@ -9,44 +9,42 @@ import { DastCall, DastTuple } from '../../src/dast_build/dast_node_specializati
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
 import { Helpers, raise, StandardError } from '../../src/helpers';
 import { IastLiteralType, IastNode, IastVisitor } from '../../src/iast_node';
-import { TokenFactories } from '../token_factories';
 import { Token } from '../../src/token';
 import { ReseatableIastVisitor } from '../iast_visitor_factories';
+import { IastFactories } from '../iast_factories';
 
 const { describeNamed } = TestHelpers;
 
 const { freeze, memoize } = Helpers;
 
 describeNamed({ LetDeclarationsRetrieval }, () => {
-  const makeFringe = (v: string): IastNode =>
-    IastNode.makeFringe(TokenFactories.makeFromStringOnly(v));
-  const { makeCall } = IastNode.forOperativeStatements;
-  const { makeTuple } = IastNode.forLetDeclarationRetrievals;
+  const { makeFringe, makeCall, makeTuple } = IastFactories;
   function makeEqual(lhs: IastNode, rhs: IastNode): IastNode {
-    return makeCallFromString('=', lhs, rhs);
+    return makeCall('=', lhs, rhs);
   }
+
   function makeAssignment(name: string, rhs: IastNode): IastNode {
     const { mapToAssignment } = FunctionNamingSchema;
     // NOTE this arrangement *never* occurs in an actual IAST
     //      it is a contrived way to create an assignment that works with our
     //      tests. Since we're testing support for DAST build, we cannot use
     //      it here.
-    return makeCallFromString(
+    return makeCall(
       mapToAssignment(name),
       makeFringe( FunctionNamingSchema.kContextName ),
       rhs);
   }
-  function makeCallFromString(callName: string, rec: IastNode, args: IastNode): IastNode {
-    return makeCall(TokenFactories.makeFromStringOnly(callName), rec, args);
-  }
+
   function makeSingleDecl(name: string, node: IastNode): IastNode {
     const assignment = makeEqual(makeFringe(name), node);
     return assignment;
   }
+
   function makeDoubleDecl(name1: string, name2: string, node: IastNode): IastNode {
-    const tuple = IastNode.forOperativeStatements.tuplify(makeFringe(name1), makeFringe(name2));
+    const tuple = makeTuple([makeFringe(name1), makeFringe(name2)]);
     return makeEqual(tuple, node);
   }
+
   const toName = (el: LetNameElement | undefined): string | undefined => {
     if (!el)
       { return undefined; }
@@ -54,6 +52,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
       { return el.name; }
     return el.names.join(',');
   };
+
   function stripNodesFrom(el: LetNameElement | undefined)
     : { name?: string, names?: Readonly<string[]>, operator?: string, dependeeNames?: Readonly<string[]> }
   {
@@ -64,6 +63,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
       dependeeNames: el?.dependeeNames
     };
   }
+
   const generallyIntoDastBuild = (() => {
     const makeFromNode = (node: DastNode_): DastBuild => freeze({
       node: () => node,
@@ -116,7 +116,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
 
   it('captures a dependee that is a function call name', () => {
     // let a = f(x)
-    const call = makeCallFromString('f', makeFringe(FunctionNamingSchema.kContextName), makeFringe('x'));
+    const call = makeCall('f', makeFringe(FunctionNamingSchema.kContextName), makeFringe('x'));
     const letDecl = makeSingleDecl('a', call);
     const retrieval = LetDeclarationsRetrieval.make(letDecl, generallyIntoDastBuild);
     const elements = retrieval.elements();
@@ -137,7 +137,7 @@ describeNamed({ LetDeclarationsRetrieval }, () => {
 
   it('handles a declaration with a dependee', () => {
     // let a = b + 4
-    const addition = makeCallFromString('+', makeFringe('b'), makeFringe('4'));
+    const addition = makeCall('+', makeFringe('b'), makeFringe('4'));
     const letA = makeSingleDecl('a', addition);
     const retrieval = LetDeclarationsRetrieval.make(letA, generallyIntoDastBuild);
     const firstEl = (retrieval.elements() ?? [])[0];

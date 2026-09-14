@@ -3,6 +3,7 @@ import { AstExpressionCollector } from '../../src/iast_build/iast_expression_bui
 import { IastNode } from '../../src/iast_node';
 import { OperatorNamingSchema } from '../../src/operator_naming_schema';
 import { Token } from '../../src/token';
+import { IastFactories } from '../iast_factories';
 import { IastHelpers } from '../iast_helpers';
 import { TestHelpers } from '../test_helpers';
 import { TokenFactories } from '../token_factories';
@@ -12,6 +13,7 @@ const { freeze, memoize } = Helpers;
 const { describeNamed } = TestHelpers;
 
 describeNamed({ AstExpressionCollector }, () => {
+  const { makeFringe, emptyTupleInstance } = IastFactories;
   const makeToken = TokenFactories.makeFromStringOnly;
   const kCallToken: Token = freeze({
     content: () => OperatorNamingSchema.kCall,
@@ -25,7 +27,7 @@ describeNamed({ AstExpressionCollector }, () => {
       reduce((prev: AstExpressionCollector, v: IastNode | Token) => {
         if ('content' in v) {
           if (v.type() === Token.types.identifier) {
-            prev.pushNode(IastNode.makeFringe(v));
+            prev.pushNode(makeFringe(v.content()));
           } else {
             prev.pushOperator(v);
           }
@@ -106,7 +108,7 @@ describeNamed({ AstExpressionCollector }, () => {
 
   it('foo()', () => {
     const in_ = [
-      makeToken('foo'), kCallToken, IastNode.emptyTupleInstance()
+      makeToken('foo'), kCallToken, emptyTupleInstance()
     ];
     const inst = makeInst(in_);
     const calls = callsFromInst(inst);
@@ -116,7 +118,7 @@ describeNamed({ AstExpressionCollector }, () => {
   describe('foo.bar().baz', () => {
     const in_ = [
       makeToken('foo'), makeToken('.'), makeToken('bar'),
-      kCallToken, IastNode.emptyTupleInstance(), makeToken('.'),
+      kCallToken, emptyTupleInstance(), makeToken('.'),
       makeToken('baz')
     ];
 

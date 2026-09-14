@@ -10,6 +10,8 @@ import {
 
 const { freeze, memoize } = Helpers;
 
+const { makeFunctionDefinition } = IastNode.forIastFunctionDefinitionBuild;
+
 function make
   (mTokens: Readonly<Token[]>,
    mSegment: Segment,
@@ -36,7 +38,7 @@ function make
     if (errors.errors().length > 0)
       { return undefined; }
 
-    return IastNode.makeFunctionDefinition(nodes());
+    return makeFunctionDefinition(nodes());
   });  
 
   return freeze({ node, errors: errors.errors });

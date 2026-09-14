@@ -25,7 +25,6 @@ const { fullListing } = OperatorDefinitions;
 function make(mRoot: IastNode): ReceiverNameStripping {
   type Direction = 'not-right' | 'right';
   type Res = IastNode | 'not-modified' | undefined;
-
   let mNameTarget: Token | undefined = undefined;
   let mDirection: Direction = 'right';
   const { setErrorMessage, error } = StandardError.make();  
@@ -35,7 +34,7 @@ function make(mRoot: IastNode): ReceiverNameStripping {
     makeLetDeclation,
     tokenize,
     makeContextNodeAt,
-  } = IastNode.forAssignmentStripping;
+  } = IastNode.forOperatorStripping;
 
   assumeDotIsTightest();
 
@@ -75,7 +74,8 @@ function make(mRoot: IastNode): ReceiverNameStripping {
       const rv = furtherVisit(nodes[0], mDirection);
       if (rv === 'not-modified' || rv === undefined)
         { return rv; }
-      return makeTuple(rv);
+
+      return makeTuple([rv]);
     }
 
     if (mDirection === 'right') {
@@ -128,6 +128,7 @@ function make(mRoot: IastNode): ReceiverNameStripping {
       const rv = furtherVisit(n, 'not-right');
       if (rv === undefined || rv === 'not-modified')
         { return; }
+
       raise('non-right branch modified!');
     });
 
@@ -145,9 +146,8 @@ function make(mRoot: IastNode): ReceiverNameStripping {
 
   const strippedTree = memoize((): IastNode | undefined => {
     const res = mRoot.visit(mVisitor);
-    if (res === 'not-modified') {
-      return mRoot;
-    }
+    if (res === 'not-modified')
+      { return mRoot; }
 
     return res;
   });

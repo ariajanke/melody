@@ -30,8 +30,7 @@ function make
     if (receiver === undefined || args === undefined)
       { return undefined; }
 
-    return IastNode.forOperativeStatements.
-      makeCall(callName, receiver, args);
+    return IastNode.forOperatorStripping.makeCall(callName, receiver, args);
   });
 
   return freeze({
