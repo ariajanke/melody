@@ -8,6 +8,42 @@ import { Helpers, StandardErrorMessage } from './helpers';
 
 const { freeze, memoize } = Helpers;
 
+interface FunctionAbilities {
+  emittable?: FunctionEmission;
+  evaluable?: FunctionEvaluation;
+  typeable?: FunctionType;
+};
+
+interface FunctionEmissionContext {
+  replaceReceiver(ftype: FunctionType): void;
+  replaceParameters(ftype: FunctionType): void;
+
+  receiver(): FunctionType;
+  parameters(): FunctionType;
+};
+
+interface TypeRepresentationInstance {};
+interface DataBlob {
+  dataAsIntegers(): Readonly<number[]>;
+};
+
+// I want to hide the fact of this either depending on a
+// WASM runtime or a *Script runtime.
+interface FunctionEvaluation {
+  // Melody can internally process what...?
+  // At least: integers, type representations (for type meta functions)
+  // difference signatures?
+  // How do I mount arguments?
+  // otype_instance.mount?
+  // what does a generic instance look like interface-wise?
+  asTypeRepresentation(): TypeRepresentationInstance | undefined;
+  asGenericBlob(): DataBlob | undefined;
+};
+
+interface FunctionEmission {
+  emit(context: FunctionEmissionContext, writer: CodeWriter): void;
+};
+
 export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;
@@ -22,6 +58,8 @@ export interface FunctionType {
   emit(receiverFtype: FunctionType,
        parameterFtype: FunctionType,
        writer: CodeWriter): void;
+
+  // abilities(): FunctionAbilities;
 
   uid(): symbol;
 };

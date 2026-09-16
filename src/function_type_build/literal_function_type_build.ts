@@ -8,6 +8,12 @@ import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 
 const { freeze } = Helpers;
 
+function makeLiteralIntegerMetaEvaluation() {
+  // get the representation of an Integer
+  // run does nothing
+  // as... returns what you expect
+}
+
 const klass = freeze({
   makeSuccessFromType: (ftype: FunctionType): FunctionTypeBuild =>
     FunctionTypeBuildBase.makeSuccessFromType(ftype),
