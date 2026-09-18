@@ -1,6 +1,6 @@
-import { DastNode } from '../dast_build';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
+import { AstNode } from '../ast_node';
 import { ReceiverResolution } from './context_build';
 
 const { freeze } = Helpers;
@@ -9,14 +9,14 @@ export interface ContextFrameSnapshot {
   receiverResolution(): ReceiverResolution;
   referenceType(): ObjectType;
   uniqueName(): string;
-  intoBuildFor(node: DastNode): FunctionTypeBuild;
+  intoBuildFor(node: AstNode): FunctionTypeBuild;
 };
 
 export interface ContextFrameStack {
   atDepth(idx: number): ContextFrameSnapshot | undefined;
   topFrame(): ContextFrameSnapshot;
   depth(): number;
-  intoBuildFunction(): (node: DastNode) => FunctionTypeBuild;
+  intoBuildFunction(): (node: AstNode) => FunctionTypeBuild;
 };
 
 export interface WritableContextFrameStack extends ContextFrameStack {
@@ -25,7 +25,7 @@ export interface WritableContextFrameStack extends ContextFrameStack {
 };
 
 export const ContextFrameStack = freeze({
-  make(mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
+  make(mIntoFunctionTypeBuild: (node: AstNode) => FunctionTypeBuild)
     : WritableContextFrameStack
   {
     const mStack: ContextFrameSnapshot[] = [];

@@ -1,12 +1,14 @@
-import { DastAttributeDeclaration, DastDeclarationMap, DastLetDeclaration, DastNode } from '../../dast_build';
-import { Helpers, raise } from '../../helpers';
+import { FunctionNamingSchema } from '../../function_naming_schema';
+import { Helpers } from '../../helpers';
+import { AstNode } from '../../ast_node';
+import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
 
 const { freeze, memoize } = Helpers;
 
 export interface InitialSetVariables {
   name: string;
   variableNames: Readonly<string[]>;
-  valueNode: DastNode;
+  valueNode: AstNode;
 };
 
 interface WritableVariableNameFunctions {
@@ -23,118 +25,39 @@ export interface OrderedInitialSetsCollection {
   variableNameMap(): Readonly<{ [vname: string]: VariableNameFunctions | undefined }>;
 };
 
-function makeVariableNameMap(mDeclarationsMap: DastDeclarationMap) {
-  const rv: { [vname: string]: WritableVariableNameFunctions | undefined } = {};
-  function forAttribute
-    (name: string, attr: DastAttributeDeclaration, kind: 'accessorName' | 'modifierName')
-  {
-    const { tupleRank } = attr;
-    const entry = rv[attr.variableName] ??= { tupleRank };
-    if (entry.tupleRank !== tupleRank) {
-      raise('uh oh, mismatching tuple rank!');
-    }
-    entry[kind] = name;
-  }
-
-  for (const name in mDeclarationsMap) {
-    const decl = mDeclarationsMap[name];
-    if (decl.initialSet)
-      { continue; }
-
-    if (decl.accessor) {
-      forAttribute(name, decl.accessor, 'accessorName');
-    } else if (decl.assignment) {
-      forAttribute(name, decl.assignment, 'modifierName');
-    }
-  }
-  return rv;
-}
-
 function make
-  (mDeclarationsMap: DastDeclarationMap,
-   mHasDependeeDefined: (name: string) => boolean
-  )
+  (mDeclarations: Readonly<NameDeclaration[]>): OrderedInitialSetsCollection
 {
-  type DastInitialSet = DastLetDeclaration['initialSet'];
-
-  const mOrder: InitialSetVariables[] = [];
-  const mDone: { [name: string] : 'done' | undefined } = {};
-
-  const mapVariableToInitialSet =
-    memoize((): Readonly<{ [varName: string]: InitialSetVariables | undefined }> =>
-  {
-    const rv: { [varName: string]: InitialSetVariables | undefined } = {};
-    for (const name in mDeclarationsMap) {
-      const decl = mDeclarationsMap[name];
-      if (!decl.initialSet)
-        { continue; }
-
-      const { variableNames } = decl.initialSet;
-      variableNames.forEach((vname: string) => {
-        rv[vname] = freeze({ name, variableNames, valueNode: decl.value });
-      });
-    }
-    return freeze(rv);
-  });
-
-  function forEntryByVariableName(vname: string) {
-    const initialSetName = (mapVariableToInitialSet()[vname] ??
-      raise(`Could not find initial set for variable '${vname}'`)).name;
-    forEntry(initialSetName, 'enforceInitialSet');
-  }
-
-  function recurOnDependee(ftypeName: string) {
-    const decl = mDeclarationsMap[ftypeName];
-    if (!decl && !mHasDependeeDefined(ftypeName)) {
-      raise(`No such fname found for '${ftypeName}'`);
-    }
-    if (!decl)
-      { return; }
-    
-    const name = decl.accessor?.variableName ?? decl.assignment?.variableName;
-    if (name) {
-      forEntryByVariableName(name);
-    }
-    decl.initialSet?.variableNames?.forEach(forEntryByVariableName);
-  }
-
-  function appendOnceToOrder
-    (initialSetName: string, set: DastInitialSet)
-  {
-    if (mDone[initialSetName])
-      { return; }
-
-    (set ?? raise('must be defined')).
-      dependeeNames.forEach(recurOnDependee);
-
-    mOrder.push({
-      name: initialSetName,
-      variableNames: set!.variableNames,
-      valueNode: mDeclarationsMap[initialSetName]!.value
-    });
-    mDone[initialSetName] = 'done';
-  }
-
-  function forEntry(fname: string, enforceIsInitialSet?: 'enforceInitialSet') {
-    const decl = mDeclarationsMap[fname];
-    if (!decl.initialSet) {
-      if (enforceIsInitialSet === 'enforceInitialSet') {
-        raise(`'${fname}' is not an initial set??`);
+  const variableNameMap = memoize((): Readonly<{ [vname: string]: VariableNameFunctions | undefined }> => {
+    const map: { [vname: string]: VariableNameFunctions | undefined } = {};
+    const len = mDeclarations.length;
+    for (let idx = 0; idx < len; ++idx) {
+      const decl = mDeclarations[idx];
+      const declLen = decl.names.length;
+      for (let jdx = 0; jdx < declLen; ++jdx) {
+        const tupleRank = declLen > 1 ? jdx : undefined;
+        const vname = decl.names[jdx];
+        const accessorName = FunctionNamingSchema.mapToFringeAccessor(vname);
+        const modifierName = decl.type === ':=' ?
+          FunctionNamingSchema.mapToAssignment(vname) :
+          undefined;
+        map[vname] = freeze({
+          tupleRank,
+          accessorName,
+          modifierName
+        });
       }
-      return;
     }
-
-    appendOnceToOrder(fname, decl.initialSet);
-  }
-
-  const orderedInitialSets = memoize((): Readonly<Readonly<InitialSetVariables>[]> => {
-    Object.keys(mDeclarationsMap).forEach((fname: string) => forEntry(fname));
-    return mOrder;
+    return map;
   });
 
-  const variableNameMap =
-    memoize((): Readonly<{ [vname: string]: VariableNameFunctions | undefined }> =>
-      makeVariableNameMap(mDeclarationsMap));
+  const orderedInitialSets = memoize((): Readonly<Readonly<InitialSetVariables>[]> =>
+    mDeclarations.map((decl: NameDeclaration): Readonly<InitialSetVariables> => 
+      freeze({
+        name: FunctionNamingSchema.mapToInitialSetName(decl.names),
+        variableNames: decl.names,
+        valueNode: decl.value
+      })));
 
   return freeze({ orderedInitialSets, variableNameMap });
 }

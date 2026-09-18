@@ -26,6 +26,8 @@ do_build_demo() {
   do_copy_build_files
 
   do_fix_imports 'demo'
+
+  npx esbuild "$MEL_BUILD_DIR/index-demo.js" --bundle --minify --outfile="$MEL_BUILD_DIR/melody-min.js"
 }
 
 do_build_tests() {

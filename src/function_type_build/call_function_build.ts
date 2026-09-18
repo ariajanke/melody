@@ -1,8 +1,10 @@
 import { CodeWriter } from '../code_writer';
-import { DastNode } from '../dast_build';
+// import { DastNode } from '../dast_build';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError, raise } from '../helpers';
+import { AstNode } from '../ast_node';
 import { OperatorNamingSchema } from '../operator_naming_schema';
+import { Token } from '../token';
 import { ContextFrameSnapshot } from './context_frame_stack';
 import { FunctionTypeBase } from './function_type_base';
 import { TupleObjectType } from './tuple_object_type';
@@ -16,9 +18,9 @@ const kAssignmentNotAValidCallName =
   `stripped it out and replaced it with the appropriate fringe accessor`;
 
 function make
-  (mCallName: string,
-   mReceiver: DastNode,
-   mArgs: DastNode,
+  (mCallName: Token,
+   mReceiver: AstNode,
+   mArgs: AstNode,
    mContext: ContextFrameSnapshot)
   : FunctionTypeBuild
 {
@@ -26,15 +28,16 @@ function make
   const { emptyTuple } = TupleObjectType;
 
   const callNameStr = memoize((): string | undefined => {
-    if (mCallName === kAssignment) {
+    const callName = mCallName.content();
+    if (callName === kAssignment) {
       raise(kAssignmentNotAValidCallName);
     }
 
     if (kLogToConsole) {
-      console.log(`Looking up call "${mCallName}" on receiver ` +
+      console.log(`Looking up call "${callName}" on receiver ` +
                   `"${mReceiver.asString()}" with args "${mArgs.asString()}"`);
     }
-    return mCallName;
+    return callName;
   });
 
   const contextSelfFtype = () =>

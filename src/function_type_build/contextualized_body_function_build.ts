@@ -1,7 +1,7 @@
 import { CodeWriter } from '../code_writer';
-import { DastNode } from '../dast_build';
 import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
+import { AstNode } from '../ast_node';
 import { FunctionTypeBase } from './function_type_base';
 
 const { freeze, memoize } = Helpers;
@@ -9,8 +9,8 @@ const { freeze, memoize } = Helpers;
 function make
   (mPreface: FunctionType,
    mAggregateType: ObjectType,
-   mNodes: Readonly<DastNode[]>,
-   mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
+   mNodes: Readonly<AstNode[]>,
+   mIntoFunctionTypeBuild: (node: AstNode) => FunctionTypeBuild)
   : FunctionTypeBuild
 {
   const { error, setErrorFn } = StandardError.make();

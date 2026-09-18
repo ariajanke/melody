@@ -1,10 +1,5 @@
-import {
-  DastFunctionNameMappings,
-  DastNode,
-  DastVisitor
-} from '../dast_build';
 import { FunctionTypeBuild } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { CallFunctionBuild } from './call_function_build';
 import { ContextFrameStack } from './context_frame_stack';
 import { FringeFunctionBuild } from './fringe_function_build';
@@ -12,51 +7,62 @@ import { DefinitionIndexFunctionBuild } from './definition_index_function_build'
 import { LiteralFunctionTypeBuild } from './literal_function_type_build';
 import { TupleFunctionBuild } from './tuple_function_build';
 import { FunctionDefinitionRegistry } from '../function_definition_registry';
-import { InitialSetFunctionBuild } from './initial_set_function_build';
+import { AstInitializerType, AstLiteralType, AstNode, AstVisitor } from '../ast_node';
+import { Token } from '../token';
+import { InitializerFunctionBuild } from './initializer_function_build';
 
 const { freeze } = Helpers;
 
 function make
   (mFunctionRegistry: FunctionDefinitionRegistry)
-  : DastVisitor<FunctionTypeBuild>
+  : AstVisitor<FunctionTypeBuild>
 {
   const mStackFrameStack = ContextFrameStack.
-    make((node: DastNode) => node.visit(inst));
+    make((node: AstNode) => node.visit(inst));
   const { topFrame } = mStackFrameStack;
 
-  const visitFringe = (name: string): FunctionTypeBuild =>
-    FringeFunctionBuild.make(name, topFrame());
+  const visitFringe = (name: Token): FunctionTypeBuild =>
+    FringeFunctionBuild.make(name.content(), topFrame());
+
+  function visitLiteral(token: Token, type: AstLiteralType): FunctionTypeBuild {
+    if (type === 'number') {
+      return LiteralFunctionTypeBuild.makeForInteger(token.content());
+    } else if (type === 'string') {
+      return LiteralFunctionTypeBuild.makeForString(token.content());
+    }
+    raise('unhandled literal type');
+  }
 
   function visitCall
-    (callName: string, receiver: DastNode, args: DastNode): FunctionTypeBuild
+    (callName: Token, receiver: AstNode, args: AstNode): FunctionTypeBuild
   {
     return CallFunctionBuild.make(callName, receiver, args, topFrame());
   }
 
   function visitFunctionDefinition
-    (defs: DastFunctionNameMappings, nodes: Readonly<DastNode[]>): FunctionTypeBuild
+    (uid: number, nodes: Readonly<AstNode[]>): FunctionTypeBuild
   {
     return DefinitionIndexFunctionBuild.
-      make(defs, nodes, mFunctionRegistry, mStackFrameStack);
+      make(uid, nodes, mFunctionRegistry, mStackFrameStack);
   }
 
-  function visitInitialSet
-    (namesDefined: readonly string[] | string,
-     node: DastNode): FunctionTypeBuild
+  function visitInitializer
+    (names: Readonly<Token[]>,
+     _1: AstInitializerType,
+     node: AstNode): FunctionTypeBuild
   {
-    return InitialSetFunctionBuild.make(namesDefined, node, topFrame());
+    return InitializerFunctionBuild.make(names.map(t => t.content()), node, topFrame());
   }
 
-  const visitTuple = (nodes: Readonly<DastNode[]>): FunctionTypeBuild =>
+  const visitTuple = (nodes: Readonly<AstNode[]>): FunctionTypeBuild =>
     TupleFunctionBuild.make(nodes, topFrame().intoBuildFor);
   
   const inst = freeze({
     visitCall,
     visitFringe,
     visitFunctionDefinition,
-    visitInitialSet,
-    visitInteger: LiteralFunctionTypeBuild.makeForInteger,
-    visitString: LiteralFunctionTypeBuild.makeForString,
+    visitInitializer,
+    visitLiteral,
     visitTuple
   });
   return inst;

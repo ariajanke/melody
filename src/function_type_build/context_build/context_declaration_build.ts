@@ -1,6 +1,7 @@
-import { DastDeclarationMap, DastNode } from '../../dast_build';
 import { FunctionTypeBuild, ObjectType } from '../../function_type_build';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
+import { AstNode } from '../../ast_node';
+import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { AttributesCreation } from './attributes_creation';
 import { ContextAttributeFactory } from './context_attribute_factory';
@@ -12,7 +13,7 @@ const { freeze, memoize } = Helpers;
 
 export interface ContextTypeProgression_ {
   nextUndeferredBuild
-    (currentFrameType: ObjectType, node: DastNode)
+    (currentFrameType: ObjectType, node: AstNode)
     : FunctionTypeBuild;
 };
 
@@ -24,7 +25,7 @@ export interface ContextDeclarationBuild_ {
 
 function make
   (mVariableAllocation: ProgressiveVariableAllocation,
-   mDeclarationsMap: DastDeclarationMap,
+   mDeclarations: Readonly<NameDeclaration[]>,
    mWritableReferenceType: WritableObjectType,
    mProgression: ContextTypeProgression_)
 : ContextDeclarationBuild_
@@ -38,7 +39,7 @@ function make
   const toFunctionTable = MutableFunctionTable.fromFunctionType;
 
   const { orderedInitialSets, variableNameMap } = OrderedInitialSetsCollection.
-    make(mDeclarationsMap, (fname: string) => !!mWritableReferenceType.lookUp(fname));
+    make(mDeclarations);
 
   function addAttributesToReference
     (wobj: WritableObjectType,

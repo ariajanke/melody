@@ -1,6 +1,5 @@
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { DastFunctionNameMappings, DastNode } from '../dast_build';
 import { FunctionTypeBase } from './function_type_base';
 import { CodeWriter } from '../code_writer';
 import { WritableContextFrameStack } from './context_frame_stack';
@@ -8,18 +7,19 @@ import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import { DefinitionBodyFunctionBuild } from './definition_body_function_build';
 import { FunctionIndexType } from './function_index_type';
 import { TupleObjectType } from './tuple_object_type';
+import { AstNode } from '../ast_node';
 
 const { freeze, memoize } = Helpers;
 
 function make
-  (mDefs: DastFunctionNameMappings,
-   mNodes: Readonly<DastNode[]>,
+  (mUid: number,
+   mNodes: Readonly<AstNode[]>,
    mFunctionRegistry: FunctionDefinitionRegistry,
    mContextFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild
 {
   const defBuild = DefinitionBodyFunctionBuild.
-    make(mDefs, mNodes, mContextFrameStack);
+    make(mUid, mNodes, mContextFrameStack);
 
   const { error } = defBuild;
   const { registerDefinitionBody } = mFunctionRegistry;

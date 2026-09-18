@@ -1,7 +1,5 @@
 # Melody Programming Language
-Melody is a simple WASM compiled language. It's written mostly from scratch in TypeScript.
-
-Declaration types are inferred by the RHS value's type. Right now it is incredibly simple. It can support some numeric operations, functions, and variable captures. All functions take no parameters, and return nothing.
+Melody is a simple WASM compiled language.
 
 ## Building/Demo
 BASH/Linux/Node.js support only for now.
@@ -15,3 +13,6 @@ cd $MEL_BUILD_DIR
 python3 -m http.server
 ```
 After that you should be able to navigate to localhost and open the demo page from the file index.
+
+## Note on AI generated code
+Earlier iterations of the project may have involved some of my own prelimary attempts to use AI SWE. Presently (as of 2026-09-21), this repository contains to the best of my knowledge only hand/human written code. Given what this project means to me (a sort of "passion project"), I will commit to only writting code by hand for this project from this point onward. Additionally contributions are accepted by *invite only*.

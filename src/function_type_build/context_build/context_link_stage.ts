@@ -1,4 +1,4 @@
-import { DastDeclarationMap } from '../../dast_build';
+// import { DastDeclarationMap } from '../../dast_build';
 import { FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers } from '../../helpers';
 import { ContextFrameStack } from '../context_frame_stack';
@@ -11,11 +11,12 @@ import { ReceiverResolution_ } from './receiver_resolution';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 import { ProgressiveVariableAllocation, VariableAllocation } from './variable_allocation';
 import { AncestorCollection, AncestorInfo } from './ancestor_collection';
+import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
 
 const { freeze, memoize } = Helpers;
 
 export type DeclarationBuildConstructor =
-  (mDeclarationsMap: DastDeclarationMap,
+  (declarations: Readonly<NameDeclaration[]>,
    incompleteContextType: WritableObjectType,
    progression: ContextTypeProgression_) =>
   ContextDeclarationBuild_;
@@ -23,7 +24,7 @@ export type DeclarationBuildConstructor =
 export interface ContextLinkStage_ {
   preface(): FunctionType;
   receiverResolution(): ReceiverResolution_;
-  next(declarationsMap: DastDeclarationMap,
+  next(declarations: Readonly<NameDeclaration[]>,
        progression: ContextTypeProgression_)
       : ContextDeclarationBuild_;
 };
@@ -84,13 +85,13 @@ function makeWithAncestors
            referenceType()));
 
   function makeDeclarationBuild
-    (declarationsMap: DastDeclarationMap,
+    (declarations: Readonly<NameDeclaration[]>,
      incompleteContextType: WritableObjectType,
      progression: ContextTypeProgression_)
   {
     return ContextDeclarationBuild_.
       make(variableAllocation(),
-           declarationsMap,
+           declarations,
            incompleteContextType,
            progression);
   }
@@ -101,11 +102,11 @@ function makeWithAncestors
   const preface = memoize(() => prefaceBuild().functionType());
 
   function next
-    (declarationsMap: DastDeclarationMap,
+    (declarations: Readonly<NameDeclaration[]>,
      progression: ContextTypeProgression_)
     : ContextDeclarationBuild_
   {
-    return delegationStage().next(declarationsMap, progression);
+    return delegationStage().next(declarations, progression);
   }
 
   return freeze({

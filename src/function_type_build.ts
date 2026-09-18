@@ -1,10 +1,11 @@
 import { CodeWriter } from './code_writer';
-import { DastNode } from './dast_build';
+// import { DastNode } from './dast_build';
 import { FunctionDefinitionRegistry } from './function_definition_registry';
 import { FunctionTypeBase } from './function_type_build/function_type_base';
 import { FunctionTypeBuildVisitor } from './function_type_build/function_type_build_visitor';
 import { TupleObjectType } from './function_type_build/tuple_object_type';
 import { Helpers, StandardErrorMessage } from './helpers';
+import { AstNode } from './ast_node';
 
 const { freeze, memoize } = Helpers;
 
@@ -57,7 +58,7 @@ export interface FunctionTypeBuild {
   error(): StandardErrorMessage
 };
 
-function make(mRoot: DastNode,
+function make(mRoot: AstNode,
               mFunctionRegistry?: FunctionDefinitionRegistry)
   : FunctionTypeBuild
 {

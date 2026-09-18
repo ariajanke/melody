@@ -1,6 +1,6 @@
-import { DastNode } from '../dast_build';
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
+import { AstNode } from '../ast_node';
 import { ContextTypeProgression, ReceiverResolution } from './context_build';
 import { ContextFrameSnapshot, WritableContextFrameStack } from './context_frame_stack';
 
@@ -16,7 +16,7 @@ function make
    mUniqueName: string)
   : CachingContextProgression
 {
-  const mCache: { [dastNodeUid: number]: FunctionTypeBuild | undefined } = {};
+  const mCache: { [astNodeUid: number]: FunctionTypeBuild | undefined } = {};
 
   const mIntoFunctionTypeBuild = mStackFrameStack.intoBuildFunction();
   
@@ -24,12 +24,12 @@ function make
     referenceType: () => raise('should never be called'),
     receiverResolution: () => mReceiverResolution,
     uniqueName: () => mUniqueName,
-    intoBuildFor: (node: DastNode) =>
+    intoBuildFor: (node: AstNode) =>
       mCache[node.uid()] ?? mIntoFunctionTypeBuild(node)
   }));
 
   function nextUndeferredBuild
-    (currentFrameType: ObjectType, node: DastNode)
+    (currentFrameType: ObjectType, node: AstNode)
     : FunctionTypeBuild
   {
     const snapshot = freeze({

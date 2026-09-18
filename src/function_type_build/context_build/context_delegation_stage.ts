@@ -1,8 +1,8 @@
-import { DastDeclarationMap } from '../../dast_build';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionLookUpTable } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
+import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
 import { ContextDeclarationBuild } from '../context_build';
 import { TupleObjectType } from '../tuple_object_type';
 import { ContextTypeProgression_ } from './context_declaration_build';
@@ -13,7 +13,7 @@ import { WritableObjectType } from './writable_object_type';
 const { freeze, memoize } = Helpers;
 
 export interface ContextDelegationStage_ {
-  next(declarationsMap: DastDeclarationMap,
+  next(declarations: Readonly<NameDeclaration[]>,
        progression: ContextTypeProgression_)
     : ContextDeclarationBuild;
 };
@@ -67,10 +67,10 @@ function make
       }, mWritableReferenceType));
 
   function next
-    (declarationsMap: DastDeclarationMap,
+    (declarations: Readonly<NameDeclaration[]>,
      progression: ContextTypeProgression_)
   {
-    return mIntoDeclarationBuild(declarationsMap, writableReferenceType(), progression);
+    return mIntoDeclarationBuild(declarations, writableReferenceType(), progression);
   }
 
   return freeze({ next });

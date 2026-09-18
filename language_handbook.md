@@ -45,6 +45,21 @@ This language solves this problem via a slightly different way. While in for exa
 
 In the above example, "a :=" is converted into "a:=" which is then sent to the current Context.
 
+### Name Expressions
+Everything left of an initializer type root operator is considered part of a name expression.
+
+As of 2026-0917, only singular and comma delimited sets of identifiers are considered to be valid name expressions.
+
+PLANNED
+A name expression takes the following form:
+`<name> , ...`
+
+#### The "is" Operator [planned]
+&lt; left blank for now &gt;
+
+### Tables [planned]
+Tables are a list of name expressions, which create a composite type.
+
 ## Builtin Types
 For now only the following: `Integer`, `ConstantString`, `SystemIO`, and every possible tuple (i.e. `Tuple(...)`).
 

@@ -1,15 +1,15 @@
 import { CodeWriter } from '../code_writer';
-import { DastNode } from '../dast_build';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, StandardError } from '../helpers';
+import { AstNode } from '../ast_node';
 import { FunctionTypeBase } from './function_type_base';
 import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
 function make
-  (mNodes: Readonly<DastNode[]>,
-   mIntoFunctionTypeBuild: (node: DastNode) => FunctionTypeBuild)
+  (mNodes: Readonly<AstNode[]>,
+   mIntoFunctionTypeBuild: (node: AstNode) => FunctionTypeBuild)
   : FunctionTypeBuild
 {
   const { error, setErrorFn } = StandardError.make();

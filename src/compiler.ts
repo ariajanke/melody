@@ -1,8 +1,7 @@
-import { DastBuild } from './dast_build';
 import { FunctionDefinitionRegistry } from './function_definition_registry';
 import { FunctionTypeBuild } from './function_type_build';
-import { Helpers } from './helpers';
-import { IastBuild } from './iast_build';
+import { Helpers, StandardErrorMessage } from './helpers';
+import { AstBuild } from './ast_build';
 import { Tokenization } from './tokenization';
 import { WasmCompilation, WasmImports } from './wasm_compilation';
 
@@ -23,25 +22,16 @@ function make(mSource: string,
   const astBuild = memoize(() => {
     const tokenization = Tokenization.make(mSource);
     
-    return IastBuild.make(tokenization.tokens());
-  });
-
-  const dastBuild = memoize(() => {
-    const iast = astBuild().node();
-    if (!iast) {
-      mError = `Failed to build IAST: ${astBuild().errors().map(e => e.message).join(', ')}`;
-      return undefined;
-    }
-    return DastBuild.make(iast);
+    return AstBuild.make(tokenization.tokens());
   });
 
   const functionRegistry = memoize(() => {
-    if (!dastBuild()) {
+    if (!astBuild()) {
       return undefined;
     }
-    const rootNode = dastBuild()!.node();
+    const rootNode = astBuild()!.node();
     if (!rootNode) {
-      mError = dastBuild()!.error().message;
+      mError = astBuild()!.errors().map((v: StandardErrorMessage) => v.message).join(', ');
       return undefined;
     }
 
