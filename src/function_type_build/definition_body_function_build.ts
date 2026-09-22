@@ -45,7 +45,7 @@ function make
     baseStage().contextLinkStage( namesRetrieval().pendingNames(), mStackFrameStack ));
 
   const fullContextBuild = memoize((): ContextDeclarationBuild =>
-    linkStage().next(namesRetrieval().declarations(), contextTypeProgression()));
+    linkStage().next(namesRetrieval().declarations()));
 
   const contextTypeProgression = memoize(() => CachingContextProgression.
     make(mStackFrameStack,

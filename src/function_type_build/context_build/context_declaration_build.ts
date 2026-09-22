@@ -18,7 +18,6 @@
 
 import { FunctionTypeBuild, ObjectType } from '../../function_type_build';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
-import { AstNode } from '../../ast_node';
 import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { AttributesCreation } from './attributes_creation';
@@ -26,14 +25,9 @@ import { ContextAttributeFactory } from './context_attribute_factory';
 import { InitialSetVariables, OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
 import { ProgressiveVariableAllocation, VariableAllocation } from './variable_allocation';
 import { WritableObjectType } from './writable_object_type';
+import { NodeTypeInference } from '../node_type_inference';
 
 const { freeze, memoize } = Helpers;
-
-export interface ContextTypeProgression_ {
-  nextUndeferredBuild
-    (currentFrameType: ObjectType, node: AstNode)
-    : FunctionTypeBuild;
-};
 
 export interface ContextDeclarationBuild_ {
   referenceType(): ObjectType | undefined;
@@ -44,8 +38,7 @@ export interface ContextDeclarationBuild_ {
 function make
   (mVariableAllocation: ProgressiveVariableAllocation,
    mDeclarations: Readonly<NameDeclaration[]>,
-   mWritableReferenceType: WritableObjectType,
-   mProgression: ContextTypeProgression_)
+   mWritableReferenceType: WritableObjectType)
 : ContextDeclarationBuild_
 {
   type RefAllocPair =
@@ -118,12 +111,14 @@ function make
       if (!pair)
         { return pair; }
 
-      const fbuild = mProgression.nextUndeferredBuild(pair.reference, v.valueNode);
-      const ftype = fbuild.functionType() ?? setErrorFn(fbuild.error);
-      if (!ftype)
-        { return undefined; }
+      const nti = NodeTypeInference.
+        make(pair.reference).
+        representationFor(v.valueNode);
+      const initialSetType = nti.resultantType();
+      if (!initialSetType) {
+        return setErrorFn(nti.error);
+      }
 
-      const initialSetType = ftype.returns();
       pair.allocation = addVariablesFor(mVariableAllocation, v.variableNames, initialSetType);
       pair.reference = addAttributesToReference(mWritableReferenceType, v, pair.allocation);
       return pair;

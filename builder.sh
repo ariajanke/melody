@@ -45,6 +45,8 @@ do_build_demo() {
   do_fix_imports 'demo'
 
   npx esbuild "$MEL_BUILD_DIR/index-demo.js" --bundle --minify --outfile="$MEL_BUILD_DIR/melody-min.js"
+
+  sed -i -e '1r./build/license-header.js' -e '1{h;d}' -e '2{x;G}' "$MEL_BUILD_DIR/melody-min.js"
 }
 
 do_build_tests() {

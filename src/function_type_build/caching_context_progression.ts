@@ -19,12 +19,12 @@
 import { FunctionTypeBuild, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
 import { AstNode } from '../ast_node';
-import { ContextTypeProgression, ReceiverResolution } from './context_build';
+import { ReceiverResolution } from './context_build';
 import { ContextFrameSnapshot, WritableContextFrameStack } from './context_frame_stack';
 
 const { freeze, memoize } = Helpers;
 
-export interface CachingContextProgression extends ContextTypeProgression {
+export interface CachingContextProgression {
   baseFrameEntry(): ContextFrameSnapshot;
 };
 
