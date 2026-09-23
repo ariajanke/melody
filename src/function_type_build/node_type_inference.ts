@@ -88,13 +88,10 @@ function make
       _1: AstInitializerType,
       _2: AstNode): ResultType
     {
-      // initializers are weird
-      // we need a central place to define that they return nothing
+      // TODO we need a central place to define that they return nothing
       return mSet.instanceFor(emptyTuple());
     },
     visitFunctionDefinition(_0: number, _1: Readonly<AstNode[]>): ResultType {
-      // each def expression will always return that function handle type
-      // (at least for now)
       return mSet.instanceFor( FunctionIndexType.of(mContextType).functionIndexType() );
     }
   });

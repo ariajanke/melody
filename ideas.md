@@ -497,7 +497,60 @@ Where we would see this: `let f := fn ...` and realize that we only need functio
 
 What are my "big" questions...
 
-# 2060-0813-1433
+# 2026-0813-1433
 Need to make a decision on the meaning of "call names".
 Expressions like `table[fname](param)` still has a "`call`" call name. Its receiver is `table[fname]`. Same deal with `getFun()(param)`.
 So... I don't think call name could ever not be represented as a string.
+
+# 2026-0923-1530
+Rethinking generics and type meta functions in Melody.
+
+```melody
+let f1 = fn (x is Integer) x + x
+let f2 = fn (x is Numeric) x*x
+let f3 = fn (T is Numeric.type) tbl x is T = 0, y is T = 0
+f1(2) # Okay
+f1(3 / 2) # Error! Rational is not an Integer!
+f2(2) # Okay
+f2(3 / 2) # Okay! We'll generate a def for rationals too!
+let myIntPt = f3(Integer) # Okay
+let myRatPt = f3(Rational) # Also okay
+let myStrPt = f3(String) # Error! does not follow numeric interface!
+```
+Name expression: `<name> is <expr> via <expr>, ...`
+Initializer expression: `<name expression> (= or :=) <expr>`
+
+For concrete types... we're already there pretty much
+For generic types... we just make a generator via the "byParameters" look up table.
+
+Integer is a concrete type.
+Numeric is an interface.
+"T" in the f3 example, has an immediate constraint, and therefore f3 becomes a sort of "macro". This creates a difficult problem for the compiler to solve. Eventually it will be the case, where a tree of "immediate" dependancies have to be compiled, and evaluated as part of the compilation process. It's important to remember that the *compiler* is expressly expected to do heavy lifting, should the programmer wish it to. (Of course they are expected to pay the price for that as well.)
+
+Consider a mixed case:
+```melody
+let makePtType = fn (T is Numeric.type, initVal is Integer) tbl
+  x is T = initVal
+  y is T = initVal
+
+let pt1 = makePtType(Integer, 0)
+let pt2 = makePtType(Integer, 1)
+```
+
+pt1 and pt2 are both of the same type (type of the final produced table), but there's a cost to this setup: the programmer just generated two seperate functions for instantiating a table!
+
+Also `let pt3 = makePtType(Integer, Integer.ask())` would fail due to conflicting constraints.
+
+Another way to handle this:
+
+```melody
+let makePtCtor = fn (T is Numeric.type)
+  fn (initVal is T) tbl
+    x is T = initVal
+    y is T = initVal
+
+let pt1 = makePtCtor(Integer)(0)
+let pt2 = makePtCtor(Integer)(1)
+let pt3 = makePtCtor(Integer)(Integer.ask())
+```
+Here `makePtCtor(Integer)` ends up creating (and caching) just one function. Now since 0 and 1 are both literals, as an optimization (and routine behavior) Melody could *still* generate a couple of functions. The important difference here is, not only can you instantiate pt3, but it would also not create an excessive number of functions.

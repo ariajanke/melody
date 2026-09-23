@@ -46,27 +46,27 @@ function make
       mCache[node.uid()] ?? mIntoFunctionTypeBuild(node)
   }));
 
-  function nextUndeferredBuild
-    (currentFrameType: ObjectType, node: AstNode)
-    : FunctionTypeBuild
-  {
-    const snapshot = freeze({
-      ...baseFrameEntry(),
-      referenceType: () => currentFrameType
-    });
+  // function nextUndeferredBuild
+  //   (currentFrameType: ObjectType, node: AstNode)
+  //   : FunctionTypeBuild
+  // {
+  //   const snapshot = freeze({
+  //     ...baseFrameEntry(),
+  //     referenceType: () => currentFrameType
+  //   });
 
-    return mStackFrameStack.withBaseReferenceType(snapshot, () => {
-      const fbuild = mIntoFunctionTypeBuild(node);
+  //   return mStackFrameStack.withBaseReferenceType(snapshot, () => {
+  //     const fbuild = mIntoFunctionTypeBuild(node);
       
-      // NOTE undeferred, and we rely on memoization
-      fbuild.functionType();
-      mCache[node.uid()] = fbuild;
+  //     // NOTE undeferred, and we rely on memoization
+  //     fbuild.functionType();
+  //     mCache[node.uid()] = fbuild;
 
-      return fbuild;
-    });
-  }
+  //     return fbuild;
+  //   });
+  // }
   
-  return freeze({ nextUndeferredBuild, baseFrameEntry });
+  return freeze({ baseFrameEntry });
 }
 
 export const CachingContextProgression = freeze({ make });

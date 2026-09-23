@@ -21,6 +21,12 @@ import { Token } from '../token';
 export type AstLiteralType_ = 'string' | 'number';
 export type AstInitializerType_ = '=' | ':=';
 
+// this would go into initializers, definitions, 
+interface AstNameExpression {
+  list: Readonly<Token[]>;
+  isSubExpression?: AstNode_;
+};
+
 export interface AstVisitor_<ResultType = void> {
   visitLiteral(token: Token, type: AstLiteralType_): ResultType;
   visitFringe(token: Token): ResultType;

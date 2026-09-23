@@ -66,6 +66,7 @@ export interface MutableObjectType extends ObjectType {
 };
 
 export interface FunctionLookUpTable {
+  // type meta would live here to some degree...
   byParameters(type: ObjectType): FunctionType | undefined;
   uniqueFunctionType(): FunctionType | undefined;
 };
