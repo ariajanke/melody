@@ -31,7 +31,7 @@
     "type": "git",
     "url": "git+https://github.com/ariajanke/melody.git"
   },
-  "keywords": [],
+  "keywords": ["WASM", "Compiler"],
   "author": "Aria Janke",
   "license": "AGPLv3",
   "bugs": {

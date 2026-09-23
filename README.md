@@ -16,3 +16,6 @@ After that you should be able to navigate to localhost and open the demo page fr
 
 ## Note on AI generated code
 Earlier iterations of the project may have involved some of my own prelimary attempts to use AI SWE. Presently (as of 2026-09-21), this repository contains to the best of my knowledge only hand/human written code. Given what this project means to me (a sort of "passion project"), I will commit to only writting code by hand for this project from this point onward. Additionally contributions are accepted by *invite only*.
+
+# Copyright Notice
+Melody is copyrighted work by Aria Janke, and release under the AGPLv3 (please refer to LICENSE which should be included in this package). Of particular note is that since this is AGPLv3, this software is not suitable for SaaS purposes as network use is considered distribution by the license.
