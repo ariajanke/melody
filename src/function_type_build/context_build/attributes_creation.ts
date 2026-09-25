@@ -21,7 +21,7 @@ import { Helpers, raise } from '../../helpers';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { CallAttributeCreation } from './call_attribute_creation';
 import { ContextAttributeFactory } from './context_attribute_factory';
-import { OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
+import { VariableNameMap } from './ordered_initial_sets_collection';
 import { VariableAllocation } from './variable_allocation';
 
 export type AttributesTuple = Readonly<[string, FunctionLookUpTable]>;
@@ -38,7 +38,7 @@ const { freeze, memoize } = Helpers;
 function make
   (mReferenceType: ObjectType,
    mVariableName: string,
-   mVariableNameMap: OrderedInitialSetsCollection['variableNameMap'],
+   mVariableNameMap: () => VariableNameMap,
    mVariableAllocation: VariableAllocation)
   : AttributesCreation
 {

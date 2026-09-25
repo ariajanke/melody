@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FunctionTypeBuild, ObjectType } from '../../function_type_build';
+import { ObjectType } from '../../function_type_build';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
 import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
 import { MutableFunctionTable } from '../mutable_function_table';

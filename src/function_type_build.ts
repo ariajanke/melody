@@ -23,8 +23,27 @@ import { FunctionTypeBuildVisitor } from './function_type_build/function_type_bu
 import { TupleObjectType } from './function_type_build/tuple_object_type';
 import { Helpers, StandardErrorMessage } from './helpers';
 import { AstNode } from './ast_node';
+import { TypeRepresentationInstance } from './function_type_build/type_representation_type';
 
 const { freeze, memoize } = Helpers;
+
+// anything requiring parameters will have all go undefined
+// (i.e. not evalable)
+interface ImmediateEvaluation {
+  asTypeRepresentation(): TypeRepresentationInstance | undefined;
+  asInteger(): number | undefined;
+};
+
+interface CodeEmissionContext {
+  pushReceiver(em: CodeEmission): void;
+  pushParameters(em: CodeEmission): void;
+  popReceiver(): CodeEmission;
+  popParameters(): CodeEmission;
+};
+
+interface CodeEmission {
+  emit(writer: CodeWriter, context: CodeEmissionContext): void;
+};
 
 export interface FunctionType {
   parameters(): ObjectType;

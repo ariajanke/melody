@@ -38,9 +38,12 @@ interface WritableVariableNameFunctions {
 export type VariableNameFunctions =
   Readonly<WritableVariableNameFunctions>;
 
+export type VariableNameMap =
+  Readonly<{ [vname: string]: VariableNameFunctions | undefined }>;
+
 export interface OrderedInitialSetsCollection {
   orderedInitialSets(): Readonly<Readonly<InitialSetVariables>[]>;
-  variableNameMap(): Readonly<{ [vname: string]: VariableNameFunctions | undefined }>;
+  variableNameMap(): VariableNameMap;
 };
 
 function make
