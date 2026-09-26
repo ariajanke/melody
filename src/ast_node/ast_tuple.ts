@@ -31,21 +31,63 @@ const { makeUid } = AstDefinition;
 const kIsATuple = Symbol();
 const nodeAsString = (n: AstNode_) => n.asString();
 
+function asTuple(n: AstNode_): AstTuple | undefined {
+  if ('kIsATuple' in n && n.kIsATuple === kIsATuple) {
+    return n as AstTuple;
+  }
+
+  return undefined;
+}
+
+function merge_
+  (n1: AstNode_, considerN1: boolean,
+   n2: AstNode_, considerN2: boolean): AstNode_
+{
+  const n1AsT = considerN1 && asTuple(n1);
+  const n2AsT = considerN2 && asTuple(n2);
+  if (n1AsT && n2AsT) {
+    n2AsT.detuplify().forEach(n1AsT.append);
+    return n1AsT;
+  } else if (n1AsT) {
+    n1AsT.append(n2);
+    return n1AsT;
+  } else if (n2AsT) {
+    return AstTuple.make([n1, ...n2AsT.detuplify()]);
+  }
+
+  return AstTuple.make([n1, n2]);
+}
+
+function mergeBoth(n1: AstNode_, n2: AstNode_): AstNode_
+  { return merge_(n1, true, n2, true); }
+
+function mergeLeft(n1: AstNode_, n2: AstNode_): AstNode_
+  { return merge_(n1, true, n2, false); }
+
+function mergeRight(n1: AstNode_, n2: AstNode_): AstNode_
+  { return merge_(n1, false, n2, true); }
+
 export const AstTuple = freeze({
-  tuplify(tOrN1: AstNode_ | AstTuple, n2: AstNode_): AstNode_ {
-    if ('kIsATuple' in tOrN1 && tOrN1.kIsATuple === kIsATuple) {
-      const temp = tOrN1;
-      temp.append(n2);
-      return temp;
-    } else {
-      return AstTuple.make([tOrN1, n2]);
-    }
-  },
-  detuplify(n: AstNode_ | AstTuple): Readonly<AstNode_[]> {
+  mergeBoth,
+  mergeLeft,
+  mergeRight,
+  // tuplify(tOrN1: AstNode_ | AstTuple, n2: AstNode_): AstNode_ {
+  //   console.log('tuplifying', 'kIsATuple' in tOrN1 ? 'apending' : 'making');
+  //   console.log('the other was: ', 'kIsATuple' in n2 ? 'a tuple' : 'non-tuple');
+  //   if ('kIsATuple' in tOrN1 && tOrN1.kIsATuple === kIsATuple) {
+  //     const temp = tOrN1;
+  //     temp.append(n2);
+  //     return temp;
+  //   } else {
+  //     return AstTuple.make([tOrN1, n2]);
+  //   }
+  // },
+  detuplify(n: AstNode_ | AstTuple): Readonly<AstNode_[]> | undefined {
     if ('kIsATuple' in n && n.kIsATuple === kIsATuple) {
       return n.detuplify();
     }
-    return [n];
+
+    return undefined;
   },
   make(mMembers: AstNode_[] = []): AstTuple {
     function verifyNotSelfNested() {
@@ -58,6 +100,7 @@ export const AstTuple = freeze({
         }
       }
     }
+
     const inst = freeze({
       kIsATuple,
       detuplify: (): Readonly<AstNode_[]> => mMembers,

@@ -52,9 +52,13 @@ function make
       if (accessIndex !== 0) {
         raise(`need to rewrite this function for a different access index (${accessIndex})`);
       }
+      const rIdx = receiverParameterIndex();
+      if (rIdx === undefined) {
+        raise('attempting to stash receiver when function was defined without one');
+      }
       mByteCodeEmitter.
         getGlobal(stackPointerLocation()).
-        getLocal(receiverParameterIndex()).
+        getLocal(rIdx).
         pushI32Store();
       return mGetInst();
     },

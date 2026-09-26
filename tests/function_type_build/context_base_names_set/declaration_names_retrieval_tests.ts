@@ -36,7 +36,7 @@ describeNamed({ DeclarationNamesRetrieval }, () => {
   const tNode = memoize((): AstNode => makeFringe('t'));
   const emptyNode = AstFactories.emptyTupleInstance;
   const makeInst = (nodes: Readonly<AstNode[]>) =>
-    memoize(() => DeclarationNamesRetrieval.make(nodes));
+    memoize(() => DeclarationNamesRetrieval.make([], nodes));
   const simpleDefNode = memoize(makeFunctionDefinition);
 
   it('skips non-context call names', () => {
@@ -58,9 +58,9 @@ describeNamed({ DeclarationNamesRetrieval }, () => {
   it('adds initializers', () => {
     const inst = makeInst([ makeInitializer(['a'], '=', tNode()) ]);
     expect(inst().declarations().length).toEqual(1);
-    expect(inst().declarations()[0]?.names).toEqual(['a']);
-    expect(inst().declarations()[0]?.type).toEqual('=');
-    expect(inst().declarations()[0].value.uid()).toEqual(tNode().uid());
+    expect(inst().declarations()[0]?.names.map(t => t.content())).toEqual(['a']);
+    expect(inst().declarations()[0]?.qualifier).toEqual('=');
+    expect(inst().declarations()[0].valueNode?.uid()).toEqual(tNode().uid());
   });
 
   it('adds function definition', () => {

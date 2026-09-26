@@ -17,7 +17,7 @@
  */
 
 import { CodeWriter } from '../../code_writer';
-import { Helpers } from '../../helpers';
+import { Helpers, raise } from '../../helpers';
 import { WasmFunctionBody } from '../wasm_function_body';
 import { WasmFunctionLocalAllocation } from './wasm_function_locals_allocation';
 
@@ -30,6 +30,15 @@ function make
 {
   const { swapA, swapB } = mLocalAllocations;
   return freeze({
+    getParameter(idx: number): CodeWriter {
+      const localIdx = mLocalAllocations.mapToParameterLocal(idx);
+      if (localIdx === undefined) {
+        raise(`local index "${idx}" could not be mapped to a local index`);
+      }
+
+      mFunctionBody.getLocal(localIdx);
+      return mGetInst();
+    },
     drop(): CodeWriter {
       mFunctionBody.pushDrop();
       return mGetInst();

@@ -19,12 +19,13 @@
 import {
   ChildFunctionDefinition,
   DeclarationNamesRetrieval,
-  NameDeclaration,
   WritableNameSet,
   NameSet
 } from './declaration_names_retrieval';
 import { Helpers } from '../../helpers';
 import { FunctionNamingSchema } from '../../function_naming_schema';
+import { AstInitializerExpression, AstParameterExpression } from '../../ast_node';
+import { Token } from '../../token';
 
 const { freeze, memoize, makeIsStringInLookUpTable } = Helpers;
 
@@ -43,37 +44,52 @@ const accumulateNames = (set: WritableNameSet, name: string): WritableNameSet =>
 
 const { mapToFringeAccessor, mapToAssignment } = FunctionNamingSchema;
 
+function declaredNamesFrom
+  (totalUsedNames: NameSet,
+   declNamesRetr: DeclarationNamesRetrieval): Readonly<string[]>
+{
+  const { declarations, parameters } = declNamesRetr;
+
+  const addAccessor = (res: string[], name: string): string[] => {
+    // TODO marry with OrderedInitialSetsCollection's logic around
+    //      accessor/modifier names
+    // NOTE if called... add (we're assuming it's a function)
+    // TODO remove this assumption
+    if (totalUsedNames[name]) {
+      res.push(name);
+    }
+
+    res.push(mapToFringeAccessor(name));
+    return res;
+  };
+
+  const reduceDecl = (res: string[], v: AstInitializerExpression): string[] => {
+    return v.names.reduce((res: string[], name: Token): string[] => {
+      res = addAccessor(res, name.content());
+      if (v.qualifier === ':=') {
+        res.push(mapToAssignment(name.content()));
+      }
+      return res;
+    }, res);
+  };
+
+  const declNames_ = declarations().reduce(reduceDecl, [] as string[]);
+
+  return parameters().
+    reduce((res: string[], p: AstParameterExpression) => {
+      return p.names.
+        reduce((res: string[], t: Token) => addAccessor(res, t.content()), res);
+    }, declNames_);
+}
+
 function make
   (mDeclNames: DeclarationNamesRetrieval,
    mIsBuiltinName: (name: string) => boolean,
    mGetChildPending: (uid: number) => PendingNamesRetrieval): PendingNamesRetrieval
 {
-  const { declarations, usedNames, childDefinitions } = mDeclNames;
+  const { usedNames, childDefinitions } = mDeclNames;
 
-  const declaredNames = ((): Readonly<string[]> =>
-    declarations().reduce((res: string[], v: NameDeclaration): string[] => {
-      return v.names.reduce((res: string[], name: string): string[] => {
-        // TODO marry with OrderedInitialSetsCollection's logic around
-        //      accessor/modifier names
-        // NOTE if called... add (we're assuming it's a function)
-        // TODO remove this assumption
-        if (totalUsedNames()[name]) {
-          res.push(name);
-        }
-        res.push(mapToFringeAccessor(name));
-        if (v.type === ':=') {
-          res.push(mapToAssignment(name));
-        }
-        return res;
-      }, res);
-    }, [] as string[]));
-
-  const isPendingNameFunc = memoize(() => {
-    const fn = makeIsStringInLookUpTable(declaredNames());
-    return (name: string) => !(mIsBuiltinName(name) || fn(name));
-  });
-
-  const totalUsedNames = memoize((): NameSet =>
+  const totalUsedNames = ((): NameSet =>
     childDefinitions().
     reduce((set: WritableNameSet, definfo: ChildFunctionDefinition) => {
       const { pendingNames, unclaimedNames } = mGetChildPending(definfo.uid);
@@ -81,6 +97,12 @@ function make
       return unclaimedNames().reduce(accumulateNames, set);
     },
     usedNames()));
+
+  const isPendingNameFunc = memoize(() => {
+    const declNames = declaredNamesFrom(totalUsedNames(), mDeclNames);
+    const fn = makeIsStringInLookUpTable(declNames);
+    return (name: string) => !(mIsBuiltinName(name) || fn(name));
+  });
 
   const pendingNames = memoize((): Readonly<string[]> =>
     Object.keys(usedNames()).filter(isPendingNameFunc()));

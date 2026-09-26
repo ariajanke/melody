@@ -5,7 +5,7 @@
   "scripts": {
     "build": "npx esbuild $(find src/ | grep '.ts$')",
     "lint": "npx eslint $(find src/ | grep '.ts$') $(find tests/ | grep -P '(?<!\\.d)\\.ts$')",
-    "test": "DEBUG_MODE=true npx jasmine $npm_config_testdir/tests.js",
+    "test": "DEBUG_MODE=true npx jasmine",
     "watch": "npx tsc -w"
   },
   "include": [

@@ -21,9 +21,11 @@ import { AstFringe } from './ast_node/ast_fringe';
 import { AstCall, AstDefinition, AstInitializer } from './ast_node/ast_other_nodes';
 import { AstTuple } from './ast_node/ast_tuple';
 import {
-  AstInitializerType_,
+  AstInitializerExpression_,
+  AstInitializerQualifier_,
   AstLiteralType_,
   AstNode_,
+  AstParameterExpression_,
   AstVisitor_
 } from './ast_node/ast_types';
 
@@ -32,7 +34,9 @@ const emptyTupleInstance = memoize(AstTuple.make);
 
 export type AstLiteralType = AstLiteralType_;
 export type AstNode = AstNode_;
-export type AstInitializerType = AstInitializerType_;
+export type AstInitializerQualifier = AstInitializerQualifier_;
+export type AstInitializerExpression = AstInitializerExpression_;
+export type AstParameterExpression = AstParameterExpression_;
 export type AstVisitor<T = void> = AstVisitor_<T>;
 
 export const AstNode = freeze({
@@ -50,9 +54,13 @@ export const AstNode = freeze({
     makeCall : AstCall.make,
     makeFringe: AstFringe.make,
     makeInitializer: AstInitializer.make,
-    tuplify: AstTuple.tuplify,
+    mergeTuple: AstTuple.mergeBoth,
+    mergeTupleLeft: AstTuple.mergeLeft,
+    mergeTupleRight: AstTuple.mergeRight,
+    makeTuple: AstTuple.make
   },
   forAstFunctionDefinitionBuild: {
     makeFunctionDefinition: AstDefinition.make,
+    detuplify: AstTuple.detuplify
   }
 });

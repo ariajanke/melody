@@ -16,24 +16,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FunctionTypeBuild, ObjectType } from '../../function_type_build';
+import { ObjectType } from '../../function_type_build';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
-import { AstNode } from '../../ast_node';
-import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { AttributesCreation } from './attributes_creation';
 import { ContextAttributeFactory } from './context_attribute_factory';
 import { InitialSetVariables, OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
 import { ProgressiveVariableAllocation, VariableAllocation } from './variable_allocation';
 import { WritableObjectType } from './writable_object_type';
+import { NodeTypeInference } from '../node_type_inference';
+import { NodeTypeEvaluation } from '../node_type_evaluation';
+import { AstInitializerExpression } from '../../ast_node';
 
 const { freeze, memoize } = Helpers;
-
-export interface ContextTypeProgression_ {
-  nextUndeferredBuild
-    (currentFrameType: ObjectType, node: AstNode)
-    : FunctionTypeBuild;
-};
 
 export interface ContextDeclarationBuild_ {
   referenceType(): ObjectType | undefined;
@@ -41,19 +36,18 @@ export interface ContextDeclarationBuild_ {
   error(): StandardErrorMessage;
 };
 
+type RefAllocPair =
+  {
+    reference: WritableObjectType;
+    allocation: ProgressiveVariableAllocation;
+  } | undefined;
+
 function make
   (mVariableAllocation: ProgressiveVariableAllocation,
-   mDeclarations: Readonly<NameDeclaration[]>,
-   mWritableReferenceType: WritableObjectType,
-   mProgression: ContextTypeProgression_)
+   mDeclarations: Readonly<AstInitializerExpression[]>,
+   mWritableReferenceType: WritableObjectType)
 : ContextDeclarationBuild_
 {
-  type RefAllocPair =
-    {
-      reference: WritableObjectType;
-      allocation: ProgressiveVariableAllocation;
-    } | undefined;
-
   const toFunctionTable = MutableFunctionTable.fromFunctionType;
 
   const { orderedInitialSets, variableNameMap } = OrderedInitialSetsCollection.
@@ -112,18 +106,36 @@ function make
     }, varAlloc);   
   }
 
+  const mNodeTypeInference = NodeTypeInference.make();
+
+  function initialSetTypeOf
+    (ctxRef: ObjectType,
+     varInfo: Readonly<InitialSetVariables>): ObjectType | undefined
+  {
+    const { valueNode, typeNode } = varInfo;
+    if (valueNode) {
+      const trt = mNodeTypeInference.useFor(ctxRef).representationFor(valueNode);
+      return trt.resultantType() ?? setErrorFn(trt.error);
+    }
+
+    if (typeNode) {
+      const { objectType, error } = NodeTypeEvaluation.make(typeNode);
+      return objectType() ?? setErrorFn(error);
+    }
+
+    return setErrorMessage(`Context method set "${varInfo.name}" must have a value or type`);
+  }
+
   const transformedReferenceAndAllocations = memoize(() =>
     orderedInitialSets().
     reduce((pair: RefAllocPair, v: Readonly<InitialSetVariables>) => {
       if (!pair)
         { return pair; }
 
-      const fbuild = mProgression.nextUndeferredBuild(pair.reference, v.valueNode);
-      const ftype = fbuild.functionType() ?? setErrorFn(fbuild.error);
-      if (!ftype)
+      const initialSetType = initialSetTypeOf(pair.reference, v);
+      if (!initialSetType)
         { return undefined; }
 
-      const initialSetType = ftype.returns();
       pair.allocation = addVariablesFor(mVariableAllocation, v.variableNames, initialSetType);
       pair.reference = addAttributesToReference(mWritableReferenceType, v, pair.allocation);
       return pair;
@@ -155,7 +167,7 @@ function make
     });
   });
 
-  const { error, setErrorFn } = StandardError.make();
+  const { error, setErrorFn, setErrorMessage } = StandardError.make();
 
   return freeze({ referenceType, aggregateType, error });
 }

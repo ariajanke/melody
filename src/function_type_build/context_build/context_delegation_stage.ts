@@ -20,27 +20,20 @@ import { FunctionNamingSchema } from '../../function_naming_schema';
 import { FunctionLookUpTable } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
-import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
-import { ContextDeclarationBuild } from '../context_build';
 import { TupleObjectType } from '../tuple_object_type';
-import { ContextTypeProgression_ } from './context_declaration_build';
-import { DeclarationBuildConstructor } from './context_link_stage';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 import { WritableObjectType } from './writable_object_type';
 
 const { freeze, memoize } = Helpers;
 
 export interface ContextDelegationStage_ {
-  next(declarations: Readonly<NameDeclaration[]>,
-       progression: ContextTypeProgression_)
-    : ContextDeclarationBuild;
+  writableReferenceType(): WritableObjectType;
 };
 
 function make
   (mPendingNames: { [name: string]: true },
    mUsedAncestorCollection: UsedAncestorCollection,
-   mWritableReferenceType: WritableObjectType,
-   mIntoDeclarationBuild: DeclarationBuildConstructor)
+   mWritableReferenceType: WritableObjectType)
 : ContextDelegationStage_
 {
 
@@ -84,14 +77,7 @@ function make
         return refType.setFunctionLookUp(name, lookUpName(name));
       }, mWritableReferenceType));
 
-  function next
-    (declarations: Readonly<NameDeclaration[]>,
-     progression: ContextTypeProgression_)
-  {
-    return mIntoDeclarationBuild(declarations, writableReferenceType(), progression);
-  }
-
-  return freeze({ next });
+  return freeze({ writableReferenceType });
 }
 
 export const ContextDelegationStage_ = freeze({ make });

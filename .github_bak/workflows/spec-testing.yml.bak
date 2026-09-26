@@ -30,4 +30,4 @@ jobs:
         run: |
           npm install
           PURPOSE=test ./builder.sh && \
-          npm run test --testdir="$(MEL_BUILD_DIR)"
+          npm run test -- "$MEL_BUILD_DIR/tests.js"

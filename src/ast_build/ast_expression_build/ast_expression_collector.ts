@@ -20,27 +20,29 @@ import { Helpers, raise, StandardError } from '../../helpers';
 import { AstNode } from '../../ast_node';
 import { Token } from '../../token';
 import { AstBuildSingleError, AstOperationBuild } from './ast_operation_build';
-import { type NodeConstructorCollection } from './node_constructor_collection';
 import { NodeConstructor, OperatorConstructor } from './operator_constructor';
-import { OperatorConstructorBuild } from './operator_constructor_build';
-
-const { freeze, memoize } = Helpers;
+import { OperatorRelation } from '../operator_definitions';
+import { OperatorDefinitionBuild } from './operator_definition_build';
 
 export interface AstExpressionCollector {
-  pushNode(node: AstNode): void;
+  /// Tuples pushed here are not flattened!
+  pushNode(node: AstNode, asString: () => string): void;
   pushOperator(op: Token): void;
   finish(): AstBuildSingleError;
 };
 
-const asNoToken = (): Token | undefined => undefined;
+const { freeze, memoize } = Helpers;
+
 const asNoNode = (): AstNode | undefined => undefined;
-const isNotOperator = (): boolean => false;
+const isOriginal = () => true;
 
 function make(): AstExpressionCollector {
+  const { makeNodeMakerFor } = OperatorConstructor;
   const { error, setErrorFn, hasErrorSet } = StandardError.make();
   const mConstructors: NodeConstructor[] = [];
   const mOperators: OperatorConstructor[] = [];
   let mFinished = false;
+  let mLastPushedWasOperator = false;
 
   function verifyUnfinished() {
     if (!mFinished)
@@ -49,25 +51,29 @@ function make(): AstExpressionCollector {
     raise('cannot add to collector after it is finished');
   }
   
-  function isInUnaryContext() {
-    return mConstructors.length === 0 ||
-           mConstructors[mConstructors.length - 1].isOperator();
-  }
+  const isInUnaryContext = () =>
+    mConstructors.length === 0 ||
+    mLastPushedWasOperator;
+
+  const operatorRelation = (): OperatorRelation =>
+    isInUnaryContext() ? 'unary' : 'binary';
 
   return freeze({
-    pushNode(node: AstNode): void {
+    pushNode(node: AstNode, asString: () => string): void {
       verifyUnfinished();
       if (hasErrorSet())
         { return; }
 
+      mLastPushedWasOperator = false;
       const len = mConstructors.length;
       const position = () => len;
 
       mConstructors.push(freeze({
-        isOperator: isNotOperator,
-        asToken: asNoToken,
-        makeNode(_0: NodeConstructorCollection): AstNode
-          { return node; },
+        fitsContainer(cont: Readonly<{ length: number }>): boolean
+          { return cont.length > len; },
+        isOriginal,
+        asString,
+        makeNode: makeNodeMakerFor(node),
         lowPosition: position,
         highPosition: position
       }));
@@ -77,13 +83,15 @@ function make(): AstExpressionCollector {
       if (hasErrorSet())
         { return; }
 
-      const { operatorConstructor, error } = OperatorConstructorBuild.
-        make(op, isInUnaryContext(), mConstructors.length);
+      const { operatorDefinition, error } = OperatorDefinitionBuild.
+        make(op, operatorRelation());
 
-      if (!operatorConstructor())
+      if (!operatorDefinition())
         { return setErrorFn(error); }
 
-      const opCtor = operatorConstructor()!;
+      mLastPushedWasOperator = true;
+      const opCtor = OperatorConstructor.
+        make(operatorDefinition()!, op, mConstructors.length);
       mConstructors.push(opCtor);
       mOperators.push(opCtor);
     },

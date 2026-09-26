@@ -21,7 +21,8 @@ import { Token } from '../token';
 
 const { freeze } = Helpers;
 
-export type SegmentType = 'functionDefinitionBody' | 'expression';
+export type SegmentType =
+  'functionDefinitionBody' | 'functionDefinitionHead' | 'expression';
 
 export interface Segmentation {
   segment(): Segment | undefined;

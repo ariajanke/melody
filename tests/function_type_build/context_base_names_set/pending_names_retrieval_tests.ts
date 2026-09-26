@@ -19,38 +19,46 @@
 import {
   ChildFunctionDefinition,
   DeclarationNamesRetrieval,
-  NameDeclaration,
   NameSet,
   WritableNameSet
 } from '../../../src/function_type_build/context_base_names_set/declaration_names_retrieval';
 import { PendingNamesRetrieval } from '../../../src/function_type_build/context_base_names_set/pending_names_retrieval';
 import { Helpers, raise } from '../../../src/helpers';
-import { AstInitializerType, AstNode } from '../../../src/ast_node';
+import {
+  AstInitializerExpression,
+  AstInitializerQualifier,
+  AstNode,
+  AstParameterExpression
+} from '../../../src/ast_node';
 import { AstFactories } from '../../ast_factories';
 import { TestHelpers } from '../../test_helpers';
+import { TokenFactories } from '../../token_factories';
 
 const { memoize, freeze } = Helpers;
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ PendingNamesRetrieval }, () => {
+  const makeToken = TokenFactories.makeFromStringOnly;
   const aNode = memoize((): AstNode => AstFactories.makeFringe('a'));
-  const makeDecl = (names: Readonly<string[]>, type: AstInitializerType): NameDeclaration =>
-    freeze({ names, type, value: aNode() });
+  const makeDecl = (names: Readonly<string[]>, qualifier: AstInitializerQualifier): AstInitializerExpression =>
+    freeze({ names: names.map(makeToken), qualifier, valueNode: aNode() });
   const makeUsedNames = (names: Readonly<string[]>): () => NameSet =>
     memoize((): NameSet => names.
       reduce(PendingNamesRetrieval.accumulateNames, {} as WritableNameSet));
   const makeChildDefs = (uids: Readonly<number[]>): () => Readonly<ChildFunctionDefinition[]> =>
     memoize((): Readonly<ChildFunctionDefinition[]> =>
-      uids.map((uid: number) => freeze({ uid, nodes: [] })));
+      uids.map((uid: number) => freeze({ uid, nodes: [], parameters: [] })));
   const kDefaultDecls: DeclarationNamesRetrieval = freeze({
-    declarations: memoize((): Readonly<NameDeclaration[]> => []),
+    declarations: memoize((): Readonly<AstInitializerExpression[]> => []),
     usedNames: memoize((): NameSet => ({})),
-    childDefinitions: memoize((): Readonly<ChildFunctionDefinition[]> => [])
+    childDefinitions: memoize((): Readonly<ChildFunctionDefinition[]> => []),
+    parameters: memoize((): Readonly<AstParameterExpression[]> => [])
   });
   const kDefaultChildGetter = (_0: number) =>
     raise('no child getter set');
   const kDefaultIsBuiltin = (_0: string) => false;
+  const intTypeNode = memoize(() => AstFactories.makeFringe('Integer'));
   const makeInst =
     (mDeclNames: DeclarationNamesRetrieval,
      mIsBuiltinName: (name: string) => boolean = kDefaultIsBuiltin,
@@ -101,6 +109,18 @@ describeNamed({ PendingNamesRetrieval }, () => {
         declarations: memoize(() => [makeDecl(['b'], '=')])
       }));
       expect(inst().pendingNames()).toEqual(['b:=', 'a']);
+    });
+
+    it('parameter names filters out names from pending', () => {
+      const inst = makeInst(({
+        ...kDefaultDecls,
+        usedNames: makeUsedNames(['c:=', 'a', '.c']),
+        parameters: memoize((): Readonly<AstParameterExpression[]> => [
+          freeze({ names: [makeToken('a')], typeNode: intTypeNode() }),
+          freeze({ names: [makeToken('c')], typeNode: intTypeNode() }),
+        ])
+      }));
+      expect(inst().pendingNames()).toEqual(['c:=']);
     });
   });
 
@@ -161,6 +181,20 @@ describeNamed({ PendingNamesRetrieval }, () => {
         kDefaultIsBuiltin,
         makeChildGetter(['a'], []));
       expect(inst().unclaimedNames()).toEqual(['a']);
+    });
+
+    it('parameter names filters out names from unclaimed', () => {
+      const inst = makeInst(({
+          ...kDefaultDecls,
+          childDefinitions: makeChildDefs([0]),
+          parameters: memoize((): Readonly<AstParameterExpression[]> => [
+            freeze({ names: [makeToken('a')], typeNode: intTypeNode() }),
+            freeze({ names: [makeToken('c')], typeNode: intTypeNode() }),
+          ])
+        }),
+        kDefaultIsBuiltin,
+        makeChildGetter(['a', '.c', 'c:='], []));
+      expect(inst().unclaimedNames()).toEqual(['c:=']);
     });
   });
 });

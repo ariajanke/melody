@@ -68,4 +68,10 @@ function stringsIntoTokens(strings: Readonly<string[]>): Readonly<Token[]> {
   return strings.map(makeFromStringOnly);
 }
 
-export const TokenFactories = freeze({ makeFromStringOnly, stringsIntoTokens });
+const tokenToString = (t: Token) => t.content();
+
+export const TokenFactories = freeze({
+  makeFromStringOnly,
+  stringsIntoTokens,
+  tokenToString
+});

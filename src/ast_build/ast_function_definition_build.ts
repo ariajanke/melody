@@ -18,48 +18,82 @@
 
 import { Helpers } from '../helpers';
 import { Segment } from './segmentation';
-import { AstNode } from '../ast_node';
+import { AstNode, AstParameterExpression } from '../ast_node';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
 import {
   AstBuild_,
   AstBuildConstructorRetrieval
 } from './ast_build_constructor_retrieval';
+import { NameExpressionBuild } from './name_expression_build';
 
 const { freeze, memoize } = Helpers;
 
 const { makeFunctionDefinition } = AstNode.forAstFunctionDefinitionBuild;
+
+const passOnNode = (n: AstNode) => n;
 
 function make
   (mTokens: Readonly<Token[]>,
    mSegment: Segment,
    mCtorRetrieval: AstBuildConstructorRetrieval): AstBuild_
 {
-  const errors = ErrorsCollector.make();
-  const nodes = (() => {
-    const nodes: AstNode[] = [];
-    const clen = mSegment.children().length;
-    for (let cidx = 0; cidx < clen; ++cidx) {
-      const child = mSegment.children()[cidx];
-      const ibuild = mCtorRetrieval.constructorFor(child.type())(mTokens, child, mCtorRetrieval);
-      if (ibuild.node()) {
-        nodes.push(ibuild.node()!);
+  const mErrors = ErrorsCollector.make();
+  const mParameters: AstParameterExpression[] = [];
+  const mChildrenCount = mSegment.children().length;
+
+  function forHead(node: AstNode) {
+    // NOTE operators are stripped for parameters later
+    const { nameExpression, error } = NameExpressionBuild.
+      make(node, 'no-value', passOnNode);
+    if (nameExpression()) {
+      const { names, typeNode } = nameExpression()!;
+      if (typeNode) {
+        mParameters.push({ names, typeNode });
       } else {
-        errors.pushErrors(ibuild.errors());
+        mErrors.pushError({ message: 'parameter is missing a type' });
+      }
+    } else {
+      mErrors.pushError(error());
+    }
+  }
+
+  const nodes = memoize((): Readonly<AstNode[]> => {
+    const mNodes: AstNode[] = [];
+    for (let cidx = 0; cidx < mChildrenCount; ++cidx) {
+      const child = mSegment.children()[cidx];
+      const ctor = mCtorRetrieval.constructorFor(child.type());
+      const ibuild = ctor(mTokens, child, mCtorRetrieval);
+      if (!ibuild.node()) {
+        mErrors.pushErrors(ibuild.errors());
+        continue;
+      }
+
+      if (child.type() === 'functionDefinitionHead') {
+        const asMany = AstNode.forAstFunctionDefinitionBuild.
+          detuplify(ibuild.node()!);
+        if (asMany) {
+          asMany.forEach(forHead);
+        } else {
+          forHead(ibuild.node()!);
+        }
+      } else {
+        mNodes.push(ibuild.node()!);
       }
     }
-    return nodes;
+
+    return mNodes;
   });
 
   const node = memoize(() => {    
     nodes(); // NOTE must build first to accumulate errors
-    if (errors.errors().length > 0)
+    if (mErrors.errors().length > 0)
       { return undefined; }
 
-    return makeFunctionDefinition(nodes());
+    return makeFunctionDefinition(mParameters, nodes());
   });  
 
-  return freeze({ node, errors: errors.errors });
+  return freeze({ node, errors: mErrors.errors });
 }
 
 export const AstFunctionDefinitionBuild = freeze({ make });

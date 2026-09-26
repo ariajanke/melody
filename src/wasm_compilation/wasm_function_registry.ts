@@ -19,7 +19,6 @@
 import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import { FunctionType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { TypesAware } from './wasm_helpers';
 import { WasmImportsSection } from './wasm_imports_section';
 import { WasmTypesSection } from './wasm_types_section';
 
@@ -35,13 +34,17 @@ function assertFtypeSignatureOkay(beingCalled: FunctionType): void {
   const emptyTuple = memoize(() =>
     FunctionType.emitEmptyTuple().parameters());
   const recSize = beingCalled.receiver().sizeInStackItems();
-  const isFtypeOkay = 
-    beingCalled.parameters().uid() === emptyTuple().uid() &&
-    beingCalled.returns   ().uid() === emptyTuple().uid() &&
+  const isFtypeOkay =
+    beingCalled.returns().uid() === emptyTuple().uid() &&
     (recSize === 0 || recSize === 1);
   if (!isFtypeOkay) {
     raise('only one call signature supported');
   }
+}
+
+function wasmParameterCountFor(ftype: FunctionType): number {
+  return ftype.parameters().sizeInStackItems() +
+    ftype.receiver().sizeInStackItems();
 }
 
 function make
@@ -51,7 +54,6 @@ function make
   : WasmFunctionRegistry
 {
   type FtypeUidToIndex = { [uid: symbol]: number | undefined };
-  const { i32 } = TypesAware.types();
   const { orderedDefinitions } = mRegistry;
   const ftypeMap = memoize(() =>
     orderedDefinitions().
@@ -60,22 +62,36 @@ function make
       map[ftype.uid()] = idx;
       return map;
     }, {} as FtypeUidToIndex));
+  const mFtypeToWasmTypes: { [stackItemCounts: number]: Readonly<'i32'[]> | undefined } = {};
+  function newPtype(ftype: FunctionType): Readonly<'i32'[]> {
+    const itemCount = wasmParameterCountFor(ftype);
+    const m: 'i32'[] = [];
+    m.length = itemCount;
+    m.fill('i32', 0, itemCount);
+    return m;
+  }
+  function intoPtype(ftype: FunctionType): Readonly<'i32'[]> {
+    return mFtypeToWasmTypes[wasmParameterCountFor(ftype)] ??= newPtype(ftype);
+  }
 
-  const kOne = freeze([i32]);
+
   const kNone = freeze([]);
 
   const wasmTypesSection = memoize(() => {
-    mTypesSection.pushFunction(kOne, kNone);
+    // NOTE added for root
     mTypesSection.pushFunction(kNone, kNone);
+    mRegistry.orderedDefinitions().forEach((ftype: FunctionType) => {
+      mTypesSection.pushFunction(intoPtype(ftype), kNone);
+    });
     return mTypesSection;
   });
 
   function signatureIndexFor(mFunctionType: FunctionType): number {
     assertFtypeSignatureOkay(mFunctionType);
 
-    const pType = mFunctionType.receiver().sizeInStackItems() === 1 ?
-      kOne : kNone;
+    const pType = intoPtype(mFunctionType);
     const rType = kNone;
+    // HACK/TODO indexFor may mutate types section!
     return wasmTypesSection().indexFor(pType, rType) ??
       raise('cannot get WASM function signature');
   }

@@ -78,6 +78,7 @@ function make
     
     const parenthetical = ParentheticalSegmentation.
       make(mTokens, headStart()!, mEnd);
+
     return parenthetical.segment() ?? setErrorFn(parenthetical.error);
   });
 

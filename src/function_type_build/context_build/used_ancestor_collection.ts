@@ -64,11 +64,8 @@ function make
       })));
 
   const parent = memoize((): AncestorInfo | undefined => {
-    if (!parentReference()) {
-      if (Object.keys(mPendingNames).length > 0)
-        { raise('DAST schema failure'); }
-      return undefined;
-    }
+    if (!parentReference())
+      { return undefined; }
 
     if (parentUniqueName() === undefined)
       { raise('poor behavior'); }

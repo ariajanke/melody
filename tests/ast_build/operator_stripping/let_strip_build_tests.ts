@@ -19,8 +19,7 @@
 import { Helpers } from '../../../src/helpers';
 import { LetStripBuild } from '../../../src/ast_build/operator_stripping/let_strip_build';
 import { StripBuild } from '../../../src/ast_build/operator_stripping/strip_build';
-import { AstNode, AstInitializerType } from '../../../src/ast_node';
-import { Token } from '../../../src/token';
+import { AstInitializerExpression, AstInitializerQualifier, AstNode } from '../../../src/ast_node';
 import { AstFactories } from '../../ast_factories';
 import { ReseatableAstVisitor } from '../../ast_visitor_factories';
 import { TestHelpers } from '../../test_helpers';
@@ -61,7 +60,7 @@ describeNamed({ LetStripBuild }, () => {
   }
 
   function isSuccessful
-    (inst: () => StripBuild, exNames: Readonly<string[]>, exGroup: AstInitializerType)
+    (inst: () => StripBuild, exNames: Readonly<string[]>, exGroup: AstInitializerQualifier)
   {
     it('is a valid node', () => {
       expect(inst().node()).toBeDefined();
@@ -72,13 +71,9 @@ describeNamed({ LetStripBuild }, () => {
       let group = '';
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer(
-          names_: Readonly<Token[]>,
-          group_: AstInitializerType,
-          _2: AstNode)
-        {
-          names.push(...names_.map(t => t.content()));
-          group = group_;
+        visitInitializer(initializer: AstInitializerExpression) {
+          names.push(...initializer.names.map(t => t.content()));
+          group = initializer.qualifier;
         }
       });
       
@@ -94,19 +89,19 @@ describeNamed({ LetStripBuild }, () => {
   describe('on "let let ..."', () => {
     const inst = makeInst(recurseOn, makeLet( aNode() ));
 
-    hasError(inst, 'let must be declared with either "=" or ":="');
+    hasError(inst, 'cannot use "let" within a name expression');
   });
 
   describe('on "let \'beans\'" = ...', () => {
     const inst = makeInst(recurseOn, makeCall('=', makeFringe(`'beans'`), makeFringe('1')) );
 
-    hasError(inst, 'invalid name set');
+    hasError(inst, 'cannot use literal as a name');
   });
 
   describe('on "let a + b"', () => {
     const inst = makeInst(recurseOn, makeCall('+', aNode(), bNode()));
 
-    hasError(inst, 'let must be declared with either "=" or ":="');
+    hasError(inst, 'cannot use "+" within a name expression');
   });
 
   describe('if recursion helper returns undefined', () => {

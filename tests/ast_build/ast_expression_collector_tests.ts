@@ -25,13 +25,14 @@ import { AstFactories } from '../ast_factories';
 import { AstHelpers } from '../ast_helpers';
 import { TestHelpers } from '../test_helpers';
 import { TokenFactories } from '../token_factories';
+import { ReseatableAstVisitor } from '../ast_visitor_factories';
 
 const { freeze, memoize } = Helpers;
 
 const { describeNamed } = TestHelpers;
 
 describeNamed({ AstExpressionCollector }, () => {
-  const { makeFringe, emptyTupleInstance } = AstFactories;
+  const { makeFringe, emptyTupleInstance, makeTuple } = AstFactories;
   const makeToken = TokenFactories.makeFromStringOnly;
   const kCallToken: Token = freeze({
     content: () => OperatorNamingSchema.kCall,
@@ -45,22 +46,16 @@ describeNamed({ AstExpressionCollector }, () => {
       reduce((prev: AstExpressionCollector, v: AstNode | Token) => {
         if ('content' in v) {
           if (v.type() === Token.types.identifier) {
-            prev.pushNode(makeFringe(v.content()));
+            prev.pushNode(makeFringe(v.content()), v.content);
           } else {
             prev.pushOperator(v);
           }
         } else {
-          prev.pushNode(v);
+          prev.pushNode(v, v.asString);
         }
         return prev;
       },
       AstExpressionCollector.make()));
-
-  it('<empty expression>', () => {
-    const inst = makeInst([]);
-    const { node } = inst().finish();
-    expect(node()).toBeDefined();
-  });
 
   function identifiersFromInst(inst: () => AstExpressionCollector): string[] {
     return AstHelpers.identifiersFromInst(inst().finish().node);
@@ -78,6 +73,51 @@ describeNamed({ AstExpressionCollector }, () => {
     return callsFromInst(makeInst(tokStrings.map(makeToken)));
   }
 
+  function firstTupleHasLength(inst: () => AstExpressionCollector, exLength: number) {
+    it(`top level tuple has ${exLength} elements`, () => {
+      let tupleSize: undefined | number = undefined;
+      const visitor = ReseatableAstVisitor.makeSelfModified({
+        ...ReseatableAstVisitor.makeDefaultingToContinue(),
+        visitTuple(nodes: Readonly<AstNode[]>) {
+          tupleSize = nodes.length;
+        }
+      });
+      const { node } = inst().finish();
+      expect(node()).toBeDefined();
+      node()?.visit(visitor);
+      expect(tupleSize!).toEqual(exLength);
+    });
+  }
+
+  function hasShallowFringeNames(inst: () => AstExpressionCollector, exNames: string[]) {
+    it(`has names ${exNames.join(', ')} in top level tuple`, () => {
+      let hitTop = false;
+      const names: string[] = [];
+      const visitor = ReseatableAstVisitor.makeSelfModified({
+        ...ReseatableAstVisitor.makeDefaultingToContinue(),
+        visitFringe(token: Token) {
+          names.push(token.content());
+        },
+        visitTuple(nodes: Readonly<AstNode[]>) {
+          if (!hitTop) {
+            hitTop = true;
+            nodes.forEach(n => n.visit(visitor));
+          }
+        }
+      });
+      const { node } = inst().finish();
+      expect(node()).toBeDefined();
+      node()?.visit(visitor);
+      expect(names).toEqual(exNames);
+    });
+  }
+
+  it('<empty expression>', () => {
+    const inst = makeInst([]);
+    const { node } = inst().finish();
+    expect(node()).toBeDefined();
+  });
+
   it('<single> a', () => {
     const strings = identifiersFrom(['a']);
     expect(strings).toEqual(['a']);
@@ -91,6 +131,59 @@ describeNamed({ AstExpressionCollector }, () => {
   it('<triple> a, b, c', () => {
     const strings = identifiersFrom(['a', ',', 'b', ',', 'c']);
     expect(strings).toEqual(['a', 'b', 'c']);
+  });
+
+  describe('flattens tuples appropriately', () => {
+    const cdTuple = memoize(() => makeTuple([makeFringe('c'), makeFringe('d')]));
+    const efTuple = memoize(() => makeTuple([makeFringe('e'), makeFringe('f')]));
+    const comma = memoize(() => makeToken(','));
+
+    describe('simple triple member tuple', () => {
+      const inst = makeInst(['a', ',', 'b', ',', 'c'].map(makeToken));
+
+      firstTupleHasLength(inst, 3);
+      hasShallowFringeNames(inst, ['a', 'b', 'c']);
+    });
+
+    describe('ends on an original tuple (not flattened)', () => {
+      const inst = makeInst([
+        makeFringe('a'), comma(), makeFringe('b'), comma(),
+        cdTuple()
+      ]);
+
+      firstTupleHasLength(inst, 3);
+      hasShallowFringeNames(inst, ['a', 'b']);
+    });
+
+    describe('ends in two original tuples (not flattened)', () => {
+      const inst = makeInst([
+        makeFringe('z'), comma(), makeFringe('x'), comma(),
+        cdTuple(), comma(),
+        efTuple()
+      ]);
+
+      firstTupleHasLength(inst, 4);
+      hasShallowFringeNames(inst, ['z', 'x']);
+    });
+
+    describe('starts on an original tuple', () => {
+      const inst = makeInst([
+        cdTuple(), comma(),
+        makeFringe('w'), comma(), makeFringe('y'),
+      ]);
+
+      firstTupleHasLength(inst, 3);
+      hasShallowFringeNames(inst, ['w', 'y']);
+    });
+
+    describe('has an original tuple in the middle', () => {
+      const inst = makeInst([
+        makeFringe('t'), comma(), cdTuple(), comma(), makeFringe('u'),
+      ]);
+
+      firstTupleHasLength(inst, 3);
+      hasShallowFringeNames(inst, ['t', 'u']);
+    });
   });
 
   it('let a := b', () => {

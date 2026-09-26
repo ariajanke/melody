@@ -33,6 +33,36 @@ export const Helpers = Object.freeze({
   makeIsStringInLookUpTable
 });
 
+// You could do this in "idealized" Melody, but not in TypeScript
+// because you cannot turn types/interfaces into runtime could no matter what
+interface InitializableHelpers<ClassType> {
+  initializeThisClass(t: ClassType): void;
+  withLocked<ExtenderType extends object>(k: ExtenderType): InitializableClassOf<ClassType> & ExtenderType;
+};
+
+export type InitializableClassOf<ClassType> =
+  ClassType & InitializableHelpers<ClassType>;
+export const InitializableClass = Object.freeze({
+  on<ClassType extends object>(initially: ClassType): InitializableClassOf<ClassType> {
+    let klass: ClassType | undefined = undefined;
+    const inst: InitializableClassOf<ClassType> = Object.assign(initially, {
+      withLocked<ExtenderType extends object>(k: ExtenderType): InitializableClassOf<ClassType> & ExtenderType {
+        const initiallyAsExtended = Object.assign(inst, k);
+        return initiallyAsExtended satisfies InitializableClassOf<ClassType> & ExtenderType;
+      },
+      initializeThisClass(t: ClassType) {
+        if (klass !== undefined) {
+          raise('this class has already been initialized');
+        }
+
+        klass = t;
+        Object.assign(initially, t);
+      }
+    });
+    return inst;
+  }
+});
+
 export type StandardErrorMessage = Readonly<{ message: string }>;
 export type StandardErrorFn = (() => StandardErrorMessage);
 export interface StandardError {

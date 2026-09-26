@@ -17,14 +17,16 @@
  */
 
 import { FunctionType } from '../../function_type_build';
-import { Helpers } from '../../helpers';
+import { Helpers, raise } from '../../helpers';
 import { WasmFunctionRegistry } from '../wasm_function_registry';
 
-const { freeze, memoize, makeCounter } = Helpers;
+const { freeze, memoize } = Helpers;
 const { assertFtypeSignatureOkay } = WasmFunctionRegistry;
+const kParentPointerParamIndex = 0;
 
 export interface WasmFunctionLocalAllocation {
-  receiverParameterIndex(): number;
+  receiverParameterIndex(): number | undefined;
+  mapToParameterLocal(parameterIdx: number): number | undefined;
   swapA(): number;
   swapB(): number;
   localStackPointerIndex(): number;
@@ -33,16 +35,34 @@ export interface WasmFunctionLocalAllocation {
 
 function make(mFunctionToBuild: FunctionType): WasmFunctionLocalAllocation {
   assertFtypeSignatureOkay(mFunctionToBuild);
-  let mLastLocal = 0;
-  const counter = makeCounter();
-  const kParentPointerParamIndex = mLastLocal = counter();
+  const mReservedForReceiver = mFunctionToBuild.receiver().sizeInStackItems();
+
+  if (mReservedForReceiver > 1) {
+    raise('Cannot reserve more than one WASM PoD for the receiver');
+  }
   
+  let mLastLocal =
+    mReservedForReceiver +
+    mFunctionToBuild.parameters().sizeInStackItems();
+  const mParametersEnd = mLastLocal;
+
+  function mapToParameterLocal(parameterIdx: number): number | undefined {
+    const parametersStart = mReservedForReceiver;
+    const localIdx = (parameterIdx + parametersStart);
+    if (localIdx >= mParametersEnd)
+      { return undefined; }
+
+    return localIdx;
+  }
+
   return freeze({
-    receiverParameterIndex: () => kParentPointerParamIndex,
-    swapA: memoize(() => mLastLocal = counter()),
-    swapB: memoize(() => mLastLocal = counter()),
-    localStackPointerIndex: memoize(() => mLastLocal = counter()),
-    totalLocalCount: () => mLastLocal + 1
+    receiverParameterIndex: () =>
+      mReservedForReceiver > 0 ? kParentPointerParamIndex : undefined,
+    mapToParameterLocal,
+    swapA: memoize(() => mLastLocal++),
+    swapB: memoize(() => mLastLocal++),
+    localStackPointerIndex: memoize(() => mLastLocal++),
+    totalLocalCount: () => mLastLocal
   });
 }
 

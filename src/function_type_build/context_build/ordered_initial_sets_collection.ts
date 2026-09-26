@@ -18,15 +18,16 @@
 
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { Helpers } from '../../helpers';
-import { AstNode } from '../../ast_node';
-import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
+import { AstInitializerExpression, AstNode } from '../../ast_node';
+import { Token } from '../../token';
 
 const { freeze, memoize } = Helpers;
 
 export interface InitialSetVariables {
   name: string;
   variableNames: Readonly<string[]>;
-  valueNode: AstNode;
+  valueNode?: AstNode;
+  typeNode?: AstNode;
 };
 
 interface WritableVariableNameFunctions {
@@ -43,8 +44,10 @@ export interface OrderedInitialSetsCollection {
   variableNameMap(): Readonly<{ [vname: string]: VariableNameFunctions | undefined }>;
 };
 
+const tokenToString = (t: Token) => t.content();
+
 function make
-  (mDeclarations: Readonly<NameDeclaration[]>): OrderedInitialSetsCollection
+  (mDeclarations: Readonly<AstInitializerExpression[]>): OrderedInitialSetsCollection
 {
   const variableNameMap = memoize((): Readonly<{ [vname: string]: VariableNameFunctions | undefined }> => {
     const map: { [vname: string]: VariableNameFunctions | undefined } = {};
@@ -54,9 +57,9 @@ function make
       const declLen = decl.names.length;
       for (let jdx = 0; jdx < declLen; ++jdx) {
         const tupleRank = declLen > 1 ? jdx : undefined;
-        const vname = decl.names[jdx];
+        const vname = tokenToString(decl.names[jdx]);
         const accessorName = FunctionNamingSchema.mapToFringeAccessor(vname);
-        const modifierName = decl.type === ':=' ?
+        const modifierName = decl.qualifier === ':=' ?
           FunctionNamingSchema.mapToAssignment(vname) :
           undefined;
         map[vname] = freeze({
@@ -70,12 +73,15 @@ function make
   });
 
   const orderedInitialSets = memoize((): Readonly<Readonly<InitialSetVariables>[]> =>
-    mDeclarations.map((decl: NameDeclaration): Readonly<InitialSetVariables> => 
-      freeze({
-        name: FunctionNamingSchema.mapToInitialSetName(decl.names),
-        variableNames: decl.names,
-        valueNode: decl.value
-      })));
+    mDeclarations.map((decl: AstInitializerExpression): Readonly<InitialSetVariables> => {
+      const names = decl.names.map(tokenToString);
+      return freeze({
+        name: FunctionNamingSchema.mapToInitialSetName(names),
+        variableNames: names,
+        valueNode: decl.valueNode,
+        typeNode: decl.typeNode
+      });
+    }));
 
   return freeze({ orderedInitialSets, variableNameMap });
 }

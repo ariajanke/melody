@@ -20,9 +20,10 @@ import { FunctionNamingSchema } from '../../function_naming_schema';
 import { Helpers } from '../../helpers';
 import { Token } from '../../token';
 import {
-  AstInitializerType,
+  AstInitializerExpression,
   AstLiteralType,
   AstNode,
+  AstParameterExpression,
   AstVisitor
 } from '../../ast_node';
 
@@ -31,20 +32,16 @@ const { freeze, memoize } = Helpers;
 export type WritableNameSet = { [name: string]: true };
 export type NameSet = Readonly<WritableNameSet>;
 
-export type NameDeclaration = Readonly<{
-  names: Readonly<string[]>;
-  type: AstInitializerType;
-  value: AstNode;
-}>;
-
 export type ChildFunctionDefinition = Readonly<{
-  nodes: Readonly<AstNode[]>;
-  uid  : number;
+  nodes     : Readonly<AstNode[]>;
+  parameters: Readonly<AstParameterExpression[]>;
+  uid       : number;
 }>;
 
 export interface DeclarationNamesRetrieval {
-  declarations(): Readonly<NameDeclaration[]>;
-  usedNames(): NameSet;
+  parameters      (): Readonly<AstParameterExpression[]>;
+  declarations    (): Readonly<AstInitializerExpression[]>;
+  usedNames       (): NameSet;
   childDefinitions(): Readonly<ChildFunctionDefinition[]>;
 };
 
@@ -52,20 +49,23 @@ function visitLiteral(_0: Token, _1: AstLiteralType): void {}
 
 const { kContextName, mapToFringeAccessor } = FunctionNamingSchema;
 
-const tokenToString = (token: Token) => token.content();
-
 function make
-  (mDefNodes: Readonly<AstNode[]>): DeclarationNamesRetrieval
+  (mParameters: Readonly<AstParameterExpression[]>,
+   mDefNodes: Readonly<AstNode[]>): DeclarationNamesRetrieval
 {
-  const mDeclarations: NameDeclaration[] = [];
+  const mDeclarations: AstInitializerExpression[] = [];
   const mUsedNames: WritableNameSet = {};
   const mChildDefs: ChildFunctionDefinition[] = [];
   
   const recurse = (node: AstNode) => node.visit(mVisitor);
   const mVisitor: AstVisitor<void> = freeze({
     visitLiteral,
-    visitFunctionDefinition(uid: number, nodes: Readonly<AstNode[]>): void {
-      mChildDefs.push(freeze({ nodes, uid }));
+    visitFunctionDefinition(
+      uid: number,
+      parameters: Readonly<AstParameterExpression[]>,
+      nodes: Readonly<AstNode[]>): void
+    {
+      mChildDefs.push(freeze({ nodes, parameters, uid }));
       // NOTE do not recur!
     },
     visitFringe(token: Token): void {
@@ -77,17 +77,9 @@ function make
     visitTuple(nodes: Readonly<AstNode[]>): void {
       nodes.forEach(recurse);
     },
-    visitInitializer(
-      names: Readonly<Token[]>,
-      type: AstInitializerType,
-      value: AstNode): void
-    {
-      mDeclarations.push(freeze({
-        names: names.map(tokenToString),
-        type,
-        value
-      }));
-      recurse(value);
+    visitInitializer(initializer: AstInitializerExpression): void {
+      mDeclarations.push(initializer);
+      recurse(initializer.valueNode);
     },
     visitCall(
       callName: Token,
@@ -109,13 +101,16 @@ function make
     return mDefNodes;
   });
 
+  const declarations = memoize((): Readonly<AstInitializerExpression[]> =>
+    visitedDefNodes() && mDeclarations);
+
   return freeze({
+    parameters: () => mParameters,
     usedNames: (): NameSet =>
       visitedDefNodes() && mUsedNames,
     childDefinitions: (): Readonly<ChildFunctionDefinition[]> =>
       visitedDefNodes() && mChildDefs,
-    declarations: (): Readonly<NameDeclaration[]> =>
-      visitedDefNodes() && mDeclarations
+    declarations
   });
 }
 

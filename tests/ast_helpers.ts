@@ -16,15 +16,34 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AstNode, AstInitializerType } from '../src/ast_node';
+import { AstInitializerExpression, AstNode, AstParameterExpression } from '../src/ast_node';
 import { ReseatableAstVisitor } from './ast_visitor_factories';
 import { Token } from '../src/token';
 import { Helpers } from '../src/helpers';
+import { TokenFactories } from './token_factories';
 
 const { freeze } = Helpers;
 
 const makeVisitor = ReseatableAstVisitor.makeSelfModified;
 const makeDefaultVisitor = ReseatableAstVisitor.makeDefaultingToContinue;
+
+const { tokenToString } = TokenFactories;
+
+const reduceParams = (acc: string[], params: AstParameterExpression) => {
+  acc.push(...params.names.map(tokenToString));
+  return acc;
+};
+
+function namesFrom
+  (nameExpression: AstInitializerExpression | Readonly<AstParameterExpression[]>)
+  : Readonly<string[]>
+{
+  if ('length' in nameExpression) {
+    return nameExpression.reduce(reduceParams, [] as string[]);
+  }
+
+  return nameExpression.names.map(tokenToString);
+}
 
 function identifiersFromNode(node: () => AstNode | undefined): string[] {
   const strings: string[] = [];
@@ -41,28 +60,60 @@ function identifiersFromNode(node: () => AstNode | undefined): string[] {
 
 function callsFromNode(node: () => AstNode | undefined): string[] {
   const calls: string[] = [];
+  const recur = (node_: AstNode) => node_.visit(visitor);
   const visitor = makeVisitor({
     ...makeDefaultVisitor(),
-    visitInitializer(
-      _0: Readonly<Token[]>,
-      _1: AstInitializerType,
-      innerNode: AstNode)
-    {
+    visitInitializer(initializer: AstInitializerExpression) {
       calls.push('let');
-      innerNode.visit(visitor);
+      recur(initializer.valueNode);
     },
     visitCall(callName: Token, receiver: AstNode, args: AstNode) {
       calls.push(callName.content());
-      receiver.visit(visitor);
-      args.visit(visitor);
-    }
+      recur(receiver);
+      recur(args);
+    },
+    visitFunctionDefinition(
+      _0: number,
+      parameters: Readonly<AstParameterExpression[]>,
+      nodes: Readonly<AstNode[]>)
+    {
+      parameters.forEach((v: AstParameterExpression) => recur(v.typeNode));
+      nodes.forEach(recur);
+    },
   });
   expect(node()).toBeDefined();
   node()?.visit(visitor);
   return calls;
 }
 
+function parametersFromNode
+  (node: () => AstNode | undefined): AstParameterExpression[]
+{
+  const params: AstParameterExpression[] = [];
+  let hitRoot = false;
+  const visitor = makeVisitor({
+    ...makeDefaultVisitor(),
+    visitFunctionDefinition(
+      _0: number,
+      parameters: Readonly<AstParameterExpression[]>,
+      nodes: Readonly<AstNode[]>)
+    {
+      if (hitRoot) {
+        params.push(...parameters);
+      } else {
+        hitRoot = true;
+        nodes.forEach(n => n.visit(visitor));
+      }
+    }
+  });
+  expect(node()).toBeDefined();
+  node()?.visit(visitor);
+  return params;
+}
+
 export const AstHelpers = freeze({
   identifiersFromInst: identifiersFromNode,
-  callsFromInst: callsFromNode
+  callsFromInst: callsFromNode,
+  parametersFromInst: parametersFromNode,
+  namesFrom
 });
