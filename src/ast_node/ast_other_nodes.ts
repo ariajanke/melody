@@ -18,7 +18,7 @@
 
 import { Helpers } from '../helpers';
 import { Token } from '../token';
-import { AstInitializerType_, AstNode_, AstVisitor_ } from './ast_types';
+import { AstInitializerType_, AstNameExpression_, AstNode_, AstVisitor_ } from './ast_types';
 
 const { freeze, memoize } = Helpers;
 
@@ -30,13 +30,13 @@ const makeUid = (() => {
 
 export const AstDefinition = freeze({
   makeUid,
-  make(nodes: AstNode_[]): AstNode_ {
+  make(parameters: Readonly<AstNameExpression_[]>, nodes: AstNode_[]): AstNode_ {
     const uid = makeUid();
     return freeze({
       asString: () =>
         `Definition { ${nodes.map(v => v.asString()).join(', ')} }`,
       visit: <T>(v: AstVisitor_<T>) =>
-        v.visitFunctionDefinition(uid(), nodes),
+        v.visitFunctionDefinition(uid(), parameters, nodes),
       uid
     });
   }
@@ -44,12 +44,12 @@ export const AstDefinition = freeze({
 
 export const AstInitializer = freeze({
   make(
-    mNames: Readonly<Token[]>,
+    mNames: AstNameExpression_,
     mGroup: AstInitializerType_,
     mValue: AstNode_): AstNode_
   {
     return freeze({
-      asString: () => `Initializer { (${mNames.join(', ')}) ${mGroup} ${mValue.asString()} }`,
+      asString: () => `Initializer { (${mNames.names.join(', ')}) ${mGroup} ${mValue.asString()} }`,
       visit: <T>(v: AstVisitor_<T>) =>
         v.visitInitializer(mNames, mGroup, mValue),
       uid: makeUid()

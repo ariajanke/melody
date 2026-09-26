@@ -77,6 +77,7 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
   const kHeadedAddition = ['fn', '(', ')', '2', '+', '1'];
   const kHeadedEmptyTuple = ['fn', '(', ')', '(', ')'];
   const kMiscLine = ['let', 'b', '=', '5'];
+
   describe('fn 2 + 1 ~', () => {
     const inst = makeInst([...kHeadlessAddition, '~']);
     isSegmentEnclosed(inst, 0, 5);
@@ -87,6 +88,20 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
     const inst = makeInst([...kHeadedAddition, '~']);
     isSegmentEnclosed(inst, 0, 7);
     hasUniqueChildSegment(inst, 3, 6);
+  });
+
+  describe('fn (x is Integer) () ~', () => {
+    it('has one function head child segment', fail);
+    it('parameter is "Integer"', fail);
+  });
+
+  describe('fn (x is Integer, y is Integer) () ~', () => {
+    it('has two function head child segments', fail);
+  });
+
+  describe('fn (x is Tuple(Integer, Integer)) () ~', () => {
+    it('has one function head child segment', fail);
+    it('parameter is "Tuple(Integer, Integer)"', fail);
   });
 
   describe('fn () () ~', () => {

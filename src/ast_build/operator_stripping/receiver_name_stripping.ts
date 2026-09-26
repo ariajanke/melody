@@ -17,7 +17,7 @@
  */
 
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
-import { AstInitializerType, AstNode, AstVisitor } from '../../ast_node';
+import { AstInitializerType, AstNameExpression, AstNode, AstVisitor } from '../../ast_node';
 import { AstLiteralType } from '../../ast_node';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
 import { Token } from '../../token';
@@ -130,7 +130,7 @@ function make(mRoot: AstNode): ReceiverNameStripping {
   }
 
   function visitInitializer
-    (names: Readonly<Token[]>,
+    (nameExpression: AstNameExpression,
      group: AstInitializerType,
      value: AstNode): Res
   {
@@ -138,10 +138,14 @@ function make(mRoot: AstNode): ReceiverNameStripping {
     if (rv === undefined || rv === 'not-modified')
       { return rv; }
 
-    return makeInitializer(names, group, rv);
+    return makeInitializer(nameExpression, group, rv);
   }
 
-  function visitFunctionDefinition(_0: number, nodes: Readonly<AstNode[]>): Res {
+  function visitFunctionDefinition
+    (_0: number,
+     _1: Readonly<AstNameExpression[]>,
+     nodes: Readonly<AstNode[]>): Res 
+  {
     if (mDirection === 'right') {
       return setErrorMessage('a function definition cannot be a target of an assignment');
     }

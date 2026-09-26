@@ -22,7 +22,7 @@ import { Token } from '../../token';
 import { FunctionBodySegmentation } from './function_body_segmentation';
 import { FunctionHeadSegmentation } from './function_head_segmentation';
 import { LineSegmentation } from './line_segmentation';
-import { Segment, Segmentation } from '../segmentation';
+import { Segment, Segmentation, SegmentType } from '../segmentation';
 
 type BodyClosingFunc = (token: Token | undefined) => boolean;
 
@@ -31,6 +31,13 @@ const { freeze, memoize } = Helpers;
 const { isBodyClosing } = FunctionBodySegmentation;
 
 const isSeparator = LineSegmentation.isProperClose;
+
+const headType = (): SegmentType => 'functionDefinitionHead';
+
+function intoHeadType(segments: Readonly<Segment[]>): Readonly<Segment[]> {
+  return segments.map((segment: Segment): Segment =>
+    freeze({ ...segment, type: headType }));
+}
 
 function isSeparatorOrBodyClose(token: Token | undefined): boolean
   { return isSeparator(token) || isBodyClosing(token); }
@@ -56,7 +63,7 @@ function make
 
   const heading = memoize((): Segmentation =>
     FunctionHeadSegmentation.make(mTokens, mStart, mEnd));
-  
+
   const isBodyClosingFunc = memoize((): BodyClosingFunc | undefined => {
     const { segment } = heading();
     if (!segment())
@@ -90,12 +97,22 @@ function make
     raise('Body segmentation must place index at body close or end position');
   });
 
+  const childSegments = memoize((): Readonly<Segment[]> | undefined => {
+    if (!body_() || !heading().segment())
+      { return undefined; }
+    
+    return [
+      ...intoHeadType(heading().segment()!.children()),
+      ...body_()!.children()
+    ];
+  });
+
   const segment = memoize((): Segment | undefined => {
-    if (!body_() || !definitionEnd())
+    if (!childSegments() || !definitionEnd())
       { return undefined; }
 
     return freeze({
-      children: body_()!.children,
+      children: childSegments as () => Readonly<Segment[]>,
       type: body_()!.type,
       start: () => mStart,
       end: definitionEnd as () => number

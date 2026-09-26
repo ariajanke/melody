@@ -22,6 +22,7 @@ import { Token } from '../../token';
 import {
   AstInitializerType,
   AstLiteralType,
+  AstNameExpression,
   AstNode,
   AstVisitor
 } from '../../ast_node';
@@ -78,12 +79,12 @@ function make
       nodes.forEach(recurse);
     },
     visitInitializer(
-      names: Readonly<Token[]>,
+      nameExpression: AstNameExpression,
       type: AstInitializerType,
       value: AstNode): void
     {
       mDeclarations.push(freeze({
-        names: names.map(tokenToString),
+        names: nameExpression.names.map(tokenToString),
         type,
         value
       }));

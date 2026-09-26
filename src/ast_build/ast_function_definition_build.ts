@@ -18,13 +18,14 @@
 
 import { Helpers } from '../helpers';
 import { Segment } from './segmentation';
-import { AstNode } from '../ast_node';
+import { AstNameExpression, AstNode } from '../ast_node';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
 import {
   AstBuild_,
   AstBuildConstructorRetrieval
 } from './ast_build_constructor_retrieval';
+import { NameExpressionBuild } from './name_expression_build';
 
 const { freeze, memoize } = Helpers;
 
@@ -35,17 +36,28 @@ function make
    mSegment: Segment,
    mCtorRetrieval: AstBuildConstructorRetrieval): AstBuild_
 {
-  const errors = ErrorsCollector.make();
+  const mErrors = ErrorsCollector.make();
+  const mParameters: AstNameExpression[] = [];
   const nodes = (() => {
     const nodes: AstNode[] = [];
     const clen = mSegment.children().length;
     for (let cidx = 0; cidx < clen; ++cidx) {
       const child = mSegment.children()[cidx];
       const ibuild = mCtorRetrieval.constructorFor(child.type())(mTokens, child, mCtorRetrieval);
-      if (ibuild.node()) {
-        nodes.push(ibuild.node()!);
+      if (!ibuild.node()) {
+        mErrors.pushErrors(ibuild.errors());
+        continue;
+      }
+
+      if (child.type() === 'functionDefinitionHead') {
+        const { nameExpression, error } = NameExpressionBuild.make(ibuild.node()!);
+        if (nameExpression()) {
+          mParameters.push(nameExpression()!);
+        } else {
+          mErrors.pushError(error());
+        }
       } else {
-        errors.pushErrors(ibuild.errors());
+        nodes.push(ibuild.node()!);
       }
     }
     return nodes;
@@ -53,13 +65,13 @@ function make
 
   const node = memoize(() => {    
     nodes(); // NOTE must build first to accumulate errors
-    if (errors.errors().length > 0)
+    if (mErrors.errors().length > 0)
       { return undefined; }
 
-    return makeFunctionDefinition(nodes());
+    return makeFunctionDefinition(mParameters, nodes());
   });  
 
-  return freeze({ node, errors: errors.errors });
+  return freeze({ node, errors: mErrors.errors });
 }
 
 export const AstFunctionDefinitionBuild = freeze({ make });

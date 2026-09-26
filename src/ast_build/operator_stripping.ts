@@ -17,7 +17,7 @@
  */
 
 import { Helpers } from '../helpers';
-import { AstInitializerType, AstLiteralType, AstNode } from '../ast_node';
+import { AstInitializerType, AstLiteralType, AstNameExpression, AstNode } from '../ast_node';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
 import { AstBuild_ } from './ast_build_constructor_retrieval';
@@ -46,37 +46,47 @@ function make(mRawTreeRoot: AstNode): AstBuild_ {
   const mLetsStack = LetMarkingStack.make();
   const mErrorCollection = ErrorsCollector.make();
 
-  function makeNodesVisitFunction(intoNode: (n: AstNode[]) => AstNode) {
-    return (nodes: Readonly<AstNode[]>): StripBuildResult => {
-      mLetsStack.markOutsideLetStatement();
-      const gvs = nodes.map(n => n.visit(mVisitor));
-      mLetsStack.popMarking();
+  function recurseOnTuple
+    (nodes: Readonly<AstNode[]>): AstNode[] | 'not-modified' | undefined
+  {
+    mLetsStack.markOutsideLetStatement();
+    const gvs = nodes.map(n => n.visit(mVisitor));
+    mLetsStack.popMarking();
 
-      if (gvs.every(n => n === 'not-modified'))
-        { return 'not-modified'; }
+    if (gvs.every(n => n === 'not-modified'))
+      { return 'not-modified'; }
 
-      if (gvs.some(n => n === undefined))
-        { return undefined; }
+    if (gvs.some(n => n === undefined))
+      { return undefined; }
 
-      type Narrowed = AstNode | 'not-modified';
+    type Narrowed = AstNode | 'not-modified';
 
-      const gvsAsNodes = (gvs as Narrowed[]).map((v: Narrowed, idx: number) =>
-        v === 'not-modified' ? nodes[idx] : v);
-
-      return intoNode(gvsAsNodes);
-    };
+    return (gvs as Narrowed[]).map((v: Narrowed, idx: number) =>
+      v === 'not-modified' ? nodes[idx] : v);
   }
 
-  const visitFunctionDefinition_ =
-    makeNodesVisitFunction(makeFunctionDefinition);
+  function visitFunctionDefinition
+    (_0: number,
+     parameters: Readonly<AstNameExpression[]>,
+     nodes: Readonly<AstNode[]>): StripBuildResult
+  {
+    const gv = recurseOnTuple(nodes);
+    if (gv === undefined || gv === 'not-modified')
+      { return gv; }
 
-  const visitFunctionDefinition = (_0: number, nodes: Readonly<AstNode[]>) =>
-    visitFunctionDefinition_(nodes);
+    return makeFunctionDefinition(parameters, gv);
+  }
 
-  const visitTuple = makeNodesVisitFunction(makeTuple);
+  function visitTuple(nodes: Readonly<AstNode[]>): StripBuildResult {
+    const gv = recurseOnTuple(nodes);
+    if (gv === undefined || gv === 'not-modified')
+      { return gv; }
+
+    return makeTuple(gv);
+  }
 
   function visitInitializer
-    (names: Readonly<Token[]>,
+    (nameExpression: AstNameExpression,
      initType: AstInitializerType,
      innerNode: AstNode): StripBuildResult
   {
@@ -87,7 +97,7 @@ function make(mRawTreeRoot: AstNode): AstBuild_ {
     if (gv === 'not-modified' || gv === undefined)
       { return gv; }
 
-    return makeInitializer(names, initType, gv);
+    return makeInitializer(nameExpression, initType, gv);
   }
 
   const recurseOn = (node: AstNode): AstNode | undefined => {

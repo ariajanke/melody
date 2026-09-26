@@ -36,6 +36,7 @@ export type AstBuild = AstBuild_;
 AstBuildConstructorRetrieval.initialize(((): AstBuildConstructorRetrieval => {
   const strats: Readonly<{ [st in SegmentType]: AstBuildConstructor | undefined }> = freeze({
     functionDefinitionBody: AstFunctionDefinitionBuild.make,
+    functionDefinitionHead: AstExpressionBuild.make,
     expression: AstExpressionBuild.make
   });
 
