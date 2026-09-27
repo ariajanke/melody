@@ -97,11 +97,18 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
 
   describe('fn (x is Integer, y is Integer) () ~', () => {
     it('has two function head child segments', fail);
+    it('parameter names are seperately "x", and "y"', fail);
   });
 
   describe('fn (x is Tuple(Integer, Integer)) () ~', () => {
     it('has one function head child segment', fail);
     it('parameter is "Tuple(Integer, Integer)"', fail);
+  });
+
+  describe('fn ((x, y) is Tuple(Integer, Integer)) () ~', () => {
+    it('has one function head child segment', fail);
+    it('parameter is "Tuple(Integer, Integer)"', fail);
+    it('parameter names are "x", and "y"', fail);
   });
 
   describe('fn () () ~', () => {

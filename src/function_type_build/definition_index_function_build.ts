@@ -25,21 +25,22 @@ import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import { DefinitionBodyFunctionBuild } from './definition_body_function_build';
 import { FunctionIndexType } from './function_index_type';
 import { TupleObjectType } from './tuple_object_type';
-import { AstNode } from '../ast_node';
+import { AstNameExpression, AstNode } from '../ast_node';
 
 const { freeze, memoize } = Helpers;
 
 function make
   (mUid: number,
+   mParameters: Readonly<AstNameExpression[]>,
    mNodes: Readonly<AstNode[]>,
    mFunctionRegistry: FunctionDefinitionRegistry,
    mContextFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild
 {
-  const defBuild = DefinitionBodyFunctionBuild.
+  const mDefBuild = DefinitionBodyFunctionBuild.
     make(mUid, mNodes, mContextFrameStack);
 
-  const { error } = defBuild;
+  const { error } = mDefBuild;
   const { registerDefinitionBody } = mFunctionRegistry;
   const { emptyTuple } = TupleObjectType;
 
@@ -51,7 +52,7 @@ function make
     mContextFrameStack.topFrame().referenceType());
 
   const recWrappedBodyFtype = memoize(() => {
-    const compositeFunctionType = defBuild.functionType();
+    const compositeFunctionType = mDefBuild.functionType();
     if (!compositeFunctionType)
       { return undefined; }
 
@@ -74,16 +75,12 @@ function make
       { return undefined; }
     
     return freeze({
-      emit(_0: FunctionType,
-       _1: FunctionType,
-       _2: CodeWriter): void
-      {
-        raise('uh oh');
-      },
+      emit(_0: FunctionType, _1: FunctionType, _2: CodeWriter): void
+        { raise('uh oh'); },
       uid: memoize(Symbol),
       // this is essentially a literal...
       receiver: emptyTuple,
-      parameters: emptyTuple,
+      // parameters: emptyTuple,
       returns: indexRepresentation().functionIndexType,
       simpleEmit(writer: CodeWriter) {
         writer.pushIndexOfRegistered(recWrappedBodyFtype()!);
