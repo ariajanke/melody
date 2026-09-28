@@ -33,6 +33,7 @@ const { freeze, memoize } = Helpers;
 
 export interface ObjectTypeBuild {
   objectType(): ObjectType | undefined;
+  objectTypes(): Readonly<ObjectType[]> | undefined;
   error(): StandardErrorMessage;
 };
 
@@ -52,11 +53,12 @@ function defaultNodeEvaluation(node: AstNode): ObjectTypeBuild {
   // we accept identifiers: "Integer", "Tuple"
   // we accept tuples within calls by name of "Tuple"
   // this will be eventually be replaced with "immediates"
+  type ResultType = ObjectType | Readonly<ObjectType[]> | undefined;
   const { setErrorFn, setErrorMessage, error } = StandardError.make();
-  function visitLiteral(_0: Token, _1: AstLiteralType): ObjectType | undefined {
+  function visitLiteral(_0: Token, _1: AstLiteralType): ResultType {
     return setErrorMessage('Cannot use a literal inside a type expression');
   }
-  function visitFringe(token: Token): ObjectType | undefined {
+  function visitFringe(token: Token): ResultType {
     const name = token.content();
     if (name === 'Integer') {
       return IntegerType.instance();
@@ -65,28 +67,36 @@ function defaultNodeEvaluation(node: AstNode): ObjectTypeBuild {
     return setErrorMessage(`Unrecognized type name "${name}"`);
   }
 
-  function visitTuple(nodes: Readonly<AstNode[]>): ObjectType | undefined {
-
+  function visitTuple(nodes: Readonly<AstNode[]>): ResultType {
+    const results = nodes.map((node: AstNode) => node.visit(mVisitor));
+    const anyNotSingular = results.some((res: ResultType) => res === undefined || ('length' in res) );
+    const firstNonMatch = results.findIndex((res: ResultType) =>
+      res === undefined || ('length' in res));
+    if (firstNonMatch === -1) {
+      return results as Readonly<ObjectType[]>;
+      
+    }
+    // if (anyNotSingular)
   }
   function visitInitializer(
-    nameExpression: AstNameExpression,
-    group: AstInitializerType,
-    value: AstNode): ObjectType | undefined
+    _0: AstNameExpression,
+    _1: AstInitializerType,
+    _2: AstNode): ResultType
   {
-    ;
+    raise('initializer within a name expression?!');
   }
-  function visitCall(callName: Token, receiver: AstNode, args: AstNode): ObjectType | undefined {
-
+  function visitCall(callName: Token, receiver: AstNode, args: AstNode): ResultType {
+    callName.content();
   }
   function visitFunctionDefinition(
     uid: number,
     parameters: Readonly<AstNameExpression[]>,
-    nodes: Readonly<AstNode[]>): ObjectType | undefined
+    nodes: Readonly<AstNode[]>): ResultType
   {
 
   }
 
-  const mVisitor: AstVisitor<ObjectType | undefined> = freeze({
+  const mVisitor: AstVisitor<ResultType> = freeze({
     visitLiteral,
     visitFringe,
     visitTuple,
