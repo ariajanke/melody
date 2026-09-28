@@ -34,18 +34,18 @@ export type NameSet = Readonly<WritableNameSet>;
 
 export type NameDeclaration = Readonly<{
   names: Readonly<string[]>;
-  type: AstInitializerType;
-  value: AstNode;
+  type : AstInitializerType;
 }>;
 
 export type ChildFunctionDefinition = Readonly<{
-  nodes: Readonly<AstNode[]>;
-  uid  : number;
+  nodes     : Readonly<AstNode[]>;
+  parameters: Readonly<AstNameExpression[]>;
+  uid       : number;
 }>;
 
 export interface DeclarationNamesRetrieval {
-  declarations(): Readonly<NameDeclaration[]>;
-  usedNames(): NameSet;
+  declarations    (): Readonly<NameDeclaration[]>;
+  usedNames       (): NameSet;
   childDefinitions(): Readonly<ChildFunctionDefinition[]>;
 };
 
@@ -55,8 +55,25 @@ const { kContextName, mapToFringeAccessor } = FunctionNamingSchema;
 
 const tokenToString = (token: Token) => token.content();
 
+function appendNameExpression
+  (collection: NameDeclaration[],
+   type: AstInitializerType,
+   expr: AstNameExpression): NameDeclaration[]
+{
+  collection.push(freeze({
+    names: expr.names.map(tokenToString),
+    type
+  }));
+  return collection;
+}
+
+function appendNameExpressionAsConstant
+  (collection: NameDeclaration[], expr: AstNameExpression): NameDeclaration[]
+{ return appendNameExpression(collection, '=', expr); }
+
 function make
-  (mDefNodes: Readonly<AstNode[]>): DeclarationNamesRetrieval
+  (mParameters: Readonly<AstNameExpression[]>,
+   mDefNodes: Readonly<AstNode[]>): DeclarationNamesRetrieval
 {
   const mDeclarations: NameDeclaration[] = [];
   const mUsedNames: WritableNameSet = {};
@@ -65,8 +82,12 @@ function make
   const recurse = (node: AstNode) => node.visit(mVisitor);
   const mVisitor: AstVisitor<void> = freeze({
     visitLiteral,
-    visitFunctionDefinition(uid: number, nodes: Readonly<AstNode[]>): void {
-      mChildDefs.push(freeze({ nodes, uid }));
+    visitFunctionDefinition(
+      uid: number,
+      parameters: Readonly<AstNameExpression[]>,
+      nodes: Readonly<AstNode[]>): void
+    {
+      mChildDefs.push(freeze({ nodes, parameters, uid }));
       // NOTE do not recur!
     },
     visitFringe(token: Token): void {
@@ -83,11 +104,7 @@ function make
       type: AstInitializerType,
       value: AstNode): void
     {
-      mDeclarations.push(freeze({
-        names: nameExpression.names.map(tokenToString),
-        type,
-        value
-      }));
+      appendNameExpression(mDeclarations, type, nameExpression);
       recurse(value);
     },
     visitCall(
@@ -110,13 +127,18 @@ function make
     return mDefNodes;
   });
 
+  const declarations = memoize((): Readonly<NameDeclaration[]> => {
+    visitedDefNodes(); // NOTE mutates mDeclarations
+    mParameters.reduce(appendNameExpressionAsConstant, mDeclarations)
+    return mDeclarations;
+  });
+
   return freeze({
     usedNames: (): NameSet =>
       visitedDefNodes() && mUsedNames,
     childDefinitions: (): Readonly<ChildFunctionDefinition[]> =>
       visitedDefNodes() && mChildDefs,
-    declarations: (): Readonly<NameDeclaration[]> =>
-      visitedDefNodes() && mDeclarations
+    declarations
   });
 }
 

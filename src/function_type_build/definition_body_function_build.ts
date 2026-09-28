@@ -20,15 +20,16 @@ import { Helpers, StandardError } from '../helpers';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { ContextFrameSnapshot, WritableContextFrameStack } from './context_frame_stack';
 import { ContextDeclarationBuild, ContextLinkStage } from './context_build';
-import { CachingContextProgression } from './caching_context_progression';
 import { ContextualizedBodyFunctionBuild } from './contextualized_body_function_build';
 import { AstNode } from '../ast_node';
 import { ContextBaseNamesSet } from './context_base_names_set';
+import { ParametersTypeRetrieval } from './parameters_type_build';
 
 const { freeze, memoize } = Helpers;
 
 function make
   (mUid: number,
+   mParameterTypes: ParametersTypeRetrieval,
    mNodes: Readonly<AstNode[]>,
    mStackFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild
@@ -39,19 +40,13 @@ function make
     ContextBaseNamesSet.instance().ensure(mUid));
 
   const namesRetrieval = memoize(() =>
-    ContextBaseNamesSet.instance().contextNamesFor(mUid, mNodes));
+    ContextBaseNamesSet.instance().contextNamesFor(mUid, mParameterTypes.asNameExpressions(), mNodes));
 
   const linkStage = memoize((): ContextLinkStage =>
     baseStage().contextLinkStage( namesRetrieval().pendingNames(), mStackFrameStack ));
 
   const fullContextBuild = memoize((): ContextDeclarationBuild =>
-    linkStage().next(namesRetrieval().declarations(), contextTypeProgression()));
-
-  const contextTypeProgression = memoize(() => CachingContextProgression.
-    make(mStackFrameStack,
-         linkStage().receiverResolution(),
-         baseStage().referenceType().name()
-     ));
+    linkStage().next(namesRetrieval().declarations()));
 
   const aggregateType = () => fullContextBuild()?.aggregateType();
 
@@ -60,9 +55,13 @@ function make
     if (!referenceType()) {
       return setErrorFn(fullContextBuild().error);
     }
+    const mCache: { [astNodeUid: number]: FunctionTypeBuild | undefined } = {};
 
     return freeze({
-      ...contextTypeProgression().baseFrameEntry(),
+      receiverResolution: linkStage().receiverResolution,
+      uniqueName: baseStage().referenceType().name,
+      intoBuildFor: (node: AstNode) =>
+        mCache[node.uid()] ?? mStackFrameStack.intoBuildFunction()(node),
       referenceType: () => referenceType()!
     });
   });

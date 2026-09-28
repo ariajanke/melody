@@ -28,7 +28,7 @@ const { freeze, memoize } = Helpers;
 
 export interface FunctionIndexType {
   functionIndexType(): ObjectType;
-  representativeFunctionType(): FunctionType;
+  // representativeFunctionType(): FunctionType;
 };
 
 const sInsts: { [parentUid: symbol]: FunctionIndexType | undefined } = {};
@@ -64,7 +64,7 @@ function makeNew(parent: ObjectType): FunctionIndexType {
 
   return freeze({
     functionIndexType,
-    representativeFunctionType
+    // representativeFunctionType
   });
 }
 

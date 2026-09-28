@@ -19,7 +19,7 @@
 import { Helpers, raise } from '../helpers';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { ContextBaseStage } from './context_build';
-import { AstNode } from '../ast_node';
+import { AstNameExpression, AstNode } from '../ast_node';
 import { PendingNamesRetrieval } from './context_base_names_set/pending_names_retrieval';
 import {
   ChildFunctionDefinition,
@@ -58,7 +58,9 @@ const ContextNamesRetrieval = freeze({
 
 export interface ContextBaseNamesSet {
   ensure(uid: number): ContextBaseStage;
-  contextNamesFor(uid: number, nodes: Readonly<AstNode[]>): ContextNamesRetrieval;
+  contextNamesFor(
+    uid: number, parameters: Readonly<AstNameExpression[]>, nodes: Readonly<AstNode[]>)
+    : ContextNamesRetrieval;
 };
 
 function addToCache<T>(cache: CacheFor<T>, uid: number, obj: T): T {
@@ -86,12 +88,13 @@ function make
   }
 
   function addNewNamesRetrievalForChild(cdef: ChildFunctionDefinition)
-    { addNewNamesRetrieval(cdef.uid, cdef.nodes); }
+    { addNewNamesRetrieval(cdef.uid, cdef.parameters, cdef.nodes); }
 
   function addNewNamesRetrieval
-    (uid: number, nodes: Readonly<AstNode[]>): ContextNamesRetrieval
+    (uid: number, parameters: Readonly<AstNameExpression[]>, nodes: Readonly<AstNode[]>)
+    : ContextNamesRetrieval
   {
-    const declRetr = DeclarationNamesRetrieval.make(nodes);
+    const declRetr = DeclarationNamesRetrieval.make(parameters, nodes);
     
     // NOTE eagerly add children, otherwise pendingNamesFor could raise
     declRetr.childDefinitions().forEach(addNewNamesRetrievalForChild);
@@ -105,11 +108,14 @@ function make
     return addToCache(mCCache, uid, ContextNamesRetrieval.make(pendingNames, declRetr));
   }
 
-  function contextNamesFor(uid: number, nodes: Readonly<AstNode[]>): ContextNamesRetrieval {
+  function contextNamesFor
+    (uid: number, parameters: Readonly<AstNameExpression[]>, nodes: Readonly<AstNode[]>)
+    : ContextNamesRetrieval
+  {
     if (mCCache[uid])
       { return mCCache[uid]; }
 
-    return addNewNamesRetrieval(uid, nodes);
+    return addNewNamesRetrieval(uid, parameters, nodes);
   }
 
   return freeze({
