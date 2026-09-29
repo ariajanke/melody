@@ -36,14 +36,17 @@ const makeCall =
 
 function makeFunctionDefinition(...nodes: Readonly<(string | AstNode)[]>): AstNode {
   return AstNode.forAstFunctionDefinitionBuild.
-    makeFunctionDefinition(nodes.map(ensureFringe));
+    makeFunctionDefinition([], nodes.map(ensureFringe));
 }
 
 function makeInitializer
   (names: Readonly<string[]>, group: AstInitializerType, value: AstNode): AstNode
 {
   return AstNode.forOperatorStripping.
-    makeInitializer(names.map(makeToken), group, value);
+    makeInitializer(freeze({
+      names: names.map(makeToken),
+      type: emptyTupleInstance(),
+    }), group, value);
 }
 
 export const AstFactories = freeze({

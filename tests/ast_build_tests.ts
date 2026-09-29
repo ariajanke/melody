@@ -18,7 +18,7 @@
 
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token, TokenType } from '../src/token';
-import { AstLiteralType, AstNode, AstInitializerType } from '../src/ast_node';
+import { AstLiteralType, AstNode, AstInitializerType, AstNameExpression } from '../src/ast_node';
 import { TokenFactories } from './token_factories';
 import { ReseatableAstVisitor } from './ast_visitor_factories';
 import { AstBuild } from '../src/ast_build';
@@ -140,12 +140,12 @@ describeNamed({ AstBuild }, () => {
       const [pt1] = points();
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer(names: Readonly<Token[]>,
+        visitInitializer(nameExpression: AstNameExpression,
                          type: AstInitializerType,
                          innerNode: AstNode): void
         {
           pt1.hitsAtExactly(1);
-          expect(names.map(t => t.content())).toEqual(['a']);
+          expect(AstHelpers.namesFrom(nameExpression)).toEqual(['a']);
           expect(type).toEqual(':=');
           innerNode.visit(visitor);
         }
@@ -163,11 +163,11 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer(names: Readonly<Token[]>,
+        visitInitializer(nameExpression: AstNameExpression,
                          _1: AstInitializerType,
                          innerNode: AstNode): void
         {
-          expect(names.map(t => t.content())).toEqual(['a']);
+          expect(AstHelpers.namesFrom(nameExpression)).toEqual(['a']);
           innerNode.visit(visitor);
         },
         visitCall(callName: Token, receiver: AstNode, args: AstNode): void {
@@ -257,12 +257,12 @@ describeNamed({ AstBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer(names: Readonly<Token[]>,
+        visitInitializer(nameExpression: AstNameExpression,
                          group: AstInitializerType,
                          value: AstNode): void
         {
           hitsAtExactly(1);
-          expect(names.map(t => t.content())).toEqual(['a']);
+          expect(AstHelpers.namesFrom(nameExpression)).toEqual(['a']);
           expect(group).toEqual(':=');
           value.visit(visitor);
         }
@@ -395,12 +395,12 @@ describeNamed({ AstBuild }, () => {
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
         visitInitializer
-          (names: Readonly<Token[]>,
+          (expr: AstNameExpression,
            _1: AstInitializerType,
            innerNode: AstNode): void
         {
           hitsAtExactly(1);
-          expect(names.map(t => t.content())).toEqual(['a']);
+          expect(expr.names.map(t => t.content())).toEqual(['a']);
           innerNode.visit(visitor);
         }
       });
@@ -414,7 +414,7 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitFunctionDefinition(_0: number, _1: Readonly<AstNode[]>): void {
+        visitFunctionDefinition(_0: number, _1: Readonly<AstNameExpression[]>, _2: Readonly<AstNode[]>): void {
           hitsAtExactly(1);
         }
       });
@@ -460,7 +460,11 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitFunctionDefinition(_0: number, nodes: Readonly<AstNode[]>): void {
+        visitFunctionDefinition(
+          _0: number,
+          _1: Readonly<AstNameExpression[]>,
+          nodes: Readonly<AstNode[]>): void
+        {
           hitsAtExactly(3); // including root
           nodes.forEach(node => node.visit(visitor));
         }

@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AstNode, AstInitializerType } from '../src/ast_node';
+import { AstNode, AstInitializerType, AstNameExpression } from '../src/ast_node';
 import { ReseatableAstVisitor } from './ast_visitor_factories';
 import { Token } from '../src/token';
 import { Helpers } from '../src/helpers';
@@ -25,6 +25,12 @@ const { freeze } = Helpers;
 
 const makeVisitor = ReseatableAstVisitor.makeSelfModified;
 const makeDefaultVisitor = ReseatableAstVisitor.makeDefaultingToContinue;
+
+const tokenToString = (t: Token) => t.content();
+
+function namesFrom(nameExpression: AstNameExpression): Readonly<string[]> {
+  return nameExpression.names.map(tokenToString);
+}
 
 function identifiersFromNode(node: () => AstNode | undefined): string[] {
   const strings: string[] = [];
@@ -44,7 +50,7 @@ function callsFromNode(node: () => AstNode | undefined): string[] {
   const visitor = makeVisitor({
     ...makeDefaultVisitor(),
     visitInitializer(
-      _0: Readonly<Token[]>,
+      _0: AstNameExpression,
       _1: AstInitializerType,
       innerNode: AstNode)
     {
@@ -64,5 +70,6 @@ function callsFromNode(node: () => AstNode | undefined): string[] {
 
 export const AstHelpers = freeze({
   identifiersFromInst: identifiersFromNode,
-  callsFromInst: callsFromNode
+  callsFromInst: callsFromNode,
+  namesFrom
 });

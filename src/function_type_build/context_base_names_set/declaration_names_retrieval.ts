@@ -33,8 +33,11 @@ export type WritableNameSet = { [name: string]: true };
 export type NameSet = Readonly<WritableNameSet>;
 
 export type NameDeclaration = Readonly<{
-  names: Readonly<string[]>;
-  type : AstInitializerType;
+  names    : Readonly<string[]>;
+  qualifier: AstInitializerType;
+
+  value?: AstNode;
+  type? : AstNode;
 }>;
 
 export type ChildFunctionDefinition = Readonly<{
@@ -57,12 +60,13 @@ const tokenToString = (token: Token) => token.content();
 
 function appendNameExpression
   (collection: NameDeclaration[],
-   type: AstInitializerType,
+   qualifier: AstInitializerType,
    expr: AstNameExpression): NameDeclaration[]
 {
   collection.push(freeze({
     names: expr.names.map(tokenToString),
-    type
+    qualifier,
+    type: expr.type
   }));
   return collection;
 }
@@ -100,11 +104,15 @@ function make
       nodes.forEach(recurse);
     },
     visitInitializer(
-      nameExpression: AstNameExpression,
-      type: AstInitializerType,
+      expr: AstNameExpression,
+      qualifier: AstInitializerType,
       value: AstNode): void
     {
-      appendNameExpression(mDeclarations, type, nameExpression);
+      mDeclarations.push(({
+        names: expr.names.map(tokenToString),
+        qualifier,
+        value
+      }));
       recurse(value);
     },
     visitCall(
@@ -129,6 +137,7 @@ function make
 
   const declarations = memoize((): Readonly<NameDeclaration[]> => {
     visitedDefNodes(); // NOTE mutates mDeclarations
+    
     mParameters.reduce(appendNameExpressionAsConstant, mDeclarations)
     return mDeclarations;
   });

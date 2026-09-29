@@ -26,6 +26,7 @@ import { InitialSetVariables, OrderedInitialSetsCollection } from './ordered_ini
 import { ProgressiveVariableAllocation, VariableAllocation } from './variable_allocation';
 import { WritableObjectType } from './writable_object_type';
 import { NodeTypeInference } from '../node_type_inference';
+import { NodeTypeEvaluation } from '../node_type_evaluation';
 
 const { freeze, memoize } = Helpers;
 
@@ -35,18 +36,18 @@ export interface ContextDeclarationBuild_ {
   error(): StandardErrorMessage;
 };
 
+type RefAllocPair =
+  {
+    reference: WritableObjectType;
+    allocation: ProgressiveVariableAllocation;
+  } | undefined;
+
 function make
   (mVariableAllocation: ProgressiveVariableAllocation,
    mDeclarations: Readonly<NameDeclaration[]>,
    mWritableReferenceType: WritableObjectType)
 : ContextDeclarationBuild_
 {
-  type RefAllocPair =
-    {
-      reference: WritableObjectType;
-      allocation: ProgressiveVariableAllocation;
-    } | undefined;
-
   const toFunctionTable = MutableFunctionTable.fromFunctionType;
 
   const { orderedInitialSets, variableNameMap } = OrderedInitialSetsCollection.
@@ -107,16 +108,33 @@ function make
 
   const mNodeTypeInference = NodeTypeInference.make();
 
+  function initialSetTypeOf
+    (ctxRef: ObjectType,
+     varInfo: Readonly<InitialSetVariables>): ObjectType | undefined
+  {
+    const { valueNode, typeNode } = varInfo;
+    if (valueNode) {
+      const trt = mNodeTypeInference.useFor(ctxRef).representationFor(valueNode);
+      return trt.resultantType() ?? setErrorFn(trt.error);
+    }
+
+    if (typeNode) {
+      const { objectType, error } = NodeTypeEvaluation.make(typeNode);
+      return objectType() ?? setErrorFn(error);
+    }
+
+    return setErrorMessage(`Context method set "${varInfo.name}" must have a value or type`);
+  }
+
   const transformedReferenceAndAllocations = memoize(() =>
     orderedInitialSets().
     reduce((pair: RefAllocPair, v: Readonly<InitialSetVariables>) => {
       if (!pair)
         { return pair; }
 
-      const trt = mNodeTypeInference.useFor(pair.reference).representationFor(v.valueNode);
-      const initialSetType = trt.resultantType();
+      const initialSetType = initialSetTypeOf(pair.reference, v);
       if (!initialSetType)
-        { return setErrorFn(trt.error); }
+        { return undefined; }
 
       pair.allocation = addVariablesFor(mVariableAllocation, v.variableNames, initialSetType);
       pair.reference = addAttributesToReference(mWritableReferenceType, v, pair.allocation);
@@ -149,7 +167,7 @@ function make
     });
   });
 
-  const { error, setErrorFn } = StandardError.make();
+  const { error, setErrorFn, setErrorMessage } = StandardError.make();
 
   return freeze({ referenceType, aggregateType, error });
 }

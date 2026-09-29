@@ -26,7 +26,8 @@ const { freeze, memoize } = Helpers;
 export interface InitialSetVariables {
   name: string;
   variableNames: Readonly<string[]>;
-  valueNode: AstNode;
+  valueNode?: AstNode;
+  typeNode?: AstNode;
 };
 
 interface WritableVariableNameFunctions {
@@ -56,7 +57,7 @@ function make
         const tupleRank = declLen > 1 ? jdx : undefined;
         const vname = decl.names[jdx];
         const accessorName = FunctionNamingSchema.mapToFringeAccessor(vname);
-        const modifierName = decl.type === ':=' ?
+        const modifierName = decl.qualifier === ':=' ?
           FunctionNamingSchema.mapToAssignment(vname) :
           undefined;
         map[vname] = freeze({
@@ -74,7 +75,8 @@ function make
       freeze({
         name: FunctionNamingSchema.mapToInitialSetName(decl.names),
         variableNames: decl.names,
-        valueNode: decl.value
+        valueNode: decl.value,
+        typeNode: decl.type
       })));
 
   return freeze({ orderedInitialSets, variableNameMap });

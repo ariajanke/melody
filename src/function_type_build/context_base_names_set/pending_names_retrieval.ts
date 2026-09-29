@@ -61,7 +61,7 @@ function make
           res.push(name);
         }
         res.push(mapToFringeAccessor(name));
-        if (v.type === ':=') {
+        if (v.qualifier === ':=') {
           res.push(mapToAssignment(name));
         }
         return res;

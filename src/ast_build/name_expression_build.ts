@@ -74,6 +74,24 @@ export interface NameExpressionBuild {
   error(): StandardErrorMessage;
 };
 
+function visitFringe(token: Token): AstNameExpression {
+  return freeze({
+    names: [token],
+    type: AstNode.forOperatorStripping.emptyTupleInstance()
+  });
+}
+
+function visitTuple(nodes: Readonly<AstNode[]>): AstNameExpression | undefined {
+  const tokens = topLevelForTokens().visitTuple(nodes)
+  if (tokens === undefined)
+    { return tokens; }
+
+  return freeze({
+    names: tokens,
+    type: AstNode.forOperatorStripping.emptyTupleInstance()
+  });
+}
+
 function make(mNode: AstNode): NameExpressionBuild {
   const { error, setErrorMessage } = StandardError.make();
 
@@ -94,11 +112,13 @@ function make(mNode: AstNode): NameExpressionBuild {
 
   const visitor = ((): AstVisitor<AstNameExpression | undefined> => freeze({
     ...visitToUndefined(),
+    visitFringe,
+    visitTuple,
     visitCall: withCall
   }));
 
   const nameExpression = memoize((): AstNameExpression | undefined =>
-    mNode.visit(visitor()));
+    mNode.visit(visitor()) ?? setErrorMessage(`not a valid name expression`));
 
   return freeze({ nameExpression, error });
 }

@@ -121,6 +121,13 @@ export interface CodeWriter {
   pushLiteralString(str: string): CodeWriter;
 
   /// --- stack ops parts ---
+
+  /// Pushes a parameter item onto the stack, type depends on how the function
+  /// was defined.
+  /// Indices must be within [0 n), where n is the parameter type's size in
+  /// stack items.
+  /// Stack Effect: [] -> [parameter_{idx}]
+  getParameter(idx: number): CodeWriter;
   
   /// Discards the top of the stack
   /// Stack Effect: [any] -> []

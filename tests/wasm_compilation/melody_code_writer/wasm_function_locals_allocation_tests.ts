@@ -1,5 +1,29 @@
-// TODO TESTS
-//
-// Essentially check and make sure unnecessary locals are not added
-//
-// unit here, and integration up?
+/* Melody WASM Compiler
+ *
+ * Copyright (C) 2026 Aria Janke
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+import { Helpers } from '../../../src/helpers';
+import { WasmFunctionLocalAllocation } from '../../../src/wasm_compilation/melody_code_writer/wasm_function_locals_allocation';
+import { TestHelpers } from '../../test_helpers';
+
+const { describeNamed } = TestHelpers;
+
+describeNamed({ WasmFunctionLocalAllocation }, () => {
+  it('reserves an index for receiver', fail);
+  it('reserves an index for parameter', fail);
+  it('reserves indices for receiver + parameters', fail);
+});

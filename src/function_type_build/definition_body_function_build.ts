@@ -46,7 +46,9 @@ function make
     baseStage().contextLinkStage( namesRetrieval().pendingNames(), mStackFrameStack ));
 
   const fullContextBuild = memoize((): ContextDeclarationBuild =>
-    linkStage().next(namesRetrieval().declarations()));
+    linkStage().
+    next(mParameterTypes).
+    next(namesRetrieval().declarations()));
 
   const aggregateType = () => fullContextBuild()?.aggregateType();
 
@@ -56,12 +58,12 @@ function make
       return setErrorFn(fullContextBuild().error);
     }
     const mCache: { [astNodeUid: number]: FunctionTypeBuild | undefined } = {};
-
+    const intoFb = mStackFrameStack.intoBuildFunction();
     return freeze({
       receiverResolution: linkStage().receiverResolution,
       uniqueName: baseStage().referenceType().name,
       intoBuildFor: (node: AstNode) =>
-        mCache[node.uid()] ?? mStackFrameStack.intoBuildFunction()(node),
+        mCache[node.uid()] ?? intoFb(node),
       referenceType: () => referenceType()!
     });
   });

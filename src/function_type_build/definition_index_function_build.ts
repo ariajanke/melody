@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FunctionType, FunctionTypeBuild, ObjectType } from '../function_type_build';
+import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { Helpers, raise, StandardError } from '../helpers';
 import { FunctionTypeBase } from './function_type_base';
 import { CodeWriter } from '../code_writer';
@@ -37,32 +37,42 @@ function make
    mFunctionRegistry: FunctionDefinitionRegistry,
    mContextFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild
-{
-  const mParameterTypes = ParametersTypeBuild.make(mParameters);
-  const mDefBuild = DefinitionBodyFunctionBuild.
-    make(mUid, mParameterTypes, mNodes, mContextFrameStack);
+{  
+  const mCurrentDepth = mContextFrameStack.depth();
+
   const { error, setErrorFn } = StandardError.make();
   const { registerDefinitionBody } = mFunctionRegistry;
   const { emptyTuple } = TupleObjectType;
 
-  const mCurrentDepth = mContextFrameStack.depth();
+  const parameterRetrieval = memoize((): ParametersTypeRetrieval | undefined => {
+    const { retrieval, error } = ParametersTypeBuild.make(mParameters);
+    return retrieval() ?? setErrorFn(error);
+  });
+
+  const definitionFtype = memoize((): FunctionType | undefined => {
+    if (!parameterRetrieval())
+      { return undefined; }
+
+    const defBuild = DefinitionBodyFunctionBuild.
+      make(mUid, parameterRetrieval()!, mNodes, mContextFrameStack);
+    return defBuild.functionType() ?? setErrorFn(defBuild.error);
+  });
 
   const parentType = memoize(() =>
     mCurrentDepth === 0 ?
     emptyTuple() : 
     mContextFrameStack.topFrame().referenceType());
 
-  const recWrappedBodyFtype = memoize(() => {
-    const compositeFunctionType = mDefBuild.functionType();
-    if (!compositeFunctionType)
-      { return setErrorFn(mDefBuild.error); }
+  const recWrappedBodyFtype = memoize((): FunctionType | undefined => {
+    if (!definitionFtype())
+      { return undefined; }
 
-    // evaluation deference is this thing's greatest strength and weakness
+    // NOTE concerns with the stack mutating
     parentType();
     const ftype = freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       receiver: parentType,
-      simpleEmit: compositeFunctionType.simpleEmit
+      simpleEmit: definitionFtype()!.simpleEmit
     });
 
     registerDefinitionBody(ftype, mCurrentDepth);
@@ -72,21 +82,16 @@ function make
   const indexRepresentation = (() => FunctionIndexType.of(parentType()));
 
   const functionType = memoize((): FunctionType | undefined => {
-    if (!recWrappedBodyFtype())
+    if (!recWrappedBodyFtype() || !parameterRetrieval())
       { return undefined; }
 
-    if (!mParameterTypes.asType())
-      { return setErrorFn(mParameterTypes.error); }
-
-    const parameters = mParameterTypes.asType as () => ObjectType;
-    
     return freeze({
       emit(_0: FunctionType, _1: FunctionType, _2: CodeWriter): void
         { raise('uh oh'); },
       uid: memoize(Symbol),
       // this is essentially a literal...
       receiver: emptyTuple,
-      parameters,
+      parameters: parameterRetrieval()!.asType,
       returns: indexRepresentation().functionIndexType,
       simpleEmit(writer: CodeWriter) {
         writer.pushIndexOfRegistered(recWrappedBodyFtype()!);

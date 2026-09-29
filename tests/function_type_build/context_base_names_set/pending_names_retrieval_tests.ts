@@ -35,14 +35,14 @@ const { describeNamed } = TestHelpers;
 
 describeNamed({ PendingNamesRetrieval }, () => {
   const aNode = memoize((): AstNode => AstFactories.makeFringe('a'));
-  const makeDecl = (names: Readonly<string[]>, type: AstInitializerType): NameDeclaration =>
-    freeze({ names, type, value: aNode() });
+  const makeDecl = (names: Readonly<string[]>, qualifier: AstInitializerType): NameDeclaration =>
+    freeze({ names, qualifier, value: aNode() });
   const makeUsedNames = (names: Readonly<string[]>): () => NameSet =>
     memoize((): NameSet => names.
       reduce(PendingNamesRetrieval.accumulateNames, {} as WritableNameSet));
   const makeChildDefs = (uids: Readonly<number[]>): () => Readonly<ChildFunctionDefinition[]> =>
     memoize((): Readonly<ChildFunctionDefinition[]> =>
-      uids.map((uid: number) => freeze({ uid, nodes: [] })));
+      uids.map((uid: number) => freeze({ uid, nodes: [], parameters: [] })));
   const kDefaultDecls: DeclarationNamesRetrieval = freeze({
     declarations: memoize((): Readonly<NameDeclaration[]> => []),
     usedNames: memoize((): NameSet => ({})),

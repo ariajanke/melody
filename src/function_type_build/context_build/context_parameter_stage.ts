@@ -16,31 +16,62 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { FunctionNamingSchema } from '../../function_naming_schema';
 import { ObjectType } from '../../function_type_build';
 import { Helpers } from '../../helpers';
+import { FunctionTypeBase } from '../function_type_base';
 import { ParametersTypeRetrieval } from '../parameters_type_build';
 import { WritableObjectType } from './writable_object_type';
+import { CodeWriter } from '../../code_writer';
+import { MutableFunctionTable } from '../mutable_function_table';
+import { ContextDeclarationBuild_ } from './context_declaration_build';
+import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
+import { ProgressiveVariableAllocation } from './variable_allocation';
 
 const { freeze, memoize } = Helpers;
 
-interface ContextParameterStage_ {
-
-  
+export interface ContextParameterStage_ {
+  next(declarations: Readonly<NameDeclaration[]>): ContextDeclarationBuild_;
 };
 
 function make
   (mIncompleteContextType: WritableObjectType,
-   mParametersRetrieval: ParametersTypeRetrieval): ContextParameterStage_
+   mParametersRetrieval: ParametersTypeRetrieval,
+   mVariableAllocation: ProgressiveVariableAllocation): ContextParameterStage_
 {
+  let mLocalIdx = 0;
   function nextContextType
     (incompleteContextType: WritableObjectType,
-     [name, parameterType]: [string, ObjectType],
-     index: number): WritableObjectType
+     [name, parameterType]: [string, ObjectType]): WritableObjectType
   {
-    // uh oh, we have a dependancy here to fix up for emissions
+    const localIdxStart = mLocalIdx;
+    const localIdxEnd   = localIdxStart + parameterType.sizeInStackItems();
+    const getter = freeze({
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      returns: () => parameterType,
+      simpleEmit(writer: CodeWriter) {
+        for (let i = localIdxStart; i < localIdxEnd; ++i) {
+          writer.getParameter(i);
+        }
+      }
+    });
+    const lookUpTbl = MutableFunctionTable.fromFunctionType(getter);
+    return incompleteContextType.
+      setFunctionLookUp(FunctionNamingSchema.mapToFringeAccessor(name),
+                        lookUpTbl);
   }
 
-  mParametersRetrieval.orderedNameTypePairs().reduce((), mIncompleteContextType);
+  const writableReferenceType = memoize((): WritableObjectType =>
+    mParametersRetrieval.
+    orderedNameTypePairs().
+    reduce(nextContextType, mIncompleteContextType));
+
+  function next(declarations: Readonly<NameDeclaration[]>): ContextDeclarationBuild_ {
+    return ContextDeclarationBuild_.
+      make(mVariableAllocation, declarations, writableReferenceType());
+  }
+
+  return freeze({ next });
 }
 
-const ContextParameterStage_ = freeze({ make });
+export const ContextParameterStage_ = freeze({ make });

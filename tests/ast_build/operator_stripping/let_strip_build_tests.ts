@@ -19,8 +19,7 @@
 import { Helpers } from '../../../src/helpers';
 import { LetStripBuild } from '../../../src/ast_build/operator_stripping/let_strip_build';
 import { StripBuild } from '../../../src/ast_build/operator_stripping/strip_build';
-import { AstNode, AstInitializerType } from '../../../src/ast_node';
-import { Token } from '../../../src/token';
+import { AstNode, AstInitializerType, AstNameExpression } from '../../../src/ast_node';
 import { AstFactories } from '../../ast_factories';
 import { ReseatableAstVisitor } from '../../ast_visitor_factories';
 import { TestHelpers } from '../../test_helpers';
@@ -73,11 +72,11 @@ describeNamed({ LetStripBuild }, () => {
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
         visitInitializer(
-          names_: Readonly<Token[]>,
+          expr: AstNameExpression,
           group_: AstInitializerType,
           _2: AstNode)
         {
-          names.push(...names_.map(t => t.content()));
+          names.push(...expr.names.map(t => t.content()));
           group = group_;
         }
       });
@@ -100,7 +99,7 @@ describeNamed({ LetStripBuild }, () => {
   describe('on "let \'beans\'" = ...', () => {
     const inst = makeInst(recurseOn, makeCall('=', makeFringe(`'beans'`), makeFringe('1')) );
 
-    hasError(inst, 'invalid name set');
+    hasError(inst, 'not a valid name expression');
   });
 
   describe('on "let a + b"', () => {
