@@ -18,7 +18,7 @@
 
 import { ReachPoint, TestHelpers } from './test_helpers';
 import { Token, TokenType } from '../src/token';
-import { AstLiteralType, AstNode, AstInitializerType, AstNameExpression } from '../src/ast_node';
+import { AstInitializerExpression, AstLiteralType, AstNode, AstParameterExpression } from '../src/ast_node';
 import { TokenFactories } from './token_factories';
 import { ReseatableAstVisitor } from './ast_visitor_factories';
 import { AstBuild } from '../src/ast_build';
@@ -140,14 +140,12 @@ describeNamed({ AstBuild }, () => {
       const [pt1] = points();
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer(nameExpression: AstNameExpression,
-                         type: AstInitializerType,
-                         innerNode: AstNode): void
+        visitInitializer(initializer: AstInitializerExpression): void
         {
           pt1.hitsAtExactly(1);
-          expect(AstHelpers.namesFrom(nameExpression)).toEqual(['a']);
-          expect(type).toEqual(':=');
-          innerNode.visit(visitor);
+          expect(AstHelpers.namesFrom(initializer)).toEqual(['a']);
+          expect(initializer.qualifier).toEqual(':=');
+          initializer.valueNode.visit(visitor);
         }
       });
 
@@ -163,12 +161,9 @@ describeNamed({ AstBuild }, () => {
       const foundOperators: string[] = [];
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer(nameExpression: AstNameExpression,
-                         _1: AstInitializerType,
-                         innerNode: AstNode): void
-        {
-          expect(AstHelpers.namesFrom(nameExpression)).toEqual(['a']);
-          innerNode.visit(visitor);
+        visitInitializer(initializer: AstInitializerExpression): void {
+          expect(AstHelpers.namesFrom(initializer)).toEqual(['a']);
+          initializer.valueNode.visit(visitor);
         },
         visitCall(callName: Token, receiver: AstNode, args: AstNode): void {
           foundOperators.push(callName.content());
@@ -257,14 +252,11 @@ describeNamed({ AstBuild }, () => {
       const { hitsAtExactly, verifyHit } = ReachPoint.make();
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer(nameExpression: AstNameExpression,
-                         group: AstInitializerType,
-                         value: AstNode): void
-        {
+        visitInitializer(initializer: AstInitializerExpression): void {
           hitsAtExactly(1);
-          expect(AstHelpers.namesFrom(nameExpression)).toEqual(['a']);
-          expect(group).toEqual(':=');
-          value.visit(visitor);
+          expect(AstHelpers.namesFrom(initializer)).toEqual(['a']);
+          expect(initializer.qualifier).toEqual(':=');
+          initializer.valueNode.visit(visitor);
         }
       });
 
@@ -394,14 +386,10 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer
-          (expr: AstNameExpression,
-           _1: AstInitializerType,
-           innerNode: AstNode): void
-        {
+        visitInitializer(initializer: AstInitializerExpression): void {
           hitsAtExactly(1);
-          expect(expr.names.map(t => t.content())).toEqual(['a']);
-          innerNode.visit(visitor);
+          expect(AstHelpers.namesFrom(initializer)).toEqual(['a']);
+          initializer.valueNode.visit(visitor);
         }
       });
 
@@ -414,7 +402,7 @@ describeNamed({ AstBuild }, () => {
       const rootNode = buildAst();
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitFunctionDefinition(_0: number, _1: Readonly<AstNameExpression[]>, _2: Readonly<AstNode[]>): void {
+        visitFunctionDefinition(_0: number, _1: Readonly<AstParameterExpression[]>, _2: Readonly<AstNode[]>): void {
           hitsAtExactly(1);
         }
       });
@@ -462,7 +450,7 @@ describeNamed({ AstBuild }, () => {
         ...makeDefaultVisitor(),
         visitFunctionDefinition(
           _0: number,
-          _1: Readonly<AstNameExpression[]>,
+          _1: Readonly<AstParameterExpression[]>,
           nodes: Readonly<AstNode[]>): void
         {
           hitsAtExactly(3); // including root
@@ -740,6 +728,56 @@ describeNamed({ AstBuild }, () => {
       const ids = idsFromNode(inst().node);
       expect(calls).toEqual(['+', '.x', '.y']);
       expect(ids).toEqual(['vex2d', 'vex2d']);
+    });
+  });
+
+  describe('function parameters', () => {
+    function makeInstWithParams(params: string[])
+      { return makeInstFromStrings(['fn', '(', ...params, ')', '(', ')', '~']); }
+
+    function parametersAre(params: () => AstParameterExpression[], exNames: string[]) {
+      it(`has parameters named ${exNames.map(n => `"${n}"`).join(', ')}`, () => {
+        const names = AstHelpers.namesFrom(params());
+        expect(names).toEqual(exNames);
+      });
+    }
+
+    function parameterTypeNamesAre
+      (params: () => AstParameterExpression[],
+       exTypeNames: string[])
+    {
+      it(`parameter type is ${exTypeNames.join(', ')}`, () =>
+        expect(params().map(n => n.typeNode.asString())).toEqual(exTypeNames));
+    }
+
+    describe('fn (x is Integer) () ~', () => {
+      const inst = makeInstWithParams(['x', 'is', 'Integer']);
+      const params = memoize(() =>
+        AstHelpers.parametersFromInst(inst().node));
+
+      parametersAre(params, ['x']);
+      parameterTypeNamesAre(params, ['Integer']);
+    });
+
+    describe('fn (t is Tuple(Integer, Integer)) () ~', () => {
+      const inst = makeInstWithParams([
+        't', 'is', 'Tuple', '(', 'Integer', 'Integer', ')'
+      ]);
+      const params = memoize(() =>
+        AstHelpers.parametersFromInst(inst().node));
+
+      parametersAre(params, ['t']);
+    });
+
+    describe('fn (x is Integer, y is Integer) () ~', () => {
+      const inst = makeInstWithParams([
+        'x', 'is', 'Integer', ',', 'y', 'is', 'Integer'
+      ]);
+      const params = memoize(() =>
+        AstHelpers.parametersFromInst(inst().node));
+
+      parametersAre(params, ['x', 'y']);
+      parameterTypeNamesAre(params, ['Integer', 'Integer']);
     });
   });
 });

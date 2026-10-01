@@ -19,7 +19,13 @@
 import { ObjectType } from '../function_type_build';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
 import { TupleObjectType } from './tuple_object_type';
-import { AstInitializerType, AstLiteralType, AstNameExpression, AstNode, AstVisitor } from '../ast_node';
+import {
+  AstInitializerExpression,
+  AstLiteralType,
+  AstNode,
+  AstParameterExpression,
+  AstVisitor
+} from '../ast_node';
 import { Token } from '../token';
 import { IntegerType } from './integer_type';
 
@@ -69,11 +75,8 @@ function make(mNode: AstNode): NodeTypeEvaluation {
 
     return setErrorMessage('cannot mix tuples');
   }
-  function visitInitializer(
-    _0: AstNameExpression,
-    _1: AstInitializerType,
-    _2: AstNode): ResultType
-  {
+
+  function visitInitializer(_0: AstInitializerExpression): ResultType {
     raise('initializer within a name expression?!');
   }
 
@@ -102,7 +105,7 @@ function make(mNode: AstNode): NodeTypeEvaluation {
 
   function visitFunctionDefinition(
     _0: number,
-    _1: Readonly<AstNameExpression[]>,
+    _1: Readonly<AstParameterExpression[]>,
     _2: Readonly<AstNode[]>): ResultType
   {
     return setErrorMessage('a function definition cannot be used as a type');

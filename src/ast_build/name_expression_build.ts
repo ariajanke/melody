@@ -17,16 +17,17 @@
  */
 
 import {
+  AstInitializerExpression,
   AstInitializerQualifier,
   AstLiteralType,
-  AstNameExpression,
   AstNode,
-  AstVisitor,
-  AstNameExpressionValue
+  AstParameterExpression,
+  AstVisitor
 } from '../ast_node';
 import { Helpers, StandardError, StandardErrorMessage, raise } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
+import { OperatorDefinitions } from './operator_definitions';
 
 const { freeze, memoize } = Helpers;
 
@@ -36,129 +37,143 @@ interface WritableNameExpressionValue {
 };
 
 interface WritableNameExpression {
-  names?: Readonly<Token[]>;
+  names: Readonly<Token[]>;
   typeNode?: AstNode;
-  value?: AstNameExpressionValue;
+  value?: WritableNameExpressionValue;
 };
 
-type ResultType = WritableNameExpression | StandardErrorMessage | undefined;
-// iteration hangs to the left
+type ResultType = WritableNameExpression | StandardErrorMessage;
 
-const visitToSomething = memoize((): AstVisitor<ResultType> => freeze({
-  visitLiteral: (_0: Token, _1: AstLiteralType): ResultType =>
-    undefined,
-  visitFringe: (_0: Token): ResultType => undefined,
-  visitTuple: (_0: Readonly<AstNode[]>): ResultType => undefined,
-  visitInitializer: (_0: AstNameExpression): ResultType =>
-    { raise('initializers should not appear in name expression builds') },
+const checkPrecedenceAssumption = memoize((): void => {
+  const { kIs, kAssignment, kEquality } = OperatorNamingSchema;
+  const { binaryMappings } = OperatorDefinitions;
+  const isPrec = binaryMappings()[kIs]?.precedence;
+  const eqPrec = binaryMappings()[kEquality]?.precedence;
+  const assgnPrec = binaryMappings()[kAssignment]?.precedence;
+  if (isPrec === undefined || eqPrec === undefined || assgnPrec === undefined)
+    { raise('operators undefined'); }
+
+  if (isPrec <= eqPrec || isPrec <= assgnPrec) {
+    raise('failed assumption: "is" must be stronger binding than "=" or ":="');
+  }
+});
+
+const visitToStripType = memoize((): AstVisitor<ResultType> => freeze({
+  ...visitToStripNames(),
   visitCall(callName: Token, rec: AstNode, args: AstNode): ResultType {
     const cn = callName.content();
-    if (cn === OperatorNamingSchema.kIs) {
-      ; // args may contain value, args or a part of args maybe the type
-    } else if (cn === OperatorNamingSchema.kAssignment) {
-      ; // args may contain type
-    } else if (cn === OperatorNamingSchema.kEquality) {
-      ; // args may contain type
+    if (cn !== OperatorNamingSchema.kIs) {
+      return ({ message: `cannot use "${cn}" within a name expression` });
     }
-  },
-  visitFunctionDefinition: (_0: number, _1: Readonly<AstNameExpression[]>,_2: Readonly<AstNode[]>): ResultType =>
-    undefined
+
+    const typeNode = args;
+    const gv = rec.visit(visitToStripType());
+    if ('names' in gv) {
+      if (gv.typeNode) {
+        return ({ message: 'already has an "is" operator' });
+      }
+      gv.typeNode = typeNode;
+      return gv;
+    }
+
+    return gv;  
+  }
 }));
 
+const visitToStripValue = memoize((): AstVisitor<ResultType> => freeze({
+  ...visitToStripNames(),
+  visitCall(callName: Token, rec: AstNode, args: AstNode): ResultType {
+    // regular nodes not allowed here
+    const cn = callName.content();
+    if (cn !== OperatorNamingSchema.kAssignment &&
+        cn !== OperatorNamingSchema.kEquality)
+    {
+      return ({ message: `cannot use "${cn}" within a name expression` });
+    }
 
-const visitToUndefined = memoize((): AstVisitor<undefined> => freeze({
-  visitLiteral: (_0: Token, _1: AstLiteralType): undefined =>
-    undefined,
-  visitFringe: (_0: Token): undefined => undefined,
-  visitTuple: (_0: Readonly<AstNode[]>): undefined => undefined,
-  visitInitializer: (_0: AstNameExpression): undefined =>
-    undefined,
-  visitCall: (_0: Token, _1: AstNode, _2: AstNode): undefined =>
-    undefined,
-  visitFunctionDefinition: (_0: number, _1: Readonly<AstNameExpression[]>,_2: Readonly<AstNode[]>): undefined =>
-    undefined
+    const node = args;
+    const gv = rec.visit(visitToStripType());
+    if ('names' in gv) {
+      if (gv.value)
+        { raise('bad branch: duplicate values'); }
+
+      gv.value = {
+        node,
+        group: cn
+      };
+      return gv;
+    }
+
+    return gv;
+  }
 }));
 
-const recurseForTuple = (node: AstNode): Token | undefined =>
-  node.visit(nextLevel());
+const visitToStripNames = memoize((): AstVisitor<ResultType> => {
+  const visitToInvalidNames = memoize((): AstVisitor<StandardErrorMessage> => freeze({
+    visitLiteral: (_0: Token, _1: AstLiteralType): StandardErrorMessage =>
+      ({ message: 'cannot use literal as a name' }),
+    visitFringe: (_0: Token): StandardErrorMessage =>
+      { raise('bad branch'); },
+    visitTuple: (_0: Readonly<AstNode[]>): StandardErrorMessage =>
+      ({ message: 'invalid nested tuple as part of a name' }),
+    visitInitializer: (_0: AstInitializerExpression): StandardErrorMessage =>
+      { raise('an initializer should not appear here') },
+    visitCall: (_0: Token, _1: AstNode, _2: AstNode): StandardErrorMessage =>
+      ({ message: 'calls are not valid for names' }),
+    visitFunctionDefinition: (_0: number, _1: Readonly<AstParameterExpression[]>,_2: Readonly<AstNode[]>): StandardErrorMessage =>
+      ({ message: 'function defs are not allowed here' })
+  }));
 
-const tokenIsAbsent = (value: Token | undefined) =>
-  value === undefined;
+  const nextLevel = memoize((): AstVisitor<Token | StandardErrorMessage> => freeze({
+    ...visitToInvalidNames(),
+    visitFringe: (token: Token): Token => token
+  }));
 
-const topLevelForTokens = memoize((): AstVisitor<Readonly<Token[]> | undefined> => freeze({
-  ...visitToUndefined(),
-  visitFringe: (token: Token): Readonly<Token[]> | undefined =>
-    [token],
-  visitTuple(nodes: Readonly<AstNode[]>): Readonly<Token[]> | undefined {
-    const gv = nodes.map(recurseForTuple);
-    if (gv.some(tokenIsAbsent))
-      { return undefined; }
+  const isErrorMessage = (value: Token | StandardErrorMessage) => 'message' in value;
 
-    return gv as Readonly<Token[]>;
-  },
-}));
+  const recurseForTuple = (node: AstNode): Token | StandardErrorMessage =>
+    node.visit(nextLevel());
+  
+  return freeze({
+    ...visitToInvalidNames(),
+    visitFringe: (token: Token): WritableNameExpression =>
+      ({ names: [token] }),
+    visitTuple(nodes: Readonly<AstNode[]>): ResultType {
+      const gv = nodes.map(recurseForTuple);
+      const fIdx = gv.findIndex(isErrorMessage);
+      if (fIdx !== -1)
+        { return gv[fIdx] as StandardErrorMessage; }
 
-const nextLevel = memoize((): AstVisitor<Token | undefined> => freeze({
-  ...visitToUndefined(),
-  visitFringe: (token: Token): Token | undefined => token
-}));
+      return ({ names: gv }) as WritableNameExpression;
+    },
+  });
+});
+
+export type NameExpression = Readonly<WritableNameExpression>;
 
 export interface NameExpressionBuild {
-  nameExpression(): AstNameExpression | undefined;
+  nameExpression(): NameExpression | undefined;
   error(): StandardErrorMessage;
 };
 
-function visitFringe(token: Token): AstNameExpression {
-  return freeze({
-    names: [token],
-    type: AstNode.forOperatorStripping.emptyTupleInstance()
-  });
-}
+export type NameExpressionOptions = 'allow-value' | 'no-value';
 
-function visitTuple(nodes: Readonly<AstNode[]>): AstNameExpression | undefined {
-  const tokens = topLevelForTokens().visitTuple(nodes)
-  if (tokens === undefined)
-    { return tokens; }
-
-  return freeze({
-    names: tokens,
-    type: AstNode.forOperatorStripping.emptyTupleInstance()
-  });
-}
-
-// permit only certain things...
-function make(mNode: AstNode): NameExpressionBuild {
+function make(mNode: AstNode, mValueIsAllowed: NameExpressionOptions): NameExpressionBuild {
+  checkPrecedenceAssumption();
   const { error, setErrorMessage } = StandardError.make();
+  const mVisitor = mValueIsAllowed === 'allow-value' ?
+    visitToStripValue() : visitToStripType();
 
-  function withCall(callName: Token, receiver: AstNode, args: AstNode): AstNameExpression | undefined {
-    if (callName.content() !== OperatorNamingSchema.kIs) {
-      return setErrorMessage('name expression may only contain a singly "is" operator');
+  const nameExpression = memoize((): NameExpression | undefined => {
+    const gv = mNode.visit(mVisitor);
+    if ('message' in gv) {
+      return setErrorMessage(gv.message);
     }
 
-    const names = receiver.visit(topLevelForTokens());
-    if (!names)
-      { return setErrorMessage('invalid name set'); }
-
-    return freeze({
-      names,
-      type: args
-    });
-  }
-
-  const visitor = ((): AstVisitor<AstNameExpression | undefined> => freeze({
-    ...visitToUndefined(),
-    visitFringe,
-    visitTuple,
-    visitCall: withCall
-  }));
-
-  const nameExpression = memoize((): AstNameExpression | undefined =>
-    mNode.visit(visitor()) ?? setErrorMessage(`not a valid name expression`));
+    return gv;
+  });
 
   return freeze({ nameExpression, error });
 }
 
-export const NameExpressionBuild = freeze({
-  make,
-  visitToUndefined
-});
+export const NameExpressionBuild = freeze({ make });

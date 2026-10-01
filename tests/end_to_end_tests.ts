@@ -225,7 +225,34 @@ describe('happy path end-to-end', () => {
           'your assignable integer was ', '15'
         ]);
 
-        doRun('parameters', `
+        it(`Fails to find modifier for a different fType`, () => {
+          const source = `
+            let f = fn
+            ~
+            let g = fn
+              let g2 := f
+              let g3 := fn
+              ~
+              g3 := g2
+            ~
+            g()
+          `;
+          const compiler = Compiler.make(source);
+          expect(compiler.byteCode()).toBeUndefined();
+          expect(compiler.error()).toMatch('cannot find function "g3:=" on receiver*');
+        });
+      });
+
+      describe('with parameters', () => {
+        doRun('simple', `
+          let add2 = fn(x is Integer, y is Integer)
+            puts(x + y)
+          ~
+          add2(6, 5)
+          `,
+          ['11'])
+
+        doRun('tuples', `
           let add2 = fn(x is Integer, y is Integer)
             puts(x + y)
           ~
@@ -243,22 +270,6 @@ describe('happy path end-to-end', () => {
           `,
           ['11', '-1', '7', '2'])
 
-        it(`Fails to find modifier for a different fType`, () => {
-          const source = `
-            let f = fn
-            ~
-            let g = fn
-              let g2 := f
-              let g3 := fn
-              ~
-              g3 := g2
-            ~
-            g()
-          `;
-          const compiler = Compiler.make(source);
-          expect(compiler.byteCode()).toBeUndefined();
-          expect(compiler.error()).toMatch('cannot find function "g3:=" on receiver*');
-        });
       });
     });
   });

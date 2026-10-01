@@ -41,11 +41,12 @@ export const AstTuple = freeze({
       return AstTuple.make([tOrN1, n2]);
     }
   },
-  detuplify(n: AstNode_ | AstTuple): Readonly<AstNode_[]> {
+  detuplify(n: AstNode_ | AstTuple): Readonly<AstNode_[]> | undefined {
     if ('kIsATuple' in n && n.kIsATuple === kIsATuple) {
       return n.detuplify();
     }
-    return [n];
+
+    return undefined;
   },
   make(mMembers: AstNode_[] = []): AstTuple {
     function verifyNotSelfNested() {

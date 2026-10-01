@@ -16,7 +16,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AstInitializerType, AstLiteralType, AstNameExpression, AstNode, AstVisitor } from '../ast_node';
+import {
+  AstInitializerExpression,
+  AstLiteralType,
+  AstNode,
+  AstParameterExpression,
+  AstVisitor
+} from '../ast_node';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionLookUpTable, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
@@ -24,6 +30,7 @@ import { Token } from '../token';
 import { ConstantStringType } from './builtin_type_base';
 import { FunctionIndexType } from './function_index_type';
 import { IntegerType } from './integer_type';
+import { ParametersTypeBuild } from './parameters_type_build';
 import { TupleObjectType } from './tuple_object_type';
 import { TypeRepresentationInstance, TypeRepresentationType } from './type_representation_type';
 
@@ -96,16 +103,17 @@ function make
       }
       return mSet.instanceFor(recType).lookUp(callName.content(), argType);
     },
-    visitInitializer(
-      _0: AstNameExpression,
-      _1: AstInitializerType,
-      _2: AstNode): ResultType
-    {
+    visitInitializer(_0: AstInitializerExpression): ResultType {
       // TODO we need a central place to define that they return nothing
       return mSet.instanceFor(emptyTuple());
     },
-    visitFunctionDefinition(_0: number, _1: Readonly<AstNameExpression[]>, _2: Readonly<AstNode[]>): ResultType {
-      return mSet.instanceFor( FunctionIndexType.of(mContextType).functionIndexType() );
+    visitFunctionDefinition(
+      _0: number,
+      params: Readonly<AstParameterExpression[]>,
+      _2: Readonly<AstNode[]>): ResultType
+    {
+      const { retrieval } = ParametersTypeBuild.make(params);
+      return mSet.instanceFor( FunctionIndexType.of(mContextType).functionIndexTypeOf(retrieval()?.asType() ?? raise('uh oh')) );
     }
   });
 

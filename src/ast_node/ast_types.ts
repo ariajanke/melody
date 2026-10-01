@@ -21,26 +21,27 @@ import { Token } from '../token';
 export type AstLiteralType_ = 'string' | 'number';
 export type AstInitializerQualifier_ = '=' | ':=';
 
-export interface AstNameExpressionValue_ {
-  readonly group: AstInitializerQualifier_;
-  readonly node : AstNode_;
-};
-
-export interface AstNameExpression_ {
+export interface AstInitializerExpression_ {
   readonly names: Readonly<Token[]>;
   readonly typeNode?: AstNode_;
-  readonly value?: AstNameExpressionValue_;
-};
+  readonly qualifier: AstInitializerQualifier_;
+  readonly valueNode: AstNode_;
+}
+
+export interface AstParameterExpression_ {
+  readonly names: Readonly<Token[]>;
+  readonly typeNode: AstNode_;
+}
 
 export interface AstVisitor_<ResultType = void> {
   visitLiteral(token: Token, type: AstLiteralType_): ResultType;
   visitFringe(token: Token): ResultType;
   visitTuple(nodes: Readonly<AstNode_[]>): ResultType;
-  visitInitializer(nameExpression: AstNameExpression_): ResultType;
+  visitInitializer(initializer: AstInitializerExpression_): ResultType;
   visitCall(callName: Token, receiver: AstNode_, args: AstNode_): ResultType;
   visitFunctionDefinition(
     uid: number,
-    parameters: Readonly<AstNameExpression_[]>,
+    parameters: Readonly<AstParameterExpression_[]>,
     nodes: Readonly<AstNode_[]>): ResultType;
 };
 

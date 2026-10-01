@@ -17,7 +17,7 @@
  */
 
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
-import { AstInitializerType, AstNameExpression, AstNode, AstVisitor } from '../../ast_node';
+import { AstInitializerExpression, AstNode, AstParameterExpression, AstVisitor } from '../../ast_node';
 import { AstLiteralType } from '../../ast_node';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
 import { Token } from '../../token';
@@ -130,20 +130,21 @@ function make(mRoot: AstNode): ReceiverNameStripping {
   }
 
   function visitInitializer
-    (nameExpression: AstNameExpression,
-     group: AstInitializerType,
-     value: AstNode): Res
+    (initializer: AstInitializerExpression): Res
   {
-    const rv = furtherVisit(value, mDirection);
+    const rv = furtherVisit(initializer.valueNode, mDirection);
     if (rv === undefined || rv === 'not-modified')
       { return rv; }
 
-    return makeInitializer(nameExpression, group, rv);
+    return makeInitializer({
+      ...initializer,
+      valueNode: rv
+    });
   }
 
   function visitFunctionDefinition
     (_0: number,
-     _1: Readonly<AstNameExpression[]>,
+     _1: Readonly<AstParameterExpression[]>,
      nodes: Readonly<AstNode[]>): Res 
   {
     if (mDirection === 'right') {

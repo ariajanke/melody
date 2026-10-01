@@ -25,14 +25,14 @@ import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import { DefinitionBodyFunctionBuild } from './definition_body_function_build';
 import { FunctionIndexType } from './function_index_type';
 import { TupleObjectType } from './tuple_object_type';
-import { AstNameExpression, AstNode } from '../ast_node';
+import { AstNode, AstParameterExpression } from '../ast_node';
 import { ParametersTypeBuild, ParametersTypeRetrieval } from './parameters_type_build';
 
 const { freeze, memoize } = Helpers;
 
 function make
   (mUid: number,
-   mParameters: Readonly<AstNameExpression[]>,
+   mParameters: Readonly<AstParameterExpression[]>,
    mNodes: Readonly<AstNode[]>,
    mFunctionRegistry: FunctionDefinitionRegistry,
    mContextFrameStack: WritableContextFrameStack)
@@ -71,6 +71,7 @@ function make
     parentType();
     const ftype = freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      parameters: parameterRetrieval()!.asType,
       receiver: parentType,
       simpleEmit: definitionFtype()!.simpleEmit
     });
@@ -79,20 +80,22 @@ function make
     return ftype;
   });
 
-  const indexRepresentation = (() => FunctionIndexType.of(parentType()));
-
   const functionType = memoize((): FunctionType | undefined => {
     if (!recWrappedBodyFtype() || !parameterRetrieval())
       { return undefined; }
 
+    // NOTE a function definition evaluating to an integer
+    //      is an "immediate evaluable" node, much like a literal
     return freeze({
       emit(_0: FunctionType, _1: FunctionType, _2: CodeWriter): void
         { raise('uh oh'); },
       uid: memoize(Symbol),
-      // this is essentially a literal...
       receiver: emptyTuple,
-      parameters: parameterRetrieval()!.asType,
-      returns: indexRepresentation().functionIndexType,
+      parameters: emptyTuple,
+      returns: () =>
+        FunctionIndexType.
+          of(parentType()).
+          functionIndexTypeOf( parameterRetrieval()!.asType() ),
       simpleEmit(writer: CodeWriter) {
         writer.pushIndexOfRegistered(recWrappedBodyFtype()!);
       }

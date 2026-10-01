@@ -18,7 +18,7 @@
 
 import { Helpers } from '../helpers';
 import { Segment } from './segmentation';
-import { AstNameExpression, AstNode } from '../ast_node';
+import { AstNode, AstParameterExpression } from '../ast_node';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
 import {
@@ -37,30 +37,49 @@ function make
    mCtorRetrieval: AstBuildConstructorRetrieval): AstBuild_
 {
   const mErrors = ErrorsCollector.make();
-  const mParameters: AstNameExpression[] = [];
-  const nodes = (() => {
-    const nodes: AstNode[] = [];
-    const clen = mSegment.children().length;
-    for (let cidx = 0; cidx < clen; ++cidx) {
+  const mParameters: AstParameterExpression[] = [];
+  const mChildrenCount = mSegment.children().length;
+
+  function forHead(node: AstNode) {
+    const { nameExpression, error } = NameExpressionBuild.make(node, 'no-value');
+    if (nameExpression()) {
+      const { names, typeNode } = nameExpression()!;
+      if (typeNode) {
+        console.log(`parameters for ${names.map(t => t.content()).join(', ')}`);
+        mParameters.push({ names, typeNode });
+      } else {
+        mErrors.pushError({ message: 'parameter is missing a type' });
+      }
+    } else {
+      mErrors.pushError(error());
+    }
+  }
+
+  const nodes = memoize((): Readonly<AstNode[]> => {
+    const mNodes: AstNode[] = [];
+    for (let cidx = 0; cidx < mChildrenCount; ++cidx) {
       const child = mSegment.children()[cidx];
-      const ibuild = mCtorRetrieval.constructorFor(child.type())(mTokens, child, mCtorRetrieval);
+      const ctor = mCtorRetrieval.constructorFor(child.type());
+      const ibuild = ctor(mTokens, child, mCtorRetrieval);
       if (!ibuild.node()) {
         mErrors.pushErrors(ibuild.errors());
         continue;
       }
 
       if (child.type() === 'functionDefinitionHead') {
-        const { nameExpression, error } = NameExpressionBuild.make(ibuild.node()!);
-        if (nameExpression()) {
-          mParameters.push(nameExpression()!);
+        const asMany = AstNode.forAstFunctionDefinitionBuild.
+          detuplify(ibuild.node()!);
+        if (asMany) {
+          asMany.forEach(forHead);
         } else {
-          mErrors.pushError(error());
+          forHead(ibuild.node()!);
         }
       } else {
-        nodes.push(ibuild.node()!);
+        mNodes.push(ibuild.node()!);
       }
     }
-    return nodes;
+
+    return mNodes;
   });
 
   const node = memoize(() => {    

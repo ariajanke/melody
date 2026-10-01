@@ -130,9 +130,9 @@ export const OperatorDefinitions = freeze({
     return factory.
       unary (kLet).
       binary(kComma).
-      binary(kIs).
       binary(kEquality).
       binary(kAssignment).
+      binary(kIs).
       binary(kPlus).
       binary(kMinus).
       binary(kMultiply).

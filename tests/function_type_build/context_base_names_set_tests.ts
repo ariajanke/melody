@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AstNameExpression } from '../../src/ast_node';
+import { AstParameterExpression } from '../../src/ast_node';
 import { FunctionLookUpTable, ObjectType } from '../../src/function_type_build';
 import { ContextBaseNamesSet } from '../../src/function_type_build/context_base_names_set';
 import { ContextBaseStage, ContextLinkStage } from '../../src/function_type_build/context_build';
@@ -66,7 +66,7 @@ describeNamed({ ContextBaseNamesSet }, () => {
     const subNodes = memoize(() => [makeFunctionDefinition(innerMostDef())]);
     const rootNode = memoize(() => makeFunctionDefinition(...subNodes()));
     const inst = memoize(() => ContextBaseNamesSet.forTesting.make(makeBaseStage));
-    const emptyParameters: Readonly<AstNameExpression[]> = [];
+    const emptyParameters: Readonly<AstParameterExpression[]> = [];
 
     it('grand parent will have parent as pending', () => {
       const { pendingNames } = inst().contextNamesFor(rootNode().uid(), emptyParameters, subNodes());

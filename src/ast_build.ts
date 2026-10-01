@@ -58,7 +58,7 @@ function make(mTokens: Readonly<Token[]>): AstBuild {
       make(mTokens, segment()!, AstBuildConstructorRetrieval.instance());
   });
 
-  const assignmentStripping = memoize((): AstBuild | undefined => {
+  const strippedTree = memoize((): AstBuild | undefined => {
     const node_ = build()?.node();
     if (!node_)
       { return undefined; }
@@ -67,7 +67,7 @@ function make(mTokens: Readonly<Token[]>): AstBuild {
   });
 
   const node = ((): AstNode | undefined =>
-    assignmentStripping()?.node());
+    strippedTree()?.node());
 
   return freeze({
     node,
@@ -76,11 +76,11 @@ function make(mTokens: Readonly<Token[]>): AstBuild {
         return [error()];
       }
 
-      if (!assignmentStripping()) {
+      if (!strippedTree()) {
         return build()!.errors();
       }
 
-      return assignmentStripping()!.errors();
+      return strippedTree()!.errors();
     })
   });  
 }

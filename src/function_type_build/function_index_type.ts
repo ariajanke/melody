@@ -27,45 +27,52 @@ import { TupleObjectType } from './tuple_object_type';
 const { freeze, memoize } = Helpers;
 
 export interface FunctionIndexType {
-  functionIndexType(): ObjectType;
-  // representativeFunctionType(): FunctionType;
+  functionIndexTypeOf(parameters: ObjectType): ObjectType;
 };
 
 const sInsts: { [parentUid: symbol]: FunctionIndexType | undefined } = {};
 
 function makeNew(parent: ObjectType): FunctionIndexType {
+  const mIndexTypes: { [oTypeUid: symbol]: ObjectType | undefined } = {};
   const { emptyTuple } = TupleObjectType;
-  const representativeFunctionType = memoize((): FunctionType => freeze({
-    parameters: emptyTuple,
-    returns: emptyTuple,
-    receiver: () => parent,
-    simpleEmit(_0: CodeWriter)
-      { raise('not emittable'); },
-    emit(_0: FunctionType,
+
+  function makeTypeForParameters(parameters: ObjectType): ObjectType {
+    const representativeFunctionType = ((): FunctionType => freeze({
+      parameters: () => parameters,
+      returns: emptyTuple,
+      receiver: () => parent,
+      simpleEmit(_0: CodeWriter)
+        { raise('not emittable'); },
+      emit(_0: FunctionType,
           _1: FunctionType,
           _2: CodeWriter)
-      { raise('not emittable'); },
-    uid: memoize(Symbol)
-  }));
-  const lookUpTable = memoize(() =>
-    MutableFunctionTable.fromFunctionType(representativeFunctionType()));
-  const functionIndexType = memoize((): ObjectType => freeze({
-    name: memoize(() => `${parent.name()}.Function()()`),
-    lookUp(operation: string | symbol): FunctionLookUpTable | undefined {
-      if (operation !== OperatorNamingSchema.kCall)
-        { return undefined; }
-      return lookUpTable();
-    },
-    detuplify: () => undefined,
-    uid: memoize(Symbol),
-    sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
-    sizeInStackItems: () => 1
-  }));
+        { raise('not emittable'); },
+      uid: memoize(Symbol)
+    }));
 
-  return freeze({
-    functionIndexType,
-    // representativeFunctionType
-  });
+    const lookUpTable = memoize(() =>
+      MutableFunctionTable.fromFunctionType(representativeFunctionType()));
+
+    return freeze({
+      name: memoize(() => `${parent.name()}.Function(${parameters.name()})()`),
+      lookUp(operation: string | symbol): FunctionLookUpTable | undefined {
+        if (operation !== OperatorNamingSchema.kCall)
+          { return undefined; }
+        return lookUpTable();
+      },
+      detuplify: () => undefined,
+      uid: memoize(Symbol),
+      sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
+      sizeInStackItems: () => 1
+    });
+  }
+
+  function functionIndexTypeOf(parameters: ObjectType): ObjectType {
+    return mIndexTypes[parameters.uid()] ??=
+      makeTypeForParameters(parameters);
+  }
+
+  return freeze({ functionIndexTypeOf });
 }
 
 function make(parent: ObjectType): FunctionIndexType {

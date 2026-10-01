@@ -19,7 +19,7 @@
 import { Helpers } from '../../../src/helpers';
 import { LetStripBuild } from '../../../src/ast_build/operator_stripping/let_strip_build';
 import { StripBuild } from '../../../src/ast_build/operator_stripping/strip_build';
-import { AstNode, AstInitializerType, AstNameExpression } from '../../../src/ast_node';
+import { AstInitializerExpression, AstInitializerQualifier, AstNode } from '../../../src/ast_node';
 import { AstFactories } from '../../ast_factories';
 import { ReseatableAstVisitor } from '../../ast_visitor_factories';
 import { TestHelpers } from '../../test_helpers';
@@ -60,7 +60,7 @@ describeNamed({ LetStripBuild }, () => {
   }
 
   function isSuccessful
-    (inst: () => StripBuild, exNames: Readonly<string[]>, exGroup: AstInitializerType)
+    (inst: () => StripBuild, exNames: Readonly<string[]>, exGroup: AstInitializerQualifier)
   {
     it('is a valid node', () => {
       expect(inst().node()).toBeDefined();
@@ -71,13 +71,9 @@ describeNamed({ LetStripBuild }, () => {
       let group = '';
       const visitor = makeVisitor({
         ...makeDefaultVisitor(),
-        visitInitializer(
-          expr: AstNameExpression,
-          group_: AstInitializerType,
-          _2: AstNode)
-        {
-          names.push(...expr.names.map(t => t.content()));
-          group = group_;
+        visitInitializer(initializer: AstInitializerExpression) {
+          names.push(...initializer.names.map(t => t.content()));
+          group = initializer.qualifier;
         }
       });
       

@@ -17,7 +17,7 @@
  */
 
 import { Helpers } from '../src/helpers';
-import { AstLiteralType, AstNode, AstVisitor, AstInitializerType, AstNameExpression } from '../src/ast_node';
+import { AstInitializerExpression, AstLiteralType, AstNode, AstParameterExpression, AstVisitor } from '../src/ast_node';
 import { Token } from '../src/token';
 
 const { freeze } = Helpers;
@@ -33,18 +33,15 @@ export const ReseatableAstVisitor = freeze({
       visitFringe(_0: Token) {},
       visitTuple(nodes: Readonly<AstNode[]>)
         { nodes.forEach((v: AstNode) => v.visit(inst)); },
-      visitInitializer(
-        _0: AstNameExpression,
-        _1: AstInitializerType,
-        value: AstNode)
-      { value.visit(inst); },
+      visitInitializer(initializer: AstInitializerExpression)
+        { initializer.valueNode.visit(inst); },
       visitCall(_0: Token, receiver: AstNode, args: AstNode) {
         receiver.visit(inst);
         args.visit(inst);
       },
       visitFunctionDefinition(
         _0: number,
-        _1: Readonly<AstNameExpression[]>,
+        _1: Readonly<AstParameterExpression[]>,
         nodes: Readonly<AstNode[]>)
       {
         nodes.forEach((v: AstNode) => v.visit(inst));

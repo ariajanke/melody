@@ -34,9 +34,9 @@ const isSeparator = LineSegmentation.isProperClose;
 
 const headType = (): SegmentType => 'functionDefinitionHead';
 
-function intoHeadType(segment: Segment): Segment {
-  return freeze({ ...segment, type: headType });
-}
+const kClosing = Token.types.grouping.closing;
+
+const kOpening = Token.types.grouping.opening;
 
 function isSeparatorOrBodyClose(token: Token | undefined): boolean
   { return isSeparator(token) || isBodyClosing(token); }
@@ -51,6 +51,21 @@ function isMultiLine(mTokens: Readonly<Token[]>, headSegment: Segment): boolean 
   }
 
   return isSeparator(mTokens[end()]);
+}
+
+function isEmpty
+  (tokens: Readonly<Token[]>, segment: Segment): boolean
+{
+  const { start, end } = segment;
+  const diff = end() - start();
+  if (diff === 0) {
+    return true;
+  } else if (diff === 2) {
+    return tokens[start()  ].type() === kOpening &&
+           tokens[end() - 1].type() === kClosing;
+  }
+
+  return false;
 }
 
 function make
@@ -99,9 +114,12 @@ function make
   const childSegments = memoize((): Readonly<Segment[]> | undefined => {
     if (!body_() || !heading().segment())
       { return undefined; }
+
+    if (isEmpty(mTokens, heading().segment()!))
+      { return body_()!.children(); }
     
     return [
-      intoHeadType(heading().segment()!),
+      freeze({ ...heading().segment()!, type: headType }),
       ...body_()!.children()
     ];
   });

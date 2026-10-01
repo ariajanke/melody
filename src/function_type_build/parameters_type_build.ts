@@ -19,8 +19,8 @@
 import { ObjectType } from '../function_type_build';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
 import { TupleObjectType } from './tuple_object_type';
-import { AstNameExpression } from '../ast_node';
 import { NodeTypeEvaluation } from './node_type_evaluation';
+import { AstParameterExpression } from '../ast_node';
 
 const { freeze, memoize } = Helpers;
 
@@ -30,7 +30,7 @@ export type NameObjectTypePairs = Readonly<WritablePairs>;
 
 export interface ParametersTypeRetrieval {
   // TODO this will eventually be affected by "InterfaceTypes" for generics
-  asNameExpressions(): Readonly<AstNameExpression[]>;
+  asNameExpressions(): Readonly<AstParameterExpression[]>;
   asType(): ObjectType;
   orderedNameTypePairs(): NameObjectTypePairs;
 };
@@ -42,16 +42,16 @@ export interface ParametersTypeBuild {
 
 const grabType = (pair: [string, ObjectType]): ObjectType => pair[1];
 
-function make(mParameters: Readonly<AstNameExpression[]>): ParametersTypeBuild {
+function make(mParameters: Readonly<AstParameterExpression[]>): ParametersTypeBuild {
   const { setErrorFn, setErrorMessage, error } = StandardError.make();
 
   function nameExpressionInto
-    (pairs: WritablePairs | undefined, nameExpr: AstNameExpression): WritablePairs | undefined
+    (pairs: WritablePairs | undefined, nameExpr: AstParameterExpression): WritablePairs | undefined
   {
     if (!pairs)
       { return pairs; }
 
-    const oTypeBuild = NodeTypeEvaluation.make(nameExpr.type);
+    const oTypeBuild = NodeTypeEvaluation.make(nameExpr.typeNode);
     const fullType = oTypeBuild.objectType();
     if (!fullType)
       { return setErrorFn(oTypeBuild.error); }

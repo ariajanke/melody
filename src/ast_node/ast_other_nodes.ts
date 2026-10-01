@@ -16,9 +16,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { Token } from '../token';
-import { AstInitializerQualifier_, AstNameExpression_, AstNode_, AstVisitor_ } from './ast_types';
+import {
+  AstInitializerExpression_,
+  AstNode_,
+  AstParameterExpression_,
+  AstVisitor_
+} from './ast_types';
 
 const { freeze, memoize } = Helpers;
 
@@ -30,7 +35,10 @@ const makeUid = (() => {
 
 export const AstDefinition = freeze({
   makeUid,
-  make(parameters: Readonly<AstNameExpression_[]>, nodes: AstNode_[]): AstNode_ {
+  make(
+    parameters: Readonly<AstParameterExpression_[]>,
+    nodes: Readonly<AstNode_[]>): AstNode_
+  {
     const uid = makeUid();
     return freeze({
       asString: () =>
@@ -43,15 +51,14 @@ export const AstDefinition = freeze({
 });
 
 export const AstInitializer = freeze({
-  make(
-    mNames: AstNameExpression_,
-    mGroup: AstInitializerQualifier_,
-    mValue: AstNode_): AstNode_
-  {
+  make(mNameExpression: AstInitializerExpression_): AstNode_ {
     return freeze({
-      asString: () => `Initializer { (${mNames.names.join(', ')}) ${mGroup} ${mValue.asString()} }`,
+      asString: () => {
+        const { names, qualifier, valueNode } = mNameExpression;
+        return `Initializer { (${names.join(', ')}) ${qualifier} ${valueNode.asString()} }`;
+      },
       visit: <T>(v: AstVisitor_<T>) =>
-        v.visitInitializer(mNames, mGroup, mValue),
+        v.visitInitializer(mNameExpression),
       uid: makeUid()
     });
   }

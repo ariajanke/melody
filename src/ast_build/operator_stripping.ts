@@ -17,7 +17,6 @@
  */
 
 import { Helpers } from '../helpers';
-import { AstInitializerType, AstLiteralType, AstNameExpression, AstNode } from '../ast_node';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
 import { AstBuild_ } from './ast_build_constructor_retrieval';
@@ -26,6 +25,12 @@ import {
   StripBuild,
   StripBuildResult
 } from './operator_stripping/strip_build';
+import {
+  AstInitializerExpression,
+  AstLiteralType,
+  AstNode,
+  AstParameterExpression
+} from '../ast_node';
 
 const { freeze, memoize } = Helpers;
 
@@ -67,7 +72,7 @@ function make(mRawTreeRoot: AstNode): AstBuild_ {
 
   function visitFunctionDefinition
     (_0: number,
-     parameters: Readonly<AstNameExpression[]>,
+     parameters: Readonly<AstParameterExpression[]>,
      nodes: Readonly<AstNode[]>): StripBuildResult
   {
     const gv = recurseOnTuple(nodes);
@@ -86,18 +91,19 @@ function make(mRawTreeRoot: AstNode): AstBuild_ {
   }
 
   function visitInitializer
-    (nameExpression: AstNameExpression,
-     initType: AstInitializerType,
-     innerNode: AstNode): StripBuildResult
+    (nameExpression: AstInitializerExpression): StripBuildResult
   {
     mLetsStack.markInsideLetStatement();
-    const gv = innerNode.visit(mVisitor);
+    const gv = nameExpression.valueNode.visit(mVisitor);
     mLetsStack.popMarking();
 
     if (gv === 'not-modified' || gv === undefined)
       { return gv; }
 
-    return makeInitializer(nameExpression, initType, gv);
+    return makeInitializer(({
+      ...nameExpression,
+      valueNode: gv
+    }));
   }
 
   const recurseOn = (node: AstNode): AstNode | undefined => {

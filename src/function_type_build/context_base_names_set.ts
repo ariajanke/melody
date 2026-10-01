@@ -19,7 +19,10 @@
 import { Helpers, raise } from '../helpers';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { ContextBaseStage } from './context_build';
-import { AstNameExpression, AstNode } from '../ast_node';
+import {
+  AstNode,
+  AstParameterExpression
+} from '../ast_node';
 import { PendingNamesRetrieval } from './context_base_names_set/pending_names_retrieval';
 import {
   ChildFunctionDefinition,
@@ -59,7 +62,7 @@ const ContextNamesRetrieval = freeze({
 export interface ContextBaseNamesSet {
   ensure(uid: number): ContextBaseStage;
   contextNamesFor(
-    uid: number, parameters: Readonly<AstNameExpression[]>, nodes: Readonly<AstNode[]>)
+    uid: number, parameters: Readonly<AstParameterExpression[]>, nodes: Readonly<AstNode[]>)
     : ContextNamesRetrieval;
 };
 
@@ -91,7 +94,7 @@ function make
     { addNewNamesRetrieval(cdef.uid, cdef.parameters, cdef.nodes); }
 
   function addNewNamesRetrieval
-    (uid: number, parameters: Readonly<AstNameExpression[]>, nodes: Readonly<AstNode[]>)
+    (uid: number, parameters: Readonly<AstParameterExpression[]>, nodes: Readonly<AstNode[]>)
     : ContextNamesRetrieval
   {
     const declRetr = DeclarationNamesRetrieval.make(parameters, nodes);
@@ -109,7 +112,7 @@ function make
   }
 
   function contextNamesFor
-    (uid: number, parameters: Readonly<AstNameExpression[]>, nodes: Readonly<AstNode[]>)
+    (uid: number, parameters: Readonly<AstParameterExpression[]>, nodes: Readonly<AstNode[]>)
     : ContextNamesRetrieval
   {
     if (mCCache[uid])

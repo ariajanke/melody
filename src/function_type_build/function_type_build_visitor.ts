@@ -25,7 +25,13 @@ import { DefinitionIndexFunctionBuild } from './definition_index_function_build'
 import { LiteralFunctionTypeBuild } from './literal_function_type_build';
 import { TupleFunctionBuild } from './tuple_function_build';
 import { FunctionDefinitionRegistry } from '../function_definition_registry';
-import { AstInitializerType, AstLiteralType, AstNameExpression, AstNode, AstVisitor } from '../ast_node';
+import {
+  AstInitializerExpression,
+  AstLiteralType,
+  AstNode,
+  AstParameterExpression,
+  AstVisitor
+} from '../ast_node';
 import { Token } from '../token';
 import { InitializerFunctionBuild } from './initializer_function_build';
 
@@ -59,7 +65,7 @@ function make
 
   function visitFunctionDefinition
     (uid: number,
-     parameters: Readonly<AstNameExpression[]>,
+     parameters: Readonly<AstParameterExpression[]>,
      nodes: Readonly<AstNode[]>): FunctionTypeBuild
   {
     return DefinitionIndexFunctionBuild.
@@ -67,12 +73,10 @@ function make
   }
 
   function visitInitializer
-    (nameExpression: AstNameExpression,
-     _1: AstInitializerType,
-     node: AstNode): FunctionTypeBuild
+    (initializer: AstInitializerExpression): FunctionTypeBuild
   {
-    const nameStrings = nameExpression.names.map(t => t.content());
-    return InitializerFunctionBuild.make(nameStrings, node, topFrame());
+    const nameStrings = initializer.names.map(t => t.content());
+    return InitializerFunctionBuild.make(nameStrings, initializer.valueNode, topFrame());
   }
 
   const visitTuple = (nodes: Readonly<AstNode[]>): FunctionTypeBuild =>

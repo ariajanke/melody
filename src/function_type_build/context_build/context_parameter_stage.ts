@@ -55,6 +55,7 @@ function make
         }
       }
     });
+    mLocalIdx = localIdxEnd;
     const lookUpTbl = MutableFunctionTable.fromFunctionType(getter);
     return incompleteContextType.
       setFunctionLookUp(FunctionNamingSchema.mapToFringeAccessor(name),

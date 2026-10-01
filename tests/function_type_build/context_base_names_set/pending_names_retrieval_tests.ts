@@ -25,7 +25,7 @@ import {
 } from '../../../src/function_type_build/context_base_names_set/declaration_names_retrieval';
 import { PendingNamesRetrieval } from '../../../src/function_type_build/context_base_names_set/pending_names_retrieval';
 import { Helpers, raise } from '../../../src/helpers';
-import { AstInitializerType, AstNode } from '../../../src/ast_node';
+import { AstInitializerQualifier, AstNode, AstParameterExpression } from '../../../src/ast_node';
 import { AstFactories } from '../../ast_factories';
 import { TestHelpers } from '../../test_helpers';
 
@@ -35,7 +35,7 @@ const { describeNamed } = TestHelpers;
 
 describeNamed({ PendingNamesRetrieval }, () => {
   const aNode = memoize((): AstNode => AstFactories.makeFringe('a'));
-  const makeDecl = (names: Readonly<string[]>, qualifier: AstInitializerType): NameDeclaration =>
+  const makeDecl = (names: Readonly<string[]>, qualifier: AstInitializerQualifier): NameDeclaration =>
     freeze({ names, qualifier, value: aNode() });
   const makeUsedNames = (names: Readonly<string[]>): () => NameSet =>
     memoize((): NameSet => names.
@@ -46,7 +46,8 @@ describeNamed({ PendingNamesRetrieval }, () => {
   const kDefaultDecls: DeclarationNamesRetrieval = freeze({
     declarations: memoize((): Readonly<NameDeclaration[]> => []),
     usedNames: memoize((): NameSet => ({})),
-    childDefinitions: memoize((): Readonly<ChildFunctionDefinition[]> => [])
+    childDefinitions: memoize((): Readonly<ChildFunctionDefinition[]> => []),
+    parameters: memoize((): Readonly<AstParameterExpression[]> => [])
   });
   const kDefaultChildGetter = (_0: number) =>
     raise('no child getter set');
