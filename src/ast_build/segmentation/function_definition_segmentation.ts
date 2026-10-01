@@ -34,9 +34,8 @@ const isSeparator = LineSegmentation.isProperClose;
 
 const headType = (): SegmentType => 'functionDefinitionHead';
 
-function intoHeadType(segments: Readonly<Segment[]>): Readonly<Segment[]> {
-  return segments.map((segment: Segment): Segment =>
-    freeze({ ...segment, type: headType }));
+function intoHeadType(segment: Segment): Segment {
+  return freeze({ ...segment, type: headType });
 }
 
 function isSeparatorOrBodyClose(token: Token | undefined): boolean
@@ -102,7 +101,7 @@ function make
       { return undefined; }
     
     return [
-      ...intoHeadType(heading().segment()!.children()),
+      intoHeadType(heading().segment()!),
       ...body_()!.children()
     ];
   });

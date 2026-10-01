@@ -19,21 +19,24 @@
 import { Token } from '../token';
 
 export type AstLiteralType_ = 'string' | 'number';
-export type AstInitializerType_ = '=' | ':=';
+export type AstInitializerQualifier_ = '=' | ':=';
+
+export interface AstNameExpressionValue_ {
+  readonly group: AstInitializerQualifier_;
+  readonly node : AstNode_;
+};
 
 export interface AstNameExpression_ {
-  names: Readonly<Token[]>;
-  type: AstNode_;
+  readonly names: Readonly<Token[]>;
+  readonly typeNode?: AstNode_;
+  readonly value?: AstNameExpressionValue_;
 };
 
 export interface AstVisitor_<ResultType = void> {
   visitLiteral(token: Token, type: AstLiteralType_): ResultType;
   visitFringe(token: Token): ResultType;
   visitTuple(nodes: Readonly<AstNode_[]>): ResultType;
-  visitInitializer(
-    nameExpression: AstNameExpression_,
-    group: AstInitializerType_,
-    value: AstNode_): ResultType;
+  visitInitializer(nameExpression: AstNameExpression_): ResultType;
   visitCall(callName: Token, receiver: AstNode_, args: AstNode_): ResultType;
   visitFunctionDefinition(
     uid: number,

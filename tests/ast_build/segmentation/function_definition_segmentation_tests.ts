@@ -21,6 +21,7 @@ import { Token } from '../../../src/token';
 import { Helpers } from '../../../src/helpers';
 import { TokenFactories } from '../../token_factories';
 import { FunctionDefinitionSegmentation } from '../../../src/ast_build/segmentation/function_definition_segmentation';
+import { SegmentType } from '../../../src/ast_build/segmentation';
 
 const { describeNamed } = TestHelpers;
 const { memoize } = Helpers;
@@ -41,7 +42,9 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
     });
   }
 
-  function hasUniqueChildSegment(inst: InstFn, exStart: number, exEnd: number) {
+  function hasUniqueChildSegment
+    (inst: InstFn, exStart: number, exEnd: number)
+  {
     hasNChildren(inst, 1);
     forNthChild(inst, 0, exStart, exEnd);
   }
@@ -53,15 +56,18 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       expect(children()?.length).toEqual(count));
   }
 
-  function forNthChild(inst: InstFn, nthChild: number, exStart: number, exEnd: number) {
+  function forNthChild
+    (inst: InstFn, nthChild: number, exStart: number, exEnd: number,
+     segmentType: SegmentType = 'expression')
+  {
     const children = memoize(() => inst().segment()?.children());
     const child = memoize(() => {
       if (!children()) { return undefined; }
 
       return children()![nthChild];
     });
-    it(`child (${nthChild}) segment that is typed as 'expression'`, () =>
-      expect(child()?.type()).toEqual('expression'));
+    it(`child (${nthChild}) segment that is typed as '${segmentType}'`, () =>
+      expect(child()?.type()).toEqual(segmentType));
     it(`child (${nthChild}) segment within [${exStart} ${exEnd})`, () => {
       expect(child()?.start()).toEqual(exStart);
       expect(child()?.end()).toEqual(exEnd);
@@ -91,7 +97,10 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
   });
 
   describe('fn (x is Integer) () ~', () => {
-    it('has one function head child segment', fail);
+    const inst = makeInst(['fn', '(', 'x', 'is', 'Integer', ')', '(', ')', '~']);
+    isSegmentEnclosed(inst, 0, 9);
+    forNthChild(inst, 0, 1, 6, 'functionDefinitionHead');
+    // move to... somewhere
     it('parameter is "Integer"', fail);
   });
 

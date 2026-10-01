@@ -35,7 +35,8 @@ function make
    mCtorRetreival: AstBuildConstructorRetrieval)
   : AstBuild_
 {
-  if (mSegment.type() !== 'expression')
+  if (mSegment.type() !== 'expression' &&
+      mSegment.type() !== 'functionDefinitionHead')
     { raise('segment must be an expression'); }
   if (!Segment.hasValidIndices(mSegment))
     { raise('segment must be valid'); }

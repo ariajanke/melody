@@ -17,27 +17,61 @@
  */
 
 import {
-  AstInitializerType,
+  AstInitializerQualifier,
   AstLiteralType,
   AstNameExpression,
   AstNode,
-  AstVisitor
+  AstVisitor,
+  AstNameExpressionValue
 } from '../ast_node';
-import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
+import { Helpers, StandardError, StandardErrorMessage, raise } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
 
 const { freeze, memoize } = Helpers;
+
+interface WritableNameExpressionValue {
+  group: AstInitializerQualifier;
+  node : AstNode;
+};
+
+interface WritableNameExpression {
+  names?: Readonly<Token[]>;
+  typeNode?: AstNode;
+  value?: AstNameExpressionValue;
+};
+
+type ResultType = WritableNameExpression | StandardErrorMessage | undefined;
+// iteration hangs to the left
+
+const visitToSomething = memoize((): AstVisitor<ResultType> => freeze({
+  visitLiteral: (_0: Token, _1: AstLiteralType): ResultType =>
+    undefined,
+  visitFringe: (_0: Token): ResultType => undefined,
+  visitTuple: (_0: Readonly<AstNode[]>): ResultType => undefined,
+  visitInitializer: (_0: AstNameExpression): ResultType =>
+    { raise('initializers should not appear in name expression builds') },
+  visitCall(callName: Token, rec: AstNode, args: AstNode): ResultType {
+    const cn = callName.content();
+    if (cn === OperatorNamingSchema.kIs) {
+      ; // args may contain value, args or a part of args maybe the type
+    } else if (cn === OperatorNamingSchema.kAssignment) {
+      ; // args may contain type
+    } else if (cn === OperatorNamingSchema.kEquality) {
+      ; // args may contain type
+    }
+  },
+  visitFunctionDefinition: (_0: number, _1: Readonly<AstNameExpression[]>,_2: Readonly<AstNode[]>): ResultType =>
+    undefined
+}));
+
 
 const visitToUndefined = memoize((): AstVisitor<undefined> => freeze({
   visitLiteral: (_0: Token, _1: AstLiteralType): undefined =>
     undefined,
   visitFringe: (_0: Token): undefined => undefined,
   visitTuple: (_0: Readonly<AstNode[]>): undefined => undefined,
-  visitInitializer:
-    (_0: AstNameExpression,
-     _1: AstInitializerType,
-     _2: AstNode): undefined =>
+  visitInitializer: (_0: AstNameExpression): undefined =>
     undefined,
   visitCall: (_0: Token, _1: AstNode, _2: AstNode): undefined =>
     undefined,
@@ -92,6 +126,7 @@ function visitTuple(nodes: Readonly<AstNode[]>): AstNameExpression | undefined {
   });
 }
 
+// permit only certain things...
 function make(mNode: AstNode): NameExpressionBuild {
   const { error, setErrorMessage } = StandardError.make();
 

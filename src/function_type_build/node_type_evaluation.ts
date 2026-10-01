@@ -56,6 +56,9 @@ function make(mNode: AstNode): NodeTypeEvaluation {
   }
 
   function visitTuple(nodes: Readonly<AstNode[]>): ResultType {
+    if (nodes.length === 0)
+      { return undefined; }
+
     const results = nodes.map((node: AstNode) => node.visit(mVisitor));
     const firstNonMatch = results.findIndex(isNotSingleObject);
     if (firstNonMatch === -1)

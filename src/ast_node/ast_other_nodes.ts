@@ -18,7 +18,7 @@
 
 import { Helpers } from '../helpers';
 import { Token } from '../token';
-import { AstInitializerType_, AstNameExpression_, AstNode_, AstVisitor_ } from './ast_types';
+import { AstInitializerQualifier_, AstNameExpression_, AstNode_, AstVisitor_ } from './ast_types';
 
 const { freeze, memoize } = Helpers;
 
@@ -45,7 +45,7 @@ export const AstDefinition = freeze({
 export const AstInitializer = freeze({
   make(
     mNames: AstNameExpression_,
-    mGroup: AstInitializerType_,
+    mGroup: AstInitializerQualifier_,
     mValue: AstNode_): AstNode_
   {
     return freeze({
