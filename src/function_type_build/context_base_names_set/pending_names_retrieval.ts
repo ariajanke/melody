@@ -55,14 +55,7 @@ function make
   const declaredNames = ((): Readonly<string[]> => {
     const declNames = declarations().reduce((res: string[], v: NameDeclaration): string[] => {
       return v.names.reduce((res: string[], name: string): string[] => {
-        // TODO marry with OrderedInitialSetsCollection's logic around
-        //      accessor/modifier names
-        // NOTE if called... add (we're assuming it's a function)
-        // TODO remove this assumption
-        if (totalUsedNames()[name]) {
-          res.push(name);
-        }
-        res.push(mapToFringeAccessor(name));
+        res = addAccessor(res, name);
         if (v.qualifier === ':=') {
           res.push(mapToAssignment(name));
         }
@@ -70,20 +63,25 @@ function make
       }, res);
     }, [] as string[]);
 
-    return parameters().reduce((res: string[], p: AstParameterExpression) => {
-      return p.names.reduce((res: string[], t: Token) => {
-        const name = t.content();
-        // NOTE if called... add (we're assuming it's a function)
-        // TODO remove this assumption
-        if (totalUsedNames()[name]) {
-          res.push(name);
-        }
-        res.push(mapToFringeAccessor(name));
-
-        return res;
-      }, res);
-    }, declNames);
+    return parameters().
+      reduce((res: string[], p: AstParameterExpression) => {
+        return p.names.
+          reduce((res: string[], t: Token) => addAccessor(res, t.content()), res);
+      }, declNames);
   });
+
+  const addAccessor = (res: string[], name: string): string[] => {
+    // TODO marry with OrderedInitialSetsCollection's logic around
+    //      accessor/modifier names
+    // NOTE if called... add (we're assuming it's a function)
+    // TODO remove this assumption
+    if (totalUsedNames()[name]) {
+      res.push(name);
+    }
+
+    res.push(mapToFringeAccessor(name));
+    return res;
+  };
 
   const isPendingNameFunc = memoize(() => {
     const fn = makeIsStringInLookUpTable(declaredNames());

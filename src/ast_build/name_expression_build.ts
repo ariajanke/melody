@@ -83,7 +83,6 @@ const visitToStripType = memoize((): AstVisitor<ResultType> => freeze({
 const visitToStripValue = memoize((): AstVisitor<ResultType> => freeze({
   ...visitToStripNames(),
   visitCall(callName: Token, rec: AstNode, args: AstNode): ResultType {
-    // regular nodes not allowed here
     const cn = callName.content();
     if (cn !== OperatorNamingSchema.kAssignment &&
         cn !== OperatorNamingSchema.kEquality)

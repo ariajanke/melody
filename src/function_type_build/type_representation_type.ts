@@ -104,6 +104,5 @@ function make(): TypeRepresentationType {
 
 export const TypeRepresentationType = freeze({
   instance: memoize(make),
-  makeErrorRepresentation,
-  forTesting: { make }
+  makeErrorRepresentation
 });

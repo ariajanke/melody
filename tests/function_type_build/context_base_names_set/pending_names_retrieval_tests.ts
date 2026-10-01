@@ -103,6 +103,8 @@ describeNamed({ PendingNamesRetrieval }, () => {
       }));
       expect(inst().pendingNames()).toEqual(['b:=', 'a']);
     });
+
+    it('has tests for parameters', fail);
   });
 
   describe('for "unclaimedNames"', () => {
@@ -163,5 +165,7 @@ describeNamed({ PendingNamesRetrieval }, () => {
         makeChildGetter(['a'], []));
       expect(inst().unclaimedNames()).toEqual(['a']);
     });
+
+    it('has tests for parameters', fail);
   });
 });

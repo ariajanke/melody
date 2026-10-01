@@ -31,6 +31,7 @@ import { IntegerType } from './integer_type';
 
 const { freeze, memoize } = Helpers;
 
+// TODO remove service once immediate evaluables are available
 export interface NodeTypeEvaluation {
   objectType(): ObjectType | undefined;
   error(): StandardErrorMessage;
