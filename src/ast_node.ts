@@ -54,7 +54,10 @@ export const AstNode = freeze({
     makeCall : AstCall.make,
     makeFringe: AstFringe.make,
     makeInitializer: AstInitializer.make,
-    tuplify: AstTuple.tuplify,
+    mergeTuple: AstTuple.mergeBoth,
+    mergeTupleLeft: AstTuple.mergeLeft,
+    mergeTupleRight: AstTuple.mergeRight,
+    makeTuple: AstTuple.make
   },
   forAstFunctionDefinitionBuild: {
     makeFunctionDefinition: AstDefinition.make,

@@ -17,17 +17,39 @@
  */
 
 import { AstNode } from '../../ast_node';
+import { InitializableClass, raise } from '../../helpers';
 import { Token } from '../../token';
+import { OperatorDefinition } from '../operator_definitions';
 import { type NodeConstructorCollection } from './node_constructor_collection';
+
+export interface OperatorPrecedence {
+  readonly precedence: number;
+  readonly position: number;
+};
 
 export interface NodeConstructor {
   makeNode(ctors: NodeConstructorCollection): AstNode;
-  isOperator(): boolean;
-  asToken(): Token | undefined;
+  /// true if this was an originally pushed node/token for the collector
+  isOriginal(): boolean;
+  fitsContainer(cont: Readonly<{ length: number }>): boolean;
+  asString(): string;
   lowPosition(): number;
   highPosition(): number;
 };
 
 export interface OperatorConstructor extends NodeConstructor {
+  operatorPrecedence(): OperatorPrecedence;
   compare(other: OperatorConstructor): number;
 };
+
+export const OperatorConstructor = InitializableClass.
+  on({
+    make(_0: OperatorDefinition, _1: Token, _2: number): OperatorConstructor
+      { raise('must initialize class'); }
+  }).
+  withLocked({
+    isNotOriginal: () => false,
+    makeNodeMakerFor(node: AstNode) {
+      return (_0: NodeConstructorCollection): AstNode => node;
+    }
+  });

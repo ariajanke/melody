@@ -21,7 +21,7 @@ import { OperatorNamingSchema } from '../operator_naming_schema';
 
 const { freeze, memoize } = Helpers;
 
-type OperatorRelation = 'binary' | 'unary';
+export type OperatorRelation = 'binary' | 'unary';
 
 interface OperatorDefinitionMut {
   representation: string;

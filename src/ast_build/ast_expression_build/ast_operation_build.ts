@@ -31,7 +31,8 @@ const { freeze, memoize } = Helpers;
 const { emptyTupleInstance } = AstNode.forAstExpressionBuild;
 
 function make
-  (mConstructors: NodeConstructor[], mOperators: OperatorConstructor[])
+  (mConstructors: NodeConstructor[],
+   mOperators: OperatorConstructor[])
   : AstBuildSingleError
 {
   const { error, setErrorMessage } = StandardError.make();
@@ -45,6 +46,13 @@ function make
   const node = memoize(() => {
     if (mConstructors.length === 0)
       { return emptyTupleInstance(); }
+
+    const unfittingIdx = mConstructors.
+      findIndex((n: NodeConstructor) => !n.fitsContainer(mConstructors));
+    if (unfittingIdx !== -1) {
+      const badNode = mConstructors[unfittingIdx].asString();
+      return setErrorMessage(`constructor runs over near: ${badNode}`);
+    }
 
     const sortedLen = sortedOperators().length;
     if (sortedLen === 0) {
@@ -62,8 +70,7 @@ function make
     const node_ = weakestBindingOperator.makeNode(collection());
     const missedCtor = collection().firstUnreplaced();
     if (missedCtor !== undefined) {
-      const token = missedCtor.asToken();
-      return setErrorMessage(`expression ends too soon around "${token?.content() ?? '<UNKNOWN>'}"`);
+      return setErrorMessage(`expression ends too soon around "${missedCtor.asString()}"`);
     }
 
     return node_;

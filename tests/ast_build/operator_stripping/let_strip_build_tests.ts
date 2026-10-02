@@ -95,7 +95,7 @@ describeNamed({ LetStripBuild }, () => {
   describe('on "let \'beans\'" = ...', () => {
     const inst = makeInst(recurseOn, makeCall('=', makeFringe(`'beans'`), makeFringe('1')) );
 
-    hasError(inst, 'not a valid name expression');
+    hasError(inst, 'cannot use literal as a name');
   });
 
   describe('on "let a + b"', () => {

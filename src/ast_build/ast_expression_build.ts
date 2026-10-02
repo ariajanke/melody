@@ -29,6 +29,20 @@ import { Segment } from './segmentation';
 
 const { freeze, memoize } = Helpers;
 
+function intoAsString
+  (tokens: Readonly<Token[]>, segment: Segment): () => string
+{
+  const { start, end } = segment;
+  if (end() === start()) {
+    return () => '<EMPTY SEGMENT>';
+  } else if (end() - start() === 1) {
+    return () => tokens[start()].content();
+  }
+
+  return memoize((): string =>
+    `${tokens[start()].content()}...${tokens[end() - 1].content()}`);
+}
+
 function make
   (mTokens: Readonly<Token[]>,
    mSegment: Segment,
@@ -42,18 +56,23 @@ function make
     { raise('segment must be valid'); }
 
   const mErrors = ErrorsCollector.make();
-  const collector = () => {
+  const collector = memoize(() => {
     const collector_ = AstExpressionCollector.make();
     let cidx = 0;
+    if (mTokens[mSegment.start() + 1]?.content() === 'addTu2') {
+      let i = 0;
+      ++i;
+    }
     for (let idx = mSegment.start(); idx < mSegment.end(); ) {
       if (mTokens[idx] === undefined)
         { raise('went too far?!'); }
       const child = mSegment.children()[cidx];
       if (idx === child?.start()) {
-        const ibuild = mCtorRetreival.constructorFor(child.type())(mTokens, child, mCtorRetreival);
+        const ctor = mCtorRetreival.constructorFor(child.type());
+        const ibuild = ctor(mTokens, child, mCtorRetreival);
         const node = ibuild.node();
         if (node) {
-          collector_.pushNode(node);
+          collector_.pushNode(node, intoAsString(mTokens, child));
         } else {
           mErrors.pushErrors(ibuild.errors());
         }
@@ -66,17 +85,18 @@ function make
           collector_.pushOperator(token);
         } else if (Segment.isFringe(token)) {
           const node = AstNode.forAstExpressionBuild.makeFringe(token);
-          collector_.pushNode(node);
+          collector_.pushNode(node, token.content);
         }
         // NOTE tolerate and ignore any groupings
         ++idx;
       }
     }
     return collector_;
-  };
+  });
 
   const node = memoize(() => {
-    
+    // NOTE you cannot "finish" collector, if there were errors
+    collector();
     if (mErrors.errors().length > 0)
       { return undefined; }
 
