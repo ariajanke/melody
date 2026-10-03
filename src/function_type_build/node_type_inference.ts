@@ -113,7 +113,10 @@ function make
       _2: Readonly<AstNode[]>): ResultType
     {
       const { retrieval } = ParametersTypeBuild.make(params);
-      return mSet.instanceFor( FunctionIndexType.of(mContextType).functionIndexTypeOf(retrieval()?.asType() ?? raise('uh oh')) );
+      const paramsType = retrieval()?.asType() ?? raise('uh oh');
+      const indexFunctionType = FunctionIndexType.
+        of(mContextType).functionIndexTypeOf(paramsType);
+      return mSet.instanceFor( indexFunctionType );
     }
   });
 

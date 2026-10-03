@@ -50,7 +50,7 @@ function make
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
       returns: () => parameterType,
       simpleEmit(writer: CodeWriter) {
-        for (let i = localIdxStart; i < localIdxEnd; ++i) {
+        for (let i = localIdxEnd - 1; i >= localIdxStart; --i) {
           writer.getParameter(i);
         }
       }

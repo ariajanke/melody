@@ -74,15 +74,19 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
     });
   }
 
-  describe('fn ~', () => {
-    const inst = makeInst(['fn', '~']);
-    isSegmentEnclosed(inst, 0, 2);
-  });
+  function emptyFunctionWith(params: string[]): string[] {
+    return ['fn', '(', ...params, ')', '(', ')', '~']
+  }
 
   const kHeadlessAddition = ['fn', '2', '+', '1'];
   const kHeadedAddition = ['fn', '(', ')', '2', '+', '1'];
   const kHeadedEmptyTuple = ['fn', '(', ')', '(', ')'];
   const kMiscLine = ['let', 'b', '=', '5'];
+
+  describe('fn ~', () => {
+    const inst = makeInst(['fn', '~']);
+    isSegmentEnclosed(inst, 0, 2);
+  });
 
   describe('fn 2 + 1 ~', () => {
     const inst = makeInst([...kHeadlessAddition, '~']);
@@ -97,27 +101,37 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
   });
 
   describe('fn (x is Integer) () ~', () => {
-    const inst = makeInst(['fn', '(', 'x', 'is', 'Integer', ')', '(', ')', '~']);
+    const inst = makeInst(emptyFunctionWith(['x', 'is', 'Integer']));
     isSegmentEnclosed(inst, 0, 9);
     forNthChild(inst, 0, 1, 6, 'functionDefinitionHead');
-    // move to... somewhere
-    it('parameter is "Integer"', fail);
   });
 
   describe('fn (x is Integer, y is Integer) () ~', () => {
-    it('has two function head child segments', fail);
-    it('parameter names are seperately "x", and "y"', fail);
+    const inst = makeInst(emptyFunctionWith([
+      'x', 'is', 'Integer', ',', 'y', 'is', 'Integer'
+    ]));
+
+    isSegmentEnclosed(inst, 0, 13);
+    forNthChild(inst, 0, 1, 10, 'functionDefinitionHead');
   });
 
   describe('fn (x is Tuple(Integer, Integer)) () ~', () => {
-    it('has one function head child segment', fail);
-    it('parameter is "Tuple(Integer, Integer)"', fail);
+    const inst = makeInst(emptyFunctionWith([
+      'x', 'is', 'Tuple', '(', 'Integer', ',', 'Integer', ')'
+    ]));
+
+    isSegmentEnclosed(inst, 0, 14);
+    forNthChild(inst, 0, 1, 11, 'functionDefinitionHead');
   });
 
   describe('fn ((x, y) is Tuple(Integer, Integer)) () ~', () => {
-    it('has one function head child segment', fail);
-    it('parameter is "Tuple(Integer, Integer)"', fail);
-    it('parameter names are "x", and "y"', fail);
+    const inst = makeInst(emptyFunctionWith([
+      '(', 'x', ',', 'y', ')', 'is',
+      'Tuple', '(', 'Integer', ',', 'Integer', ')'
+    ]));
+
+    isSegmentEnclosed(inst, 0, 18);
+    forNthChild(inst, 0, 1, 15, 'functionDefinitionHead');
   });
 
   describe('fn () () ~', () => {

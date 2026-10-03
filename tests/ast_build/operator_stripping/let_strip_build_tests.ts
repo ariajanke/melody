@@ -89,7 +89,7 @@ describeNamed({ LetStripBuild }, () => {
   describe('on "let let ..."', () => {
     const inst = makeInst(recurseOn, makeLet( aNode() ));
 
-    hasError(inst, 'let must be declared with either "=" or ":="');
+    hasError(inst, 'cannot use "let" within a name expression');
   });
 
   describe('on "let \'beans\'" = ...', () => {
@@ -101,7 +101,7 @@ describeNamed({ LetStripBuild }, () => {
   describe('on "let a + b"', () => {
     const inst = makeInst(recurseOn, makeCall('+', aNode(), bNode()));
 
-    hasError(inst, 'let must be declared with either "=" or ":="');
+    hasError(inst, 'cannot use "+" within a name expression');
   });
 
   describe('if recursion helper returns undefined', () => {
