@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
 import { AstBuild_ } from './ast_build_constructor_retrieval';
@@ -40,6 +40,10 @@ function visitLiteral(_0: Token, _1: AstLiteralType): StripBuildResult
 function visitFringe(_0: Token): StripBuildResult
   { return 'not-modified'; }
 
+// const isNotModified = <T>(t: T | 'not-modified'): boolean =>
+//   t === 'not-modified';
+const isUndefined = <T>(t: T | undefined): boolean => t === undefined;
+
 const {
   makeFunctionDefinition,
   makeTuple,
@@ -48,26 +52,43 @@ const {
 } = AstNode.forOperatorStripping;
 
 function make(mRawTreeRoot: AstNode): AstBuild_ {
+  // TODO name expression build should outmode LetMarkingStack entirely
   const mLetsStack = LetMarkingStack.make();
   const mErrorCollection = ErrorsCollector.make();
 
   function recurseOnTuple
     (nodes: Readonly<AstNode[]>): AstNode[] | 'not-modified' | undefined
   {
-    mLetsStack.markOutsideLetStatement();
-    const gvs = nodes.map(n => n.visit(mVisitor));
-    mLetsStack.popMarking();
-
-    if (gvs.every(n => n === 'not-modified'))
-      { return 'not-modified'; }
-
-    if (gvs.some(n => n === undefined))
+    const gvs = nodes.map(recurseOn);
+    if (gvs.some(isUndefined))
       { return undefined; }
 
-    type Narrowed = AstNode | 'not-modified';
+    return gvs as AstNode[];
 
-    return (gvs as Narrowed[]).map((v: Narrowed, idx: number) =>
-      v === 'not-modified' ? nodes[idx] : v);
+    // mLetsStack.markOutsideLetStatement();
+    // const gvs = nodes.map(n => n.visit(mVisitor));
+    // mLetsStack.popMarking();
+
+    // if (gvs.every(isNotModified))
+    //   { return 'not-modified'; }
+
+    // if (gvs.some(isUndefined))
+    //   { return undefined; }
+
+    // type Narrowed = AstNode | 'not-modified';
+
+    // return (gvs as Narrowed[]).map((v: Narrowed, idx: number) =>
+    //   v === 'not-modified' ? nodes[idx] : v);
+  }
+
+  function recurseOnParameter
+    (p: AstParameterExpression): AstParameterExpression | undefined
+  {
+    const typeNode = recurseOn(p.typeNode);
+    if (!typeNode)
+      { return typeNode; }
+
+    return freeze({ typeNode, names: p.names });
   }
 
   function visitFunctionDefinition
@@ -76,10 +97,16 @@ function make(mRawTreeRoot: AstNode): AstBuild_ {
      nodes: Readonly<AstNode[]>): StripBuildResult
   {
     const gv = recurseOnTuple(nodes);
-    if (gv === undefined || gv === 'not-modified')
+    if (gv === undefined)
       { return gv; }
 
-    return makeFunctionDefinition(parameters, gv);
+    const newParameters = parameters.map(recurseOnParameter);
+    if (newParameters.some(isUndefined))
+      { return undefined; }
+
+    const newNodes = gv === 'not-modified' ? nodes : gv as Readonly<AstNode[]>;
+    return makeFunctionDefinition(
+      newParameters as Readonly<AstParameterExpression[]>, newNodes);
   }
 
   function visitTuple(nodes: Readonly<AstNode[]>): StripBuildResult {
@@ -93,17 +120,18 @@ function make(mRawTreeRoot: AstNode): AstBuild_ {
   function visitInitializer
     (nameExpression: AstInitializerExpression): StripBuildResult
   {
-    mLetsStack.markInsideLetStatement();
-    const gv = nameExpression.valueNode.visit(mVisitor);
-    mLetsStack.popMarking();
+    raise('I don\'t think this should exist yet?');
+    // mLetsStack.markInsideLetStatement();
+    // const gv = nameExpression.valueNode.visit(mVisitor);
+    // mLetsStack.popMarking();
 
-    if (gv === 'not-modified' || gv === undefined)
-      { return gv; }
+    // if (gv === 'not-modified' || gv === undefined)
+    //   { return gv; }
 
-    return makeInitializer(({
-      ...nameExpression,
-      valueNode: gv
-    }));
+    // return makeInitializer(({
+    //   ...nameExpression,
+    //   valueNode: gv
+    // }));
   }
 
   const recurseOn = (node: AstNode): AstNode | undefined => {

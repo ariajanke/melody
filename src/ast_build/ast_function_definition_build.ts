@@ -31,6 +31,8 @@ const { freeze, memoize } = Helpers;
 
 const { makeFunctionDefinition } = AstNode.forAstFunctionDefinitionBuild;
 
+const passOnNode = (n: AstNode) => n;
+
 function make
   (mTokens: Readonly<Token[]>,
    mSegment: Segment,
@@ -41,11 +43,12 @@ function make
   const mChildrenCount = mSegment.children().length;
 
   function forHead(node: AstNode) {
-    const { nameExpression, error } = NameExpressionBuild.make(node, 'no-value');
+    // NOTE operators are stripped for parameters later
+    const { nameExpression, error } = NameExpressionBuild.
+      make(node, 'no-value', passOnNode);
     if (nameExpression()) {
       const { names, typeNode } = nameExpression()!;
       if (typeNode) {
-        console.log(`parameters for ${names.map(t => t.content()).join(', ')}`);
         mParameters.push({ names, typeNode });
       } else {
         mErrors.pushError({ message: 'parameter is missing a type' });

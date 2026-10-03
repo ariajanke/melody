@@ -62,34 +62,64 @@ function make
 
   const { error, setErrorMessage, setErrorFn } = StandardError.make();
 
-  function withCall(callName: Token, receiver: AstNode, args: AstNode): AstNode | undefined {
-    const grouping = callName.content();
-    if (grouping !== ':=' && grouping !== '=') {
-      return setErrorMessage('let must be declared with either "=" or ":="');
+  const mNameExpressionBuild = NameExpressionBuild.
+    make( mReceiver, 'allow-value', mRecurseOn );
+
+  // function setDefaultError(): undefined {
+  //   return setErrorMessage(`let must be declared with either "=" or ":=" (${mReceiver.asString()})`);
+  // }
+
+  // function withCall(callName: Token, receiver: AstNode, args: AstNode): AstNode | undefined {
+  //   const grouping = callName.content();
+  //   if (grouping !== ':=' && grouping !== '=')
+  //     { return undefined; }
+
+  //   const { nameExpression, error } = NameExpressionBuild.
+  //     make( receiver, 'allow-value', mRecurseOn );
+  //   if (!nameExpression())
+  //     { return setErrorFn(error); }
+
+  //   const gArgs = mRecurseOn(args);
+  //   if (!gArgs)
+  //     { return undefined; }
+
+  //   const gType = mRecurseOn(nameExpression()!.typeNode)
+
+  //   return AstNode.forOperatorStripping.
+  //     makeInitializer({
+  //       ...nameExpression()!,
+  //       qualifier: grouping,
+  //       valueNode: gArgs
+  //     });
+  // }
+
+  // const visitor = (): AstVisitor<AstNode | undefined> => freeze({
+  //   ...visitToUndefined(),
+  //   visitCall: withCall
+  // });
+
+  // const node = memoize((): StripBuildResult =>
+  //   mReceiver.visit(visitor()) ?? setDefaultError());
+
+  const node = memoize((): StripBuildResult => {
+    const nameExpression = mNameExpressionBuild.nameExpression();
+    if (!nameExpression) {
+      return setErrorFn(mNameExpressionBuild.error);
     }
-    const { nameExpression, error } = NameExpressionBuild.make( receiver, 'allow-value' );
-    if (!nameExpression())
-      { return setErrorFn(error); }
+    const { value } = nameExpression;
+    if (!value) {
+      return setErrorMessage('let statements must have a value');
+    }
+    const { names, typeNode } = nameExpression;
+    const { qualifier } = value;
 
-    const gArgs = mRecurseOn(args);
-    if (!gArgs)
-      { return undefined; }
-
-    return AstNode.forOperatorStripping.
-      makeInitializer({
-        ...nameExpression()!,
-        qualifier: grouping,
-        valueNode: gArgs
-      });
-  }
-
-  const visitor = (): AstVisitor<AstNode | undefined> => freeze({
-    ...visitToUndefined(),
-    visitCall: withCall
+    return AstNode.forOperatorStripping.makeInitializer(freeze({
+      names,
+      qualifier,
+      typeNode,
+      valueNode: value.node
+    }));
   });
-
-  const node =
-    memoize((): StripBuildResult => mReceiver.visit(visitor()));
 
   return freeze({ node, error });
 }

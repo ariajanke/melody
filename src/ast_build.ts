@@ -25,7 +25,7 @@ import {
 import { AstExpressionBuild } from './ast_build/ast_expression_build';
 import { AstFunctionDefinitionBuild } from './ast_build/ast_function_definition_build';
 import { OperatorStripping } from './ast_build/operator_stripping';
-import { Segmentation, SegmentType } from './ast_build/segmentation';
+import { Segment, Segmentation, SegmentType } from './ast_build/segmentation';
 import { AstNode } from './ast_node';
 import { Token } from './token';
 
@@ -47,12 +47,38 @@ AstBuildConstructorRetrieval.initialize(((): AstBuildConstructorRetrieval => {
   });
 })());
 
+function printSegment(tokens: Readonly<Token[]>, segment: Segment, depth: number = 0) {
+  let cidx = 0;
+  const strs: string[] = [];
+  for (let i = segment.start(); i < segment.end(); ) {
+    const child: Segment | undefined = segment.children()[cidx];
+    if (child) {
+      if (child.start() <= i || i < child.end()) {
+        i = child.end();
+        strs.push(`(*${depth} | ${child.end() - child.start()})`);
+        ++cidx;
+        continue;
+      }
+    }
+
+    strs.push(tokens[i].content());
+    ++i;
+  }
+  console.log('  '.repeat(depth) + strs.join(' '));
+  const cLen = segment.children().length;
+  for (let i = 0; i < cLen; ++i) {
+    printSegment(tokens, segment.children()[i], depth + 1);
+  }
+}
+
 function make(mTokens: Readonly<Token[]>): AstBuild {  
   const { segment, error } = Segmentation.makeInitialSegmentation(mTokens);
 
   const build = memoize(() => {
     if (!segment())
       { return undefined; }
+
+    printSegment(mTokens, segment()!);
 
     return AstFunctionDefinitionBuild.
       make(mTokens, segment()!, AstBuildConstructorRetrieval.instance());

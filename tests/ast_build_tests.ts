@@ -39,11 +39,12 @@ describeNamed({ AstBuild }, () => {
   const makeDefaultVisitor = ReseatableAstVisitor.makeDefaultingToContinue;
   const makeToken = TokenFactories.makeFromStringOnly;
 
+  const kCallStr = OperatorNamingSchema.kCall;
   const kCallToken: Token = freeze({
     start  : (): number => raise('!!'),
     end    : (): number => raise('!!'),
     type   : (): TokenType => Token.types.operator,
-    content: (): string => OperatorNamingSchema.kCall
+    content: (): string => kCallStr
   });
 
   function buildAstFor(tokens: Readonly<Token[]>): AstNode {
@@ -649,7 +650,7 @@ describeNamed({ AstBuild }, () => {
 
     it(`nested.foo(a, b).assignment := 5`, () => {
       const inst = makeInstFromStrings([
-        'nested', '.', 'foo', '<call>', '(', 'a', ',', 'b', ')', '.',
+        'nested', '.', 'foo', kCallStr, '(', 'a', ',', 'b', ')', '.',
           'assignment', ':=', '5'
       ]);
       const calls = callsFromNode(inst().node);
@@ -660,7 +661,7 @@ describeNamed({ AstBuild }, () => {
 
     it(`a(nested.table).assignment := 5`, () => {
       const inst = makeInstFromStrings([
-        'a', '<call>', '(', 'nested', '.', 'table', ')', '.', 'assignment', ':=', '5'
+        'a', kCallStr, '(', 'nested', '.', 'table', ')', '.', 'assignment', ':=', '5'
       ]);
       const calls = callsFromNode(inst().node);
       const ids = idsFromNode(inst().node);
@@ -670,7 +671,7 @@ describeNamed({ AstBuild }, () => {
 
     it(`t.foo(let a = 5).assignment := 5`, () => {
       const inst = makeInstFromStrings([
-        't', '.', 'foo', '<call>', '(',
+        't', '.', 'foo', kCallStr, '(',
           'let', 'a', '=', '5',
         ')', '.', 'assignment', ':=', '5'
       ]);
@@ -712,7 +713,7 @@ describeNamed({ AstBuild }, () => {
 
     it(`nested.table.call('withArg')`, () => {
       const inst = makeInstFromStrings([
-        'nested', '.', 'table', '.', 'call', '<call>', '(', `'withArg'`, ')'
+        'nested', '.', 'table', '.', 'call', kCallStr, '(', `'withArg'`, ')'
       ]);
       const calls = callsFromNode(inst().node);
       const ids = idsFromNode(inst().node);
@@ -761,12 +762,17 @@ describeNamed({ AstBuild }, () => {
 
     describe('fn (t is Tuple(Integer, Integer)) () ~', () => {
       const inst = makeInstWithParams([
-        't', 'is', 'Tuple', '(', 'Integer', 'Integer', ')'
+        't', 'is', 'Tuple', kCallStr, '(', 'Integer', ',', 'Integer', ')'
       ]);
       const params = memoize(() =>
         AstHelpers.parametersFromInst(inst().node));
 
       parametersAre(params, ['t']);
+
+      it('has a call to "Tuple"', () => {
+        const calls = callsFromNode(inst().node);
+        expect(calls).toEqual(['Tuple']);
+      });
     });
 
     describe('fn (x is Integer, y is Integer) () ~', () => {

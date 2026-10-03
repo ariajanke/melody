@@ -24,7 +24,7 @@ import {
   AstParameterExpression,
   AstVisitor
 } from '../ast_node';
-import { Helpers, StandardError, StandardErrorMessage, raise } from '../helpers';
+import { Helpers, StandardErrorMessage, raise } from '../helpers';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
 import { OperatorDefinitions } from './operator_definitions';
@@ -32,7 +32,7 @@ import { OperatorDefinitions } from './operator_definitions';
 const { freeze, memoize } = Helpers;
 
 interface WritableNameExpressionValue {
-  group: AstInitializerQualifier;
+  qualifier: AstInitializerQualifier;
   node : AstNode;
 };
 
@@ -98,7 +98,7 @@ const visitToStripValue = memoize((): AstVisitor<ResultType> => freeze({
 
       gv.value = {
         node,
-        group: cn
+        qualifier: cn
       };
       return gv;
     }
@@ -132,6 +132,24 @@ const visitToStripNames = memoize((): AstVisitor<ResultType> => {
 
   const recurseForTuple = (node: AstNode): Token | StandardErrorMessage =>
     node.visit(nextLevel());
+
+  const toContent = (t: Token) => t.content();
+
+  function duplicateNamesFound
+    (tokens: Readonly<Token[]>): StandardErrorMessage | undefined
+  {
+    const sortedNames = tokens.map(toContent).sort();
+    const sLen = sortedNames.length;
+    for (let i = 0; i < sLen - 1; ++i) {
+      if (sortedNames[i] === sortedNames[i - 1]) {
+        return freeze({
+          message: `duplicate name "${sortedNames[i]}" not allowed`
+        });
+      }
+    }
+
+    return undefined;
+  }
   
   return freeze({
     ...visitToInvalidNames(),
@@ -143,7 +161,8 @@ const visitToStripNames = memoize((): AstVisitor<ResultType> => {
       if (fIdx !== -1)
         { return gv[fIdx] as StandardErrorMessage; }
 
-      return ({ names: gv }) as WritableNameExpression;
+      const asTokens = gv as Token[];
+      return duplicateNamesFound(asTokens) ?? ({ names: asTokens });
     },
   });
 });
@@ -157,18 +176,40 @@ export interface NameExpressionBuild {
 
 export type NameExpressionOptions = 'allow-value' | 'no-value';
 
-function make(mNode: AstNode, mValueIsAllowed: NameExpressionOptions): NameExpressionBuild {
+function make
+  (mNode: AstNode,
+   mValueIsAllowed: NameExpressionOptions,
+   mRecurseOn: (n: AstNode) => AstNode | undefined): NameExpressionBuild
+{
   checkPrecedenceAssumption();
-  const { error, setErrorMessage } = StandardError.make();
+  let mError: StandardErrorMessage | undefined = undefined;
   const mVisitor = mValueIsAllowed === 'allow-value' ?
     visitToStripValue() : visitToStripType();
+
+  const error = (): StandardErrorMessage =>
+    mError ?? raise('no error set');
 
   const nameExpression = memoize((): NameExpression | undefined => {
     const gv = mNode.visit(mVisitor);
     if ('message' in gv) {
-      return setErrorMessage(gv.message);
+      mError = gv;
+      return undefined;
     }
 
+    if (gv.value) {
+      const valueNode = mRecurseOn(gv.value.node);
+      if (!valueNode)
+        { return undefined; }
+
+      gv.value.node = valueNode;
+    }
+    if (gv.typeNode) {
+      const typeNode = mRecurseOn(gv.typeNode);
+      if (!typeNode)
+        { return undefined; }
+
+      gv.typeNode = typeNode;
+    }
     return gv;
   });
 

@@ -59,17 +59,26 @@ function identifiersFromNode(node: () => AstNode | undefined): string[] {
 
 function callsFromNode(node: () => AstNode | undefined): string[] {
   const calls: string[] = [];
+  const recur = (node_: AstNode) => node_.visit(visitor);
   const visitor = makeVisitor({
     ...makeDefaultVisitor(),
     visitInitializer(initializer: AstInitializerExpression) {
       calls.push('let');
-      initializer.valueNode.visit(visitor);
+      recur(initializer.valueNode);
     },
     visitCall(callName: Token, receiver: AstNode, args: AstNode) {
       calls.push(callName.content());
-      receiver.visit(visitor);
-      args.visit(visitor);
-    }
+      recur(receiver);
+      recur(args);
+    },
+    visitFunctionDefinition(
+      _0: number,
+      parameters: Readonly<AstParameterExpression[]>,
+      nodes: Readonly<AstNode[]>)
+    {
+      parameters.forEach((v: AstParameterExpression) => recur(v.typeNode));
+      nodes.forEach(recur);
+    },
   });
   expect(node()).toBeDefined();
   node()?.visit(visitor);

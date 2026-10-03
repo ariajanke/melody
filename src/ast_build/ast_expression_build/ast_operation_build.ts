@@ -59,7 +59,7 @@ function make
       if (mConstructors.length === 1)
         { return mConstructors[0].makeNode(collection()); }
 
-      return setErrorMessage(`expression ends too soon around ""`);
+      return setErrorMessage(`expression ends too soon around "${mConstructors[0].asString()}"`);
     }
 
     for (let i = 0; i < sortedLen - 1; ++i) {
