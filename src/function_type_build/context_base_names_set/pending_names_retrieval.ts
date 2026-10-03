@@ -25,6 +25,8 @@ import {
 } from './declaration_names_retrieval';
 import { Helpers } from '../../helpers';
 import { FunctionNamingSchema } from '../../function_naming_schema';
+import { AstParameterExpression } from '../../ast_node';
+import { Token } from '../../token';
 
 const { freeze, memoize, makeIsStringInLookUpTable } = Helpers;
 
@@ -48,25 +50,38 @@ function make
    mIsBuiltinName: (name: string) => boolean,
    mGetChildPending: (uid: number) => PendingNamesRetrieval): PendingNamesRetrieval
 {
-  const { declarations, usedNames, childDefinitions } = mDeclNames;
+  const { declarations, parameters, usedNames, childDefinitions } = mDeclNames;
 
-  const declaredNames = ((): Readonly<string[]> =>
-    declarations().reduce((res: string[], v: NameDeclaration): string[] => {
+  const declaredNames = ((): Readonly<string[]> => {
+    const declNames = declarations().reduce((res: string[], v: NameDeclaration): string[] => {
       return v.names.reduce((res: string[], name: string): string[] => {
-        // TODO marry with OrderedInitialSetsCollection's logic around
-        //      accessor/modifier names
-        // NOTE if called... add (we're assuming it's a function)
-        // TODO remove this assumption
-        if (totalUsedNames()[name]) {
-          res.push(name);
-        }
-        res.push(mapToFringeAccessor(name));
-        if (v.type === ':=') {
+        res = addAccessor(res, name);
+        if (v.qualifier === ':=') {
           res.push(mapToAssignment(name));
         }
         return res;
       }, res);
-    }, [] as string[]));
+    }, [] as string[]);
+
+    return parameters().
+      reduce((res: string[], p: AstParameterExpression) => {
+        return p.names.
+          reduce((res: string[], t: Token) => addAccessor(res, t.content()), res);
+      }, declNames);
+  });
+
+  const addAccessor = (res: string[], name: string): string[] => {
+    // TODO marry with OrderedInitialSetsCollection's logic around
+    //      accessor/modifier names
+    // NOTE if called... add (we're assuming it's a function)
+    // TODO remove this assumption
+    if (totalUsedNames()[name]) {
+      res.push(name);
+    }
+
+    res.push(mapToFringeAccessor(name));
+    return res;
+  };
 
   const isPendingNameFunc = memoize(() => {
     const fn = makeIsStringInLookUpTable(declaredNames());

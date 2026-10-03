@@ -21,7 +21,7 @@ import { Helpers } from '../../helpers';
 import { ContextFrameStack } from '../context_frame_stack';
 import { ContextAncestorAccessorsStage } from './context_ancestor_accessors_stage';
 import { WritableObjectType } from './writable_object_type';
-import { ContextDeclarationBuild_, ContextTypeProgression_ } from './context_declaration_build';
+import { ContextDeclarationBuild_ } from './context_declaration_build';
 import { ContextDelegationStage_ } from './context_delegation_stage';
 import { FunctionBodyPrefaceBuild } from './function_body_preface_build';
 import { ReceiverResolution_ } from './receiver_resolution';
@@ -29,21 +29,20 @@ import { UsedAncestorCollection } from './used_ancestor_collection';
 import { ProgressiveVariableAllocation, VariableAllocation } from './variable_allocation';
 import { AncestorCollection, AncestorInfo } from './ancestor_collection';
 import { NameDeclaration } from '../context_base_names_set/declaration_names_retrieval';
+import { ParametersTypeRetrieval } from '../parameters_type_build';
+import { ContextParameterStage_ } from './context_parameter_stage';
 
 const { freeze, memoize } = Helpers;
 
 export type DeclarationBuildConstructor =
   (declarations: Readonly<NameDeclaration[]>,
-   incompleteContextType: WritableObjectType,
-   progression: ContextTypeProgression_) =>
+   incompleteContextType: WritableObjectType) =>
   ContextDeclarationBuild_;
 
 export interface ContextLinkStage_ {
   preface(): FunctionType;
   receiverResolution(): ReceiverResolution_;
-  next(declarations: Readonly<NameDeclaration[]>,
-       progression: ContextTypeProgression_)
-      : ContextDeclarationBuild_;
+  next(parametersRetrieval: ParametersTypeRetrieval): ContextParameterStage_;
 };
 
 function make
@@ -79,8 +78,10 @@ function makeWithAncestors
               varAlc.next(anc.variableName, anc.type),
              makeInitialAllocation()));
 
+  const roVariableAllocation = variableAllocation as () => VariableAllocation;
+
   const accessorsStage = memoize(() => ContextAncestorAccessorsStage.
-    make(variableAllocation(),
+    make(roVariableAllocation(),
          mUsedAncestorCollection,
          mWritableReferenceType));
 
@@ -88,8 +89,7 @@ function makeWithAncestors
     preface() && ContextDelegationStage_.
       make(mPendingNames,
            mUsedAncestorCollection,
-           writableReferenceType(),
-           makeDeclarationBuild));
+           writableReferenceType()));
 
   const writableReferenceType = () => accessorsStage().writableReferenceType();
 
@@ -97,33 +97,20 @@ function makeWithAncestors
 
   const prefaceBuild = memoize(() =>
     FunctionBodyPrefaceBuild.
-      make(variableAllocation(),
+      make(roVariableAllocation(),
            mUsedAncestorCollection,
            referenceType()));
-
-  function makeDeclarationBuild
-    (declarations: Readonly<NameDeclaration[]>,
-     incompleteContextType: WritableObjectType,
-     progression: ContextTypeProgression_)
-  {
-    return ContextDeclarationBuild_.
-      make(variableAllocation(),
-           declarations,
-           incompleteContextType,
-           progression);
-  }
 
   const receiverResolution = memoize(() =>
     ReceiverResolution_.make(mUsedAncestorCollection, referenceType()));
 
   const preface = memoize(() => prefaceBuild().functionType());
 
-  function next
-    (declarations: Readonly<NameDeclaration[]>,
-     progression: ContextTypeProgression_)
-    : ContextDeclarationBuild_
-  {
-    return delegationStage().next(declarations, progression);
+  function next(parametersRetrieval: ParametersTypeRetrieval): ContextParameterStage_ {
+    return ContextParameterStage_.
+      make(delegationStage().writableReferenceType(),
+           parametersRetrieval,
+           variableAllocation());
   }
 
   return freeze({

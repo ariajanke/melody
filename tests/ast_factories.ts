@@ -17,7 +17,7 @@
  */
 
 import { Helpers } from '../src/helpers';
-import { AstInitializerType, AstNode } from '../src/ast_node';
+import { AstInitializerExpression, AstInitializerQualifier, AstNode } from '../src/ast_node';
 import { TokenFactories } from './token_factories';
 
 const { freeze } = Helpers;
@@ -36,14 +36,19 @@ const makeCall =
 
 function makeFunctionDefinition(...nodes: Readonly<(string | AstNode)[]>): AstNode {
   return AstNode.forAstFunctionDefinitionBuild.
-    makeFunctionDefinition(nodes.map(ensureFringe));
+    makeFunctionDefinition([], nodes.map(ensureFringe));
 }
 
 function makeInitializer
-  (names: Readonly<string[]>, group: AstInitializerType, value: AstNode): AstNode
+  (names: Readonly<string[]>, group: AstInitializerQualifier, value: AstNode): AstNode
 {
   return AstNode.forOperatorStripping.
-    makeInitializer(names.map(makeToken), group, value);
+    makeInitializer(freeze({
+      names: names.map(makeToken),
+      typeNode: emptyTupleInstance(),
+      qualifier: group,
+      valueNode: value
+    }) satisfies AstInitializerExpression);
 }
 
 export const AstFactories = freeze({

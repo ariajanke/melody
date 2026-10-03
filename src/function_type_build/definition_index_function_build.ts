@@ -17,7 +17,7 @@
  */
 
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
-import { Helpers, raise } from '../helpers';
+import { Helpers, raise, StandardError } from '../helpers';
 import { FunctionTypeBase } from './function_type_base';
 import { CodeWriter } from '../code_writer';
 import { WritableContextFrameStack } from './context_frame_stack';
@@ -25,66 +25,77 @@ import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import { DefinitionBodyFunctionBuild } from './definition_body_function_build';
 import { FunctionIndexType } from './function_index_type';
 import { TupleObjectType } from './tuple_object_type';
-import { AstNode } from '../ast_node';
+import { AstNode, AstParameterExpression } from '../ast_node';
+import { ParametersTypeBuild, ParametersTypeRetrieval } from './parameters_type_build';
 
 const { freeze, memoize } = Helpers;
 
 function make
   (mUid: number,
+   mParameters: Readonly<AstParameterExpression[]>,
    mNodes: Readonly<AstNode[]>,
    mFunctionRegistry: FunctionDefinitionRegistry,
    mContextFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild
-{
-  const defBuild = DefinitionBodyFunctionBuild.
-    make(mUid, mNodes, mContextFrameStack);
+{  
+  const mCurrentDepth = mContextFrameStack.depth();
 
-  const { error } = defBuild;
+  const { error, setErrorFn } = StandardError.make();
   const { registerDefinitionBody } = mFunctionRegistry;
   const { emptyTuple } = TupleObjectType;
 
-  const mCurrentDepth = mContextFrameStack.depth();
+  const parameterRetrieval = memoize((): ParametersTypeRetrieval | undefined => {
+    const { retrieval, error } = ParametersTypeBuild.make(mParameters);
+    return retrieval() ?? setErrorFn(error);
+  });
+
+  const definitionFtype = memoize((): FunctionType | undefined => {
+    if (!parameterRetrieval())
+      { return undefined; }
+
+    const defBuild = DefinitionBodyFunctionBuild.
+      make(mUid, parameterRetrieval()!, mNodes, mContextFrameStack);
+    return defBuild.functionType() ?? setErrorFn(defBuild.error);
+  });
 
   const parentType = memoize(() =>
     mCurrentDepth === 0 ?
     emptyTuple() : 
     mContextFrameStack.topFrame().referenceType());
 
-  const recWrappedBodyFtype = memoize(() => {
-    const compositeFunctionType = defBuild.functionType();
-    if (!compositeFunctionType)
+  const recWrappedBodyFtype = memoize((): FunctionType | undefined => {
+    if (!definitionFtype())
       { return undefined; }
 
-    // evaluation deference is this thing's greatest strength and weakness
+    // NOTE concerns with the stack mutating
     parentType();
     const ftype = freeze({
       ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      parameters: parameterRetrieval()!.asType,
       receiver: parentType,
-      simpleEmit: compositeFunctionType.simpleEmit
+      simpleEmit: definitionFtype()!.simpleEmit
     });
 
     registerDefinitionBody(ftype, mCurrentDepth);
     return ftype;
   });
 
-  const indexRepresentation = (() => FunctionIndexType.of(parentType()));
-
   const functionType = memoize((): FunctionType | undefined => {
-    if (!recWrappedBodyFtype())
+    if (!recWrappedBodyFtype() || !parameterRetrieval())
       { return undefined; }
-    
+
+    // NOTE a function definition evaluating to an integer
+    //      is an "immediate evaluable" node, much like a literal
     return freeze({
-      emit(_0: FunctionType,
-       _1: FunctionType,
-       _2: CodeWriter): void
-      {
-        raise('uh oh');
-      },
+      emit(_0: FunctionType, _1: FunctionType, _2: CodeWriter): void
+        { raise('uh oh'); },
       uid: memoize(Symbol),
-      // this is essentially a literal...
       receiver: emptyTuple,
       parameters: emptyTuple,
-      returns: indexRepresentation().functionIndexType,
+      returns: () =>
+        FunctionIndexType.
+          of(parentType()).
+          functionIndexTypeOf( parameterRetrieval()!.asType() ),
       simpleEmit(writer: CodeWriter) {
         writer.pushIndexOfRegistered(recWrappedBodyFtype()!);
       }

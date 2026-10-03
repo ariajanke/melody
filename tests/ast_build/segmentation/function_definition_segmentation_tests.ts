@@ -21,6 +21,7 @@ import { Token } from '../../../src/token';
 import { Helpers } from '../../../src/helpers';
 import { TokenFactories } from '../../token_factories';
 import { FunctionDefinitionSegmentation } from '../../../src/ast_build/segmentation/function_definition_segmentation';
+import { SegmentType } from '../../../src/ast_build/segmentation';
 
 const { describeNamed } = TestHelpers;
 const { memoize } = Helpers;
@@ -41,7 +42,9 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
     });
   }
 
-  function hasUniqueChildSegment(inst: InstFn, exStart: number, exEnd: number) {
+  function hasUniqueChildSegment
+    (inst: InstFn, exStart: number, exEnd: number)
+  {
     hasNChildren(inst, 1);
     forNthChild(inst, 0, exStart, exEnd);
   }
@@ -53,30 +56,38 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
       expect(children()?.length).toEqual(count));
   }
 
-  function forNthChild(inst: InstFn, nthChild: number, exStart: number, exEnd: number) {
+  function forNthChild
+    (inst: InstFn, nthChild: number, exStart: number, exEnd: number,
+     segmentType: SegmentType = 'expression')
+  {
     const children = memoize(() => inst().segment()?.children());
     const child = memoize(() => {
       if (!children()) { return undefined; }
 
       return children()![nthChild];
     });
-    it(`child (${nthChild}) segment that is typed as 'expression'`, () =>
-      expect(child()?.type()).toEqual('expression'));
+    it(`child (${nthChild}) segment that is typed as '${segmentType}'`, () =>
+      expect(child()?.type()).toEqual(segmentType));
     it(`child (${nthChild}) segment within [${exStart} ${exEnd})`, () => {
       expect(child()?.start()).toEqual(exStart);
       expect(child()?.end()).toEqual(exEnd);
     });
   }
 
-  describe('fn ~', () => {
-    const inst = makeInst(['fn', '~']);
-    isSegmentEnclosed(inst, 0, 2);
-  });
+  function emptyFunctionWith(params: string[]): string[] {
+    return ['fn', '(', ...params, ')', '(', ')', '~']
+  }
 
   const kHeadlessAddition = ['fn', '2', '+', '1'];
   const kHeadedAddition = ['fn', '(', ')', '2', '+', '1'];
   const kHeadedEmptyTuple = ['fn', '(', ')', '(', ')'];
   const kMiscLine = ['let', 'b', '=', '5'];
+
+  describe('fn ~', () => {
+    const inst = makeInst(['fn', '~']);
+    isSegmentEnclosed(inst, 0, 2);
+  });
+
   describe('fn 2 + 1 ~', () => {
     const inst = makeInst([...kHeadlessAddition, '~']);
     isSegmentEnclosed(inst, 0, 5);
@@ -87,6 +98,40 @@ describeNamed({ FunctionDefinitionSegmentation }, () => {
     const inst = makeInst([...kHeadedAddition, '~']);
     isSegmentEnclosed(inst, 0, 7);
     hasUniqueChildSegment(inst, 3, 6);
+  });
+
+  describe('fn (x is Integer) () ~', () => {
+    const inst = makeInst(emptyFunctionWith(['x', 'is', 'Integer']));
+    isSegmentEnclosed(inst, 0, 9);
+    forNthChild(inst, 0, 1, 6, 'functionDefinitionHead');
+  });
+
+  describe('fn (x is Integer, y is Integer) () ~', () => {
+    const inst = makeInst(emptyFunctionWith([
+      'x', 'is', 'Integer', ',', 'y', 'is', 'Integer'
+    ]));
+
+    isSegmentEnclosed(inst, 0, 13);
+    forNthChild(inst, 0, 1, 10, 'functionDefinitionHead');
+  });
+
+  describe('fn (x is Tuple(Integer, Integer)) () ~', () => {
+    const inst = makeInst(emptyFunctionWith([
+      'x', 'is', 'Tuple', '(', 'Integer', ',', 'Integer', ')'
+    ]));
+
+    isSegmentEnclosed(inst, 0, 14);
+    forNthChild(inst, 0, 1, 11, 'functionDefinitionHead');
+  });
+
+  describe('fn ((x, y) is Tuple(Integer, Integer)) () ~', () => {
+    const inst = makeInst(emptyFunctionWith([
+      '(', 'x', ',', 'y', ')', 'is',
+      'Tuple', '(', 'Integer', ',', 'Integer', ')'
+    ]));
+
+    isSegmentEnclosed(inst, 0, 18);
+    forNthChild(inst, 0, 1, 15, 'functionDefinitionHead');
   });
 
   describe('fn () () ~', () => {

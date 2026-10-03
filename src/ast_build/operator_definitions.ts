@@ -21,7 +21,7 @@ import { OperatorNamingSchema } from '../operator_naming_schema';
 
 const { freeze, memoize } = Helpers;
 
-type OperatorRelation = 'binary' | 'unary';
+export type OperatorRelation = 'binary' | 'unary';
 
 interface OperatorDefinitionMut {
   representation: string;
@@ -130,9 +130,9 @@ export const OperatorDefinitions = freeze({
     return factory.
       unary (kLet).
       binary(kComma).
-      binary(kIs).
       binary(kEquality).
       binary(kAssignment).
+      binary(kIs).
       binary(kPlus).
       binary(kMinus).
       binary(kMultiply).

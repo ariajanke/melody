@@ -16,14 +16,14 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Helpers } from '../../../src/helpers';
-import { WasmFunctionLocalAllocation } from '../../../src/wasm_compilation/melody_code_writer/wasm_function_locals_allocation';
-import { TestHelpers } from '../../test_helpers';
+import { Helpers } from '../../src/helpers';
+import { TestHelpers } from '../test_helpers';
+import { NameExpressionBuild } from '../../src/ast_build/name_expression_build';
+
+const { freeze, memoize } = Helpers;
 
 const { describeNamed } = TestHelpers;
 
-describeNamed({ WasmFunctionLocalAllocation }, () => {
-  it('reserves an index for receiver', fail);
-  it('reserves an index for parameter', fail);
-  it('reserves indices for receiver + parameters', fail);
+describeNamed({ NameExpressionBuild }, () => {
+  it('has tests', fail);
 });

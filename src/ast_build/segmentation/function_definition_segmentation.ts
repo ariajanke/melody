@@ -22,7 +22,7 @@ import { Token } from '../../token';
 import { FunctionBodySegmentation } from './function_body_segmentation';
 import { FunctionHeadSegmentation } from './function_head_segmentation';
 import { LineSegmentation } from './line_segmentation';
-import { Segment, Segmentation } from '../segmentation';
+import { Segment, Segmentation, SegmentType } from '../segmentation';
 
 type BodyClosingFunc = (token: Token | undefined) => boolean;
 
@@ -31,6 +31,12 @@ const { freeze, memoize } = Helpers;
 const { isBodyClosing } = FunctionBodySegmentation;
 
 const isSeparator = LineSegmentation.isProperClose;
+
+const headType = (): SegmentType => 'functionDefinitionHead';
+
+const kClosing = Token.types.grouping.closing;
+
+const kOpening = Token.types.grouping.opening;
 
 function isSeparatorOrBodyClose(token: Token | undefined): boolean
   { return isSeparator(token) || isBodyClosing(token); }
@@ -47,6 +53,21 @@ function isMultiLine(mTokens: Readonly<Token[]>, headSegment: Segment): boolean 
   return isSeparator(mTokens[end()]);
 }
 
+function isEmpty
+  (tokens: Readonly<Token[]>, segment: Segment): boolean
+{
+  const { start, end } = segment;
+  const diff = end() - start();
+  if (diff === 0) {
+    return true;
+  } else if (diff === 2) {
+    return tokens[start()  ].type() === kOpening &&
+           tokens[end() - 1].type() === kClosing;
+  }
+
+  return false;
+}
+
 function make
   (mTokens: Readonly<Token[]>, mStart: number, mEnd: number): Segmentation
 {
@@ -56,7 +77,7 @@ function make
 
   const heading = memoize((): Segmentation =>
     FunctionHeadSegmentation.make(mTokens, mStart, mEnd));
-  
+
   const isBodyClosingFunc = memoize((): BodyClosingFunc | undefined => {
     const { segment } = heading();
     if (!segment())
@@ -90,12 +111,25 @@ function make
     raise('Body segmentation must place index at body close or end position');
   });
 
+  const childSegments = memoize((): Readonly<Segment[]> | undefined => {
+    if (!body_() || !heading().segment())
+      { return undefined; }
+
+    if (isEmpty(mTokens, heading().segment()!))
+      { return body_()!.children(); }
+    
+    return [
+      freeze({ ...heading().segment()!, type: headType }),
+      ...body_()!.children()
+    ];
+  });
+
   const segment = memoize((): Segment | undefined => {
-    if (!body_() || !definitionEnd())
+    if (!childSegments() || !definitionEnd())
       { return undefined; }
 
     return freeze({
-      children: body_()!.children,
+      children: childSegments as () => Readonly<Segment[]>,
       type: body_()!.type,
       start: () => mStart,
       end: definitionEnd as () => number

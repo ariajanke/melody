@@ -242,6 +242,37 @@ describe('happy path end-to-end', () => {
           expect(compiler.error()).toMatch('cannot find function "g3:=" on receiver*');
         });
       });
+
+      describe('with parameters', () => {
+        doRun('simple', `
+          let add2 = fn(x is Integer, y is Integer)
+            puts(x + y)
+          ~
+          add2(6, 5)
+          `,
+          ['11'])
+
+        doRun('tuples', `
+          # let add2 = fn(x is Integer, y is Integer)
+          #  puts(x + y)
+          # ~
+          # let minTu = fn(t is Tuple(Integer, Integer))
+          #  let x, y = t
+          #  puts(x - y)
+          # ~
+          let addTu2 = fn(x is Integer, y is Integer, t is Tuple(Integer, Integer))
+            # add2(x, y)
+            # addTu(t)
+            let (a, b) = t
+            puts(a, b, x, y)
+          ~
+          # add2(6, 5)
+          # minTu(7, 8)
+          addTu2(3, 4, (5, 3))
+          `,
+          ['5', '3', '3', '4'])
+
+      });
     });
   });
 });

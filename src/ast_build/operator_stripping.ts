@@ -16,8 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Helpers } from '../helpers';
-import { AstInitializerType, AstLiteralType, AstNode } from '../ast_node';
+import { Helpers, raise } from '../helpers';
 import { Token } from '../token';
 import { ErrorsCollector } from './errors_collector';
 import { AstBuild_ } from './ast_build_constructor_retrieval';
@@ -26,6 +25,12 @@ import {
   StripBuild,
   StripBuildResult
 } from './operator_stripping/strip_build';
+import {
+  AstInitializerExpression,
+  AstLiteralType,
+  AstNode,
+  AstParameterExpression
+} from '../ast_node';
 
 const { freeze, memoize } = Helpers;
 
@@ -35,60 +40,68 @@ function visitLiteral(_0: Token, _1: AstLiteralType): StripBuildResult
 function visitFringe(_0: Token): StripBuildResult
   { return 'not-modified'; }
 
+const isUndefined = <T>(t: T | undefined): boolean => t === undefined;
+
 const {
   makeFunctionDefinition,
   makeTuple,
-  makeInitializer,
   makeCall,
 } = AstNode.forOperatorStripping;
 
 function make(mRawTreeRoot: AstNode): AstBuild_ {
+  // TODO name expression build should outmode LetMarkingStack entirely
   const mLetsStack = LetMarkingStack.make();
   const mErrorCollection = ErrorsCollector.make();
 
-  function makeNodesVisitFunction(intoNode: (n: AstNode[]) => AstNode) {
-    return (nodes: Readonly<AstNode[]>): StripBuildResult => {
-      mLetsStack.markOutsideLetStatement();
-      const gvs = nodes.map(n => n.visit(mVisitor));
-      mLetsStack.popMarking();
+  function recurseOnTuple
+    (nodes: Readonly<AstNode[]>): AstNode[] | 'not-modified' | undefined
+  {
+    const gvs = nodes.map(recurseOn);
+    if (gvs.some(isUndefined))
+      { return undefined; }
 
-      if (gvs.every(n => n === 'not-modified'))
-        { return 'not-modified'; }
-
-      if (gvs.some(n => n === undefined))
-        { return undefined; }
-
-      type Narrowed = AstNode | 'not-modified';
-
-      const gvsAsNodes = (gvs as Narrowed[]).map((v: Narrowed, idx: number) =>
-        v === 'not-modified' ? nodes[idx] : v);
-
-      return intoNode(gvsAsNodes);
-    };
+    return gvs as AstNode[];
   }
 
-  const visitFunctionDefinition_ =
-    makeNodesVisitFunction(makeFunctionDefinition);
-
-  const visitFunctionDefinition = (_0: number, nodes: Readonly<AstNode[]>) =>
-    visitFunctionDefinition_(nodes);
-
-  const visitTuple = makeNodesVisitFunction(makeTuple);
-
-  function visitInitializer
-    (names: Readonly<Token[]>,
-     initType: AstInitializerType,
-     innerNode: AstNode): StripBuildResult
+  function recurseOnParameter
+    (p: AstParameterExpression): AstParameterExpression | undefined
   {
-    mLetsStack.markInsideLetStatement();
-    const gv = innerNode.visit(mVisitor);
-    mLetsStack.popMarking();
+    const typeNode = recurseOn(p.typeNode);
+    if (!typeNode)
+      { return typeNode; }
 
-    if (gv === 'not-modified' || gv === undefined)
+    return freeze({ typeNode, names: p.names });
+  }
+
+  function visitFunctionDefinition
+    (_0: number,
+     parameters: Readonly<AstParameterExpression[]>,
+     nodes: Readonly<AstNode[]>): StripBuildResult
+  {
+    const gv = recurseOnTuple(nodes);
+    if (gv === undefined)
       { return gv; }
 
-    return makeInitializer(names, initType, gv);
+    const newParameters = parameters.map(recurseOnParameter);
+    if (newParameters.some(isUndefined))
+      { return undefined; }
+
+    const newNodes = gv === 'not-modified' ? nodes : gv as Readonly<AstNode[]>;
+    return makeFunctionDefinition(
+      newParameters as Readonly<AstParameterExpression[]>, newNodes);
   }
+
+  function visitTuple(nodes: Readonly<AstNode[]>): StripBuildResult {
+    const gv = recurseOnTuple(nodes);
+    if (gv === undefined || gv === 'not-modified')
+      { return gv; }
+
+    return makeTuple(gv);
+  }
+
+  function visitInitializer
+    (_0: AstInitializerExpression): StripBuildResult
+  { raise('initializers should not exist on the AST yet'); }
 
   const recurseOn = (node: AstNode): AstNode | undefined => {
     mLetsStack.markOutsideLetStatement();

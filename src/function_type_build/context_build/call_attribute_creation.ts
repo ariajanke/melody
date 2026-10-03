@@ -88,7 +88,7 @@ function make
     receiver: () => representativeFtype.receiver(),
     // NOTE only one set of params/returns supported so far
     //      returns: empty
-    //      parameters: empty
+    parameters: representativeFtype.parameters,
     emit
   });
 }

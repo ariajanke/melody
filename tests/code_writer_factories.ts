@@ -68,6 +68,10 @@ export const CallCountingCodeWriter = freeze({
         mStrings.push('pushInteger', `${num}`);
         return inst;
       },
+      getParameter(idx: number): CodeWriter {
+        mStrings.push('getParameter', `${idx}`);
+        return inst;
+      },
       pushLiteralString(str: string): CodeWriter {
         mStrings.push('pushLiteralString', str);
         return inst;
