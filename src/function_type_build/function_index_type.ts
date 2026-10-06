@@ -58,6 +58,7 @@ function makeNew(parent: ObjectType): FunctionIndexType {
       lookUp(operation: string | symbol): FunctionLookUpTable | undefined {
         if (operation !== OperatorNamingSchema.kCall)
           { return undefined; }
+
         return lookUpTable();
       },
       detuplify: () => undefined,

@@ -511,3 +511,34 @@ let PointCtor = fn (a is Numeric.Type)
   ~
 ~
 ```
+
+# 2026-1005-1720
+```
+...
+# could export "new"
+return tbl
+  new = fn (...) tbl
+    x = ...
+    y = ...
+    width = fn () ...
+via Packaging
+```
+
+```ts
+
+class MelodyResource {
+  constructor(private addr) {}
+  [Symbol.dispose]() {
+    // if we need to "release" it in some fashion
+    Melody.Referentials.release(this.addr);
+  }
+};
+
+// ... and a whole lot of complicated s*** ...
+
+const MyObject = Melody.domodule('...').exportedPackage();
+const inst = MyObject.new(...); // there could be issues with names, as melody has no problems with "new" though JS certainly could
+// I'm not sure how "inst" would be represented in javascript...
+inst.x(); // ".x" properties?
+inst.width(); // no problems here
+```

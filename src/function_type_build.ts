@@ -29,19 +29,26 @@ const { freeze, memoize } = Helpers;
 export interface FunctionType {
   parameters(): ObjectType;
   returns(): ObjectType;
-  /// A name of another function on the parent object type. Which is used as
-  /// the actual receiver for this
-  /// function type. If no such name is provided, then the actual receiver is
-  /// the DAST indicated receiver.
   receiver(): ObjectType;
 
-  simpleEmit(writer: CodeWriter): void;
+  // simpleEmit(writer: CodeWriter): void;
 
-  emit(receiverFtype: FunctionType,
-       parameterFtype: FunctionType,
-       writer: CodeWriter): void;
+  // emit(receiverFtype: FunctionType,
+  //      parameterFtype: FunctionType,
+  //      writer: CodeWriter): void;
 
   uid(): symbol;
+};
+
+export interface EmissionContext {
+  pushParameters(em: CodeEmission): void;
+  pushReceiver(em: CodeEmission): void;
+  popParameters(): CodeEmission;
+  popReceiver(): CodeEmission;
+};
+
+export interface CodeEmission {
+  emit(writer: CodeWriter, ctx: EmissionContext): void;
 };
 
 export const FunctionType = FunctionTypeBase;
@@ -73,6 +80,19 @@ export interface FunctionLookUpTable {
 export interface FunctionTypeBuild {
   functionType(): FunctionType | undefined,
   error(): StandardErrorMessage
+};
+
+export interface ImmediateValue {
+  asInteger(): number | undefined;
+  asObjectType(): ObjectType | undefined;
+};
+
+interface ImmediateFunction {
+  call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue;
+};
+
+interface FunctionRegistry {
+  register(ftype: FunctionType, completedContextType: ObjectType): void;
 };
 
 function make(mRoot: AstNode,

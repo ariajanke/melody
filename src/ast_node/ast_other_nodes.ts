@@ -39,14 +39,16 @@ export const AstDefinition = freeze({
     parameters: Readonly<AstParameterExpression_[]>,
     nodes: Readonly<AstNode_[]>): AstNode_
   {
-    const uid = makeUid();
-    return freeze({
+    const inst = freeze({
+      parameters,
+      nodes,
       asString: () =>
         `Definition { ${nodes.map(v => v.asString()).join(', ')} }`,
-      visit: <T>(v: AstVisitor_<T>) =>
-        v.visitFunctionDefinition(uid(), parameters, nodes),
-      uid
+      visit: <T>(v: AstVisitor_<T>): T =>
+        v.visitFunctionDefinition(inst),
+      uid: makeUid()
     });
+    return inst;
   }
 });
 

@@ -23,8 +23,26 @@ import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
 import { ConstantStringType } from './builtin_type_base';
 import { FunctionType, FunctionTypeBuild } from '../function_type_build';
+import { EmissionContext } from '../function_type_build';
 
 const { freeze } = Helpers;
+
+const IntegerLiteralThings = ({
+  make(intValue: number) {
+
+    function emit(writer: CodeWriter, _1: EmissionContext) {
+      writer.pushInteger(intValue);
+    }
+
+    function asInteger(): number | undefined
+      { return intValue; }
+
+    freeze({
+      ...FunctionTypeBase.makeNewEmitlessEmpty(),
+      returns: IntegerType.instance,
+    }) satisfies FunctionType;
+  }
+});
 
 const klass = freeze({
   makeSuccessFromType: (ftype: FunctionType): FunctionTypeBuild =>

@@ -26,12 +26,17 @@ export interface AstInitializerExpression_ {
   readonly typeNode?: AstNode_;
   readonly qualifier: AstInitializerQualifier_;
   readonly valueNode: AstNode_;
-}
+};
 
 export interface AstParameterExpression_ {
   readonly names: Readonly<Token[]>;
   readonly typeNode: AstNode_;
-}
+};
+
+export interface AstDefinitionNode_ extends AstNode_ {
+  readonly parameters: Readonly<AstParameterExpression_[]>;
+  readonly nodes: Readonly<AstNode_[]>;
+};
 
 export interface AstVisitor_<ResultType = void> {
   visitLiteral(token: Token, type: AstLiteralType_): ResultType;
@@ -39,10 +44,7 @@ export interface AstVisitor_<ResultType = void> {
   visitTuple(nodes: Readonly<AstNode_[]>): ResultType;
   visitInitializer(initializer: AstInitializerExpression_): ResultType;
   visitCall(callName: Token, receiver: AstNode_, args: AstNode_): ResultType;
-  visitFunctionDefinition(
-    uid: number,
-    parameters: Readonly<AstParameterExpression_[]>,
-    nodes: Readonly<AstNode_[]>): ResultType;
+  visitFunctionDefinition(defNode: AstDefinitionNode_): ResultType;
 };
 
 /// IAST: Initial Abstract Syntax Tree

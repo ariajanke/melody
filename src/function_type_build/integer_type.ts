@@ -18,12 +18,30 @@
 
 import { CodeWriter } from '../code_writer';
 import { FunctionLookUpTable, ObjectType, FunctionType } from '../function_type_build';
-import { Helpers } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { BuiltinTypeBase } from './builtin_type_base';
 import { FunctionTypeBase } from './function_type_base';
 import { MutableFunctionTable } from './mutable_function_table';
 
 const { freeze, memoize } = Helpers;
+
+interface ImmediateValue {
+  asInteger(): number | undefined;
+};
+
+const plus = ({
+  call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue {
+    const rint = receiver.asInteger();
+    const pint = parameters.asInteger();
+    if (rint === undefined ||
+        pint === undefined)
+    { raise('cannot call plus, your immediates are not integers'); }
+
+    return ({
+      asInteger: () => rint + pint
+    })
+  }
+})
 
 function make(): ObjectType {
   type CodeWriterFnName = 'addIntegers' | 'multiplyIntegers' | 'subtractIntegers';
