@@ -17,18 +17,25 @@
  */
 
 import { CodeWriter } from '../code_writer';
-import { Helpers } from '../helpers';
+import { Helpers, StandardErrorMessage } from '../helpers';
 import { IntegerType } from './integer_type';
 import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
 import { ConstantStringType } from './builtin_type_base';
-import { FunctionType, FunctionTypeBuild } from '../function_type_build';
+import { CodeEmission, FunctionType, FunctionTypeBuild, ImmediateValue, ObjectType } from '../function_type_build';
 import { EmissionContext } from '../function_type_build';
+import { AstLiteralNode } from '../ast_node';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
+
+// multiple records per node
+
 
 const IntegerLiteralThings = ({
-  make(intValue: number) {
+  make(mLiteralNode: AstLiteralNode,
+       
+  ): RecordsRetrieval {
+    const intValue = Number(mLiteralNode.token.content());
 
     function emit(writer: CodeWriter, _1: EmissionContext) {
       writer.pushInteger(intValue);
@@ -37,10 +44,11 @@ const IntegerLiteralThings = ({
     function asInteger(): number | undefined
       { return intValue; }
 
-    freeze({
-      ...FunctionTypeBase.makeNewEmitlessEmpty(),
-      returns: IntegerType.instance,
-    }) satisfies FunctionType;
+    return freeze({
+      emission: memoize(() => freeze({ emit })),
+      objectType: IntegerType.instance,
+      immediateValue: memoize(() => freeze({ asInteger, asObjectType: () => undefined }))
+    });
   }
 });
 

@@ -21,6 +21,17 @@ import { Token } from '../token';
 export type AstLiteralType_ = 'string' | 'number';
 export type AstInitializerQualifier_ = '=' | ':=';
 
+/// Abstract Syntax Tree
+/// schema:
+/// <calls> are generally stripped, but maybe present if a name (identifier) 
+/// was not found for them. Assignment operators are stripped, operators found
+/// immediately under lets will remain. All dots are removed without exception.
+export interface AstNode_ {
+  asString(): string;
+  visit<T>(visitor: AstVisitor_<T>): T;
+  uid(): number;
+};
+
 export interface AstInitializerExpression_ {
   readonly names: Readonly<Token[]>;
   readonly typeNode?: AstNode_;
@@ -38,6 +49,25 @@ export interface AstDefinitionNode_ extends AstNode_ {
   readonly nodes: Readonly<AstNode_[]>;
 };
 
+export interface AstLiteralNode_ extends AstNode_ {
+  readonly token: Token;
+  readonly type : AstLiteralType_;
+};
+
+interface AstIdentifierNode_ extends AstNode_ {
+  readonly token: Token;
+};
+
+interface AstTupleNode_ extends AstNode_ {
+  readonly nodes: Readonly<AstNode_[]>;
+};
+
+interface AstCallNode_ extends AstNode_ {
+  readonly callName: Token;
+  readonly receiver: AstNode_;
+  readonly parameters: AstNode_;
+}
+
 export interface AstVisitor_<ResultType = void> {
   visitLiteral(token: Token, type: AstLiteralType_): ResultType;
   visitFringe(token: Token): ResultType;
@@ -47,13 +77,3 @@ export interface AstVisitor_<ResultType = void> {
   visitFunctionDefinition(defNode: AstDefinitionNode_): ResultType;
 };
 
-/// IAST: Initial Abstract Syntax Tree
-/// schema:
-/// <calls> are generally stripped, but maybe present if a name (identifier) 
-/// was not found for them. Assignment operators are stripped, operators found
-/// immediately under lets will remain. All dots are removed without exception.
-export interface AstNode_ {
-  asString(): string;
-  visit<T>(visitor: AstVisitor_<T>): T;
-  uid(): number;
-};

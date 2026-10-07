@@ -23,8 +23,8 @@ import { TupleObjectType } from '../tuple_object_type';
 const { freeze } = Helpers;
 
 interface WritableVariableOffset {
-  type: ObjectType;
-  accessIndex: number;
+  readonly type: ObjectType;
+  readonly accessIndex: number;
 };
 
 export type VariableOffset = Readonly<WritableVariableOffset>;

@@ -39,7 +39,9 @@ export interface AncestorCollection {
 const kDepthToParent = 0;
 
 function make(mStackThing: ContextFrameStack): AncestorCollection {
-  const { atDepth } = mStackThing;
+  const { 
+    
+   } = mStackThing;
 
   function searchName_(name: string, idx: number): ObjectType | undefined {
     if (name === FunctionNamingSchema.kParentName)

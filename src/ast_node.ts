@@ -24,6 +24,7 @@ import {
   AstDefinitionNode_,
   AstInitializerExpression_,
   AstInitializerQualifier_,
+  AstLiteralNode_,
   AstLiteralType_,
   AstNode_,
   AstParameterExpression_,
@@ -39,6 +40,7 @@ export type AstInitializerQualifier = AstInitializerQualifier_;
 export type AstInitializerExpression = AstInitializerExpression_;
 export type AstParameterExpression = AstParameterExpression_;
 export type AstDefinitionNode = AstDefinitionNode_;
+export type AstLiteralNode = AstLiteralNode_;
 export type AstVisitor<T = void> = AstVisitor_<T>;
 
 export const AstNode = freeze({

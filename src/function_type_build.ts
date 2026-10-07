@@ -21,15 +21,22 @@ import { FunctionDefinitionRegistry } from './function_definition_registry';
 import { FunctionTypeBase } from './function_type_build/function_type_base';
 import { FunctionTypeBuildVisitor } from './function_type_build/function_type_build_visitor';
 import { TupleObjectType } from './function_type_build/tuple_object_type';
-import { Helpers, StandardErrorMessage } from './helpers';
+import { Helpers, raise, StandardErrorMessage } from './helpers';
 import { AstNode } from './ast_node';
 
 const { freeze, memoize } = Helpers;
 
-export interface FunctionType {
+export interface FunctionType extends MelodyRecord {
   parameters(): ObjectType;
   returns(): ObjectType;
   receiver(): ObjectType;
+
+  // optionally one of:
+  // - immediate function
+  // - immediate value (for empty tuple ftypes)
+  // - embeddable
+  // - registerable
+  // - code emission
 
   // simpleEmit(writer: CodeWriter): void;
 
@@ -37,23 +44,75 @@ export interface FunctionType {
   //      parameterFtype: FunctionType,
   //      writer: CodeWriter): void;
 
-  uid(): symbol;
+  // uid(): symbol;
 };
 
 export interface EmissionContext {
-  pushParameters(em: CodeEmission): void;
-  pushReceiver(em: CodeEmission): void;
-  popParameters(): CodeEmission;
-  popReceiver(): CodeEmission;
+  pushParameters(obj: ObjectType, em: CodeEmission): void;
+  pushReceiver(obj: ObjectType, em: CodeEmission): void;
+  popParameters(obj: ObjectType): CodeEmission;
+  popReceiver(obj: ObjectType): CodeEmission;
 };
 
-export interface CodeEmission {
+export const EmissionContext = freeze({
+  make() {
+    type ObjectEmissionPair = {
+      objectType: ObjectType;
+      emission: CodeEmission;
+    };
+    const { emptyTuple } = TupleObjectType;
+    const isEmptyTuple = (obj: ObjectType) =>
+      obj.uid() === emptyTuple().uid();
+    const makeEmptyPair = (): ObjectEmissionPair => ({
+      objectType: emptyTuple(),
+      emission: ({ emit(_0: CodeWriter, _1: EmissionContext) { } })
+    });
+    const kEmptyPair = makeEmptyPair();
+    const mReceiver: ObjectEmissionPair = makeEmptyPair();
+    const mParameters: ObjectEmissionPair = makeEmptyPair();
+    const makePush =
+      (name: string, pair: ObjectEmissionPair): EmissionContext['pushParameters'] =>
+        (obj: ObjectType, em: CodeEmission): void => {
+          if (!isEmptyTuple(mParameters.objectType)) {
+            raise(`Unconsumed ${name}`);
+          }
+          pair.objectType = obj;
+          pair.emission = em;
+        };
+    const makePop =
+      (name: string, pair: ObjectEmissionPair): EmissionContext['popParameters'] =>
+        (obj: ObjectType): CodeEmission => {
+          if (obj.uid() === pair.objectType.uid()) {
+            const rv = pair.emission;
+            pair.emission = kEmptyPair.emission;
+            pair.objectType = kEmptyPair.objectType;
+            return rv;
+          }
+
+          raise(`Cannot pop, expected different type (${pair.objectType.name()}) for ${name}`);
+        };
+
+    return freeze({
+      pushParameters: makePush('parameters', mParameters),
+      pushReceiver: makePush('receiver', mReceiver),
+      popParameters: makePop('parameters', mParameters),
+      popReceiver: makePop('receiver', mReceiver)
+    });
+  }
+});
+
+export interface CodeEmission extends MelodyRecord {
   emit(writer: CodeWriter, ctx: EmissionContext): void;
 };
 
-export const FunctionType = FunctionTypeBase;
+export const FunctionType = ({
+  ...FunctionTypeBase,
+  on(db: object) {
 
-export interface ObjectType {
+  }
+});
+
+export interface ObjectType extends MelodyRecord {
   /// Display name only, no semantic use.
   name(): string;
 
@@ -62,7 +121,7 @@ export interface ObjectType {
   /// If this is a tuple, it maybe "detuplified". By definition there are no
   /// single member tuples.
   detuplify(): Readonly<ObjectType[]> | undefined;
-  uid(): symbol;
+  // uid(): symbol;
 
   sizeInBytes(): number;
   sizeInStackItems(): number;
@@ -82,10 +141,43 @@ export interface FunctionTypeBuild {
   error(): StandardErrorMessage
 };
 
-export interface ImmediateValue {
+export interface ImmediateValue extends MelodyRecord {
   asInteger(): number | undefined;
   asObjectType(): ObjectType | undefined;
 };
+
+interface MelodyRecord {
+  // differentiate records this way
+  visit<T>(visitor: MelodyRecordVisitor<T>): T;
+  uid(): symbol;
+};
+
+interface MelodyRecordVisitor<T> {
+  visitFunctionType(ftype: FunctionType): T;
+  visitCodeEmission(cem: CodeEmission): T;
+  visitObjectType(otype: ObjectType): T;
+};
+
+interface RecordsRetrieval {
+  emission(): CodeEmission | undefined;
+  objectType(): ObjectType;
+  immediateValue(): ImmediateValue | undefined;
+};
+
+interface RecordsRetrievalBuild {
+  records(): RecordsRetrieval | undefined;
+  error(): StandardErrorMessage;
+};
+
+interface BigCannoliDatabase {
+  retrieveForNode(node: AstNode): RecordsRetrieval;
+};
+
+interface WritableDatabase extends BigCannoliDatabase {
+  // differentiate the type, record to the correct "table",
+  // and raise if the wrong type is passed
+  writeForNode(node: AstNode, record: MelodyRecord): void;
+}
 
 interface ImmediateFunction {
   call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue;

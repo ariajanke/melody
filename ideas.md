@@ -542,3 +542,49 @@ const inst = MyObject.new(...); // there could be issues with names, as melody h
 inst.x(); // ".x" properties?
 inst.width(); // no problems here
 ```
+
+# 2026-1007-0008
+```melody
+let ents = Map(Integer).new
+let fib = fn (x is Integer)
+  (x < 2).then(x) or
+    ents.at(x) or
+    ents.append(x, $fn(x - 1) + $fn(x - 2))
+```
+
+Or generically
+
+```
+let fibgen = fn (x is ConvertableTo(Integer))
+  fib(x.toInteger())
+```
+
+# 2026-1007-1120
+```
+let Thing = tbl
+  new = fn
+    let x := 10
+    tbl
+      set_x = fn (x_ is Integer) is ReturnType # how big is my rv?
+        x := x
+        $tbl
+      $.x = fn x
+  $is = $tbl .new.ReturnType
+let do_stuff = fn (t is Thing) t.x
+let t = Thing.new()
+t.set_x(100).x
+do_stuff(t)
+
+let Pt = fn (Num is Numeric.Type) tbl
+  new = fn (x is Num, y is Num) tbl
+    x := x
+    y := y
+  # how do I say then, this is an ObjectType?
+
+# the call "Pt(Integer)" ends of having the following properties:
+# - object type (which is itself an ObjectType)
+# - immediate value
+let IntPt = Pt(Integer)
+let r = Pt(Integer).new(3, 4)
+r.x := 5
+```
