@@ -21,13 +21,16 @@ import { AstFringe } from './ast_node/ast_fringe';
 import { AstCall, AstDefinition, AstInitializer } from './ast_node/ast_other_nodes';
 import { AstTuple } from './ast_node/ast_tuple';
 import {
+  AstCallNode_,
   AstDefinitionNode_,
-  AstInitializerExpression_,
+  AstIdentifierNode_,
+  AstInitializerNode_,
   AstInitializerQualifier_,
   AstLiteralNode_,
   AstLiteralType_,
   AstNode_,
   AstParameterExpression_,
+  AstTupleNode_,
   AstVisitor_
 } from './ast_node/ast_types';
 
@@ -35,12 +38,17 @@ const { freeze, memoize } = Helpers;
 const emptyTupleInstance = memoize(AstTuple.make);
 
 export type AstLiteralType = AstLiteralType_;
-export type AstNode = AstNode_;
 export type AstInitializerQualifier = AstInitializerQualifier_;
-export type AstInitializerExpression = AstInitializerExpression_;
 export type AstParameterExpression = AstParameterExpression_;
+
+export type AstNode = AstNode_;
+export type AstInitializerNode = AstInitializerNode_;
 export type AstDefinitionNode = AstDefinitionNode_;
 export type AstLiteralNode = AstLiteralNode_;
+export type AstIdentifierNode = AstIdentifierNode_;
+export type AstTupleNode = AstTupleNode_;
+export type AstCallNode = AstCallNode_;
+
 export type AstVisitor<T = void> = AstVisitor_<T>;
 
 export const AstNode = freeze({

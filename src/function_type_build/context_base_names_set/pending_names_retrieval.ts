@@ -17,14 +17,18 @@
  */
 
 import {
-  ChildFunctionDefinition,
   DeclarationNamesRetrieval,
   WritableNameSet,
   NameSet
 } from './declaration_names_retrieval';
 import { Helpers } from '../../helpers';
 import { FunctionNamingSchema } from '../../function_naming_schema';
-import { AstInitializerExpression, AstParameterExpression } from '../../ast_node';
+import {
+  AstDefinitionNode,
+  AstInitializerNode,
+  AstNode,
+  AstParameterExpression
+} from '../../ast_node';
 import { Token } from '../../token';
 
 const { freeze, memoize, makeIsStringInLookUpTable } = Helpers;
@@ -63,7 +67,7 @@ function declaredNamesFrom
     return res;
   };
 
-  const reduceDecl = (res: string[], v: AstInitializerExpression): string[] => {
+  const reduceDecl = (res: string[], v: AstInitializerNode): string[] => {
     return v.names.reduce((res: string[], name: Token): string[] => {
       res = addAccessor(res, name.content());
       if (v.qualifier === ':=') {
@@ -85,14 +89,14 @@ function declaredNamesFrom
 function make
   (mDeclNames: DeclarationNamesRetrieval,
    mIsBuiltinName: (name: string) => boolean,
-   mGetChildPending: (uid: number) => PendingNamesRetrieval): PendingNamesRetrieval
+   mGetChildPending: (node: AstNode) => PendingNamesRetrieval): PendingNamesRetrieval
 {
   const { usedNames, childDefinitions } = mDeclNames;
 
   const totalUsedNames = ((): NameSet =>
     childDefinitions().
-    reduce((set: WritableNameSet, definfo: ChildFunctionDefinition) => {
-      const { pendingNames, unclaimedNames } = mGetChildPending(definfo.uid);
+    reduce((set: WritableNameSet, definfo: AstDefinitionNode) => {
+      const { pendingNames, unclaimedNames } = mGetChildPending(definfo);
       set = pendingNames().reduce(accumulateNames, set);
       return unclaimedNames().reduce(accumulateNames, set);
     },
@@ -121,8 +125,8 @@ function make
     };
 
     return Object.keys(childDefinitions().
-      reduce((set: WritableNameSet, definfo: ChildFunctionDefinition): WritableNameSet => {
-        const { pendingNames, unclaimedNames } = mGetChildPending(definfo.uid);
+      reduce((set: WritableNameSet, definfo: AstDefinitionNode): WritableNameSet => {
+        const { pendingNames, unclaimedNames } = mGetChildPending(definfo);
         set = pendingNames().reduce(accumulateNameIfPending, set);
         return unclaimedNames().reduce(accumulateNameIfPending, set);
       },

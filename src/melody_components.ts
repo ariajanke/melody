@@ -55,7 +55,7 @@ export interface FunctionType extends MelodyComponent {
 
 export interface FunctionTypeRelationSet {
   emission(): CodeEmission | undefined;
-  immediate(): ImmediateFunction | ImmediateValue | undefined;
+  immediate(): ImmediateFunction | ImmediateValue | RuntimeOnlyValue | undefined;
 };
 
 export interface CodeEmission extends MelodyComponent {
@@ -80,6 +80,8 @@ export interface FunctionLookUpTable {
   byParameters(type: ObjectType): FunctionType | undefined;
   uniqueFunctionType(): FunctionType | undefined;
 };
+
+export interface RuntimeOnlyValue extends MelodyComponent {};
 
 export interface ImmediateValue extends MelodyComponent {
   asInteger(): number | undefined;

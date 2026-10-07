@@ -16,8 +16,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FunctionLookUpTable, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
+import { FunctionLookUpTable, ObjectType } from '../../melody_components';
 import { BuiltinTypeBase } from '../builtin_type_base';
 
 const { freeze } = Helpers;
@@ -30,7 +30,6 @@ export interface WritableObjectType extends ObjectType {
   setFunctionLookUp
     (operation: string | symbol, lookUpTbl: FunctionLookUpTable)
     : WritableObjectType;
-  peek(): WritableObjectType;
 };
 
 function make
@@ -54,12 +53,9 @@ function make
 
   const inst = freeze({
     ...mBaseObjectType,
-    lookUp(operation: string | symbol): FunctionLookUpTable | undefined
+    lookUp(operation: string): FunctionLookUpTable | undefined
       { return mTable[operation] ?? lookUp(operation); },
-    setFunctionLookUp,
-    peek() {
-      return inst;
-    }
+    setFunctionLookUp
   });
   return inst;
 }

@@ -19,7 +19,7 @@
 import { Helpers } from '../helpers';
 import { Token } from '../token';
 import {
-  AstInitializerExpression_,
+  AstInitializerNode_,
   AstNode_,
   AstParameterExpression_,
   AstVisitor_
@@ -53,7 +53,7 @@ export const AstDefinition = freeze({
 });
 
 export const AstInitializer = freeze({
-  make(mNameExpression: AstInitializerExpression_): AstNode_ {
+  make(mNameExpression: AstInitializerNode_): AstNode_ {
     return freeze({
       asString: () => {
         const { names, qualifier, valueNode } = mNameExpression;

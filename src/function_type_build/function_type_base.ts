@@ -17,43 +17,58 @@
  */
 
 import { CodeWriter } from '../code_writer';
-import { FunctionType } from '../function_type_build';
+// import { FunctionType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
+import { FunctionType, MelodyComponentVisitor, ObjectType } from '../melody_components';
 import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 const makeUid = () => memoize(Symbol);
 const { emptyTuple } = TupleObjectType;
 
-const common = memoize(() => freeze({
-  parameters: emptyTuple,
-  returns: emptyTuple,
-  receiver: emptyTuple,
-  simpleEmit: (_0: CodeWriter) =>
-    raise('This function cannot be simply emitted'),
-  emit(_0: FunctionType,
-       _1: FunctionType,
-       _2: CodeWriter)
-  {
-    raise('This function cannot be emitted (at least this way).');
-  },
-  uid: () => raise('should not be reached')
-}));
+// const common = memoize(() => freeze({
+//   parameters: emptyTuple,
+//   returns: emptyTuple,
+//   receiver: emptyTuple,
+//   simpleEmit: (_0: CodeWriter) =>
+//     raise('This function cannot be simply emitted'),
+//   emit(_0: FunctionType,
+//        _1: FunctionType,
+//        _2: CodeWriter)
+//   {
+//     raise('This function cannot be emitted (at least this way).');
+//   },
+//   uid: () => raise('should not be reached')
+// }));
 
-function makeNewEmitlessEmpty() {
-  return freeze({
-    ...common(),
-    uid: makeUid()
-  });
-}
+// function makeNewEmitlessEmpty() {
+//   return freeze({
+//     ...common(),
+//     uid: makeUid()
+//   });
+// }
 
-const emitEmptyTuple = memoize((): FunctionType =>
-  freeze({
-    ...makeNewEmitlessEmpty(),
-    simpleEmit(_0: CodeWriter) {},
-  }));
+// const emitEmptyTuple = memoize((): FunctionType =>
+//   freeze({
+//     ...makeNewEmitlessEmpty(),
+//     simpleEmit(_0: CodeWriter) {},
+//   }));
 
 export const FunctionTypeBase = freeze({
-  makeNewEmitlessEmpty,
-  emitEmptyTuple
+  make(mReceiver?: ObjectType,
+       mParameters?: ObjectType,
+       mReturns?: ObjectType): FunctionType
+  {
+    const inst: FunctionType = freeze({
+      receiver: mReceiver ? () => mReceiver : emptyTuple,
+      parameters: mParameters ? () => mParameters : emptyTuple,
+      returns: mReturns ? () => mReturns : emptyTuple,
+      visit<T>(visitor: MelodyComponentVisitor<T>): T
+        { return visitor.visitFunctionType(inst); },
+      uid: memoize(Symbol),
+    });
+    return inst;
+  },
+  // makeNewEmitlessEmpty,
+  emitEmptyTuple: memoize((): FunctionType => FunctionTypeBase.make())
 });

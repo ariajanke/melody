@@ -19,8 +19,7 @@
 import { BuiltinFunctionNames } from '../../builtin_function_names';
 import { CodeWriter } from '../../code_writer';
 import { FunctionNamingSchema } from '../../function_naming_schema';
-import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
-import { Helpers } from '../../helpers';
+import { Helpers, raise } from '../../helpers';
 import { ContextFrameStack } from '../context_frame_stack';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
@@ -30,6 +29,8 @@ import { FunctionOpLookUp, WritableObjectType } from './writable_object_type';
 import { WasmCompilation } from '../../wasm_compilation';
 import { SystemIoType } from '../system_io_type';
 import { PutsFunctionLookUpTable } from '../puts_function_look_up_table';
+import { FunctionLookUpTable, FunctionType, MelodyComponentVisitor, ObjectType } from '../../melody_components';
+import { TupleObjectType } from '../tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -40,17 +41,25 @@ export interface ContextBaseStage_ {
     : ContextLinkStage_;
 };
 
+// function makeFTypeBase(): FunctionType {
+//   const { emptyTuple } = TupleObjectType;
+//   const inst = freeze({
+//     receiver: emptyTuple,
+//     parameters: emptyTuple,
+//     returns: emptyTuple,
+//     visit<T>(_0: MelodyComponentVisitor<T>): T
+//       { raise('eff'); },
+//     uid: memoize(Symbol)
+//   });
+//   return inst;
+// }
+
 function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
   const mTable: FunctionOpLookUp = {};
   const { fromFunctionType } = MutableFunctionTable;
 
-  const referenceGetter = ((): FunctionType => freeze({
-    ...FunctionTypeBase.makeNewEmitlessEmpty(),
-    returns: (): ObjectType => writableReferenceType(),
-    simpleEmit(codeWriter: CodeWriter) {
-      return codeWriter.pushStackPointer();
-    }
-  }));
+  const referenceGetter = ((): FunctionType => 
+    FunctionTypeBase.make(undefined, undefined, writableReferenceType()));
 
   const addSystem = ((): FunctionLookUpTable =>
     mTable[BuiltinFunctionNames.kSystemIoTable] =

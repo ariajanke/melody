@@ -18,36 +18,33 @@
 
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { Helpers } from '../../helpers';
-import { AstInitializerExpression, AstNode } from '../../ast_node';
+import { AstInitializerNode, AstNode } from '../../ast_node';
 import { Token } from '../../token';
 
 const { freeze, memoize } = Helpers;
 
-export interface InitialSetVariables {
-  name: string;
-  variableNames: Readonly<string[]>;
-  valueNode?: AstNode;
-  typeNode?: AstNode;
+export interface InitializerVariable {
+  readonly name: string;
+  readonly variableNames: Readonly<string[]>;
+  readonly valueNode: AstNode;
+  readonly typeNode?: AstNode;
 };
 
-interface WritableVariableNameFunctions {
-  accessorName?: string;
-  modifierName?: string;
-  tupleRank?: number;
+export interface VariableNameFunctions {
+  readonly accessorName?: string;
+  readonly modifierName?: string;
+  readonly tupleRank?: number;
 };
-
-export type VariableNameFunctions =
-  Readonly<WritableVariableNameFunctions>;
 
 export interface OrderedInitialSetsCollection {
-  orderedInitialSets(): Readonly<Readonly<InitialSetVariables>[]>;
+  orderedInitialSets(): Readonly<Readonly<InitializerVariable>[]>;
   variableNameMap(): Readonly<{ [vname: string]: VariableNameFunctions | undefined }>;
 };
 
 const tokenToString = (t: Token) => t.content();
 
 function make
-  (mDeclarations: Readonly<AstInitializerExpression[]>): OrderedInitialSetsCollection
+  (mDeclarations: Readonly<AstInitializerNode[]>): OrderedInitialSetsCollection
 {
   const variableNameMap = memoize((): Readonly<{ [vname: string]: VariableNameFunctions | undefined }> => {
     const map: { [vname: string]: VariableNameFunctions | undefined } = {};
@@ -72,8 +69,8 @@ function make
     return map;
   });
 
-  const orderedInitialSets = memoize((): Readonly<Readonly<InitialSetVariables>[]> =>
-    mDeclarations.map((decl: AstInitializerExpression): Readonly<InitialSetVariables> => {
+  const orderedInitialSets = memoize((): Readonly<Readonly<InitializerVariable>[]> =>
+    mDeclarations.map((decl: AstInitializerNode): Readonly<InitializerVariable> => {
       const names = decl.names.map(tokenToString);
       return freeze({
         name: FunctionNamingSchema.mapToInitialSetName(names),

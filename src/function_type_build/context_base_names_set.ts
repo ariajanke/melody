@@ -20,20 +20,19 @@ import { Helpers, raise } from '../helpers';
 import { FunctionNamingSchema } from '../function_naming_schema';
 import { ContextBaseStage } from './context_build';
 import {
-  AstInitializerExpression,
+  AstDefinitionNode,
+  AstInitializerNode,
   AstNode,
-  AstParameterExpression
 } from '../ast_node';
 import { PendingNamesRetrieval } from './context_base_names_set/pending_names_retrieval';
 import {
-  ChildFunctionDefinition,
   DeclarationNamesRetrieval,
   WritableNameSet,
   NameSet
 } from './context_base_names_set/declaration_names_retrieval';
 
 export interface ContextNamesRetrieval {
-  declarations(): Readonly<AstInitializerExpression[]>;
+  declarations(): Readonly<AstInitializerNode[]>;
   pendingNames(): NameSet;
 };
 
@@ -60,10 +59,8 @@ const ContextNamesRetrieval = freeze({
 });
 
 export interface ContextBaseNamesSet {
-  ensure(uid: number): ContextBaseStage;
-  contextNamesFor(
-    uid: number, parameters: Readonly<AstParameterExpression[]>, nodes: Readonly<AstNode[]>)
-    : ContextNamesRetrieval;
+  contextNamesFor(node: AstDefinitionNode): ContextNamesRetrieval;
+  baseStageFor(node: AstDefinitionNode): ContextBaseStage;
 };
 
 function addToCache<T>(cache: CacheFor<T>, uid: number, obj: T): T {
@@ -72,38 +69,35 @@ function addToCache<T>(cache: CacheFor<T>, uid: number, obj: T): T {
 }
 
 function make
-  (mBaseStageCtor: (uniqueName: string) => ContextBaseStage = ContextBaseStage.make)
+  (mRootNode: AstDefinitionNode,
+   mBaseStageCtor: (uniqueName: string) => ContextBaseStage = ContextBaseStage.make)
   : ContextBaseNamesSet
 {
   const mCache: CacheFor<ContextBaseStage> = {};
   const mPCache: CacheFor<PendingNamesRetrieval> = {};
   const mCCache: CacheFor<ContextNamesRetrieval> = {};
 
-  function ensure(uid: number): ContextBaseStage {
+  function ensure(node: AstNode): ContextBaseStage {
+    const uid = node.uid();
     if (mCache[uid])
       { return mCache[uid]; }
 
     return addToCache(mCache, uid, mBaseStageCtor(`<frame:${uid}>`));
   }
 
-  function pendingNamesFor(uid: number): PendingNamesRetrieval {
-    return mPCache[uid] ?? raise('pending names was not initialized');
+  function pendingNamesFor(node: AstNode): PendingNamesRetrieval {
+    return mPCache[node.uid()] ?? raise('pending names was not initialized');
   }
 
-  function addNewNamesRetrievalForChild(cdef: ChildFunctionDefinition)
-    { addNewNamesRetrieval(cdef.uid, cdef.parameters, cdef.nodes); }
-
-  function addNewNamesRetrieval
-    (uid: number, parameters: Readonly<AstParameterExpression[]>, nodes: Readonly<AstNode[]>)
-    : ContextNamesRetrieval
-  {
-    const declRetr = DeclarationNamesRetrieval.make(parameters, nodes);
+  function addNewNamesRetrieval(def: AstDefinitionNode): ContextNamesRetrieval {
+    const uid = def.uid();
+    const declRetr = DeclarationNamesRetrieval.make(def.parameters, def.nodes);
     
     // NOTE eagerly add children, otherwise pendingNamesFor could raise
-    declRetr.childDefinitions().forEach(addNewNamesRetrievalForChild);
+    declRetr.childDefinitions().forEach(addNewNamesRetrieval);
 
     const isBuiltin = (name: string) =>
-      ensure(uid).referenceType().lookUp(name) !== undefined;
+      ensure(def).referenceType().lookUp(name) !== undefined;
     
     const pendingNames = PendingNamesRetrieval.
       make(declRetr, isBuiltin, pendingNamesFor);
@@ -111,23 +105,23 @@ function make
     return addToCache(mCCache, uid, ContextNamesRetrieval.make(pendingNames, declRetr));
   }
 
-  function contextNamesFor
-    (uid: number, parameters: Readonly<AstParameterExpression[]>, nodes: Readonly<AstNode[]>)
-    : ContextNamesRetrieval
-  {
-    if (mCCache[uid])
-      { return mCCache[uid]; }
+  const addedRoot = memoize(() => addNewNamesRetrieval(mRootNode));
 
-    return addNewNamesRetrieval(uid, parameters, nodes);
+  function contextNamesFor(node: AstDefinitionNode): ContextNamesRetrieval {
+    return addedRoot() &&
+      (mCCache[node.uid()] ??
+       raise('this definition is not a part of this tree'));
   }
 
-  return freeze({
-    ensure,
-    contextNamesFor
-  });
+  function baseStageFor(node: AstDefinitionNode): ContextBaseStage {
+    return mCache[node.uid()] ?? raise('this definition is not part of this tree');
+  }
+
+  return freeze({ contextNamesFor, baseStageFor });
 }
 
 export const ContextBaseNamesSet = freeze({
-  instance: memoize(make),
-  forTesting: { make }
+  make
+  // instance: memoize(make),
+  // forTesting: { make }
 });

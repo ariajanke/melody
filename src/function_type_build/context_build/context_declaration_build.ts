@@ -21,7 +21,7 @@ import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpe
 import { MutableFunctionTable } from '../mutable_function_table';
 import { AttributesCreation } from './attributes_creation';
 import { ContextAttributeFactory } from './context_attribute_factory';
-import { InitialSetVariables, OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
+import { InitializerVariable, OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
 import { ProgressiveVariableAllocation, VariableAllocation } from './variable_allocation';
 import { WritableObjectType } from './writable_object_type';
 import { NodeTypeInference } from '../node_type_inference';
@@ -55,7 +55,7 @@ function make
 
   function addAttributesToReference
     (wobj: WritableObjectType,
-     v: Readonly<InitialSetVariables>,
+     v: Readonly<InitializerVariable>,
      alloc: VariableAllocation
     ): WritableObjectType
   {
@@ -110,7 +110,7 @@ function make
 
   function initialSetTypeOf
     (ctxRef: ObjectType,
-     varInfo: Readonly<InitialSetVariables>): ObjectType | undefined
+     varInfo: Readonly<InitializerVariable>): ObjectType | undefined
   {
     const { valueNode, typeNode } = varInfo;
     if (valueNode) {
@@ -128,7 +128,7 @@ function make
 
   const transformedReferenceAndAllocations = memoize(() =>
     orderedInitialSets().
-    reduce((pair: RefAllocPair, v: Readonly<InitialSetVariables>) => {
+    reduce((pair: RefAllocPair, v: Readonly<InitializerVariable>) => {
       if (!pair)
         { return pair; }
 

@@ -32,7 +32,7 @@ export interface AstNode_ {
   uid(): number;
 };
 
-export interface AstInitializerExpression_ {
+export interface AstInitializerNode_ extends AstNode_ {
   readonly names: Readonly<Token[]>;
   readonly typeNode?: AstNode_;
   readonly qualifier: AstInitializerQualifier_;
@@ -54,26 +54,26 @@ export interface AstLiteralNode_ extends AstNode_ {
   readonly type : AstLiteralType_;
 };
 
-interface AstIdentifierNode_ extends AstNode_ {
+export interface AstIdentifierNode_ extends AstNode_ {
   readonly token: Token;
 };
 
-interface AstTupleNode_ extends AstNode_ {
+export interface AstTupleNode_ extends AstNode_ {
   readonly nodes: Readonly<AstNode_[]>;
 };
 
-interface AstCallNode_ extends AstNode_ {
+export interface AstCallNode_ extends AstNode_ {
   readonly callName: Token;
   readonly receiver: AstNode_;
   readonly parameters: AstNode_;
 }
 
 export interface AstVisitor_<ResultType = void> {
-  visitLiteral(token: Token, type: AstLiteralType_): ResultType;
-  visitFringe(token: Token): ResultType;
-  visitTuple(nodes: Readonly<AstNode_[]>): ResultType;
-  visitInitializer(initializer: AstInitializerExpression_): ResultType;
-  visitCall(callName: Token, receiver: AstNode_, args: AstNode_): ResultType;
+  visitLiteral(n: AstLiteralNode_): ResultType;
+  visitFringe(n: AstIdentifierNode_): ResultType;
+  visitTuple(n: AstTupleNode_): ResultType;
+  visitInitializer(n: AstInitializerNode_): ResultType;
+  visitCall(n: AstCallNode_): ResultType;
   visitFunctionDefinition(defNode: AstDefinitionNode_): ResultType;
 };
 

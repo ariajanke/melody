@@ -26,33 +26,33 @@ import { AstNode } from './ast_node';
 
 const { freeze, memoize } = Helpers;
 
-export interface FunctionType extends MelodyRecord {
-  parameters(): ObjectType;
-  returns(): ObjectType;
-  receiver(): ObjectType;
+// export interface FunctionType extends MelodyRecord {
+//   parameters(): ObjectType;
+//   returns(): ObjectType;
+//   receiver(): ObjectType;
 
-  // optionally one of:
-  // - immediate function
-  // - immediate value (for empty tuple ftypes)
-  // - embeddable
-  // - registerable
-  // - code emission
+//   // optionally one of:
+//   // - immediate function
+//   // - immediate value (for empty tuple ftypes)
+//   // - embeddable
+//   // - registerable
+//   // - code emission
 
-  // simpleEmit(writer: CodeWriter): void;
+//   // simpleEmit(writer: CodeWriter): void;
 
-  // emit(receiverFtype: FunctionType,
-  //      parameterFtype: FunctionType,
-  //      writer: CodeWriter): void;
+//   // emit(receiverFtype: FunctionType,
+//   //      parameterFtype: FunctionType,
+//   //      writer: CodeWriter): void;
 
-  // uid(): symbol;
-};
+//   // uid(): symbol;
+// };
 
-export interface EmissionContext {
-  pushParameters(obj: ObjectType, em: CodeEmission): void;
-  pushReceiver(obj: ObjectType, em: CodeEmission): void;
-  popParameters(obj: ObjectType): CodeEmission;
-  popReceiver(obj: ObjectType): CodeEmission;
-};
+// export interface EmissionContext {
+//   pushParameters(obj: ObjectType, em: CodeEmission): void;
+//   pushReceiver(obj: ObjectType, em: CodeEmission): void;
+//   popParameters(obj: ObjectType): CodeEmission;
+//   popReceiver(obj: ObjectType): CodeEmission;
+// };
 
 export const EmissionContext = freeze({
   make() {
@@ -105,87 +105,82 @@ export interface CodeEmission extends MelodyRecord {
   emit(writer: CodeWriter, ctx: EmissionContext): void;
 };
 
-export const FunctionType = ({
-  ...FunctionTypeBase,
-  on(db: object) {
+export const FunctionType = FunctionTypeBase;
 
-  }
-});
+// export interface ObjectType extends MelodyRecord {
+//   /// Display name only, no semantic use.
+//   name(): string;
 
-export interface ObjectType extends MelodyRecord {
-  /// Display name only, no semantic use.
-  name(): string;
+//   lookUp(operation: string | symbol): FunctionLookUpTable | undefined;
 
-  lookUp(operation: string | symbol): FunctionLookUpTable | undefined;
+//   /// If this is a tuple, it maybe "detuplified". By definition there are no
+//   /// single member tuples.
+//   detuplify(): Readonly<ObjectType[]> | undefined;
+//   // uid(): symbol;
 
-  /// If this is a tuple, it maybe "detuplified". By definition there are no
-  /// single member tuples.
-  detuplify(): Readonly<ObjectType[]> | undefined;
-  // uid(): symbol;
-
-  sizeInBytes(): number;
-  sizeInStackItems(): number;
-};
+//   sizeInBytes(): number;
+//   sizeInStackItems(): number;
+// };
 
 export interface MutableObjectType extends ObjectType {
   setLookUp(operation: string | symbol, lookUpTable: FunctionLookUpTable): void;
 };
 
-export interface FunctionLookUpTable {
-  byParameters(type: ObjectType): FunctionType | undefined;
-  uniqueFunctionType(): FunctionType | undefined;
-};
+// export interface FunctionLookUpTable {
+//   byParameters(type: ObjectType): FunctionType | undefined;
+//   uniqueFunctionType(): FunctionType | undefined;
+// };
 
 export interface FunctionTypeBuild {
   functionType(): FunctionType | undefined,
   error(): StandardErrorMessage
 };
 
-export interface ImmediateValue extends MelodyRecord {
-  asInteger(): number | undefined;
-  asObjectType(): ObjectType | undefined;
-};
+// export interface ImmediateValue extends MelodyRecord {
+//   asInteger(): number | undefined;
+//   asObjectType(): ObjectType | undefined;
+// };
 
-interface MelodyRecord {
-  // differentiate records this way
-  visit<T>(visitor: MelodyRecordVisitor<T>): T;
-  uid(): symbol;
-};
+// interface MelodyRecord {
+//   // differentiate records this way
+//   visit<T>(visitor: MelodyRecordVisitor<T>): T;
+//   uid(): symbol;
+// };
 
-interface MelodyRecordVisitor<T> {
-  visitFunctionType(ftype: FunctionType): T;
-  visitCodeEmission(cem: CodeEmission): T;
-  visitObjectType(otype: ObjectType): T;
-};
+// interface MelodyRecordVisitor<T> {
+//   visitFunctionType(ftype: FunctionType): T;
+//   visitCodeEmission(cem: CodeEmission): T;
+//   visitObjectType(otype: ObjectType): T;
+// };
 
-interface RecordsRetrieval {
-  emission(): CodeEmission | undefined;
-  objectType(): ObjectType;
-  immediateValue(): ImmediateValue | undefined;
-};
+// interface RecordsRetrieval {
+//   emission(): CodeEmission | undefined;
+//   objectType(): ObjectType;
+//   immediateValue(): ImmediateValue | undefined;
+// };
 
-interface RecordsRetrievalBuild {
-  records(): RecordsRetrieval | undefined;
-  error(): StandardErrorMessage;
-};
+// interface RecordsRetrievalBuild {
+//   records(): RecordsRetrieval | undefined;
+//   error(): StandardErrorMessage;
+// };
 
-interface BigCannoliDatabase {
-  retrieveForNode(node: AstNode): RecordsRetrieval;
-};
+// interface BigCannoliDatabase {
+//   retrieveForNode(node: AstNode): RecordsRetrieval;
+// };
 
-interface WritableDatabase extends BigCannoliDatabase {
-  // differentiate the type, record to the correct "table",
-  // and raise if the wrong type is passed
-  writeForNode(node: AstNode, record: MelodyRecord): void;
-}
+// interface WritableDatabase extends BigCannoliDatabase {
+//   // differentiate the type, record to the correct "table",
+//   // and raise if the wrong type is passed
+//   writeForNode(node: AstNode, record: MelodyRecord): void;
+// }
 
-interface ImmediateFunction {
-  call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue;
-};
+// interface ImmediateFunction {
+//   call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue;
+// };
 
-interface FunctionRegistry {
-  register(ftype: FunctionType, completedContextType: ObjectType): void;
-};
+// interface FunctionRegistry {
+//   register(ftype: FunctionType, completedContextType: ObjectType): void;
+// };
 
 function make(mRoot: AstNode,
               mFunctionRegistry?: FunctionDefinitionRegistry)
@@ -201,6 +196,7 @@ function make(mRoot: AstNode,
   });
 }
 
+// TODO, remove me, we're not doing amalgam building anymore
 export const FunctionTypeBuild = freeze({
   make,
   emptyTupleType: TupleObjectType.emptyTuple

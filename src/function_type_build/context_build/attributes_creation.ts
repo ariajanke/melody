@@ -16,13 +16,15 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
+// import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
+import { FunctionLookUpTable, FunctionType, ObjectType } from '../../melody_components';
+import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { CallAttributeCreation } from './call_attribute_creation';
 import { ContextAttributeFactory } from './context_attribute_factory';
-import { OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
-import { VariableAllocation } from './variable_allocation';
+import { OrderedInitialSetsCollection, VariableNameFunctions } from './ordered_initial_sets_collection';
+// import { VariableAllocation } from './variable_allocation';
 
 export type AttributesTuple = Readonly<[string, FunctionLookUpTable]>;
 
@@ -38,32 +40,19 @@ const { freeze, memoize } = Helpers;
 function make
   (mReferenceType: ObjectType,
    mVariableName: string,
-   mVariableNameMap: OrderedInitialSetsCollection['variableNameMap'],
-   mVariableAllocation: VariableAllocation)
+   mFunctionNames: VariableNameFunctions,
+   mVariableType: ObjectType)
   : AttributesCreation
 {
   const toFunctionTable = MutableFunctionTable.fromFunctionType;
 
-  const { accessorName, modifierName } =
-    mVariableNameMap()[mVariableName] ??
-    raise(`Variable '${mVariableName}' was not mapped!`);
-
-  const mFactory = ContextAttributeFactory.make(mReferenceType);
-
-  const varInfo = memoize(() =>
-    mVariableAllocation.lookUp(mVariableName) ??
-    raise(`Cannot look up variable name '${mVariableName}', was it added?`));
-
-  function makeAttribute
-    (maker: (accessIndex: number, type: ObjectType) => FunctionType)
-    : FunctionType
-  { return maker(varInfo().accessIndex, varInfo().type); }
+  const { accessorName, modifierName } = mFunctionNames;
 
   const accessorFtype = memoize((): FunctionType | undefined => {
     if (!accessorName)
       { return undefined; }
 
-    return makeAttribute(mFactory.buildGetter);
+    return FunctionTypeBase.make( mReferenceType, undefined, mVariableType);
   });
 
   const accessor = memoize((): AttributesTuple | undefined => {
@@ -77,7 +66,9 @@ function make
     if (!modifierName)
       { return undefined; }
 
-    return [modifierName, toFunctionTable(makeAttribute(mFactory.buildGeneralSetter))];
+    const ftype = FunctionTypeBase.make(mReferenceType, mVariableType, mVariableType);
+
+    return [modifierName, toFunctionTable(ftype)];
   });
 
   const call = memoize((): AttributesTuple | undefined => {

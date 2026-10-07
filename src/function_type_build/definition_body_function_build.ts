@@ -17,30 +17,27 @@
  */
 
 import { Helpers, StandardError } from '../helpers';
-import { FunctionType, FunctionTypeBuild } from '../function_type_build';
 import { ContextFrameSnapshot, WritableContextFrameStack } from './context_frame_stack';
 import { ContextDeclarationBuild, ContextLinkStage } from './context_build';
 import { ContextualizedBodyFunctionBuild } from './contextualized_body_function_build';
-import { AstNode } from '../ast_node';
+import { AstDefinitionNode, AstNode } from '../ast_node';
 import { ContextBaseNamesSet } from './context_base_names_set';
 import { ParametersTypeRetrieval } from './parameters_type_build';
 
 const { freeze, memoize } = Helpers;
 
 function make
-  (mUid: number,
+  (mDefNode: AstDefinitionNode,
+   mContextBaseSet: ContextBaseNamesSet,
    mParameterTypes: ParametersTypeRetrieval,
-   mNodes: Readonly<AstNode[]>,
    mStackFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild
 {
   const { error, setErrorFn } = StandardError.make();
 
-  const baseStage = memoize(() =>
-    ContextBaseNamesSet.instance().ensure(mUid));
+  const baseStage = memoize(() => mContextBaseSet.baseStageFor(mDefNode));
 
-  const namesRetrieval = memoize(() =>
-    ContextBaseNamesSet.instance().contextNamesFor(mUid, mParameterTypes.asNameExpressions(), mNodes));
+  const namesRetrieval = memoize(() => mContextBaseSet.contextNamesFor(mDefNode));
 
   const linkStage = memoize((): ContextLinkStage =>
     baseStage().contextLinkStage( namesRetrieval().pendingNames(), mStackFrameStack ));
@@ -79,7 +76,7 @@ function make
       const fbuild = ContextualizedBodyFunctionBuild.
         make(linkStage().preface(),
              aggregateType()!,
-             mNodes,
+             mDefNode.nodes,
              mStackFrameStack.intoBuildFunction());
 
       return fbuild.functionType() ?? setErrorFn(fbuild.error);
