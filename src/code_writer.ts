@@ -57,7 +57,7 @@ export interface CodeWriter {
   /// WASM: this handles all of the call overhead, including stack pointer
   //        operations
   /// Stack Effect: [i32, ...t_n] -> [...t_m]
-  indirectCall(representativeFtype: FunctionType): CodeWriter;
+  call(exactRegisteredFtype: FunctionType): CodeWriter;
 
   // TODO this is broken, we must support the fact that ftype index modifiers
   //      are called, presently reassigning indicies will fail to work as

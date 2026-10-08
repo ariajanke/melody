@@ -17,14 +17,14 @@
  */
 
 import { FunctionNamingSchema } from '../../function_naming_schema';
-import { FunctionType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
 import { FunctionTypeBase } from '../function_type_base';
 import { CodeWriter } from '../../code_writer';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
 import { TupleObjectType } from '../tuple_object_type';
+import { EmissionContext, FunctionType } from '../../melody_components';
 
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 function wrappedIndexGetterOf(originalIndexGetter: FunctionType): FunctionType {
   const { emptyTuple } = TupleObjectType;
@@ -60,30 +60,34 @@ function make
   const representativeFtype = lookUp.uniqueFunctionType() ??
     raise('cannot support more than one index');
 
-  const { emitEmptyTuple, makeNewEmitlessEmpty } = FunctionTypeBase;
+  // const { emitEmptyTuple, makeNewEmitlessEmpty } = FunctionTypeBase;
   
   const isOriginal =
     mPossibleIndexGetter.receiver().uid() === representativeFtype.receiver().uid();
   const wrappedIndexGetter =
     !isOriginal ? wrappedIndexGetterOf(mPossibleIndexGetter) : undefined;
     
-  const emit = (receiverFtype: FunctionType,
-                parameterFtype: FunctionType,
-                writer: CodeWriter): void =>
-  {
-    receiverFtype.simpleEmit(writer);
-    parameterFtype.simpleEmit(writer);
+  function emit(writer: CodeWriter, ctx: EmissionContext): void {
 
-    if (wrappedIndexGetter) {
-      wrappedIndexGetter.simpleEmit(writer);
-    } else {
-      mPossibleIndexGetter.emit(receiverFtype, emitEmptyTuple(), writer);
-    }
-    writer.indirectCall(representativeFtype);
-  };
+  }
+  const emission = mem
+  // const emit = (receiverFtype: FunctionType,
+  //               parameterFtype: FunctionType,
+  //               writer: CodeWriter): void =>
+  // {
+  //   receiverFtype.simpleEmit(writer);
+  //   parameterFtype.simpleEmit(writer);
+
+  //   if (wrappedIndexGetter) {
+  //     wrappedIndexGetter.simpleEmit(writer);
+  //   } else {
+  //     mPossibleIndexGetter.emit(receiverFtype, emitEmptyTuple(), writer);
+  //   }
+  //   writer.indirectCall(representativeFtype);
+  // };
     
   return freeze({
-    ...makeNewEmitlessEmpty(),
+    // ...makeNewEmitlessEmpty(),
     // TODO capture in testing that this is correct
     receiver: () => representativeFtype.receiver(),
     // NOTE only one set of params/returns supported so far

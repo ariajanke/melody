@@ -16,23 +16,20 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// import { FunctionLookUpTable, FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { FunctionLookUpTable, FunctionType, ObjectType } from '../../melody_components';
-import { FunctionTypeBase } from '../function_type_base';
-import { MutableFunctionTable } from '../mutable_function_table';
-import { CallAttributeCreation } from './call_attribute_creation';
-import { ContextAttributeFactory } from './context_attribute_factory';
-import { OrderedInitialSetsCollection, VariableNameFunctions } from './ordered_initial_sets_collection';
-// import { VariableAllocation } from './variable_allocation';
+import { FunctionType, ObjectType } from '../../melody_components';
+import { OperatorNamingSchema } from '../../operator_naming_schema';
+import { FunctionTypeAssociationSet } from './function_type_association_set';
+import { VariableNameFunctions } from './ordered_initial_sets_collection';
 
-export type AttributesTuple = Readonly<[string, FunctionLookUpTable]>;
+export type AttributesTuple = Readonly<[string, FunctionType]>;
 
 export interface AttributesCreation {
   // NOTE absence is not an error
   accessor(): AttributesTuple | undefined;
   modifier(): AttributesTuple | undefined;
   call(): AttributesTuple | undefined;
+  associationSet(): FunctionTypeAssociationSet;
 };
 
 const { freeze, memoize } = Helpers;
@@ -41,48 +38,56 @@ function make
   (mReferenceType: ObjectType,
    mVariableName: string,
    mFunctionNames: VariableNameFunctions,
-   mVariableType: ObjectType)
+   mVariableType: ObjectType,
+   mFunctionTypeFactory: () => FunctionTypeAssociationSet)
   : AttributesCreation
 {
-  const toFunctionTable = MutableFunctionTable.fromFunctionType;
-
+  const { makeUnassociated } = mFunctionTypeFactory();
   const { accessorName, modifierName } = mFunctionNames;
 
   const accessorFtype = memoize((): FunctionType | undefined => {
     if (!accessorName)
       { return undefined; }
 
-    return FunctionTypeBase.make( mReferenceType, undefined, mVariableType);
+    return makeUnassociated( mReferenceType, undefined, mVariableType);
   });
 
   const accessor = memoize((): AttributesTuple | undefined => {
     if (!accessorFtype())
       { return undefined; }
 
-    return [accessorName!, toFunctionTable(accessorFtype()!)];
+    return [accessorName!, accessorFtype()!];
   });
 
   const modifier = memoize((): AttributesTuple | undefined => {
     if (!modifierName)
       { return undefined; }
 
-    const ftype = FunctionTypeBase.make(mReferenceType, mVariableType, mVariableType);
-
-    return [modifierName, toFunctionTable(ftype)];
+    const ftype = makeUnassociated(mReferenceType, mVariableType, mVariableType);
+    return [modifierName, ftype];
   });
 
   const call = memoize((): AttributesTuple | undefined => {
-    if (!accessorFtype())
+    const lookUpTable = mVariableType.lookUp(OperatorNamingSchema.kCall)
+    if (!accessorFtype() || !lookUpTable)
       { return undefined; }
 
-    const ftype = CallAttributeCreation.of(accessorFtype()!);
-    if (!ftype)
-      { return undefined; }
+    // this is okay in one case: the immediate ftype
+    const repFtype = lookUpTable.uniqueFunctionType();
+    if (!repFtype)
+      { raise('cannot support calls that do not map the a unique ftype'); }
 
-    return [mVariableName, toFunctionTable(ftype)];
+    // unique ftype is not expected nor cannot have an emission!
+    if (repFtype.emission())
+      { raise('broken assumption, this representative ftype must not have an emission'); }
+
+    const { receiver, parameters, returns } = repFtype;
+    const trueFtype = makeUnassociated(receiver(), parameters(), returns());
+    return [mVariableName, trueFtype];
   });
+  const associationSet = mFunctionTypeFactory;
 
-  return freeze({ accessor, modifier, call });
+  return freeze({ accessor, modifier, call, associationSet });
 }
 
 export const AttributesCreation = freeze({ make });

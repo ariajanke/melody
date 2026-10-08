@@ -40,7 +40,7 @@ const kDepthToParent = 0;
 
 function make(mStackThing: ContextFrameStack): AncestorCollection {
   const { 
-    
+    atDepth
    } = mStackThing;
 
   function searchName_(name: string, idx: number): ObjectType | undefined {

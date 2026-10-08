@@ -17,19 +17,22 @@
  */
 
 import { Helpers, raise } from '../../helpers';
-import { FunctionLookUpTable, ObjectType } from '../../melody_components';
+import { FunctionLookUpTable, FunctionType, ObjectType } from '../../melody_components';
 import { BuiltinTypeBase } from '../builtin_type_base';
+import { MutableFunctionTable } from '../mutable_function_table';
 
 const { freeze } = Helpers;
 
 export type FunctionOpLookUp =
-  { [op: string | symbol]: FunctionLookUpTable | undefined };
+  { [op: string]: FunctionLookUpTable | undefined };
 
 export interface WritableObjectType extends ObjectType {
   // not sure I can enfore move semantic like handling
   setFunctionLookUp
-    (operation: string | symbol, lookUpTbl: FunctionLookUpTable)
+    (operation: string, lookUpTbl: FunctionLookUpTable)
     : WritableObjectType;
+  setFunctionType
+    (operation: string, ftype: FunctionType): WritableObjectType;
 };
 
 function make
@@ -38,7 +41,7 @@ function make
   : WritableObjectType
 {
   function setFunctionLookUp
-    (operation: string | symbol, lookUpTbl: FunctionLookUpTable)
+    (operation: string, lookUpTbl: FunctionLookUpTable)
     : WritableObjectType
   {
     if (mTable[operation]) {
@@ -49,12 +52,21 @@ function make
     return inst;
   }
 
+  function setFunctionType
+    (operation: string, ftype: FunctionType)
+    : WritableObjectType
+  {
+    const { fromFunctionType } = MutableFunctionTable;
+    return setFunctionLookUp(operation, fromFunctionType(ftype));
+  }
+
   const { lookUp } = mBaseObjectType;
 
   const inst = freeze({
     ...mBaseObjectType,
     lookUp(operation: string): FunctionLookUpTable | undefined
       { return mTable[operation] ?? lookUp(operation); },
+    setFunctionType,
     setFunctionLookUp
   });
   return inst;

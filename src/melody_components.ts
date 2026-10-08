@@ -37,6 +37,7 @@ export interface MelodyComponentVisitor<T> {
   visitObjectType(otype: ObjectType): T;
   visitImmediateValue(imm: ImmediateValue): T;
   visitImmediateFunction(imf: ImmediateFunction): T;
+  visitRuntimeOnly(rto: RuntimeOnlyValue): T;
 };
 
 // TODO OOS for this file
@@ -47,15 +48,15 @@ export interface EmissionContext {
   popReceiver(obj: ObjectType): CodeEmission;
 };
 
-export interface FunctionType extends MelodyComponent {
-  parameters(): ObjectType;
-  returns(): ObjectType;
-  receiver(): ObjectType;
-};
-
-export interface FunctionTypeRelationSet {
+export interface FunctionTypeAssociation {
   emission(): CodeEmission | undefined;
   immediate(): ImmediateFunction | ImmediateValue | RuntimeOnlyValue | undefined;
+};
+
+export interface FunctionType extends MelodyComponent, FunctionTypeAssociation {
+  receiver(): ObjectType;
+  parameters(): ObjectType;
+  returns(): ObjectType;
 };
 
 export interface CodeEmission extends MelodyComponent {
