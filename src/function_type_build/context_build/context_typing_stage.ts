@@ -36,7 +36,7 @@ import { NodeTypeInference } from '../node_type_inference';
 import { NodeTypeEvaluation } from '../node_type_evaluation';
 import { InitializerVariable, OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
 import { AttributesCreation, AttributesTuple } from './attributes_creation';
-import { FunctionTypeAssociationSet } from './function_type_association_set';
+import { FunctionTypeAssociationSet } from '../function_type_association_set';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 
 const { freeze, memoize } = Helpers;
@@ -121,16 +121,6 @@ const ContextShiftFactory = freeze({
     return freeze({ methodPairs, associationSet, byInitializer });
   }
 });
-
-// interface InitializerVariableReduction {
-//   methodPairs(): Readonly<AttributesTuple[]>;
-//   associationSet(): FunctionTypeAssociationSet;
-
-//   next(writableContextType: WritableObjectType,
-//        initializerType: ObjectType,
-//        variableNames: Readonly<string[]>)
-//     : WritableObjectType;
-// };
 
 interface VariableTypeBreakdownBuild {
   initializerType(): ObjectType | undefined;

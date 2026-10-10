@@ -16,14 +16,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AstNode } from './ast_node';
-import { Helpers } from './helpers';
 import { CodeWriter } from './code_writer';
+import { Helpers } from './helpers';
 
-// TODO clean up this import
-import { TupleObjectType } from './function_type_build/tuple_object_type';
-
-const { freeze } = Helpers;
+const { freeze, memoize } = Helpers;
 
 export interface MelodyComponent {
   // differentiate records this way
@@ -77,6 +73,43 @@ export interface ObjectType extends MelodyComponent {
   sizeInStackItems(): number;
 };
 
+export const ObjectType = freeze({
+  // ouch...
+  // typeGetterOf(type: ObjectType): FunctionType {
+  //   const immediateValue = freeze({
+  //     asInteger: () => undefined,
+  //     asObjectType: () => inst,
+  //     uid: memoize(Symbol),
+  //     visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+  //       visitor.visitImmediateValue(immediateValue),
+  //   });
+  //   const ftype = freeze({
+  //     emission: () => undefined,
+  //     immediate: () => immediateValue,
+  //     uid: memoize(Symbol),
+  //     visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+  //       visitor.visitFunctionType(ftype),
+  //     receiver: TupleObjectType.emptyTuple,
+  //     parameters: TupleObjectType.emptyTuple,
+  //     returns: ObjectType.instance
+  //   });
+  //   return ftype;
+  // },
+  instance: memoize((): ObjectType => {
+    const inst = freeze({
+      uid: memoize(Symbol),
+      name: (): string => 'ObjectType',
+      visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+        visitor.visitObjectType(inst),
+      lookUp: (_0: string): FunctionLookUpTable | undefined => undefined,
+      detuplify: (): Readonly<ObjectType[]> | undefined => undefined,
+      sizeInBytes: (): number => 0,
+      sizeInStackItems: (): number => 0
+    });
+    return inst;
+  })
+});
+
 export interface FunctionLookUpTable {
   byParameters(type: ObjectType): FunctionType | undefined;
   uniqueFunctionType(): FunctionType | undefined;
@@ -95,22 +128,6 @@ export interface NodeRelationSet {
   immediateValue(): ImmediateValue | undefined;
 };
 
-// interface MelodyDatabase {
-//   retrieveForNode(node: AstNode): NodeRelationSet;
-//   retrieveForFunction(ftype: FunctionType): FunctionTypeRelationSet;
-// };
-
-// interface MelodyWritableDatabase extends MelodyDatabase {
-//   // differentiate the type, record to the correct "table",
-//   // and raise if the wrong type is passed
-//   writeForNode(node: AstNode, record: MelodyComponent): void;
-//   writeForFunction(ftype: FunctionType, component: MelodyComponent): void;
-// }
-
 export interface ImmediateFunction extends MelodyComponent {
   call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue;
 };
-
-// interface FunctionRegistry {
-//   register(ftype: FunctionType, completedContextType: ObjectType): void;
-// };

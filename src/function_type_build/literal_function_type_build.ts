@@ -22,9 +22,10 @@ import { IntegerType } from './integer_type';
 import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
 import { ConstantStringType } from './builtin_type_base';
-import { CodeEmission, FunctionType, FunctionTypeBuild, ImmediateValue, ObjectType } from '../function_type_build';
-import { EmissionContext } from '../function_type_build';
 import { AstLiteralNode } from '../ast_node';
+import { CodeEmission, EmissionContext, FunctionType, ImmediateValue, MelodyComponentVisitor } from '../melody_components';
+import { FunctionTypeFactory } from './function_type_association_set';
+import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -35,20 +36,49 @@ const IntegerLiteralThings = ({
   make(mLiteralNode: AstLiteralNode,
        
   ): RecordsRetrieval {
-    const intValue = Number(mLiteralNode.token.content());
 
-    function emit(writer: CodeWriter, _1: EmissionContext) {
-      writer.pushInteger(intValue);
-    }
-
-    function asInteger(): number | undefined
-      { return intValue; }
-
-    return freeze({
-      emission: memoize(() => freeze({ emit })),
-      objectType: IntegerType.instance,
-      immediateValue: memoize(() => freeze({ asInteger, asObjectType: () => undefined }))
+    const numericValue = memoize((): number | undefined => {
+      const intValue = Number(mLiteralNode.token.content());
+      if (isNaN(intValue)) {
+        // error out
+      }
     });
+
+    const entity = memoize(() => {
+      if (numericValue() === undefined)
+        { return undefined; }
+
+      const intValue = numericValue()!;
+      function emit(writer: CodeWriter, _1: EmissionContext)
+        { writer.pushInteger(intValue); }
+
+      const emission = freeze({
+        emit,
+        visit<T>(visitor: MelodyComponentVisitor<T>): T
+          { return visitor.visitCodeEmission(emission); },
+        uid: memoize(Symbol)
+      });
+      const immediate = freeze({
+        asInteger: numericValue,
+        asObjectType: () => undefined,
+        visit<T>(visitor: MelodyComponentVisitor<T>): T
+          { return visitor.visitImmediateValue(immediate); },
+        uid: memoize(Symbol)
+      });
+      const inst = freeze({
+        receiver: TupleObjectType.emptyTuple,
+        parameters: TupleObjectType.emptyTuple,
+        returns: IntegerType.instance,
+        emission: (): CodeEmission => emission,
+        immediate: (): ImmediateValue => immediate,
+        visit<T>(visitor: MelodyComponentVisitor<T>): T
+          { return visitor.visitFunctionType(inst); },
+        uid: memoize(Symbol)
+      });
+      return inst;
+    });
+
+    
   }
 });
 

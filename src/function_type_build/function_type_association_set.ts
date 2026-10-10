@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Helpers, raise } from '../../helpers';
+import { Helpers, raise } from '../helpers';
 import {
   CodeEmission,
   FunctionType,
@@ -27,13 +27,16 @@ import {
   MelodyComponentVisitor,
   ObjectType, 
   RuntimeOnlyValue
-} from '../../melody_components';
-import { TupleObjectType } from '../tuple_object_type';
+} from '../melody_components';
+import { TupleObjectType } from './tuple_object_type';
 
-export interface FunctionTypeAssociationSet {
+export interface FunctionTypeFactory {
   makeUnassociated
     (receiver?: ObjectType, parameters?: ObjectType, returns?: ObjectType)
     : FunctionType;
+};
+
+export interface FunctionTypeAssociationSet extends FunctionTypeFactory {
   associate(to: FunctionType, component: MelodyComponent): this;
 };
 

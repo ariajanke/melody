@@ -17,73 +17,135 @@
  */
 
 import { CodeWriter } from '../code_writer';
-import { FunctionLookUpTable, ObjectType, FunctionType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { BuiltinTypeBase } from './builtin_type_base';
-import { FunctionTypeBase } from './function_type_base';
+import {
+  EmissionContext,
+  FunctionLookUpTable,
+  FunctionType,
+  ImmediateValue,
+  MelodyComponentVisitor,
+  ObjectType
+} from '../melody_components';
+import { WasmCompilation } from '../wasm_compilation';
+// import { BuiltinTypeBase } from './builtin_type_base';
 import { MutableFunctionTable } from './mutable_function_table';
+import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 
-interface ImmediateValue {
-  asInteger(): number | undefined;
-};
+type CodeWriterFnName = 'addIntegers' | 'multiplyIntegers' | 'subtractIntegers';
 
-const plus = ({
-  call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue {
-    const rint = receiver.asInteger();
-    const pint = parameters.asInteger();
-    if (rint === undefined ||
-        pint === undefined)
-    { raise('cannot call plus, your immediates are not integers'); }
+function makeBinaryOperator
+  (callName: CodeWriterFnName,
+   imfImpl: (lhs: number, rhs: number) => number,
+   thisType: () => ObjectType)
+  : FunctionType
+{
+  const imf = freeze({
+    uid: memoize(Symbol),
+    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+      visitor.visitImmediateFunction(imf),
+    call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue {
+      const rint = receiver.asInteger();
+      const pint = parameters.asInteger();
+      if (rint === undefined ||
+          pint === undefined)
+      { raise(`cannot call ${callName}, your immediates are not integers`); }
 
-    return ({
-      asInteger: () => rint + pint
-    })
-  }
-})
+      const imv: ImmediateValue = freeze({
+        uid: memoize(Symbol),
+        visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+          visitor.visitImmediateValue(imv),
+        asInteger: (): number | undefined => imfImpl(rint, pint),
+        asObjectType: (): ObjectType | undefined => undefined
+      });
+      return imv;
+    }
+  });
+
+  const emission = freeze({
+    uid: memoize(Symbol),
+    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+      visitor.visitCodeEmission(emission),
+    emit(writer: CodeWriter, ctx: EmissionContext): void {
+      const rec = ctx.popReceiver(thisType());
+      const prm = ctx.popParameters(thisType());
+      rec.emit(writer, ctx);
+      prm.emit(writer, ctx);
+      writer[callName]();
+    }
+  });
+
+  const ftype = freeze({
+    emission: () => emission,
+    immediate: () => imf,
+    uid: memoize(Symbol),
+    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+      visitor.visitFunctionType(ftype),
+    receiver: thisType,
+    parameters: thisType,
+    returns:  thisType
+  });
+  return ftype;
+}
+
+const addition = memoize((): FunctionType =>
+  makeBinaryOperator('addIntegers',
+                     (lhs: number, rhs: number) => lhs + rhs,
+                     IntegerType.instance));
+const subtraction = memoize((): FunctionType =>
+  makeBinaryOperator('subtractIntegers',
+                     (lhs: number, rhs: number) => lhs - rhs,
+                     IntegerType.instance));
+const multiplication = memoize((): FunctionType =>
+  makeBinaryOperator('multiplyIntegers',
+                     (lhs: number, rhs: number) => lhs*rhs,
+                     IntegerType.instance));
+
+const objectTypeGetter = memoize((): FunctionType => {
+  const immediateValue = freeze({
+    asInteger: () => undefined,
+    asObjectType: IntegerType.instance,
+    uid: memoize(Symbol),
+    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+      visitor.visitImmediateValue(immediateValue),
+  });
+  const ftype = freeze({
+    emission: () => undefined,
+    immediate: () => immediateValue,
+    uid: memoize(Symbol),
+    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+      visitor.visitFunctionType(ftype),
+    receiver: TupleObjectType.emptyTuple,
+    parameters: TupleObjectType.emptyTuple,
+    returns: ObjectType.instance
+  });
+  return ftype;
+});
 
 function make(): ObjectType {
-  type CodeWriterFnName = 'addIntegers' | 'multiplyIntegers' | 'subtractIntegers';
+  const { fromFunctionType } = MutableFunctionTable;
 
-  function mkOperation(writerFn: CodeWriterFnName): FunctionLookUpTable {
-    const ftype = freeze({
-      ...FunctionTypeBase.makeNewEmitlessEmpty(),
-      receiver: () => inst,
-      parameters: () => inst,
-      returns: () => inst,
-      emit(receiverFtype: FunctionType,
-           parameterFtype: FunctionType,
-           writer: CodeWriter): void
-      {
-        receiverFtype.simpleEmit(writer);
-        parameterFtype.simpleEmit(writer);
-        writer[writerFn]();
-      },
-      simpleEmit(writer: CodeWriter): CodeWriter {
-        return writer[writerFn]();
-      }
-    });
-
-    return MutableFunctionTable.fromFunctionType(ftype);
-  }
-
-  const lookUpTable = memoize(():
-    { [name: string | symbol]: FunctionLookUpTable | undefined } => 
+  const lookUpTable = memoize((): { [name: string]: FunctionLookUpTable | undefined } => 
     freeze({
-    '+': mkOperation('addIntegers'),
-    '*': mkOperation('multiplyIntegers'),
-    '-': mkOperation('subtractIntegers')
-  }));
+      '+': fromFunctionType(addition()),
+      '*': fromFunctionType(subtraction()),
+      '-': fromFunctionType(multiplication())
+    }));
 
-  const inst = freeze({
-    ...BuiltinTypeBase.makeNewWithDefaults(),
+  const inst: ObjectType = freeze({
+    uid: memoize(Symbol),
+    detuplify: () => undefined,
+    sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
+    sizeInStackItems: () => 1,
     name: () => 'Integer',
-    lookUp(name: string | symbol): FunctionLookUpTable | undefined
+    lookUp(name: string): FunctionLookUpTable | undefined
       { return lookUpTable()[name]; },
+    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+      visitor.visitObjectType(inst),
   });
 
   return inst;
 }
 
-export const IntegerType = freeze({ instance: memoize(make) });
+export const IntegerType = freeze({ instance: memoize(make), objectTypeGetter });

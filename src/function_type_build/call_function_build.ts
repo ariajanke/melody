@@ -34,6 +34,15 @@ const kAssignmentNotAValidCallName =
   `"${kAssignment}" is not a valid call name, DAST build should have ` +
   `stripped it out and replaced it with the appropriate fringe accessor`;
 
+function make2
+  (mCallName: Token,
+   mReceiver: AstNode,
+   mArgs: AstNode,
+  )
+{
+
+}
+
 function make
   (mCallName: Token,
    mReceiver: AstNode,

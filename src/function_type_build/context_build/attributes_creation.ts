@@ -19,7 +19,7 @@
 import { Helpers, raise } from '../../helpers';
 import { FunctionType, ObjectType } from '../../melody_components';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
-import { FunctionTypeAssociationSet } from './function_type_association_set';
+import { FunctionTypeAssociationSet } from '../function_type_association_set';
 import { VariableNameFunctions } from './ordered_initial_sets_collection';
 
 export type AttributesTuple = Readonly<[string, FunctionType]>;

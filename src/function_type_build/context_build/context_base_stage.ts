@@ -31,6 +31,7 @@ import { SystemIoType } from '../system_io_type';
 import { PutsFunctionLookUpTable } from '../puts_function_look_up_table';
 import { FunctionLookUpTable, FunctionType, MelodyComponentVisitor, ObjectType } from '../../melody_components';
 import { TupleObjectType } from '../tuple_object_type';
+import { IntegerType } from '../integer_type';
 
 const { freeze, memoize } = Helpers;
 
@@ -40,19 +41,6 @@ export interface ContextBaseStage_ {
                    mFrameStack: ContextFrameStack)
     : ContextLinkStage_;
 };
-
-// function makeFTypeBase(): FunctionType {
-//   const { emptyTuple } = TupleObjectType;
-//   const inst = freeze({
-//     receiver: emptyTuple,
-//     parameters: emptyTuple,
-//     returns: emptyTuple,
-//     visit<T>(_0: MelodyComponentVisitor<T>): T
-//       { raise('eff'); },
-//     uid: memoize(Symbol)
-//   });
-//   return inst;
-// }
 
 function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
   const mTable: FunctionOpLookUp = {};
@@ -65,8 +53,18 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
     mTable[BuiltinFunctionNames.kSystemIoTable] =
       fromFunctionType(SystemIoType.selfGetter()));
 
-  const addPuts  = ((): FunctionLookUpTable =>
-    mTable[BuiltinFunctionNames.kPuts] = PutsFunctionLookUpTable.instance());
+  // const addPuts  = ((): FunctionLookUpTable =>
+  //   mTable[BuiltinFunctionNames.kPuts] = PutsFunctionLookUpTable.instance());
+
+  // new builtins, they are immediately evaluable!
+  'ConstantString'
+  const addInteger = ((): FunctionLookUpTable =>
+    mTable[FunctionNamingSchema.mapToFringeAccessor(IntegerType.instance().name())] =
+      fromFunctionType(IntegerType.objectTypeGetter()));
+
+  const addTuple = ((): FunctionLookUpTable =>
+    mTable[TupleObjectType.kBaseName] =
+      TupleObjectType.selfCallAsFunctionType());
 
   const addContext = ((): FunctionLookUpTable =>
     mTable[FunctionNamingSchema.kContextName] =
@@ -81,7 +79,7 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
     addSystem() &&
     addContext() &&
     addNone() &&
-    addPuts() &&
+    // addPuts() &&
     WritableObjectType.make(mTable, freeze({
       ...BuiltinTypeBase.makeNewWithDefaults(),
       name: () => mFrameName,
