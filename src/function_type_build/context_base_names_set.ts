@@ -28,10 +28,12 @@ import { PendingNamesRetrieval } from './context_base_names_set/pending_names_re
 import {
   DeclarationNamesRetrieval,
   WritableNameSet,
-  NameSet
 } from './context_base_names_set/declaration_names_retrieval';
+import * as dnr from './context_base_names_set/declaration_names_retrieval';
 
-export interface ContextNamesRetrieval {
+export type NameSet = dnr.NameSet;
+
+export interface UsedContextNames {
   declarations(): Readonly<AstInitializerNode[]>;
   pendingNames(): NameSet;
 };
@@ -43,7 +45,7 @@ const { accumulateNames } = PendingNamesRetrieval;
 
 const ContextNamesRetrieval = freeze({
   make(mPendingNames: PendingNamesRetrieval,
-       mDeclNames: DeclarationNamesRetrieval): ContextNamesRetrieval
+       mDeclNames: DeclarationNamesRetrieval): UsedContextNames
   {
     const pendingNames = memoize((): NameSet => {
       const set = mPendingNames.pendingNames().reduce(accumulateNames, {} as WritableNameSet);
@@ -59,7 +61,7 @@ const ContextNamesRetrieval = freeze({
 });
 
 export interface ContextBaseNamesSet {
-  contextNamesFor(node: AstDefinitionNode): ContextNamesRetrieval;
+  contextNamesFor(node: AstDefinitionNode): UsedContextNames;
   baseStageFor(node: AstDefinitionNode): ContextBaseStage;
 };
 
@@ -75,7 +77,7 @@ function make
 {
   const mCache: CacheFor<ContextBaseStage> = {};
   const mPCache: CacheFor<PendingNamesRetrieval> = {};
-  const mCCache: CacheFor<ContextNamesRetrieval> = {};
+  const mCCache: CacheFor<UsedContextNames> = {};
 
   function ensure(node: AstNode): ContextBaseStage {
     const uid = node.uid();
@@ -89,7 +91,7 @@ function make
     return mPCache[node.uid()] ?? raise('pending names was not initialized');
   }
 
-  function addNewNamesRetrieval(def: AstDefinitionNode): ContextNamesRetrieval {
+  function addNewNamesRetrieval(def: AstDefinitionNode): UsedContextNames {
     const uid = def.uid();
     const declRetr = DeclarationNamesRetrieval.make(def.parameters, def.nodes);
     
@@ -107,7 +109,7 @@ function make
 
   const addedRoot = memoize(() => addNewNamesRetrieval(mRootNode));
 
-  function contextNamesFor(node: AstDefinitionNode): ContextNamesRetrieval {
+  function contextNamesFor(node: AstDefinitionNode): UsedContextNames {
     return addedRoot() &&
       (mCCache[node.uid()] ??
        raise('this definition is not a part of this tree'));

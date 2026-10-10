@@ -17,18 +17,16 @@
  */
 
 import { BuiltinFunctionNames } from '../../builtin_function_names';
-import { CodeWriter } from '../../code_writer';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { Helpers, raise } from '../../helpers';
 import { ContextFrameStack } from '../context_frame_stack';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { ContextLinkStage_ } from './context_link_stage';
-import { BuiltinTypeBase } from '../builtin_type_base';
+import { ConstantStringType } from '../constant_string_type';
 import { FunctionOpLookUp, WritableObjectType } from './writable_object_type';
 import { WasmCompilation } from '../../wasm_compilation';
 import { SystemIoType } from '../system_io_type';
-import { PutsFunctionLookUpTable } from '../puts_function_look_up_table';
 import { FunctionLookUpTable, FunctionType, MelodyComponentVisitor, ObjectType } from '../../melody_components';
 import { TupleObjectType } from '../tuple_object_type';
 import { IntegerType } from '../integer_type';
@@ -42,6 +40,45 @@ export interface ContextBaseStage_ {
     : ContextLinkStage_;
 };
 
+function typeGetterOf(type: ObjectType): FunctionLookUpTable {
+  const immediateValue = freeze({
+    asInteger: () => undefined,
+    asObjectType: () => type,
+    uid: memoize(Symbol),
+    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+      visitor.visitImmediateValue(immediateValue),
+  });
+  const ftype = freeze({
+    emission: () => undefined,
+    immediate: () => immediateValue,
+    uid: memoize(Symbol),
+    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+      visitor.visitFunctionType(ftype),
+    receiver: TupleObjectType.emptyTuple,
+    parameters: TupleObjectType.emptyTuple,
+    returns: ObjectType.instance
+  });
+  return MutableFunctionTable.fromFunctionType(ftype);
+}
+
+const builtinTypes = memoize((): Readonly<ObjectType[]> => [
+  IntegerType.instance(),
+  ConstantStringType.instance()
+]);
+
+const referenceTypeDefaults = memoize((): ObjectType => freeze({
+  name: (): string => raise('name me'),
+  lookUp(_0: string): FunctionLookUpTable | undefined
+    { raise('overwrite me'); },
+  detuplify: () => undefined,
+  // NOTE: Just a pointer for the reference type.
+  sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
+  sizeInStackItems: () => 1,
+  uid: () => raise('overwrite me'),
+  visit: <T>(_0: MelodyComponentVisitor<T>) =>
+    raise('overwrite me')
+}));
+
 function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
   const mTable: FunctionOpLookUp = {};
   const { fromFunctionType } = MutableFunctionTable;
@@ -49,18 +86,14 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
   const referenceGetter = ((): FunctionType => 
     FunctionTypeBase.make(undefined, undefined, writableReferenceType()));
 
+  function addTypeAccessor(type: ObjectType): FunctionLookUpTable {
+    const { mapToFringeAccessor } = FunctionNamingSchema;
+    return mTable[mapToFringeAccessor(type.name())] = typeGetterOf(type);
+  }
+
   const addSystem = ((): FunctionLookUpTable =>
     mTable[BuiltinFunctionNames.kSystemIoTable] =
       fromFunctionType(SystemIoType.selfGetter()));
-
-  // const addPuts  = ((): FunctionLookUpTable =>
-  //   mTable[BuiltinFunctionNames.kPuts] = PutsFunctionLookUpTable.instance());
-
-  // new builtins, they are immediately evaluable!
-  'ConstantString'
-  const addInteger = ((): FunctionLookUpTable =>
-    mTable[FunctionNamingSchema.mapToFringeAccessor(IntegerType.instance().name())] =
-      fromFunctionType(IntegerType.objectTypeGetter()));
 
   const addTuple = ((): FunctionLookUpTable =>
     mTable[TupleObjectType.kBaseName] =
@@ -70,7 +103,6 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
     mTable[FunctionNamingSchema.kContextName] =
       fromFunctionType(referenceGetter()));
 
-  // TODO might be unused
   const addNone = ((): FunctionLookUpTable =>
     mTable[FunctionNamingSchema.kNoneName] =
       fromFunctionType(FunctionTypeBase.emitEmptyTuple()));
@@ -79,13 +111,11 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
     addSystem() &&
     addContext() &&
     addNone() &&
-    // addPuts() &&
+    addTuple() &&
+    (builtinTypes().every(addTypeAccessor) as true) &&
     WritableObjectType.make(mTable, freeze({
-      ...BuiltinTypeBase.makeNewWithDefaults(),
+      ...referenceTypeDefaults(),
       name: () => mFrameName,
-      // NOTE: Just a pointer for the reference type.
-      sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
-      sizeInStackItems: () => 1
     })));
 
   const referenceType = writableReferenceType as () => ObjectType;

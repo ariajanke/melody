@@ -21,7 +21,7 @@ import { Helpers, StandardErrorMessage } from '../helpers';
 import { IntegerType } from './integer_type';
 import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
-import { ConstantStringType } from './builtin_type_base';
+import { ConstantStringType } from './constant_string_type';
 import { AstLiteralNode } from '../ast_node';
 import { CodeEmission, EmissionContext, FunctionType, ImmediateValue, MelodyComponentVisitor } from '../melody_components';
 import { FunctionTypeFactory } from './function_type_association_set';

@@ -17,9 +17,9 @@
  */
 
 import { FunctionNamingSchema } from '../../function_naming_schema';
-import { ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
-import { ContextFrameStack } from '../context_frame_stack';
+import { ObjectType } from '../../melody_components';
+// import { ContextFrameStack } from '../context_frame_stack';
 
 const { freeze, memoize } = Helpers;
 
@@ -34,6 +34,15 @@ export interface AncestorCollection {
   parentReference(): ObjectType | undefined;
   parentUniqueName(): string | undefined;
   searchForOriginalByName(fName: string): ObjectType | undefined;
+};
+
+export interface ContextFrameInfo {
+  referenceType(): ObjectType;
+  uniqueName(): string;
+};
+
+export interface ContextFrameStack {
+  atDepth(idx: number): ContextFrameInfo | undefined;
 };
 
 const kDepthToParent = 0;
@@ -55,6 +64,7 @@ function make(mStackThing: ContextFrameStack): AncestorCollection {
     if (!fLookUp)
       { return searchName_(name, idx + 1); }
 
+    // TODO this seems relatively problematic to me...
     const ftype = fLookUp.uniqueFunctionType();
     if (!ftype)
       { return undefined; }

@@ -19,7 +19,7 @@
 import { AstNode } from '../../src/ast_node';
 import { FunctionNamingSchema } from '../../src/function_naming_schema';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../../src/function_type_build';
-import { BuiltinTypeBase, ConstantStringType } from '../../src/function_type_build/builtin_type_base';
+import { BuiltinTypeBase, ConstantStringType } from '../../src/function_type_build/constant_string_type';
 import { FunctionTypeBase } from '../../src/function_type_build/function_type_base';
 import { IntegerType } from '../../src/function_type_build/integer_type';
 import { MutableFunctionTable } from '../../src/function_type_build/mutable_function_table';

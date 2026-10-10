@@ -17,8 +17,8 @@
  */
 
 import { FunctionNamingSchema } from '../../function_naming_schema';
-import { ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
+import { ObjectType } from '../../melody_components';
 import { AncestorCollection, AncestorInfo } from './ancestor_collection';
 
 const { freeze, memoize } = Helpers;

@@ -102,26 +102,26 @@ const multiplication = memoize((): FunctionType =>
                      (lhs: number, rhs: number) => lhs*rhs,
                      IntegerType.instance));
 
-const objectTypeGetter = memoize((): FunctionType => {
-  const immediateValue = freeze({
-    asInteger: () => undefined,
-    asObjectType: IntegerType.instance,
-    uid: memoize(Symbol),
-    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
-      visitor.visitImmediateValue(immediateValue),
-  });
-  const ftype = freeze({
-    emission: () => undefined,
-    immediate: () => immediateValue,
-    uid: memoize(Symbol),
-    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
-      visitor.visitFunctionType(ftype),
-    receiver: TupleObjectType.emptyTuple,
-    parameters: TupleObjectType.emptyTuple,
-    returns: ObjectType.instance
-  });
-  return ftype;
-});
+// const objectTypeGetter = memoize((): FunctionType => {
+//   const immediateValue = freeze({
+//     asInteger: () => undefined,
+//     asObjectType: IntegerType.instance,
+//     uid: memoize(Symbol),
+//     visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+//       visitor.visitImmediateValue(immediateValue),
+//   });
+//   const ftype = freeze({
+//     emission: () => undefined,
+//     immediate: () => immediateValue,
+//     uid: memoize(Symbol),
+//     visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+//       visitor.visitFunctionType(ftype),
+//     receiver: TupleObjectType.emptyTuple,
+//     parameters: TupleObjectType.emptyTuple,
+//     returns: ObjectType.instance
+//   });
+//   return ftype;
+// });
 
 function make(): ObjectType {
   const { fromFunctionType } = MutableFunctionTable;
@@ -148,4 +148,4 @@ function make(): ObjectType {
   return inst;
 }
 
-export const IntegerType = freeze({ instance: memoize(make), objectTypeGetter });
+export const IntegerType = freeze({ instance: memoize(make) });

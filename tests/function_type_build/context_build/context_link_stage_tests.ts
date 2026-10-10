@@ -18,7 +18,7 @@
 
 import { FunctionNamingSchema } from '../../../src/function_naming_schema';
 import { FunctionType, ObjectType } from '../../../src/function_type_build';
-import { BuiltinTypeBase } from '../../../src/function_type_build/builtin_type_base';
+import { BuiltinTypeBase } from '../../../src/function_type_build/constant_string_type';
 import { ContextBaseStage } from '../../../src/function_type_build/context_build';
 import { AncestorCollection, AncestorInfo } from '../../../src/function_type_build/context_build/ancestor_collection';
 import { ContextAncestorAccessorsStage } from '../../../src/function_type_build/context_build/context_ancestor_accessors_stage';

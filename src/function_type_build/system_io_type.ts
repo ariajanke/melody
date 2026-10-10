@@ -18,7 +18,7 @@
 
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
-import { BuiltinTypeBase, ConstantStringType } from './builtin_type_base';
+import { BuiltinTypeBase, ConstantStringType } from './constant_string_type';
 import { PutsFunctionLookUpTable } from './puts_function_look_up_table';
 import { FunctionTypeBase } from './function_type_base';
 import { IntegerType } from './integer_type';

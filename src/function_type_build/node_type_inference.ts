@@ -27,7 +27,7 @@ import { FunctionNamingSchema } from '../function_naming_schema';
 import { FunctionLookUpTable, ObjectType } from '../function_type_build';
 import { Helpers, raise } from '../helpers';
 import { Token } from '../token';
-import { ConstantStringType } from './builtin_type_base';
+import { ConstantStringType } from './constant_string_type';
 import { FunctionIndexType } from './function_index_type';
 import { IntegerType } from './integer_type';
 import { ParametersTypeBuild } from './parameters_type_build';

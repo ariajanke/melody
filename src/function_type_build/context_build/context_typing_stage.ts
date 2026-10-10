@@ -24,20 +24,20 @@ import { ContextFrameStack } from '../context_frame_stack';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
 import { ContextLinkStage_ } from './context_link_stage';
-import { BuiltinTypeBase } from '../builtin_type_base';
 import { FunctionOpLookUp, WritableObjectType } from './writable_object_type';
 import { WasmCompilation } from '../../wasm_compilation';
 import { SystemIoType } from '../system_io_type';
 import { PutsFunctionLookUpTable } from '../puts_function_look_up_table';
 import { FunctionLookUpTable, FunctionType, MelodyComponentVisitor, ObjectType } from '../../melody_components';
 import { TupleObjectType } from '../tuple_object_type';
-import { AstInitializerNode } from '../../ast_node';
+import { AstDefinitionNode, AstInitializerNode, AstNode } from '../../ast_node';
 import { NodeTypeInference } from '../node_type_inference';
 import { NodeTypeEvaluation } from '../node_type_evaluation';
 import { InitializerVariable, OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
 import { AttributesCreation, AttributesTuple } from './attributes_creation';
 import { FunctionTypeAssociationSet } from '../function_type_association_set';
 import { UsedAncestorCollection } from './used_ancestor_collection';
+import { ContextBaseNamesSet, UsedContextNames } from '../context_base_names_set';
 
 const { freeze, memoize } = Helpers;
 
@@ -178,21 +178,73 @@ const VariableTypeBreakdownBuild = freeze({
   }
 });
 
+interface Thing {
+  // enable access to used ancestors collection for each child of a given node
+  addFullyNamedContext(
+    node: AstDefinitionNode,
+    uniqueName: string,
+    fullyNamedContext: ObjectType): Thing;
+  // access must be enabled, or this will raise!
+  // if a def node has any pending names, attempt to get this
+  // in the root case, simply fail to retrieve and allow methods to be left
+  // undefined (therefore allowing future error handling to catch undefines)
+  usedAncestorsCollectionFor(node: AstDefinitionNode): UsedAncestorCollection;
+};
+
+function makeThing
+  (mContextNamesFor: (node: AstDefinitionNode) => UsedContextNames): Thing
+{
+  function addFullyNamedContext(
+    node: AstDefinitionNode,
+    uniqueName: string,
+    fullyNamedContext: ObjectType): void
+  {
+    // referenceType, uniqueName
+    mContextNamesFor(node);
+  }
+
+  function usedAncestorsCollectionFor
+    (node: AstDefinitionNode): UsedAncestorCollection
+  {
+
+  }
+}
+
+function doStuff(mRoot: AstDefinitionNode) {
+  const { contextNamesFor, baseStageFor } = ContextBaseNamesSet.make(mRoot);
+  const { addFullyNamedContext, usedAncestorsCollectionFor } = makeThing(contextNamesFor);
+  (node: AstDefinitionNode) => {
+    const cns = contextNamesFor(node);
+    const baseStage = baseStageFor(node);
+    // basestage into
+    const wr = baseStage.referenceType() as WritableObjectType;
+    const uac = usedAncestorsCollectionFor(node);
+    make(cns, wr, uac);
+    
+  }
+}
+
 function make
-  (mPendingNames: { [name: string]: true },
-   mUsedAncestorCollection: UsedAncestorCollection,
+  (mContextNames: UsedContextNames,
+    // mPendingNames: { [name: string]: true },
+   
    mWritableReferenceType: WritableObjectType,
-   mDeclarations: Readonly<AstInitializerNode[]>)
+   mUsedAncestors: UsedAncestorCollection
+  //  mDeclarations: Readonly<AstInitializerNode[]>
+  )
 {
   // still need linking and delegations
   // linking -> I don't think we need anything here yet?
   // delegations -> make it "we just need them" kind of deal
   const mError = StandardError.make();
+  const { declarations, pendingNames } = mContextNames;
   const { error, setErrorFn } = mError;
   const mNodeTypeInference = NodeTypeInference.make();
 
+  Object.keys(pendingNames());
+
   const mOrderedInitializers =
-    OrderedInitialSetsCollection.make(mDeclarations);
+    OrderedInitialSetsCollection.make(declarations());
 
   const mFactory = ContextShiftFactory.make(mOrderedInitializers.variableNameMap);
   function reduceInitializerVariable

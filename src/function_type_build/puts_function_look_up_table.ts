@@ -21,7 +21,7 @@ import { FunctionLookUpTable, FunctionType, ObjectType } from '../function_type_
 import { Helpers, raise } from '../helpers';
 import { IntegerType } from './integer_type';
 import { FunctionTypeBase } from './function_type_base';
-import { ConstantStringType } from './builtin_type_base';
+import { ConstantStringType } from './constant_string_type';
 import { LiteralFunctionTypeBuild } from './literal_function_type_build';
 import { TupleObjectType } from './tuple_object_type';
 
