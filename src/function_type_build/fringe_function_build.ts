@@ -105,7 +105,7 @@ function make2
       // emission has to be composed
       // does every AST node need a ftype? couldn't hurt
       
-
+      originalFtype()!.emission() ?? genThatEmission();
 
       return originalFtype();
     }

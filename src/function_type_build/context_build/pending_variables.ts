@@ -22,9 +22,9 @@ import { ObjectType } from '../../melody_components';
 import { AncestorCollection, AncestorInfo } from './ancestor_collection';
 
 const { freeze, memoize } = Helpers;
-type ThingMap = {
-  readonly variableName?: string;
-};
+
+// I already have my container right? It's the context type
+// and we hate passing redundent info!
 interface PendingVariables {
   initializersAndVariableNames(): Readonly<[string, string[]][]>;
   functionToVariableNames(): Readonly<{ [fname: string]: string | undefined }>;
@@ -32,9 +32,7 @@ interface PendingVariables {
 
 interface WritablePendingVariables {
   appendInitializer
-    (mInitializerType: ObjectType,
-     mVariableNames: Readonly<string[]>,
-     mVariableTypes: Readonly<ObjectType[]>): void;
+    (mVariableNames: Readonly<string[]>): void;
 };
 
 function append

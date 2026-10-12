@@ -42,6 +42,9 @@ export interface ContextTypingStage_ {
 
 const { freeze, memoize } = Helpers;
 
+// What can we get away with not knowing?
+// With that answer, we need to reduce this service to that as much as possible.
+// 
 function make
   (mContextNames: UsedContextNames,
    mWritableReferenceType: WritableObjectType,
@@ -49,6 +52,7 @@ function make
    mAssociations: FunctionTypeAssociationSet = FunctionTypeAssociationSet.make())
   : ContextTypingStage_
 {
+  // I still need parameter naming too! (ow)
   // can't throw away uac until emission is complete for the entire body (yuck)
   // still need linking and delegations
   // linking -> I don't think we need anything here yet?
@@ -115,10 +119,14 @@ function make
   // accessors to inhabit above fnames
   // pass UAC to emission?
 
+  const { allAncestorsOrdered, ancestors, parent } = mUsedAncestors;
+
   return freeze({
     writableReferenceType,
-    associationSet,
-    pendingForEmission,
+    associationSet, // <- for furthering component associations 
+    pendingForEmission, // <- our pending variable info
+    // v ancestors or preface
+    someAncestorInfo: { allAncestorsOrdered, ancestors, parent },
     error
   });
 }
