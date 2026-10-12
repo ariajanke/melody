@@ -18,7 +18,7 @@
 
 import { AstParameterExpression } from '../../src/ast_node';
 import { FunctionLookUpTable, ObjectType } from '../../src/function_type_build';
-import { ContextBaseNamesSet } from '../../src/function_type_build/context_base_names_set';
+import { ContextNamesTreeSet } from '../../src/function_type_build/context_names_tree_set';
 import { ContextBaseStage, ContextLinkStage } from '../../src/function_type_build/context_build';
 import { ContextFrameStack } from '../../src/function_type_build/context_frame_stack';
 import { Helpers, raise } from '../../src/helpers';
@@ -29,7 +29,7 @@ const { memoize, freeze } = Helpers;
 
 const { describeNamed } = TestHelpers;
 
-describeNamed({ ContextBaseNamesSet }, () => {
+describeNamed({ ContextBaseNamesSet: ContextNamesTreeSet }, () => {
   const { makeFringe, makeFunctionDefinition } = AstFactories;
   let baseStagesMadeCount = 0;
   const makeBaseStage = (name: string): ContextBaseStage => {
@@ -53,7 +53,7 @@ describeNamed({ ContextBaseNamesSet }, () => {
 
   it('makes only one base stage per uid', () => {
     const oldCount = baseStagesMadeCount;
-    const inst = ContextBaseNamesSet.forTesting.make(makeBaseStage);
+    const inst = ContextNamesTreeSet.forTesting.make(makeBaseStage);
     inst.ensure(0);
     inst.ensure(0);
     inst.ensure(1);
@@ -65,7 +65,7 @@ describeNamed({ ContextBaseNamesSet }, () => {
     const innerMostDef = memoize(() => makeFunctionDefinition(...innerMostNodes()));
     const subNodes = memoize(() => [makeFunctionDefinition(innerMostDef())]);
     const rootNode = memoize(() => makeFunctionDefinition(...subNodes()));
-    const inst = memoize(() => ContextBaseNamesSet.forTesting.make(makeBaseStage));
+    const inst = memoize(() => ContextNamesTreeSet.forTesting.make(makeBaseStage));
     const emptyParameters: Readonly<AstParameterExpression[]> = [];
 
     it('grand parent will have parent as pending', () => {

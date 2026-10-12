@@ -68,6 +68,7 @@ const mEmissionVisitor: MelodyComponentVisitor<EType> = freeze({
 function make(): FunctionTypeAssociationSet {
   const mEmissionCache: { [uid: symbol]: EType } = {};
   const mImmediateCache: { [uid: symbol]: ImmType } = {};
+  const mSourcedFtypes: { [uid: symbol]: FunctionType | undefined } = {};
   const { emptyTuple } = TupleObjectType;
   function makeUnassociated
     (receiver?: ObjectType, parameters?: ObjectType, returns?: ObjectType)
@@ -84,10 +85,13 @@ function make(): FunctionTypeAssociationSet {
       emission: () => mEmissionCache[uid],
       immediate: () => mImmediateCache[uid]
     });
-    return ftype;
+    return mSourcedFtypes[uid] ??= ftype;
   }
   function associate(to: FunctionType, component: MelodyComponent): FunctionTypeAssociationSet {
     const uid = to.uid();
+    if (mSourcedFtypes[uid] === undefined) {
+      raise('This set cannot associate the given ftype with any component (not its original owner)');
+    }
     const emission = component.visit(mEmissionVisitor);
     if (emission) {
       mEmissionCache[uid] && raise('cannot set emission, already present');

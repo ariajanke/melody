@@ -60,7 +60,7 @@ const ContextNamesRetrieval = freeze({
   }
 });
 
-export interface ContextBaseNamesSet {
+export interface ContextNamesTreeSet {
   contextNamesFor(node: AstDefinitionNode): UsedContextNames;
   baseStageFor(node: AstDefinitionNode): ContextBaseStage;
 };
@@ -73,7 +73,7 @@ function addToCache<T>(cache: CacheFor<T>, uid: number, obj: T): T {
 function make
   (mRootNode: AstDefinitionNode,
    mBaseStageCtor: (uniqueName: string) => ContextBaseStage = ContextBaseStage.make)
-  : ContextBaseNamesSet
+  : ContextNamesTreeSet
 {
   const mCache: CacheFor<ContextBaseStage> = {};
   const mPCache: CacheFor<PendingNamesRetrieval> = {};
@@ -122,7 +122,7 @@ function make
   return freeze({ contextNamesFor, baseStageFor });
 }
 
-export const ContextBaseNamesSet = freeze({
+export const ContextNamesTreeSet = freeze({
   make
   // instance: memoize(make),
   // forTesting: { make }

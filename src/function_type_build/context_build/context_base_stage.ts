@@ -19,10 +19,8 @@
 import { BuiltinFunctionNames } from '../../builtin_function_names';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { Helpers, raise } from '../../helpers';
-import { ContextFrameStack } from '../context_frame_stack';
 import { FunctionTypeBase } from '../function_type_base';
 import { MutableFunctionTable } from '../mutable_function_table';
-import { ContextLinkStage_ } from './context_link_stage';
 import { ConstantStringType } from '../constant_string_type';
 import { FunctionOpLookUp, WritableObjectType } from './writable_object_type';
 import { WasmCompilation } from '../../wasm_compilation';
@@ -30,14 +28,19 @@ import { SystemIoType } from '../system_io_type';
 import { FunctionLookUpTable, FunctionType, MelodyComponentVisitor, ObjectType } from '../../melody_components';
 import { TupleObjectType } from '../tuple_object_type';
 import { IntegerType } from '../integer_type';
+import { ContextTypingStage_ } from './context_typing_stage';
+import { type UsedContextNames } from '../context_names_tree_set';
+import { type UsedAncestorCollection } from './used_ancestor_collection';
+import { type FunctionTypeAssociationSet } from '../function_type_association_set';
 
 const { freeze, memoize } = Helpers;
 
 export interface ContextBaseStage_ {
   referenceType(): ObjectType;
-  contextLinkStage(mPendingNames: Readonly<{ [name: string]: true }>,
-                   mFrameStack: ContextFrameStack)
-    : ContextLinkStage_;
+  typingStage
+    (contextNames: UsedContextNames,
+     usedAncestors: UsedAncestorCollection,
+     associations: FunctionTypeAssociationSet): ContextTypingStage_;
 };
 
 function typeGetterOf(type: ObjectType): FunctionLookUpTable {
@@ -120,17 +123,18 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
 
   const referenceType = writableReferenceType as () => ObjectType;
 
-  function contextLinkStage
-    (mPendingNames: Readonly<{ [name: string]: true }>,
-     mFrameStack: ContextFrameStack)
+  function typingStage
+    (contextNames: UsedContextNames,
+     usedAncestors: UsedAncestorCollection,
+     associations: FunctionTypeAssociationSet): ContextTypingStage_
   {
-    return ContextLinkStage_.
-      make( mPendingNames, mFrameStack, writableReferenceType() );
+    return ContextTypingStage_.
+      make(contextNames, writableReferenceType(), usedAncestors, associations);
   }
 
   return freeze({
     referenceType,
-    contextLinkStage
+    typingStage
   });
 }
 

@@ -17,8 +17,10 @@
  */
 
 import { FunctionNamingSchema } from '../../function_naming_schema';
-import { FunctionType, ObjectType } from '../../function_type_build';
+// import { FunctionType, ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
+import { FunctionType, ObjectType } from '../../melody_components';
+// import { FunctionTypeFactory } from '../function_type_association_set';
 import { TupleObjectType } from '../tuple_object_type';
 import { AncestorInfo } from './ancestor_collection';
 import { UsedAncestorCollection } from './used_ancestor_collection';

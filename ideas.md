@@ -588,3 +588,36 @@ let IntPt = Pt(Integer)
 let r = Pt(Integer).new(3, 4)
 r.x := 5
 ```
+# 2026-1011-1643
+```
+let FunctionTypeBuild = OptionalEntity(FunctionType).
+  defaultingTo(StandardError, as: 'error')
+# "..." denotes omitted code
+let CallNodeBuild = tbl
+  new = fn (... return FunctionTypeBuild) ...
+let inst = CallNodeBuild.new(...)
+inst.functionType or inst.error
+```
+Yet all of this puts us in an awkward position of undefered work.
+So let's revise this!
+```
+let FunctionTypeBuild =
+  OptionalEntity(FunctionType).
+  defaultingTo(StandardError, as: 'error').
+  # We'll have to give ObjectType instances a way to transform themselves
+  # according to some service. A super power of this language is that
+  # meta-programming is done by the same syntax.
+  # (cue the usual lecture on limitations of this approach)
+  as(... SharedReference ... Polymorph ...)
+let CallNodeBuild = tbl
+  new = fn (... return FunctionTypeBuild) ...
+let inst = CallNodeBuild.new(...)
+inst.functionType or inst.error
+```
+Perhaps when return types are finally implemented...
+```
+let makeCounter = fn
+  let i := 0
+  (fn i := i + 1).as(Concrete)
+let c = makeCounter()
+```

@@ -21,14 +21,14 @@ import { ContextFrameSnapshot, WritableContextFrameStack } from './context_frame
 import { ContextDeclarationBuild, ContextLinkStage } from './context_build';
 import { ContextualizedBodyFunctionBuild } from './contextualized_body_function_build';
 import { AstDefinitionNode, AstNode } from '../ast_node';
-import { ContextBaseNamesSet } from './context_base_names_set';
+import { ContextNamesTreeSet } from './context_names_tree_set';
 import { ParametersTypeRetrieval } from './parameters_type_build';
 
 const { freeze, memoize } = Helpers;
 
 function make
   (mDefNode: AstDefinitionNode,
-   mContextBaseSet: ContextBaseNamesSet,
+   mContextBaseSet: ContextNamesTreeSet,
    mParameterTypes: ParametersTypeRetrieval,
    mStackFrameStack: WritableContextFrameStack)
   : FunctionTypeBuild

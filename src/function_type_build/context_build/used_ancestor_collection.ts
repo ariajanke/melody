@@ -27,6 +27,7 @@ export interface ExtendedAncestorInfo extends AncestorInfo {
   use: 'used' | 'unused';
 };
 
+// TODO rename to UsedAncestorNodeSet
 export interface UsedAncestorCollection {
   allAncestorsOrdered(): Readonly<ExtendedAncestorInfo[]>;
   ancestors(): Readonly<AncestorInfo[]>;
