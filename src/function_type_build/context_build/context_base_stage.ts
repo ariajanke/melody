@@ -25,22 +25,22 @@ import { ConstantStringType } from '../constant_string_type';
 import { FunctionOpLookUp, WritableObjectType } from './writable_object_type';
 import { WasmCompilation } from '../../wasm_compilation';
 import { SystemIoType } from '../system_io_type';
-import { FunctionLookUpTable, FunctionType, MelodyComponentVisitor, ObjectType } from '../../melody_components';
+import { FunctionLookUpTable, FunctionType, ObjectType } from '../../melody_components';
 import { TupleObjectType } from '../tuple_object_type';
 import { IntegerType } from '../integer_type';
-import { ContextTypingStage_ } from './context_typing_stage';
-import { type UsedContextNames } from '../context_names_tree_set';
-import { type UsedAncestorCollection } from './used_ancestor_collection';
-import { type FunctionTypeAssociationSet } from '../function_type_association_set';
+// import { ContextTypingStage_ } from './context_typing_stage';
+// import { type UsedContextNames } from '../context_names_tree_set';
+// import { type UsedAncestorCollection } from './used_ancestor_collection';
+// import { type FunctionTypeAssociationSet } from '../function_type_association_set';
 
 const { freeze, memoize } = Helpers;
 
 export interface ContextBaseStage_ {
-  referenceType(): ObjectType;
-  typingStage
-    (contextNames: UsedContextNames,
-     usedAncestors: UsedAncestorCollection,
-     associations: FunctionTypeAssociationSet): ContextTypingStage_;
+  writableReferenceType(): WritableObjectType;
+  // typingStage
+  //   (contextNames: UsedContextNames,
+  //    usedAncestors: UsedAncestorCollection,
+  //    associations: FunctionTypeAssociationSet): ContextTypingStage_;
 };
 
 function typeGetterOf(type: ObjectType): FunctionLookUpTable {
@@ -48,15 +48,17 @@ function typeGetterOf(type: ObjectType): FunctionLookUpTable {
     asInteger: () => undefined,
     asObjectType: () => type,
     uid: memoize(Symbol),
-    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
-      visitor.visitImmediateValue(immediateValue),
+    type: () => 'immediate-value'
+    // visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+    //   visitor.visitImmediateValue(immediateValue),
   });
   const ftype = freeze({
     emission: () => undefined,
     immediate: () => immediateValue,
     uid: memoize(Symbol),
-    visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
-      visitor.visitFunctionType(ftype),
+    // visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
+    //   visitor.visitFunctionType(ftype),
+    type: () => 'function-type',
     receiver: TupleObjectType.emptyTuple,
     parameters: TupleObjectType.emptyTuple,
     returns: ObjectType.instance
@@ -78,8 +80,9 @@ const referenceTypeDefaults = memoize((): ObjectType => freeze({
   sizeInBytes: () => WasmCompilation.kWordSizeInBytes,
   sizeInStackItems: () => 1,
   uid: () => raise('overwrite me'),
-  visit: <T>(_0: MelodyComponentVisitor<T>) =>
-    raise('overwrite me')
+  type: () => 'object-type'
+  // visit: <T>(_0: MelodyComponentVisitor<T>) =>
+  //   raise('overwrite me')
 }));
 
 function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
@@ -121,20 +124,19 @@ function make(mFrameName: string = 'ContextType'): ContextBaseStage_ {
       name: () => mFrameName,
     })));
 
-  const referenceType = writableReferenceType as () => ObjectType;
+  // const referenceType = writableReferenceType as () => ObjectType;
 
-  function typingStage
-    (contextNames: UsedContextNames,
-     usedAncestors: UsedAncestorCollection,
-     associations: FunctionTypeAssociationSet): ContextTypingStage_
-  {
-    return ContextTypingStage_.
-      make(contextNames, writableReferenceType(), usedAncestors, associations);
-  }
+  // function typingStage
+  //   (contextNames: UsedContextNames,
+  //    usedAncestors: UsedAncestorCollection,
+  //    associations: FunctionTypeAssociationSet): ContextTypingStage_
+  // {
+  //   return ContextTypingStage_.
+  //     make(contextNames, writableReferenceType(), usedAncestors, associations);
+  // }
 
   return freeze({
-    referenceType,
-    typingStage
+    writableReferenceType
   });
 }
 

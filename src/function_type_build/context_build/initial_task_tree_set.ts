@@ -30,18 +30,23 @@ import {
 import { FunctionTypeAssociationSet } from '../function_type_association_set';
 import { ContextNamesTreeSet } from '../context_names_tree_set';
 import { TreeWideAncestorCollection } from './tree_wide_ancestor_collection';
+import { ContextShiftTask } from './task_controller';
 
 const { freeze, memoize } = Helpers;
+
+interface InitialTaskTreeSet {
+  tasks(): Readonly<ContextShiftTask[]>;
+};
 
 // this should consume a ContextBaseNamesSet instance completely
 function make
   (mRoot: AstDefinitionNode,
-   mTreeWideAncestorCollection: TreeWideAncestorCollection,
+  //  mTreeWideAncestorCollection: TreeWideAncestorCollection,
    mAssociations: FunctionTypeAssociationSet = FunctionTypeAssociationSet.make(),
    mBaseStageNamesCtor = ContextNamesTreeSet.make)
 {
   const { contextNamesFor, baseStageFor } = mBaseStageNamesCtor(mRoot);
-  const { addFullyNamedContext, usedAncestorsCollectionFor } = mTreeWideAncestorCollection;
+  // const { addFullyNamedContext, usedAncestorsCollectionFor } = mTreeWideAncestorCollection;
   
   type ResultType = void;
   function visitLiteral(_0: AstLiteralNode): ResultType {}
@@ -61,13 +66,14 @@ function make
     const cns = contextNamesFor(node);
     const baseStage = baseStageFor(node);
     const uac = usedAncestorsCollectionFor(node);
-    const typeStage = baseStage.typingStage(cns, uac, mAssociations);
-    const contextType = typeStage.referenceType();
-    if (!contextType)
-      { return; }
+    // const typeStage = baseStage.typingStage(cns, uac, mAssociations);
+    // const contextType = typeStage.referenceType();
+    const contextType = baseStage.writableReferenceType();
+    // if (!contextType)
+    //   { return; }
 
     // have to net up everything else too...
-    addFullyNamedContext(node, contextType.name(), contextType);
+    // addFullyNamedContext(node, contextType.name(), contextType);
     // then at some point... a context completion task!
 
     // then go deeper!

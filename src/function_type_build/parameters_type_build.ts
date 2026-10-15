@@ -16,11 +16,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ObjectType } from '../function_type_build';
+// import { ObjectType } from '../function_type_build';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../helpers';
 import { TupleObjectType } from './tuple_object_type';
 import { NodeTypeEvaluation } from './node_type_evaluation';
 import { AstParameterExpression } from '../ast_node';
+import { ObjectType } from '../melody_components';
 
 const { freeze, memoize } = Helpers;
 

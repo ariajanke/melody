@@ -31,6 +31,8 @@ import { AncestorInfo } from './ancestor_collection';
 import { TupleObjectType } from '../tuple_object_type';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { VariableAllocation } from './variable_allocation';
+import { ContextShift } from './task_controller';
+import { ParameterContextShift } from './parameter_context_shift';
 
 // this is perhaps better thought up as a "naming" stage
 // not all types ought need be known yet, only "enough" (at least ideally)
@@ -51,60 +53,6 @@ function makeContextShiftTask() {
   
 }
 
-const isNotUndefined = <T>(obj: T | undefined): boolean => obj !== undefined;
-
-function makeDelegationsShift
-  (mContextNames: UsedContextNames,
-   mUsedAncestors: UsedAncestorCollection,
-   mFactory: FunctionTypeFactory): ContextShift
-{
-  const { pendingNames } = mContextNames;
-
-  const additionalMethods = memoize((): Readonly<[string, FunctionType][]> =>
-    mUsedAncestors.ancestors().map((anc: AncestorInfo): [string, FunctionType] =>
-      [anc.variableName, mFactory.makeUnassociated(undefined, undefined, anc.type)]));
-
-  const additionalLookUps = memoize((): Readonly<[string, FunctionLookUpTable][]> =>
-    Object.
-      keys(pendingNames()).
-      map((pendingName: string): [string, FunctionLookUpTable] | undefined => {
-        const ftbl = mUsedAncestors.mapNameToAncestor(pendingName)?.lookUp(pendingName);
-        if (!ftbl) {
-          // NOTE if a method cannot be delegated, leave it undefined
-          //      if the call is still missing, we will later generate the
-          //      appropriate missing method error
-          return undefined;
-        }
-        
-        return [pendingName, ftbl];
-      }).
-      filter(isNotUndefined) as [string, FunctionLookUpTable][]);
-
-  const associations = memoize(() => freeze({
-    additionalMethods,
-    additionalLookUps
-  }));
-
-  return freeze({
-    associations,
-    allocations: memoize(() => []),
-    error: () => StandardError.make().error()
-  });
-}
-
-function makeDelegationsTask
-  (mContextNames: UsedContextNames,
-   mUsedAncestors: UsedAncestorCollection): ContextShiftTask
-{
-  function run(
-    _0: ObjectType,
-    factory: FunctionTypeFactory): ContextShift
-  {
-    return makeDelegationsShift(mContextNames, mUsedAncestors, factory);
-  }
-
-  return freeze({ run });
-}
 
 function makeDeclarationShift
   (mContext: ObjectType,
@@ -132,6 +80,7 @@ function makeDeclarationShift
 
   // I need value node's... function type? immediate value?
   mInitializer.valueNode;
+  mInitializer.typeNode;
   
   const dependencies = memoize(() => {});
 
@@ -199,6 +148,8 @@ function make
   const { declarations, pendingNames } = mContextNames;
   const { error, setErrorFn } = mError;
   const mNodeTypeInference = NodeTypeInference.make();
+
+  ParameterContextShift.make()
 
   const ancestoredContextType = (() => {
     mUsedAncestors.ancestors().forEach((anc: AncestorInfo) => {

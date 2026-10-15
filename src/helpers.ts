@@ -114,7 +114,7 @@ export const StandardError = (() => {
     });
   }
 
-  return freeze({ make });
+  return freeze({ make, raiseNoError: kErrorNotSetFn });
 })();
 
 export const InternalNaming = Object.freeze({

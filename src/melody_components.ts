@@ -17,23 +17,57 @@
  */
 
 import { CodeWriter } from './code_writer';
-import { Helpers } from './helpers';
+import { Helpers } from './helpers'
 
 const { freeze, memoize } = Helpers;
 
-export interface MelodyComponent {
-  // differentiate records this way
-  visit<T>(visitor: MelodyComponentVisitor<T>): T;
-  uid(): symbol;
+export interface StringToComponentTypeMap {
+  'object-type': ObjectType;
+  'code-emission': CodeEmission;
+  'runtime-only-value': RuntimeOnlyValue;
+  'function-type': FunctionType;
+  'immediate-value': ImmediateValue;
 };
 
-export interface MelodyComponentVisitor<T> {
-  visitFunctionType(ftype: FunctionType): T;
-  visitCodeEmission(cem: CodeEmission): T;
-  visitObjectType(otype: ObjectType): T;
-  visitImmediateValue(imm: ImmediateValue): T;
-  visitImmediateFunction(imf: ImmediateFunction): T;
-  visitRuntimeOnly(rto: RuntimeOnlyValue): T;
+export type MelodyComponentTypeString = keyof StringToComponentTypeMap;
+
+export interface ConstantEntity {
+  get<KeyType extends MelodyComponentTypeString>
+    (key: KeyType): StringToComponentTypeMap[KeyType] | undefined;
+};
+
+export interface MelodyEntity extends ConstantEntity {
+  set<KeyType extends MelodyComponentTypeString>
+    (key: KeyType, value: StringToComponentTypeMap[KeyType])
+    : StringToComponentTypeMap[KeyType];
+};
+
+export const MelodyEntity = freeze({
+  constFrom(mSet: Partial<StringToComponentTypeMap>) {
+    function get<KeyType extends MelodyComponentTypeString>
+      (key: KeyType): StringToComponentTypeMap[KeyType] | undefined
+    { return mSet[key]; }
+
+    return freeze({ get });
+  },
+  make(): MelodyEntity {
+    const mSet: Partial<StringToComponentTypeMap> = {};
+    function get<KeyType extends MelodyComponentTypeString>
+      (key: KeyType): StringToComponentTypeMap[KeyType] | undefined
+    { return mSet[key]; }
+
+    function set<KeyType extends MelodyComponentTypeString>
+      (key: KeyType, value: StringToComponentTypeMap[KeyType])
+      : StringToComponentTypeMap[KeyType]
+    { return mSet[key] ??= value; }
+
+    return freeze({ set, get });
+  }
+});
+
+export interface MelodyComponent {
+  type(): MelodyComponentTypeString;
+  uid(): symbol;
 };
 
 // TODO OOS for this file
@@ -78,8 +112,7 @@ export const ObjectType = freeze({
     const inst = freeze({
       uid: memoize(Symbol),
       name: (): string => 'ObjectType',
-      visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
-        visitor.visitObjectType(inst),
+      type: () => 'object-type',
       lookUp: (_0: string): FunctionLookUpTable | undefined => undefined,
       detuplify: (): Readonly<ObjectType[]> | undefined => undefined,
       sizeInBytes: (): number => 0,
@@ -101,11 +134,11 @@ export interface ImmediateValue extends MelodyComponent {
   asObjectType(): ObjectType | undefined;
 };
 
-export interface NodeRelationSet {
-  emission(): CodeEmission | undefined;
-  objectType(): ObjectType;
-  immediateValue(): ImmediateValue | undefined;
-};
+// export interface NodeRelationSet {
+//   emission(): CodeEmission | undefined;
+//   objectType(): ObjectType;
+//   immediateValue(): ImmediateValue | undefined;
+// };
 
 export interface ImmediateFunction extends MelodyComponent {
   call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue;

@@ -17,13 +17,13 @@
  */
 
 import { CodeWriter } from '../code_writer';
-import { Helpers, StandardErrorMessage } from '../helpers';
+import { Helpers, StandardError, StandardErrorMessage } from '../helpers';
 import { IntegerType } from './integer_type';
 import { FunctionTypeBase } from './function_type_base';
 import { FunctionTypeBuildBase } from './function_type_build_base';
 import { ConstantStringType } from './constant_string_type';
 import { AstLiteralNode } from '../ast_node';
-import { CodeEmission, EmissionContext, FunctionType, ImmediateValue, MelodyComponentVisitor } from '../melody_components';
+import { CodeEmission, ConstantEntity, EmissionContext, FunctionType, ImmediateValue, MelodyComponentTypeString, MelodyComponentVisitor, MelodyEntity, StringToComponentTypeMap } from '../melody_components';
 import { FunctionTypeFactory } from './function_type_association_set';
 import { TupleObjectType } from './tuple_object_type';
 
@@ -31,54 +31,62 @@ const { freeze, memoize } = Helpers;
 
 // multiple records per node
 
+interface EntityBuild {
+  entity(): ConstantEntity | undefined;
+  error(): StandardErrorMessage;
+};
 
-const IntegerLiteralThings = ({
+const InitialIntegerLiteralEntity = ({
   make(mLiteralNode: AstLiteralNode,
-       
-  ): RecordsRetrieval {
-
+       mError = StandardError.make()
+  ): EntityBuild {
+    const { setErrorMessage, error } = mError;
     const numericValue = memoize((): number | undefined => {
-      const intValue = Number(mLiteralNode.token.content());
+      const literalString = mLiteralNode.token.content();
+      const intValue = Number(literalString);
       if (isNaN(intValue)) {
-        // error out
+        return setErrorMessage(`literal "${literalString}" is not a number`);
       }
+
+      return intValue;
     });
 
-    const entity = memoize(() => {
+    const entity = memoize((): ConstantEntity | undefined => {
       if (numericValue() === undefined)
         { return undefined; }
 
       const intValue = numericValue()!;
-      function emit(writer: CodeWriter, _1: EmissionContext)
-        { writer.pushInteger(intValue); }
-
-      const emission = freeze({
-        emit,
-        visit<T>(visitor: MelodyComponentVisitor<T>): T
-          { return visitor.visitCodeEmission(emission); },
+      const emission: CodeEmission = freeze({
+        emit(writer: CodeWriter, _1: EmissionContext)
+          { writer.pushInteger(intValue); },
+        type: () => 'code-emission',
         uid: memoize(Symbol)
       });
-      const immediate = freeze({
+      const immediate: ImmediateValue = freeze({
         asInteger: numericValue,
         asObjectType: () => undefined,
-        visit<T>(visitor: MelodyComponentVisitor<T>): T
-          { return visitor.visitImmediateValue(immediate); },
+        type: () => 'immediate-value',
         uid: memoize(Symbol)
       });
-      const inst = freeze({
+      const functionType: FunctionType = freeze({
         receiver: TupleObjectType.emptyTuple,
         parameters: TupleObjectType.emptyTuple,
         returns: IntegerType.instance,
         emission: (): CodeEmission => emission,
         immediate: (): ImmediateValue => immediate,
-        visit<T>(visitor: MelodyComponentVisitor<T>): T
-          { return visitor.visitFunctionType(inst); },
+        type: () => 'function-type',
         uid: memoize(Symbol)
       });
-      return inst;
+
+      return MelodyEntity.constFrom(freeze({
+        'code-emission': emission,
+        'immediate-value': immediate,
+        'function-type': functionType,
+        'object-type': IntegerType.instance()
+      }));
     });
 
-    
+    return freeze({ entity, error });
   }
 });
 

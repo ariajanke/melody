@@ -32,13 +32,13 @@ import { VariableAllocation } from './variable_allocation';
 // - context completion tasks
 // between tasks we can execute state changes
 export interface ContextShiftAssociations {
-  additionalMethods(): Readonly<[string, FunctionType][]>;
-  additionalLookUps(): Readonly<[string, FunctionLookUpTable][]>;
+  additionalMethods(): Readonly<Readonly<[string, FunctionType]>[]>;
+  additionalLookUps(): Readonly<Readonly<[string, FunctionLookUpTable]>[]>;
 };
 
 export interface ContextShift {
   associations(): ContextShiftAssociations | undefined;
-  allocations(): Readonly<[string, ObjectType][]> | undefined;
+  allocations(): Readonly<Readonly<[string, ObjectType]>[]> | undefined;
   error(): StandardErrorMessage;
 };
 
@@ -48,7 +48,7 @@ export interface ContextTaskAdditions extends FunctionTypeFactory {
 
 // a task that starts on a "let" statement
 export interface ContextShiftTask {
-  dependencies(): ;
+  // dependencies(): ;
   run(
     context: ObjectType,
     // v this factory must be able to "pre-associate" ftypes with immediates
@@ -74,7 +74,7 @@ export interface ContextTypeCompletionTask {
 };
 
 function make
-  (mTasks: (ContextShiftTask | ContextCompletionTask)[],
+  (mTasks: ContextShiftTask[],
    
   )
 {
