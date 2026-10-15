@@ -18,7 +18,7 @@
 
 import { Helpers, raise } from '../../helpers';
 import { FunctionLookUpTable, FunctionType, ObjectType } from '../../melody_components';
-import { BuiltinTypeBase } from '../constant_string_type';
+// import { BuiltinTypeBase } from '../constant_string_type';
 import { MutableFunctionTable } from '../mutable_function_table';
 
 const { freeze } = Helpers;

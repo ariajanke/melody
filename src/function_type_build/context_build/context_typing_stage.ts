@@ -16,19 +16,21 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Helpers, StandardError } from '../../helpers';
+import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
 import { ContextLinkStage_ } from './context_link_stage';
 import { WritableObjectType } from './writable_object_type';
-import { ObjectType } from '../../melody_components';
+import { CodeEmission, FunctionLookUpTable, FunctionType, ObjectType } from '../../melody_components';
 import { NodeTypeInference } from '../node_type_inference';
 import { InitializerVariable, OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
-import { FunctionTypeAssociationSet } from '../function_type_association_set';
+import { FunctionTypeAssociationSet, FunctionTypeFactory } from '../function_type_association_set';
 import { ExtendedAncestorInfo, UsedAncestorCollection } from './used_ancestor_collection';
 import { UsedContextNames } from '../context_names_tree_set';
 import { VariableTypeBreakdownBuild } from './variable_type_breakdown_build';
 import { ContextShiftFactory } from './context_shift_factory';
 import { AncestorInfo } from './ancestor_collection';
 import { TupleObjectType } from '../tuple_object_type';
+import { FunctionNamingSchema } from '../../function_naming_schema';
+import { VariableAllocation } from './variable_allocation';
 
 // this is perhaps better thought up as a "naming" stage
 // not all types ought need be known yet, only "enough" (at least ideally)
@@ -41,6 +43,142 @@ export interface ContextTypingStage_ {
 };
 
 const { freeze, memoize } = Helpers;
+
+
+// in task controller: take the returned associations and use the associator to finish the job!
+
+function makeContextShiftTask() {
+  
+}
+
+const isNotUndefined = <T>(obj: T | undefined): boolean => obj !== undefined;
+
+function makeDelegationsShift
+  (mContextNames: UsedContextNames,
+   mUsedAncestors: UsedAncestorCollection,
+   mFactory: FunctionTypeFactory): ContextShift
+{
+  const { pendingNames } = mContextNames;
+
+  const additionalMethods = memoize((): Readonly<[string, FunctionType][]> =>
+    mUsedAncestors.ancestors().map((anc: AncestorInfo): [string, FunctionType] =>
+      [anc.variableName, mFactory.makeUnassociated(undefined, undefined, anc.type)]));
+
+  const additionalLookUps = memoize((): Readonly<[string, FunctionLookUpTable][]> =>
+    Object.
+      keys(pendingNames()).
+      map((pendingName: string): [string, FunctionLookUpTable] | undefined => {
+        const ftbl = mUsedAncestors.mapNameToAncestor(pendingName)?.lookUp(pendingName);
+        if (!ftbl) {
+          // NOTE if a method cannot be delegated, leave it undefined
+          //      if the call is still missing, we will later generate the
+          //      appropriate missing method error
+          return undefined;
+        }
+        
+        return [pendingName, ftbl];
+      }).
+      filter(isNotUndefined) as [string, FunctionLookUpTable][]);
+
+  const associations = memoize(() => freeze({
+    additionalMethods,
+    additionalLookUps
+  }));
+
+  return freeze({
+    associations,
+    allocations: memoize(() => []),
+    error: () => StandardError.make().error()
+  });
+}
+
+function makeDelegationsTask
+  (mContextNames: UsedContextNames,
+   mUsedAncestors: UsedAncestorCollection): ContextShiftTask
+{
+  function run(
+    _0: ObjectType,
+    factory: FunctionTypeFactory): ContextShift
+  {
+    return makeDelegationsShift(mContextNames, mUsedAncestors, factory);
+  }
+
+  return freeze({ run });
+}
+
+function makeDeclarationShift
+  (mContext: ObjectType,
+   mInitializer: InitializerVariable,
+   mVarMap: OrderedInitialSetsCollection['variableNameMap'],
+   mFactory: ContextTaskAdditions
+  ): ContextShift
+{
+  // a declaration maybe:
+  // - immediate value suitable (build as immediate)
+  // - a set of runtime constant (build as emission task)
+  // - a totally modifiable set of variables (build as emission task)
+
+  // on nodes generally
+  // any node may hide any number tasks
+  //
+  // consider the order in which we create our initial set of
+  // (context related) tasks
+  // Task order priorty:
+  // - inner defs before outer defs
+  // - declarations before defs
+  // - code emissions done *only* on a call site which needs that function
+  // AST nodes as we know are generally mappable to the set of a
+  // specific set of components (each node as an entity).
+
+  // I need value node's... function type? immediate value?
+  mInitializer.valueNode;
+  
+  const dependencies = memoize(() => {});
+
+  mVarMap()['a']
+  
+  
+  const { typesBreakdown, initializerType, error } = VariableTypeBreakdownBuild.
+    make(mContext, mInitializer, mNodeTypeInference, mError);
+
+  const allocations = memoize(() => {
+    if (!typesBreakdown())
+      { return undefined; }
+
+    return mInitializer.variableNames.
+      map((vname: string, idx: number) => [vname, typesBreakdown()![idx]]);
+  });
+
+  const initializerPair = memoize((): Readonly<[string, FunctionType]> => {
+    // assume emittable for now!
+    if (initializerType() === undefined) {
+      raise('idk');
+    }
+
+    const initializerName = FunctionNamingSchema.mapToInitialSetName(mInitializer.variableNames);
+    const initializerFtype = mFactory.makeUnassociated(mContext, initializerType()!);
+    // for immediates initializer would have an empty emission (it is gaurenteed to be called!)
+    mFactory.makeDeferredEmissionFor(initializerFtype, freeze({
+      run(finishedContext: ObjectType, allocations: VariableAllocation): CodeEmission | StandardErrorMessage {
+        
+        mInitializer.valueNode; // <- get code emission for this
+        // need variable allocation etc...
+      }
+    }));
+    return [initializerName, initializerFtype];
+  });
+
+  const additionalMethods = memoize((): Readonly<[string, FunctionType][]> => {
+
+  });
+
+  const additionalLookUps =
+    memoize((): Readonly<[string, FunctionLookUpTable][]> => []);
+  const associations(): ContextShiftAssociations | undefined;
+  const error(): StandardErrorMessage;
+
+}
+
 
 // What can we get away with not knowing?
 // With that answer, we need to reduce this service to that as much as possible.

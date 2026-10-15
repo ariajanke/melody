@@ -68,6 +68,7 @@ function make
 
     // have to net up everything else too...
     addFullyNamedContext(node, contextType.name(), contextType);
+    // then at some point... a context completion task!
 
     // then go deeper!
     node.nodes.forEach(recurse);

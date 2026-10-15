@@ -21,8 +21,51 @@
 
 import { Compiler } from './compiler';
 import { Helpers } from './helpers';
+import { ImmediateValue, MelodyComponentVisitor, ObjectType } from './melody_components';
+import { WasmImports } from './wasm_compilation';
 
 const { freeze, expose } = Helpers;
+
+interface CompiledCode {
+  byteCode(): Uint8Array;
+  importsObject(): WasmImports;
+  uid(): symbol;
+};
+
+interface AdvancedCompilerResult extends Compiler {};
+
+interface AdvancedCompiler {
+  emissionQueue(): Readonly<CompiledCode[]>;
+  associate(compiledCode: CompiledCode, value: ImmediateValue): AdvancedCompiler;
+  completion(): AdvancedCompilerResult | undefined;
+};
+
+async function advanceCompilerLoop(compiler: AdvancedCompiler, memory: WebAssembly.Memory) {
+  while (!compiler.completion()) {
+    const queue = compiler.emissionQueue();
+    for (let i = 0; i < queue.length; ++i) {
+      const codeObject = queue[i];
+      const { byteCode } = codeObject;
+      const importsObject = {
+        ...codeObject.importsObject(),
+        js: { memory }
+      }  as WebAssembly.Imports;
+      const result = await WebAssembly.instantiate(byteCode(), importsObject);
+      
+      // pretend this is always an integer for simplicity
+      const asInteger = (result.exports.entry as () => number);
+      const immediate: ImmediateValue = freeze({
+        uid: Helpers.memoize(Symbol),
+        visit<T>(visitor: MelodyComponentVisitor<T>): T
+          { return visitor.visitImmediateValue(immediate); },
+        asInteger,
+        asObjectType: (): ObjectType | undefined => undefined
+      });
+      compiler.associate(codeObject, immediate);
+    }
+  }
+
+}
 
 function getEntryPointOnInst(instance: WebAssembly.Instance | undefined): () => void {
   const exports = instance?.exports;
@@ -57,7 +100,7 @@ async function getEntryPointWithMemory
     js: { memory }
   }  as WebAssembly.Imports;
 
-  const byteCode = compiler.byteCode();
+  const byteCode: Uint8Array | undefined = compiler.byteCode();
   if (!byteCode) {
     throw new Error(`Failed to compile Melody source: ${compiler.error()}`);
   }

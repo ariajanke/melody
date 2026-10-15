@@ -16,8 +16,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { ObjectType } from '../../function_type_build';
+// import { ObjectType } from '../../function_type_build';
 import { Helpers, raise } from '../../helpers';
+import { ObjectType } from '../../melody_components';
 import { TupleObjectType } from '../tuple_object_type';
 
 const { freeze } = Helpers;
@@ -31,7 +32,7 @@ export type VariableOffset = Readonly<WritableVariableOffset>;
 
 export interface VariableAllocation {
   lookUp(name: string): VariableOffset | undefined;
-  lookUpTuple(names: readonly string[]): VariableOffset | undefined;
+  lookUpTuple(names: Readonly<string[]>): VariableOffset | undefined;
   talliedSizeInBytes(): number;
   talliedSizeInItems(): number;
 };

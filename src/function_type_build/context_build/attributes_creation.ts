@@ -24,6 +24,10 @@ import { VariableNameFunctions } from './ordered_initial_sets_collection';
 
 export type AttributesTuple = Readonly<[string, FunctionType]>;
 
+// there are types of attr creations
+// - emission producing
+// - immediate producing
+
 export interface AttributesCreation {
   // NOTE absence is not an error
   accessor(): AttributesTuple | undefined;

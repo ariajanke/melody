@@ -74,27 +74,6 @@ export interface ObjectType extends MelodyComponent {
 };
 
 export const ObjectType = freeze({
-  // ouch...
-  // typeGetterOf(type: ObjectType): FunctionType {
-  //   const immediateValue = freeze({
-  //     asInteger: () => undefined,
-  //     asObjectType: () => inst,
-  //     uid: memoize(Symbol),
-  //     visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
-  //       visitor.visitImmediateValue(immediateValue),
-  //   });
-  //   const ftype = freeze({
-  //     emission: () => undefined,
-  //     immediate: () => immediateValue,
-  //     uid: memoize(Symbol),
-  //     visit: <T>(visitor: MelodyComponentVisitor<T>): T =>
-  //       visitor.visitFunctionType(ftype),
-  //     receiver: TupleObjectType.emptyTuple,
-  //     parameters: TupleObjectType.emptyTuple,
-  //     returns: ObjectType.instance
-  //   });
-  //   return ftype;
-  // },
   instance: memoize((): ObjectType => {
     const inst = freeze({
       uid: memoize(Symbol),

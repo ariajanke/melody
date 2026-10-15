@@ -82,6 +82,7 @@ export const ContextShiftFactory = freeze({
         const mVariableName = mVariableNames[mVariableIndex];
         const mFunctionNames = mVarMap()[mVariableName] ??
           raise(`variable "${mVariableName}" not found`);
+        
         const mAttributesCreation = AttributesCreation.
           make(mWritableContext, mVariableName, mFunctionNames, mVariableType, associationSet);
         const { accessor, modifier, call } = mAttributesCreation;
