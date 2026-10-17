@@ -73,6 +73,7 @@ function makeDeclarationShift
 
   // I need value node's... function type? immediate value?
   mSomething.entityOf(mInitializer.valueNode).get('immediate-value');
+  mSomething.entityOf(mInitializer.valueNode).get('object-type');
   mInitializer.typeNode;
   
   const dependencies = memoize(() => {});

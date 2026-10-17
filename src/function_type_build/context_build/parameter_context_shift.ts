@@ -34,7 +34,7 @@ const runtimeOnlyValue = memoize((): RuntimeOnlyValue => freeze({
 
 const additionalLookUps = memoize((): ReturnType<ContextShiftAssociations['additionalLookUps']> => []);
 const allocations = memoize((): ReturnType<ContextShift['allocations']> => []);
-const stateIsFunctionType = (): MelodyComponentTypeString => 'function-type';
+// const stateIsFunctionType = (): MelodyComponentTypeString => 'function-type';
 
 function make
   (mParameterTypes: ParametersTypeRetrieval)
@@ -60,7 +60,7 @@ function make
 
     const ftype: FunctionType = freeze({
       uid: memoize(Symbol),
-      type: stateIsFunctionType,
+      // type: stateIsFunctionType,
       emission: () => emission,
       immediate: runtimeOnlyValue,
       receiver: emptyTuple,

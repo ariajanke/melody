@@ -31,6 +31,8 @@ import { FunctionTypeAssociationSet } from '../function_type_association_set';
 import { ContextNamesTreeSet } from '../context_names_tree_set';
 import { TreeWideAncestorCollection } from './tree_wide_ancestor_collection';
 import { ContextShiftTask } from './task_controller';
+import { UsedAncestorCollection } from './used_ancestor_collection';
+import { FringeEntityBuild } from '../fringe_entity_build';
 
 const { freeze, memoize } = Helpers;
 
@@ -50,7 +52,9 @@ function make
   
   type ResultType = void;
   function visitLiteral(_0: AstLiteralNode): ResultType {}
-  function visitFringe(_0: AstIdentifierNode): ResultType {}
+  function visitFringe(n: AstIdentifierNode): ResultType {
+    // FringeEntityBuild.make(n, , );
+  }
   function visitTuple(n: AstTupleNode): ResultType {
     n.nodes.forEach(recurse);
   }
@@ -65,7 +69,8 @@ function make
   function visitFunctionDefinition(node: AstDefinitionNode): ResultType {
     const cns = contextNamesFor(node);
     const baseStage = baseStageFor(node);
-    const uac = usedAncestorsCollectionFor(node);
+    const uac: UsedAncestorCollection = usedAncestorsCollectionFor(node);
+    
     // const typeStage = baseStage.typingStage(cns, uac, mAssociations);
     // const contextType = typeStage.referenceType();
     const contextType = baseStage.writableReferenceType();

@@ -621,3 +621,103 @@ let makeCounter = fn
   (fn i := i + 1).as(Concrete)
 let c = makeCounter()
 ```
+
+# 2026-1017-1306
+More on rethinking the IR and compiler's behavior.
+Need much more exact definition of an object type, and function type.
+Entities (unique typed element containers), components, tasks, relational objects.
+An object type is a mapping of f names to look up tables. Look up tables themselves are mappings from parameter object types to function types.
+An entity stands upon a single AST node and act to relate to "components". The fact that many entities may share a single unique component instance of some type suggests that it isn't an entity in the truest sense, This is perhaps counter argued by being different instances in that they're different pointer instances of the same value. 
+With these considerations, the function type which was once a long time component now falls under scrutiny once again. Not for its usefulness, but for its role. The function type does not properly describe a single node, it only meaningfully comes into such framing via function definitions.
+Function types in addition to immediate functions are not components under node-entity framing... then what are they exactly?
+The danger with a mature IR is the same problem that comes up in software design again and again: concept creep. At present the infastructure is: tasks, task controllers, initial tasks spawner, AST node-entities, their components, and now these functional relations. Though this is perhaps not that terrible, we are describing an enormously complex in nature problem. Powerful and expressive architecture is needed.
+The system overall must simplify *well*, that is decompose into a small number of primitives. There primitives must be easy to explain. General types (e.g. node-components) must specialize in obvious ways (to expand on the example, be things like code emissions and/or immediate values). Each concept should be introducable in concert with as few other concepts as possible. This is not for the benefit of machines, or even architecture, but for perserving congnitive resources should one be interested in learning *how* the Melody compiler works.
+In which case, let's start, by introducing the IR architecture one bite sized frame at a time.
+## The AST entity-nodes
+An AST is just a source code's syntax represented as a tree of differently typed nodes. Each node may possess any number of uniquely typed components. These are all bound together by an "entity".
+
+Example:
+```
+let a = 5
+let b = Integer.ask()
+```
+
+\[we can show an example tree here\]
+We may then follow/link with these concepts:
+\[*node-entity components*\](...)
+(which will then link to the following)
+\[*immediate values*\](...)
+\[*runtime only values*\](...)
+\[*object type (references to as components)*\](...)
+And since we've shown `let`s here:
+\[*context shift*\](...)
+(which will then further link to the following)
+\[*context shift task*\](...)
+\[*how tasks work*\](...)
+
+Like everything else, it's hard to see if this is good architecture until all the peices are in place and expressed in Melody's code base proper.
+
+## Node-entity components
+A node-entity component, or node-component. Is just an extra chunk of data that is associated with an AST node. There are many possible specializations.
+For the purposes of simplifying vocabulary, a component describes only what can be tacked onto a syntactical AST node. Other parts of the IR are considered to be relations.
+
+Components are additionally derived information about an AST node. When enough information is derived, eventually the compiler will be able to compile the entire program. Components are added to nodes, and relations are created as tasks are run.
+
+The specializations are as follows:
+Object type (as a reference) \[link to\](...)
+Runtime only value \[link to\](...)
+Immediate value \[link to\](...)
+Code emission \[link to\](...)
+(And possibly) StandardError \[link to\](...)
+
+Related concepts:
+Relations \[link to\](...)
+Tasks \[link to\](...)
+
+## Tasks
+A critical peice of the Melody IR infrastructure. It as is important to know *when* to do something as it is to know *how* to do it. A task is just a single step of discovering more information about the program we're attempting to compile, while holding everything we know about the program constant during that task. Essentially any change made to what we know about the program becomes atomic. Specialization flow in how we describe mutation. A task may:
+- have other tasks it creates, which it depends on
+- may create tasks that are run after itself, possibly in relation to yet another task
+- are selectively exposed to a small window of the program at a time depending on specialization
+A task may not:
+- mutate any entity
+- mutate any relation
+- mutate any object type (including any variable allocation)
+
+Tasks and their specializations, scheduling are all handled by the task controller.
+
+Related concepts... linked below
+\[Initial task spawner\](...)
+
+## Initial Task Spawner
+In order for the compiler to start, it needs an initial set of tasks. These tasks are fired off via an initial tree traversal. Early in the process, a lot of name mapping services are needed to set things up first. There are used ancestor frames, base context types, and finally the initial task set.
+
+Once a task list is ready, the task controller is instantiated with them, where it takes full ownership of those tasks.
+
+### Recall
+
+The definition of a context type: the object type that describes the reference to the current stack frame. This is how we define all our "variables" (attribute accessors and modifiers) and functions.
+
+### What it does
+
+The initial tasks are as follows and they are spawned when certain node types are hit.
+- per initializer (let, parameter expression): context shift task
+- per definition: context type completion task
+
+A context shift task creates a context shift, which describes how to mutate the current context object type. A context type changes/evolves as more lets are introduced, until finally the definition body closes. When that body close gets hit by the traversal, a "type completion" task is run.
+
+A context shift task may (and will often) additionally create a code emission sub task, which gets scheduled after the type completion task. This scheduling schema is in place because we don't know what variable lives where until the context type finishes at the end of the body. We won't need that code emission sub-task if that let describes an immutable immediate value.
+
+A context type completion task will create a function registration task, which has lower precedence than the aforementioned code emissions. This ensure that function registration happens only when we know everything we need to know to emit all of the necessary byte code that defines the functions runtime behavior.
+
+### Future Expansion
+An essential goal of Melody is its ability to use compiled code to aid itself. Which allows it to implement some very powerful features from reflections, to generics, to metaprogramming. Tasks are a solution to the async JavaScript/sync-only WebAssembly problem.
+
+Related concepts:
+\[names\](...)
+
+### (ASIDE) Psychological Dependencies
+I got plenty of sleep last night (like 10 hours). I had exercised (two mile walk) yesterday. Lots of protein and fiber for breakfast (lentils!). Full dose of Adderall. Outlet for stimming. Not too brought down by living in evil/pain world.
+
+By having documentation, I give myself back something that I missed when starting out learning about agentic SWE: a sense of authorship.
+

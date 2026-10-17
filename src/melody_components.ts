@@ -25,8 +25,11 @@ export interface StringToComponentTypeMap {
   'object-type': ObjectType;
   'code-emission': CodeEmission;
   'runtime-only-value': RuntimeOnlyValue;
-  'function-type': FunctionType;
   'immediate-value': ImmediateValue;
+};
+
+type Functionalized<T> = {
+  [K in keyof T]: () => T[K] | undefined;
 };
 
 export type MelodyComponentTypeString = keyof StringToComponentTypeMap;
@@ -43,7 +46,17 @@ export interface MelodyEntity extends ConstantEntity {
 };
 
 export const MelodyEntity = freeze({
-  constFrom(mSet: Partial<StringToComponentTypeMap>) {
+  functionalizedFrom(mSet: Partial<Functionalized<StringToComponentTypeMap>>): ConstantEntity {
+    function get<KeyType extends MelodyComponentTypeString>
+      (key: KeyType): StringToComponentTypeMap[KeyType] | undefined
+    {
+      const fn = mSet[key];
+      return fn && fn();
+    }
+
+    return freeze({ get });
+  },
+  constFrom(mSet: Partial<StringToComponentTypeMap>): ConstantEntity {
     function get<KeyType extends MelodyComponentTypeString>
       (key: KeyType): StringToComponentTypeMap[KeyType] | undefined
     { return mSet[key]; }
@@ -70,6 +83,10 @@ export interface MelodyComponent {
   uid(): symbol;
 };
 
+export interface MelodyRelation {
+  uid(): symbol;
+};
+
 // TODO OOS for this file
 export interface EmissionContext {
   pushParameters(obj: ObjectType, em: CodeEmission): void;
@@ -80,10 +97,11 @@ export interface EmissionContext {
 
 export interface FunctionTypeAssociation {
   emission(): CodeEmission | undefined;
-  immediate(): ImmediateFunction | ImmediateValue | RuntimeOnlyValue | undefined;
+  immediate(): ImmediateValue | RuntimeOnlyValue | undefined;
+  immediateCallable(): ImmediateFunction | undefined;
 };
 
-export interface FunctionType extends MelodyComponent, FunctionTypeAssociation {
+export interface FunctionType extends MelodyRelation, FunctionTypeAssociation {
   receiver(): ObjectType;
   parameters(): ObjectType;
   returns(): ObjectType;
@@ -97,7 +115,7 @@ export interface ObjectType extends MelodyComponent {
   /// Display name only, no semantic use.
   name(): string;
 
-  lookUp(operation: string): FunctionLookUpTable | undefined;
+  lookUp(fname: string): FunctionLookUpTable | undefined;
 
   /// If this is a tuple, it maybe "detuplified". By definition there are no
   /// single member tuples.
@@ -122,24 +140,26 @@ export const ObjectType = freeze({
   })
 });
 
-export interface FunctionLookUpTable {
+export interface FunctionLookUpTable extends MelodyRelation {
   byParameters(type: ObjectType): FunctionType | undefined;
   uniqueFunctionType(): FunctionType | undefined;
 };
 
 export interface RuntimeOnlyValue extends MelodyComponent {};
 
+export const RuntimeOnlyValue = freeze({
+  instance: memoize((): RuntimeOnlyValue => freeze({
+    uid: memoize(Symbol),
+    type: () => 'runtime-only-value'
+  }))
+});
+
 export interface ImmediateValue extends MelodyComponent {
   asInteger(): number | undefined;
+  asString(): string | undefined;
   asObjectType(): ObjectType | undefined;
 };
 
-// export interface NodeRelationSet {
-//   emission(): CodeEmission | undefined;
-//   objectType(): ObjectType;
-//   immediateValue(): ImmediateValue | undefined;
-// };
-
-export interface ImmediateFunction extends MelodyComponent {
+export interface ImmediateFunction extends MelodyRelation {
   call(receiver: ImmediateValue, parameters: ImmediateValue): ImmediateValue;
 };
