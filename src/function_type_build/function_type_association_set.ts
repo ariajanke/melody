@@ -24,7 +24,6 @@ import {
   ImmediateFunction,
   ImmediateValue,
   MelodyComponent,
-  MelodyComponentVisitor,
   ObjectType, 
   RuntimeOnlyValue
 } from '../melody_components';

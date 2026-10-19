@@ -16,12 +16,13 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { AstNode } from '../../ast_node';
+import { AstInitializerNode, AstNode } from '../../ast_node';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
 import {
   CodeEmission,
   ConstantEntity,
+  FunctionLookUpTable,
   FunctionType,
   ImmediateFunction,
   ImmediateValue,
@@ -31,27 +32,31 @@ import {
 import { NodeTypeInference } from '../node_type_inference';
 import { AttributesCreation } from './attributes_creation';
 import { InitializerVariable, OrderedInitialSetsCollection } from './ordered_initial_sets_collection';
-import { ContextTaskAdditions, DeferredEmissionTask } from './task_controller';
+import { ContextShift, ContextShiftAssociations, ContextShiftTask, ContextTaskAdditions, DeferredEmissionTask, NodeEntitySet } from './task_controller';
 import { VariableAllocation } from './variable_allocation';
 import { VariableTypeBreakdownBuild } from './variable_type_breakdown_build';
 
 const { freeze, memoize } = Helpers;
 
-interface AnythingIWant {
-  entityOf(node: AstNode): ConstantEntity;
-};
+// interface AnythingIWant {
+//   entityOf(node: AstNode): ConstantEntity;
+// };
 
 function makeRuntimeDeclaration() {
   // must spawn emission task
   
 }
 
+const additionalLookUps =
+  memoize((): Readonly<[string, FunctionLookUpTable][]> => []);
+
 function makeDeclarationShift
   (mContext: ObjectType,
-   mInitializer: InitializerVariable,
-   mVarMap: OrderedInitialSetsCollection['variableNameMap'],
+   mInitializer: AstInitializerNode,
+  //  mInitializer: InitializerVariable,
+  //  mVarMap: OrderedInitialSetsCollection['variableNameMap'],
    mFactory: ContextTaskAdditions,
-   mSomething: AnythingIWant
+   mNodeEntities: NodeEntitySet
   ): ContextShift
 {
   // a declaration maybe:
@@ -72,24 +77,26 @@ function makeDeclarationShift
   // specific set of components (each node as an entity).
 
   // I need value node's... function type? immediate value?
-  mSomething.entityOf(mInitializer.valueNode).get('immediate-value');
-  mSomething.entityOf(mInitializer.valueNode).get('object-type');
+  mNodeEntities.entityOf(mInitializer.valueNode).get('immediate-value');
+  mNodeEntities.entityOf(mInitializer.valueNode).get('object-type');
   mInitializer.typeNode;
+  const mNameThings = OrderedInitialSetsCollection.singleOf(mInitializer);
   
-  const dependencies = memoize(() => {});
+  // const dependencies = memoize(() => {});
 
-  mVarMap()['a']
+  // mVarMap()['a']
   
   const mNodeTypeInference = NodeTypeInference.make();
   const { typesBreakdown, initializerType, error } = VariableTypeBreakdownBuild.
-    make(mContext, mInitializer, mNodeTypeInference);
+    make(mContext, mNameThings.initializer(), mNodeTypeInference);
 
   const allocations = memoize(() => {
     if (!typesBreakdown())
       { return undefined; }
 
-    return mInitializer.variableNames.
-      map((vname: string, idx: number) => [vname, typesBreakdown()![idx]]);
+    return mNameThings.variableNames().
+      map((vname: string, idx: number): [string, ObjectType] =>
+          [vname, typesBreakdown()![idx]]);
   });
 
   const initializerPair = memoize((): Readonly<[string, FunctionType]> => {
@@ -98,32 +105,22 @@ function makeDeclarationShift
       raise('idk');
     }
 
-    const initializerName = FunctionNamingSchema.mapToInitialSetName(mInitializer.variableNames);
+    const initializerName = FunctionNamingSchema.mapToInitialSetName(mNameThings.variableNames());
     const initializerFtype = mFactory.makeUnassociated(mContext, initializerType()!);
-    // for immediates initializer would have an empty emission (it is gaurenteed to be called!)
-    freeze({
-      run(
-        finishedContext: ObjectType,
-        allocations: VariableAllocation,
-        something: AnythingIWant): CodeEmission | StandardErrorMessage
-      {
-        allocations.lookUpTuple(mInitializer.variableNames);
-        
-      }
-    });
-    // mFactory.makeDeferredEmissionFor(initializerFtype, );
+
     return [initializerName, initializerFtype];
   });
 
   const additionalMethods = memoize((): Readonly<Readonly<[string, FunctionType]>[]> => {
-    const rv: Readonly<[string, FunctionType]>[] = [];
-    mInitializer.variableNames.forEach((vname: string, idx: number) => {
+    const rv: Readonly<[string, FunctionType]>[] = [initializerPair()];
+    mNameThings.variableNames().forEach((vname: string, idx: number) => {
       // each method set has their own set of code emissions tied to their vname
       const mVariableType =
             typesBreakdown()![idx] ??
             raise('index out of bounds');
-        const mFunctionNames = mVarMap()[vname] ??
-          raise(`variable "${vname}" not found`);
+
+      const mFunctionNames = mNameThings.variableNameMap()[vname] ??
+        raise(`variable "${vname}" not found`);
       const mAttributesCreation = AttributesCreation.
         make(mContext, vname, mFunctionNames, mVariableType, mFactory);
       const { accessor, modifier, call } = mAttributesCreation;
@@ -136,11 +133,33 @@ function makeDeclarationShift
     });
     return rv;
   });
+  
+  const associations = memoize((): ContextShiftAssociations | undefined => freeze({
+    additionalMethods,
+    additionalLookUps
+  }));
 
-  const additionalLookUps =
-    memoize((): Readonly<[string, FunctionLookUpTable][]> => []);
-  const associations(): ContextShiftAssociations | undefined;
-  const error(): StandardErrorMessage;
-
+  return freeze({
+    associations,
+    allocations,
+    additions: () => mFactory,
+    error
+  });
 }
 
+function makeTask
+  (mInitializer: AstInitializerNode,): ContextShiftTask 
+{
+  function run(
+    context: ObjectType,
+    // v this factory must be able to "pre-associate" ftypes with immediates
+    additions: ContextTaskAdditions,
+    set: NodeEntitySet): ContextShift
+  {
+    return makeDeclarationShift(context, mInitializer, additions, set);
+  }
+
+  return freeze({ run });
+}
+
+export const DeclarationShiftTask = freeze({ make: makeTask });

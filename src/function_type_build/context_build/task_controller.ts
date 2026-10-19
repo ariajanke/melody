@@ -16,9 +16,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import { AstNode } from '../../ast_node';
 import { Helpers, StandardErrorMessage } from '../../helpers';
 import {
   CodeEmission,
+  ConstantEntity,
   FunctionLookUpTable,
   FunctionType,
   ObjectType
@@ -38,12 +40,24 @@ export interface ContextShiftAssociations {
 
 export interface ContextShift {
   associations(): ContextShiftAssociations | undefined;
+  additions(): ContextTaskAdditions | undefined;
+
+  // NOTE absence here not evidence of an error
   allocations(): Readonly<Readonly<[string, ObjectType]>[]> | undefined;
+
   error(): StandardErrorMessage;
 };
 
 export interface ContextTaskAdditions extends FunctionTypeFactory {
   makeDeferredEmissionFor(ftype: FunctionType, task: DeferredEmissionTask): void;
+};
+
+export interface NodeEntitySet {
+  entityOf(node: AstNode): ConstantEntity;
+};
+
+export interface MutableNodeEntitySet extends NodeEntitySet {
+  append(node: AstNode, entity: ConstantEntity): MutableNodeEntitySet;
 };
 
 // a task that starts on a "let" statement
@@ -52,7 +66,8 @@ export interface ContextShiftTask {
   run(
     context: ObjectType,
     // v this factory must be able to "pre-associate" ftypes with immediates
-    additions: ContextTaskAdditions): ContextShift;
+    additions: ContextTaskAdditions,
+    set: NodeEntitySet): ContextShift;
 };
 
 export interface DeferredEmissionTask {
@@ -86,7 +101,7 @@ function make
   }
   for (let i = 0; i < mTasks.length; ++i) {
     const task = mTasks[i];
-    
+    task.run()
     // if shift, then
     // - accumulate associations and allocations (and errors)
     // if completion, then

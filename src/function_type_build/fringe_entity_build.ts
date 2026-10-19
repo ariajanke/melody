@@ -83,11 +83,14 @@ function make
       setErrorMessage(`Cannot find receiver '${receiver().name()}'`);
   });
 
+  const needsReceiver = (): boolean =>
+    originalFtype()!.receiver().uid() !== emptyTuple().uid();
+
   const emission = memoize((): CodeEmission | undefined => {
     const orgEm = originalFtype()?.emission() ??
       raise('cannot get original emission');
 
-    if (originalFtype()!.receiver().uid() !== emptyTuple().uid()) {
+    if (needsReceiver()) {
       const recEm = receiverFunctionType()?.emission() ??
         raise('cannot get receiver emission');      
       return freeze({

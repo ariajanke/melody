@@ -20,6 +20,7 @@ import { FunctionNamingSchema } from '../../function_naming_schema';
 import { Helpers } from '../../helpers';
 import { AstInitializerNode, AstNode } from '../../ast_node';
 import { Token } from '../../token';
+import { initialize } from 'esbuild';
 
 const { freeze, memoize } = Helpers;
 
@@ -41,7 +42,54 @@ export interface OrderedInitialSetsCollection {
   variableNameMap(): Readonly<{ [vname: string]: VariableNameFunctions | undefined }>;
 };
 
+export interface InitializerNameSet {
+  initializer(): InitializerVariable;
+  variableNameMap(): Readonly<{ [vname: string]: VariableNameFunctions | undefined }>;
+  variableNames(): Readonly<string[]>;
+};
+
+
 const tokenToString = (t: Token) => t.content();
+
+type VNameMap = { [vname: string]: VariableNameFunctions | undefined };
+
+function singleOf
+  (mDeclaration: AstInitializerNode): InitializerNameSet
+{  
+  const mDeclLen = mDeclaration.names.length;
+  const variableNames = memoize((): Readonly<string[]> =>
+    mDeclaration.names.map(tokenToString));
+
+  const variableNameMap = memoize((): Readonly<VNameMap> =>
+    variableNames().
+    reduce((map: VNameMap, vname: string, idx: number): VNameMap => {
+      const tupleRank = mDeclLen > 1 ? idx : undefined;
+      const accessorName = FunctionNamingSchema.mapToFringeAccessor(vname);
+      const modifierName = mDeclaration.qualifier === ':=' ?
+        FunctionNamingSchema.mapToAssignment(vname) :
+        undefined;
+
+      map[vname] = freeze({
+        tupleRank,
+        accessorName,
+        modifierName
+      });
+      return map;
+    }, {} as VNameMap));
+
+  const initializer = memoize((): Readonly<InitializerVariable> => {
+    
+    return freeze({
+      name: FunctionNamingSchema.mapToInitialSetName(variableNames()),
+      variableNames: variableNames(),
+      valueNode: mDeclaration.valueNode,
+      typeNode: mDeclaration.typeNode
+    });
+  });
+
+  return freeze({ initializer, variableNameMap, variableNames });
+}
+
 
 function make
   (mDeclarations: Readonly<AstInitializerNode[]>): OrderedInitialSetsCollection
@@ -83,4 +131,4 @@ function make
   return freeze({ orderedInitialSets, variableNameMap });
 }
 
-export const OrderedInitialSetsCollection = freeze({ make });
+export const OrderedInitialSetsCollection = freeze({ make, singleOf });

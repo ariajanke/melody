@@ -26,6 +26,7 @@ const { freeze } = Helpers;
 
 export interface TreeWideAncestorCollection {
   // enable access to used ancestors collection for each child of a given node
+  // a fully named context is a context that has all(?) of it's method names added
   addFullyNamedContext(
     node: AstDefinitionNode,
     uniqueName: string,

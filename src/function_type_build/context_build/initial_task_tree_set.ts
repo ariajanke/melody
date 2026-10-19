@@ -30,9 +30,14 @@ import {
 import { FunctionTypeAssociationSet } from '../function_type_association_set';
 import { ContextNamesTreeSet } from '../context_names_tree_set';
 import { TreeWideAncestorCollection } from './tree_wide_ancestor_collection';
-import { ContextShiftTask } from './task_controller';
+import { ContextShiftTask, MutableNodeEntitySet, NodeEntitySet } from './task_controller';
 import { UsedAncestorCollection } from './used_ancestor_collection';
 import { FringeEntityBuild } from '../fringe_entity_build';
+import { CallEntityBuild } from '../call_entity_build';
+import { LiteralEntityBuild } from '../literal_entity_build';
+import { ConstantEntity } from '../../melody_components';
+import { EndToEndHelpers } from '../../../tests/end_to_end_helpers';
+import { DeclarationShiftTask } from './declaration_shift';
 
 const { freeze, memoize } = Helpers;
 
@@ -40,18 +45,26 @@ interface InitialTaskTreeSet {
   tasks(): Readonly<ContextShiftTask[]>;
 };
 
+
 // this should consume a ContextBaseNamesSet instance completely
 function make
   (mRoot: AstDefinitionNode,
   //  mTreeWideAncestorCollection: TreeWideAncestorCollection,
+   mNodeEntitySet: MutableNodeEntitySet,
    mAssociations: FunctionTypeAssociationSet = FunctionTypeAssociationSet.make(),
    mBaseStageNamesCtor = ContextNamesTreeSet.make)
 {
   const { contextNamesFor, baseStageFor } = mBaseStageNamesCtor(mRoot);
-  // const { addFullyNamedContext, usedAncestorsCollectionFor } = mTreeWideAncestorCollection;
-  
+  const { addFullyNamedContext, usedAncestorsCollectionFor } = mTreeWideAncestorCollection;
+  const mContextShiftTasks: ContextShiftTask[] = [];
   type ResultType = void;
-  function visitLiteral(_0: AstLiteralNode): ResultType {}
+  function visitLiteral(litNode: AstLiteralNode): ResultType {
+    const { entity } = LiteralEntityBuild.make(litNode);
+    if (entity())
+      {}
+
+    mNodeEntitySet.append(litNode, entity()!);
+  }
   function visitFringe(n: AstIdentifierNode): ResultType {
     // FringeEntityBuild.make(n, , );
   }
@@ -60,16 +73,27 @@ function make
   }
   function visitInitializer(n: AstInitializerNode): ResultType {
     recurse(n.valueNode);
+    mContextShiftTasks.push(DeclarationShiftTask.make(n));
   }
   function visitCall(n: AstCallNode): ResultType {
     recurse(n.parameters);
     recurse(n.receiver);
+    const prmEnt = mNodeEntitySet.entityOf(n.parameters);
+    const recEnt = mNodeEntitySet.entityOf(n.receiver);
+    if (!prmEnt || !recEnt)
+      {}
+
+    const { entity } = CallEntityBuild.make(n.callName, recEnt!, prmEnt!, );
+    if (!entity())
+      {}
+
+    mNodeEntitySet.append(n, entity()!);
   }
 
   function visitFunctionDefinition(node: AstDefinitionNode): ResultType {
     const cns = contextNamesFor(node);
     const baseStage = baseStageFor(node);
-    const uac: UsedAncestorCollection = usedAncestorsCollectionFor(node);
+    // const uac: UsedAncestorCollection = usedAncestorsCollectionFor(node);
     
     // const typeStage = baseStage.typingStage(cns, uac, mAssociations);
     // const contextType = typeStage.referenceType();

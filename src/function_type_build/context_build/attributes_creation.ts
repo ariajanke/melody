@@ -19,7 +19,7 @@
 import { Helpers, raise } from '../../helpers';
 import { FunctionType, ObjectType } from '../../melody_components';
 import { OperatorNamingSchema } from '../../operator_naming_schema';
-import { FunctionTypeAssociationSet } from '../function_type_association_set';
+import { FunctionTypeAssociationSet, FunctionTypeFactory } from '../function_type_association_set';
 import { VariableNameFunctions } from './ordered_initial_sets_collection';
 
 export type AttributesTuple = Readonly<[string, FunctionType]>;
@@ -33,7 +33,7 @@ export interface AttributesCreation {
   accessor(): AttributesTuple | undefined;
   modifier(): AttributesTuple | undefined;
   call(): AttributesTuple | undefined;
-  associationSet(): FunctionTypeAssociationSet;
+  associationSet(): FunctionTypeFactory;
 };
 
 const { freeze, memoize } = Helpers;
@@ -43,10 +43,10 @@ function make
    mVariableName: string,
    mFunctionNames: VariableNameFunctions,
    mVariableType: ObjectType,
-   mFunctionTypeFactory: () => FunctionTypeAssociationSet)
+   mFunctionTypeFactory: FunctionTypeFactory)
   : AttributesCreation
 {
-  const { makeUnassociated } = mFunctionTypeFactory();
+  const { makeUnassociated } = mFunctionTypeFactory;
   const { accessorName, modifierName } = mFunctionNames;
 
   const accessorFtype = memoize((): FunctionType | undefined => {
@@ -89,7 +89,7 @@ function make
     const trueFtype = makeUnassociated(receiver(), parameters(), returns());
     return [mVariableName, trueFtype];
   });
-  const associationSet = mFunctionTypeFactory;
+  const associationSet = () => mFunctionTypeFactory;
 
   return freeze({ accessor, modifier, call, associationSet });
 }

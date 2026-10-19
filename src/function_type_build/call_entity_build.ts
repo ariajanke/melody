@@ -18,11 +18,12 @@
 
 import { CodeWriter } from '../code_writer';
 import { Helpers, raise, StandardError } from '../helpers';
-import { ConstantEntity, FunctionType } from '../melody_components';
+import { CodeEmission, ConstantEntity, EmissionContext, FunctionType, ImmediateValue, MelodyEntity, RuntimeOnlyValue } from '../melody_components';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
 import { ReceiverResolution } from './context_build';
 import { EntityBuild } from './fringe_entity_build';
+import { TupleObjectType } from './tuple_object_type';
 
 const { freeze, memoize } = Helpers;
 const { kAssignment } = OperatorNamingSchema;
@@ -34,12 +35,12 @@ function make
   (mCallName: Token,
    mReceiverEntity: ConstantEntity,
    mParametersEntity: ConstantEntity,
-   mContextEntity: ConstantEntity,
    mReceiverResolution: ReceiverResolution,
    mError: StandardError = StandardError.make())
   : EntityBuild
 {
   const { setErrorMessage, error } = mError;
+  const { emptyTuple } = TupleObjectType;
   
   const callNameStr = memoize((): string | undefined => {
     const callName = mCallName.content();
@@ -50,57 +51,99 @@ function make
     return callName;
   });
 
-  const mContextType =
-    mContextEntity.get('object-type') ??
-    raise('context entity must map to an object type');
-  const contextSelfFtype = () =>
-    mReceiverResolution.
-    mapExpectedToReceiverAccessor(mContextType) ??
-    raise('no self reference function <context>');
   const parameterType = () =>
     mParametersEntity.get('object-type') ??
-    raise('parameter object type is needed');
-  const receiverFtype = () => {};
+    raise('parameter entity is missing object type');
 
-  const callFunctionType = memoize((): FunctionType | undefined => {
-    if (!callNameStr())
+  const receiverType = () =>
+    mReceiverEntity.get('object-type') ??
+    raise('receiver object type is needed');
+  
+  const originalFtype = memoize((): FunctionType | undefined => {
+    if (callNameStr() === undefined)
       { return undefined; }
 
-    const callFunctionType = mReceiverEntity.
-      get('object-type')?.
+    return receiverType().
       lookUp(callNameStr()!)?.
-      byParameters( parameterType() );
-    if (!callFunctionType) {
-      // const msg =
-      //   `cannot find function "${callNameStr()}" ` +
-      //   `on receiver "${mReceiver.asString()}" ` +
-      //   `(type: "${lexicalReceiver()!.returns().name()}") ` +
-      //   `for args "${mArgs.asString()}"`;
-      // return setErrorMessage(msg);
-      // missing method
-      return undefined;
-    }
-
-    return callFunctionType;
+      byParameters(parameterType()) ??
+      setErrorMessage(
+        `Cannot find function "${callNameStr()!}" taking a ` +
+        `"${parameterType().name()}" ` +
+        `on receiver type "${receiverType().name()}"`);
   });
 
-  const receiverFtype = memoize((): FunctionType | undefined => {
-    if (!callFunctionType())
+  const receiverFunctionType = memoize((): FunctionType | undefined => {
+    if (!originalFtype())
       { return undefined; }
 
-    if (contextSelfFtype().uid() !== lexicalReceiver()?.uid())
-      { return lexicalReceiver(); }
+    const { receiver } = originalFtype() as FunctionType;
 
-    const rec = callFunctionType()!.receiver();
-    const ftype = mContext.receiverResolution().
-      mapExpectedToReceiverAccessor(rec);
-    if (!ftype) {
-      return setErrorMessage(`Cannot resolve receiver for function ` +
-                             `'${callNameStr()}' on type '${rec.name()}'`);
-    }
-
-    if (ftype.receiver().uid() !== emptyTuple().uid())
-      { raise('Receiver resolution is behaving poorly'); }
-    return ftype;
+    return mReceiverResolution.
+      mapExpectedToReceiverAccessor(receiver()) ??
+      setErrorMessage(`Cannot find receiver '${receiver().name()}'`);
   });
+
+  const emission = memoize((): CodeEmission | undefined => {
+    const orgEm = originalFtype()?.emission() ??
+      raise('cannot get original emission');
+    
+    const needsReceiverOrParameters =
+      emptyTuple().uid() != parameterType().uid() ||
+      emptyTuple().uid() != receiverType().uid();
+
+    if (!needsReceiverOrParameters)
+      { return orgEm; }
+
+    const recEm = receiverFunctionType()?.emission() ??
+      raise('cannot get receiver emission');
+    const prmEm = mParametersEntity.get('code-emission') ??
+      raise('cannot get parameter emission');
+    
+    return freeze({
+      uid: memoize(Symbol),
+      type: () => 'code-emission',
+      emit(writer: CodeWriter, ctx: EmissionContext): void {
+        ctx.pushReceiver( receiverFunctionType()!.returns(), recEm );
+        ctx.pushParameters( parameterType(), prmEm );
+        orgEm.emit(writer, ctx);
+      }
+    });
+  });
+
+  const immediateValue = memoize((): ImmediateValue | undefined => {
+    const recValue = mReceiverEntity.get('immediate-value');
+    const prmValue = mParametersEntity.get('immediate-value');
+    const imfn = originalFtype()?.immediateCallable();
+    if (!recValue || !prmValue || !imfn)
+      { return undefined; }
+
+    return imfn.call(recValue, prmValue);
+  });
+
+  const runtimeOnlyValue = memoize((): RuntimeOnlyValue | undefined => {
+    const recRtV = mReceiverEntity.get('runtime-only-value');
+    const prmRtV = mParametersEntity.get('runtime-only-value');
+    /* as Melody, this could be a tuple call:
+    let (recRtV, prmRtV) = (mReceiverEntity, mParametersEntity).get('runtime-only-value')
+    */
+    const fnIsRtOnly = originalFtype()?.immediateCallable() === undefined;
+    const fnAsRtV = fnIsRtOnly ? RuntimeOnlyValue.instance() : undefined;
+    return recRtV ?? prmRtV ?? fnAsRtV;
+  });
+
+  const entity = memoize((): ConstantEntity | undefined => {
+    if (!originalFtype())
+      { return undefined; }
+
+    return MelodyEntity.functionalizedFrom({
+      'code-emission': emission,
+      'immediate-value': immediateValue,
+      'runtime-only-value': runtimeOnlyValue,
+      'object-type': originalFtype()!.returns
+    });
+  });
+
+  return freeze({ entity, error });
 }
+
+export const CallEntityBuild = freeze({ make });
