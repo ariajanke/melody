@@ -22,7 +22,7 @@ import { CallFunctionBuild } from './call_function_build';
 import { ContextFrameStack } from './context_frame_stack';
 import { FringeFunctionBuild } from './fringe_function_build';
 import { DefinitionIndexFunctionBuild } from './definition_index_function_build';
-import { LiteralFunctionTypeBuild } from './literal_entity_build';
+import { LiteralFunctionTypeBuild } from './literal_entity';
 import { TupleFunctionBuild } from './tuple_function_build';
 import { FunctionDefinitionRegistry } from '../function_definition_registry';
 import {

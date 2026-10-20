@@ -27,12 +27,15 @@ import {
   FunctionType,
   ImmediateValue,
   MelodyEntity, 
+  NodeError, 
+  ObjectType, 
   RuntimeOnlyValue
 } from '../melody_components';
 import { ReceiverResolution } from './context_build';
+import { EntityError } from './entity_error';
 import { TupleObjectType } from './tuple_object_type';
 
-const { freeze, memoize } = Helpers;
+const { freeze, memoize, softMemoize } = Helpers;
 
 export interface EntityBuild {
   entity(): ConstantEntity | undefined;
@@ -52,12 +55,11 @@ function immediateValueOf(ftype: FunctionType): ImmediateValue | undefined {
 
 function make
   (mIdentifierNode: AstIdentifierNode,
-   mContextEntity: ConstantEntity,
-   mReceiverResolution: ReceiverResolution,
-   mError: StandardError = StandardError.make())
-  : EntityBuild
+   mContextTypeFn: () => ObjectType,
+   mReceiverResolutionFn: () => ReceiverResolution)
+  : ConstantEntity
 {
-  const { setErrorMessage, error } = mError;
+  const { setErrorMessage, error } = EntityError.make();
   const { emptyTuple } = TupleObjectType;
   const mName = mIdentifierNode.token.content();
   const mFunctionName =
@@ -65,9 +67,8 @@ function make
     mName :
     FunctionNamingSchema.mapToFringeAccessor(mName);
 
-  const mContextType = mContextEntity.get('object-type');
   const originalFtype = memoize((): FunctionType | undefined =>
-    mContextType?.
+    mContextTypeFn().
     lookUp(mFunctionName)?.
     byParameters(emptyTuple()) ??
     setErrorMessage(`Cannot find function for "${mName}"`));
@@ -78,7 +79,7 @@ function make
 
     const { receiver } = originalFtype()!;
 
-    return mReceiverResolution.
+    return mReceiverResolutionFn().
       mapExpectedToReceiverAccessor(receiver()) ??
       setErrorMessage(`Cannot find receiver '${receiver().name()}'`);
   });
@@ -86,9 +87,11 @@ function make
   const needsReceiver = (): boolean =>
     originalFtype()!.receiver().uid() !== emptyTuple().uid();
 
-  const emission = memoize((): CodeEmission | undefined => {
-    const orgEm = originalFtype()?.emission() ??
-      raise('cannot get original emission');
+  const emission = softMemoize((): CodeEmission | undefined => {
+    const orgEm = originalFtype()?.emission();
+    const recEm = receiverFunctionType()?.emission();
+    if (!orgEm || !recEm)
+      { return undefined; }
 
     if (needsReceiver()) {
       const recEm = receiverFunctionType()?.emission() ??
@@ -106,26 +109,19 @@ function make
     return orgEm;
   });
 
-  const entity = memoize((): ConstantEntity | undefined => {
+  const immediateValue = memoize((): ImmediateValue | undefined => {
     if (!originalFtype())
       { return undefined; }
 
-    const immValue = immediateValueOf(originalFtype()!);
-    if (immValue) {
-      return MelodyEntity.constFrom({
-        'object-type': originalFtype()!.returns(),
-        'immediate-value': immValue
-      });
-    }
-
-    return MelodyEntity.functionalizedFrom({
-      'code-emission': emission,
-      'object-type': originalFtype()!.returns,
-      'runtime-only-value': RuntimeOnlyValue.instance,
-    });
+    return immediateValueOf(originalFtype()!);
   });
 
-  return freeze({ entity, error });
+  return MelodyEntity.functionalizedFrom({
+    'error': error,
+    'code-emission': emission,
+    'object-type': originalFtype()!.returns,
+    'immediate-value': immediateValue
+  });
 }
 
-export const FringeEntityBuild = freeze({ make });
+export const FringeEntity = freeze({ make });

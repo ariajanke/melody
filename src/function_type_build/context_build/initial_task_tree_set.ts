@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Helpers } from '../../helpers';
+import { Helpers, raise } from '../../helpers';
 import { WritableObjectType } from './writable_object_type';
 import {
   AstCallNode,
@@ -32,12 +32,15 @@ import { ContextNamesTreeSet } from '../context_names_tree_set';
 import { TreeWideAncestorCollection } from './tree_wide_ancestor_collection';
 import { ContextShiftTask, MutableNodeEntitySet, NodeEntitySet } from './task_controller';
 import { UsedAncestorCollection } from './used_ancestor_collection';
-import { FringeEntityBuild } from '../fringe_entity_build';
-import { CallEntityBuild } from '../call_entity_build';
-import { LiteralEntityBuild } from '../literal_entity_build';
-import { ConstantEntity } from '../../melody_components';
+import { EntityBuild, FringeEntity } from '../fringe_entity';
+import { CallEntity } from '../call_entity';
+import { LiteralEntity } from '../literal_entity';
+import { ConstantEntity, ObjectType } from '../../melody_components';
 import { EndToEndHelpers } from '../../../tests/end_to_end_helpers';
 import { DeclarationShiftTask } from './declaration_shift';
+import { ReceiverResolution } from '../context_build';
+import { TupleEntityBuild } from '../tuple_entity';
+import { InitializerEntity } from '../initializer_entity';
 
 const { freeze, memoize } = Helpers;
 
@@ -57,56 +60,48 @@ function make
   const { contextNamesFor, baseStageFor } = mBaseStageNamesCtor(mRoot);
   const { addFullyNamedContext, usedAncestorsCollectionFor } = mTreeWideAncestorCollection;
   const mContextShiftTasks: ContextShiftTask[] = [];
+  
+  const mCurrentContext = (): ObjectType => raise(`don't call me`);
+  const mCurrentRecRes = (): ReceiverResolution => raise(`don't call me`);
   type ResultType = void;
   function visitLiteral(litNode: AstLiteralNode): ResultType {
-    const { entity } = LiteralEntityBuild.make(litNode);
-    if (entity())
-      {}
+    mNodeEntitySet.append( litNode, LiteralEntity.make(litNode) );
+  }
 
-    mNodeEntitySet.append(litNode, entity()!);
+  function visitFringe(n: AstIdentifierNode): ResultType { 
+    const ent = FringeEntity.make(n, mCurrentContext, mCurrentRecRes);
+    mNodeEntitySet.append( n, ent );
   }
-  function visitFringe(n: AstIdentifierNode): ResultType {
-    // FringeEntityBuild.make(n, , );
-  }
+
   function visitTuple(n: AstTupleNode): ResultType {
     n.nodes.forEach(recurse);
+    const ent = TupleEntityBuild.make(n, mNodeEntitySet);
+    mNodeEntitySet.append( n, ent );
   }
   function visitInitializer(n: AstInitializerNode): ResultType {
     recurse(n.valueNode);
     mContextShiftTasks.push(DeclarationShiftTask.make(n));
+    mNodeEntitySet.append(n, InitializerEntity.make(n, mCurrentContext, mNodeEntitySet));
   }
   function visitCall(n: AstCallNode): ResultType {
     recurse(n.parameters);
     recurse(n.receiver);
+
     const prmEnt = mNodeEntitySet.entityOf(n.parameters);
     const recEnt = mNodeEntitySet.entityOf(n.receiver);
     if (!prmEnt || !recEnt)
-      {}
+      { raise('parameters and receiver should have been added'); }
 
-    const { entity } = CallEntityBuild.make(n.callName, recEnt!, prmEnt!, );
-    if (!entity())
-      {}
-
-    mNodeEntitySet.append(n, entity()!);
+    const ent = CallEntity.make(n.callName, recEnt!, prmEnt!, mCurrentRecRes);
+    mNodeEntitySet.append(n, ent);
   }
 
   function visitFunctionDefinition(node: AstDefinitionNode): ResultType {
-    const cns = contextNamesFor(node);
+    // builds -> task -> builds -> task -> usw
     const baseStage = baseStageFor(node);
-    // const uac: UsedAncestorCollection = usedAncestorsCollectionFor(node);
     
-    // const typeStage = baseStage.typingStage(cns, uac, mAssociations);
-    // const contextType = typeStage.referenceType();
-    const contextType = baseStage.writableReferenceType();
-    // if (!contextType)
-    //   { return; }
-
-    // have to net up everything else too...
-    // addFullyNamedContext(node, contextType.name(), contextType);
-    // then at some point... a context completion task!
-
-    // then go deeper!
     node.nodes.forEach(recurse);
+
   }
   function recurse(node: AstNode) { node.visit(mVisitor); }
   const mVisitor = freeze({

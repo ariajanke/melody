@@ -28,6 +28,7 @@ export const Helpers = Object.freeze({
   freeze: !kDebugMode ? Object.freeze : pass,
   makeCounter,
   memoize,
+  softMemoize,
   toNamedMap,
   verifyInTesting,
   makeIsStringInLookUpTable
@@ -186,6 +187,11 @@ function memoize<Type>(fn: () => Type): () => Type {
     memorized = true;
     return value = fn();
   };
+}
+
+function softMemoize<Type>(fn: () => Type): () => Type {
+  let value: Type;
+  return () => value ??= fn();
 }
 
 function makeCounter() {

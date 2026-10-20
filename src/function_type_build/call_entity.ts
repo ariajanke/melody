@@ -17,15 +17,15 @@
  */
 
 import { CodeWriter } from '../code_writer';
-import { Helpers, raise, StandardError } from '../helpers';
+import { Helpers, raise } from '../helpers';
 import { CodeEmission, ConstantEntity, EmissionContext, FunctionType, ImmediateValue, MelodyEntity, RuntimeOnlyValue } from '../melody_components';
 import { OperatorNamingSchema } from '../operator_naming_schema';
 import { Token } from '../token';
 import { ReceiverResolution } from './context_build';
-import { EntityBuild } from './fringe_entity_build';
+import { EntityError } from './entity_error';
 import { TupleObjectType } from './tuple_object_type';
 
-const { freeze, memoize } = Helpers;
+const { freeze, memoize, softMemoize } = Helpers;
 const { kAssignment } = OperatorNamingSchema;
 const kAssignmentNotAValidCallName =
   `"${kAssignment}" is not a valid call name, DAST build should have ` +
@@ -35,11 +35,10 @@ function make
   (mCallName: Token,
    mReceiverEntity: ConstantEntity,
    mParametersEntity: ConstantEntity,
-   mReceiverResolution: ReceiverResolution,
-   mError: StandardError = StandardError.make())
-  : EntityBuild
+   mReceiverResolutionFn: () => ReceiverResolution)
+  : ConstantEntity
 {
-  const { setErrorMessage, error } = mError;
+  const { setErrorMessage, error } = EntityError.make();
   const { emptyTuple } = TupleObjectType;
   
   const callNameStr = memoize((): string | undefined => {
@@ -78,26 +77,25 @@ function make
 
     const { receiver } = originalFtype() as FunctionType;
 
-    return mReceiverResolution.
+    return mReceiverResolutionFn().
       mapExpectedToReceiverAccessor(receiver()) ??
       setErrorMessage(`Cannot find receiver '${receiver().name()}'`);
   });
 
-  const emission = memoize((): CodeEmission | undefined => {
-    const orgEm = originalFtype()?.emission() ??
-      raise('cannot get original emission');
+  const emission = softMemoize((): CodeEmission | undefined => {
+    const orgEm = originalFtype()?.emission();
     
     const needsReceiverOrParameters =
       emptyTuple().uid() != parameterType().uid() ||
       emptyTuple().uid() != receiverType().uid();
 
-    if (!needsReceiverOrParameters)
+    if (!needsReceiverOrParameters || !orgEm)
       { return orgEm; }
 
-    const recEm = receiverFunctionType()?.emission() ??
-      raise('cannot get receiver emission');
-    const prmEm = mParametersEntity.get('code-emission') ??
-      raise('cannot get parameter emission');
+    const recEm = receiverFunctionType()?.emission();
+    const prmEm = mParametersEntity.get('code-emission');
+    if (!recEm || !prmEm)
+      { return undefined; }
     
     return freeze({
       uid: memoize(Symbol),
@@ -131,19 +129,13 @@ function make
     return recRtV ?? prmRtV ?? fnAsRtV;
   });
 
-  const entity = memoize((): ConstantEntity | undefined => {
-    if (!originalFtype())
-      { return undefined; }
-
-    return MelodyEntity.functionalizedFrom({
-      'code-emission': emission,
-      'immediate-value': immediateValue,
-      'runtime-only-value': runtimeOnlyValue,
-      'object-type': originalFtype()!.returns
-    });
+  return MelodyEntity.functionalizedFrom({
+    'error': error,
+    'code-emission': emission,
+    'immediate-value': immediateValue,
+    'runtime-only-value': runtimeOnlyValue,
+    'object-type': originalFtype()!.returns
   });
-
-  return freeze({ entity, error });
 }
 
-export const CallEntityBuild = freeze({ make });
+export const CallEntity = freeze({ make });

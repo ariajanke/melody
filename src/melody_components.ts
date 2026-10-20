@@ -17,7 +17,7 @@
  */
 
 import { CodeWriter } from './code_writer';
-import { Helpers } from './helpers'
+import { Helpers, StandardErrorMessage } from './helpers'
 
 const { freeze, memoize } = Helpers;
 
@@ -26,6 +26,7 @@ export interface StringToComponentTypeMap {
   'code-emission': CodeEmission;
   'runtime-only-value': RuntimeOnlyValue;
   'immediate-value': ImmediateValue;
+  'error': NodeError;
 };
 
 type Functionalized<T> = {
@@ -106,6 +107,25 @@ export interface FunctionType extends MelodyRelation, FunctionTypeAssociation {
   parameters(): ObjectType;
   returns(): ObjectType;
 };
+
+export interface NodeError extends MelodyComponent {
+  error(): StandardErrorMessage;
+};
+
+export const NodeError = freeze({
+  from(memoizedErrorFn: () => StandardErrorMessage | undefined): () => NodeError | undefined {
+    return memoize((): NodeError | undefined => {
+      if (memoizedErrorFn() === undefined) 
+        { return undefined; }
+
+      return freeze({
+        type: () => 'error',
+        uid: memoize(Symbol),
+        error: memoizedErrorFn as () => StandardErrorMessage
+      });
+    });
+  }
+});
 
 export interface CodeEmission extends MelodyComponent {
   emit(writer: CodeWriter, ctx: EmissionContext): void;

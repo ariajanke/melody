@@ -25,6 +25,7 @@ import {
   FunctionType,
   ObjectType
 } from '../../melody_components';
+import { EntityBuild } from '../fringe_entity';
 import { FunctionTypeFactory } from '../function_type_association_set';
 import { VariableAllocation } from './variable_allocation';
 
@@ -89,7 +90,7 @@ export interface ContextTypeCompletionTask {
 };
 
 function make
-  (mTasks: ContextShiftTask[],
+  (mTasks: (ContextShiftTask | EntityBuild)[],
    
   )
 {
@@ -101,7 +102,12 @@ function make
   }
   for (let i = 0; i < mTasks.length; ++i) {
     const task = mTasks[i];
-    task.run()
+    if ('entity' in task) {
+      const { entity, error } = (task as EntityBuild);
+      ;
+    } else {
+      (task as ContextShiftTask).run(, , );
+    }
     // if shift, then
     // - accumulate associations and allocations (and errors)
     // if completion, then

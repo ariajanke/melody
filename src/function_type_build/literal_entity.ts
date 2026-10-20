@@ -26,32 +26,36 @@ import {
   EmissionContext,
   ImmediateValue,
   MelodyComponentTypeString,
-  MelodyEntity
+  MelodyEntity,
+  NodeError,
+  ObjectType
 } from '../melody_components';
-import { EntityBuild } from './fringe_entity_build';
 import { Token } from '../token';
+import { ConstantStringType } from './constant_string_type';
 
 const { freeze, memoize } = Helpers;
 
 interface LiteralStuff {
-  hasValue(): unknown | undefined;
+  // hasValue(): unknown | undefined;
   asString(): string | undefined;
   asInteger(): number | undefined;
+  objectType(): ObjectType | undefined;
   emit(writer: CodeWriter, _1: EmissionContext): void;
-  error(): StandardErrorMessage;
+  error(): StandardErrorMessage | undefined;
 }
 
 const toUndefined = () => undefined;
 
 const LiteralStuff = freeze({
-  forString(mToken: Token, mError: StandardError): LiteralStuff {
+  forString(mToken: Token, _1: StandardError): LiteralStuff {
     return freeze({
       hasValue: mToken.content,
       asInteger: toUndefined,
       asString: mToken.content,
       emit(writer: CodeWriter, _1: EmissionContext)
         { writer.pushLiteralString(mToken.content()); },
-      error: mError.error
+      error: toUndefined,
+      objectType: IntegerType.instance
     });
   },
   forNumber(mToken: Token, mError: StandardError): LiteralStuff {
@@ -67,12 +71,17 @@ const LiteralStuff = freeze({
     });
 
     return freeze({
-      hasValue: numericValue,
       asInteger: numericValue,
       asString: toUndefined,
       emit(writer: CodeWriter, _1: EmissionContext)
         { writer.pushInteger(numericValue() ?? raise('uh oh')); },
-      error
+      error: () => {
+        if (numericValue())
+          { return undefined; }
+
+        return error();
+      },
+      objectType: ConstantStringType.instance
     });
   }
 });
@@ -83,47 +92,37 @@ const isImmediateValue = (): MelodyComponentTypeString => 'immediate-value';
 function make
   (mLiteralNode: AstLiteralNode,
    mError = StandardError.make())
-  : EntityBuild
+  : ConstantEntity
 {
-  const literalStuffCtor = (() => {
-    if (mLiteralNode.type === 'number')
-      { return LiteralStuff.forNumber; }
+  const literalStuffCtor = 
+    mLiteralNode.type === 'number' ?
+    LiteralStuff.forNumber :
+    LiteralStuff.forString;
 
-    return LiteralStuff.forString;
-  });
   const {
-    hasValue,
     asString,
     asInteger,
     emit,
-    error
-  } = literalStuffCtor()(mLiteralNode.token, mError);
+    error,
+    objectType
+  } = literalStuffCtor(mLiteralNode.token, mError);
 
-  const entity = memoize((): ConstantEntity | undefined => {
-    if (hasValue() === undefined)
-      { return undefined; }
-
-    const emission: CodeEmission = freeze({
+  return MelodyEntity.functionalizedFrom({
+    'error': NodeError.from(error),
+    'object-type': objectType,
+    'code-emission': memoize(() => freeze({
       emit,
       type: isCodeEmission,
       uid: memoize(Symbol)
-    });
-    const immediate: ImmediateValue = freeze({
+    })),
+    'immediate-value': memoize((): ImmediateValue => freeze({
       asInteger,
       asString,
       asObjectType: toUndefined,
       type: isImmediateValue,
       uid: memoize(Symbol)
-    });
-
-    return MelodyEntity.constFrom(freeze({
-      'code-emission': emission,
-      'immediate-value': immediate,
-      'object-type': IntegerType.instance()
-    }));
-  });
-
-  return freeze({ entity, error });
+    }))
+  });  
 }
 
-export const LiteralEntityBuild = freeze({ make });
+export const LiteralEntity = freeze({ make });
