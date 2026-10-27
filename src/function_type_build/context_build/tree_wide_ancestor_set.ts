@@ -24,13 +24,13 @@ import { UsedAncestorCollection } from './used_ancestor_collection';
 
 const { freeze } = Helpers;
 
-export interface TreeWideAncestorCollection {
+export interface TreeWideAncestorSet {
   // enable access to used ancestors collection for each child of a given node
   // a fully named context is a context that has all(?) of it's method names added
   addFullyNamedContext(
     node: AstDefinitionNode,
     uniqueName: string,
-    fullyNamedContext: ObjectType): TreeWideAncestorCollection;
+    fullyNamedContext: ObjectType): TreeWideAncestorSet;
   // access must be enabled, or this will raise!
   // if a def node has any pending names, attempt to get this
   // in the root case, simply fail to retrieve and allow methods to be left
@@ -40,12 +40,12 @@ export interface TreeWideAncestorCollection {
 
 function make
   (mContextNamesFor: (node: AstDefinitionNode) => UsedContextNames)
-  : TreeWideAncestorCollection
+  : TreeWideAncestorSet
 {
   function addFullyNamedContext(
     node: AstDefinitionNode,
     uniqueName: string,
-    fullyNamedContext: ObjectType): TreeWideAncestorCollection
+    fullyNamedContext: ObjectType): TreeWideAncestorSet
   {
     // referenceType, uniqueName
     mContextNamesFor(node);
@@ -57,7 +57,7 @@ function make
   }
 
   function usedAncestorsCollectionFor
-    (node: AstDefinitionNode): UsedAncestorCollection
+    (node: AstDefinitionNode): TreeWideAncestorSet
   {
 
   }
@@ -93,4 +93,4 @@ function make
   return inst;
 }
 
-export const TreeWideAncestorCollection = freeze({ make });
+export const TreeWideAncestorSet = freeze({ make });

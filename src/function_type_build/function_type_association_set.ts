@@ -46,23 +46,23 @@ type EType = ReturnType<FunctionTypeAssociation['emission']>;
 const { freeze } = Helpers;
 const singleToUndefined = <T>(_0: T) => undefined;
 const singleToSelf = <T>(t: T) => t;
-const mImmediateVisitor: MelodyComponentVisitor<ImmType> = freeze({
-  visitFunctionType: singleToUndefined<FunctionType>,
-  visitCodeEmission: singleToUndefined<CodeEmission>,
-  visitObjectType: singleToUndefined<ObjectType>,
-  visitImmediateValue: singleToSelf<ImmediateValue>,
-  visitImmediateFunction: singleToSelf<ImmediateFunction>,
-  visitRuntimeOnly: singleToSelf<RuntimeOnlyValue>
-});
+// const mImmediateVisitor: MelodyComponentVisitor<ImmType> = freeze({
+//   visitFunctionType: singleToUndefined<FunctionType>,
+//   visitCodeEmission: singleToUndefined<CodeEmission>,
+//   visitObjectType: singleToUndefined<ObjectType>,
+//   visitImmediateValue: singleToSelf<ImmediateValue>,
+//   visitImmediateFunction: singleToSelf<ImmediateFunction>,
+//   visitRuntimeOnly: singleToSelf<RuntimeOnlyValue>
+// });
 
-const mEmissionVisitor: MelodyComponentVisitor<EType> = freeze({
-  visitFunctionType: singleToUndefined<FunctionType>,
-  visitCodeEmission: singleToSelf<CodeEmission>,
-  visitObjectType: singleToUndefined<ObjectType>,
-  visitImmediateValue: singleToUndefined<ImmediateValue>,
-  visitImmediateFunction: singleToUndefined<ImmediateFunction>,
-  visitRuntimeOnly: singleToUndefined<RuntimeOnlyValue>
-});
+// const mEmissionVisitor: MelodyComponentVisitor<EType> = freeze({
+//   visitFunctionType: singleToUndefined<FunctionType>,
+//   visitCodeEmission: singleToSelf<CodeEmission>,
+//   visitObjectType: singleToUndefined<ObjectType>,
+//   visitImmediateValue: singleToUndefined<ImmediateValue>,
+//   visitImmediateFunction: singleToUndefined<ImmediateFunction>,
+//   visitRuntimeOnly: singleToUndefined<RuntimeOnlyValue>
+// });
 
 function make(): FunctionTypeAssociationSet {
   const mEmissionCache: { [uid: symbol]: EType } = {};
@@ -78,11 +78,13 @@ function make(): FunctionTypeAssociationSet {
       receiver: receiver ? () => receiver : emptyTuple,
       parameters: parameters ? () => parameters : emptyTuple,
       returns: returns ? () => returns : emptyTuple,
-      visit<T>(visitor: MelodyComponentVisitor<T>): T
-        { return visitor.visitFunctionType(ftype); },
+      // visit<T>(visitor: MelodyComponentVisitor<T>): T
+      //   { return visitor.visitFunctionType(ftype); },
+      type: () => 'function-type',
       uid: () => uid,
       emission: () => mEmissionCache[uid],
-      immediate: () => mImmediateCache[uid]
+      immediate: () => mImmediateCache[uid],
+      immediateCallable: (): ImmediateFunction | undefined => undefined
     });
     return mSourcedFtypes[uid] ??= ftype;
   }
@@ -91,12 +93,16 @@ function make(): FunctionTypeAssociationSet {
     if (mSourcedFtypes[uid] === undefined) {
       raise('This set cannot associate the given ftype with any component (not its original owner)');
     }
-    const emission = component.visit(mEmissionVisitor);
+    const emission = component.type() === 'code-emission' ?
+      component as CodeEmission :
+      undefined;
     if (emission) {
       mEmissionCache[uid] && raise('cannot set emission, already present');
       mEmissionCache[uid] = emission;
     }
-    const immediate = component.visit(mImmediateVisitor);
+    const immediate = component.type() === 'immediate-value' ?
+      component as ImmediateValue :
+      undefined;
     if (immediate) {
       mImmediateCache[uid] && raise('cannot set immediate, already present');
       mImmediateCache[uid] = immediate;

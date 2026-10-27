@@ -21,11 +21,13 @@
 
 import { Compiler } from './compiler';
 import { Helpers } from './helpers';
-import { ImmediateValue, MelodyComponentVisitor, ObjectType } from './melody_components';
+import { ImmediateValue, ObjectType } from './melody_components';
 import { WasmImports } from './wasm_compilation';
 
 const { freeze, expose } = Helpers;
 
+// this only enters the picture when we want to do `... is MySpecialType` kind
+// of things
 interface CompiledCode {
   byteCode(): Uint8Array;
   importsObject(): WasmImports;
@@ -56,9 +58,9 @@ async function advanceCompilerLoop(compiler: AdvancedCompiler, memory: WebAssemb
       const asInteger = (result.exports.entry as () => number);
       const immediate: ImmediateValue = freeze({
         uid: Helpers.memoize(Symbol),
-        visit<T>(visitor: MelodyComponentVisitor<T>): T
-          { return visitor.visitImmediateValue(immediate); },
+        type: () => 'immediate-value',
         asInteger,
+        asString: () => undefined,
         asObjectType: (): ObjectType | undefined => undefined
       });
       compiler.associate(codeObject, immediate);

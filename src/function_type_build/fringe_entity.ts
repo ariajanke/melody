@@ -29,6 +29,7 @@ import {
   MelodyEntity, 
   NodeError, 
   ObjectType, 
+  ReceiverResolutionN, 
   RuntimeOnlyValue
 } from '../melody_components';
 import { ReceiverResolution } from './context_build';
@@ -55,8 +56,7 @@ function immediateValueOf(ftype: FunctionType): ImmediateValue | undefined {
 
 function make
   (mIdentifierNode: AstIdentifierNode,
-   mContextTypeFn: () => ObjectType,
-   mReceiverResolutionFn: () => ReceiverResolution)
+   mContextEntity: ConstantEntity)
   : ConstantEntity
 {
   const { setErrorMessage, error } = EntityError.make();
@@ -67,8 +67,14 @@ function make
     mName :
     FunctionNamingSchema.mapToFringeAccessor(mName);
 
+  const contextType = (): ObjectType =>
+    mContextEntity.get('context-type') ?? raise('called too soon');
+
+  const receiverResolution = (): ReceiverResolutionN =>
+    mContextEntity.get('receiver-resolution') ?? raise('called too soon');
+
   const originalFtype = memoize((): FunctionType | undefined =>
-    mContextTypeFn().
+    contextType().
     lookUp(mFunctionName)?.
     byParameters(emptyTuple()) ??
     setErrorMessage(`Cannot find function for "${mName}"`));
@@ -79,7 +85,7 @@ function make
 
     const { receiver } = originalFtype()!;
 
-    return mReceiverResolutionFn().
+    return receiverResolution().
       mapExpectedToReceiverAccessor(receiver()) ??
       setErrorMessage(`Cannot find receiver '${receiver().name()}'`);
   });

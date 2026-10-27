@@ -17,11 +17,13 @@
  */
 
 import { AstInitializerNode, AstNode } from '../../ast_node';
+import { CodeWriter } from '../../code_writer';
 import { FunctionNamingSchema } from '../../function_naming_schema';
 import { Helpers, raise, StandardError, StandardErrorMessage } from '../../helpers';
 import {
   CodeEmission,
   ConstantEntity,
+  EmissionContext,
   FunctionLookUpTable,
   FunctionType,
   ImmediateFunction,
@@ -47,11 +49,12 @@ function makeRuntimeDeclaration() {
   
 }
 
-const additionalLookUps =
-  memoize((): Readonly<[string, FunctionLookUpTable][]> => []);
+// const additionalLookUps =
+//   memoize((): Readonly<[string, FunctionLookUpTable][]> => []);
 
 function makeDeclarationShift
-  (mContext: ObjectType,
+  (//mContext: ObjectType,
+   mContextEntity: ConstantEntity,
    mInitializer: AstInitializerNode,
   //  mInitializer: InitializerVariable,
   //  mVarMap: OrderedInitialSetsCollection['variableNameMap'],
@@ -81,6 +84,8 @@ function makeDeclarationShift
   mNodeEntities.entityOf(mInitializer.valueNode).get('object-type');
   mInitializer.typeNode;
   const mNameThings = OrderedInitialSetsCollection.singleOf(mInitializer);
+  const contextType = (): ObjectType =>
+    mContextEntity.get('context-type') ?? raise('???');
   
   // const dependencies = memoize(() => {});
 
@@ -88,7 +93,7 @@ function makeDeclarationShift
   
   const mNodeTypeInference = NodeTypeInference.make();
   const { typesBreakdown, initializerType, error } = VariableTypeBreakdownBuild.
-    make(mContext, mNameThings.initializer(), mNodeTypeInference);
+    make(contextType(), mNameThings.initializer(), mNodeTypeInference);
 
   const allocations = memoize(() => {
     if (!typesBreakdown())
@@ -106,9 +111,37 @@ function makeDeclarationShift
     }
 
     const initializerName = FunctionNamingSchema.mapToInitialSetName(mNameThings.variableNames());
-    const initializerFtype = mFactory.makeUnassociated(mContext, initializerType()!);
+    const initializerFtype = mFactory.makeUnassociated(contextType(), initializerType()!);
 
     return [initializerName, initializerFtype];
+  });
+
+  const initializerEmissionTask = memoize((): DeferredEmissionTask => {
+    const ftype = contextType().
+      lookUp(initializerPair()[0])?.
+      uniqueFunctionType();
+    function run(allocations: VariableAllocation): Readonly<[FunctionType, CodeEmission][]> | StandardErrorMessage {
+      if (!ftype) {
+        return freeze({ message: ':(' });
+      }
+
+      const accessIndex = allocations.
+        lookUpTuple(mNameThings.variableNames())?.accessIndex;
+
+      if (accessIndex === undefined) {
+        return freeze({ message: ':(' });
+      }
+      function emit(writer: CodeWriter, ctx: EmissionContext): void {
+        ctx.popParameters(ftype!.parameters()).emit(writer, ctx);
+        // TODO then do your write per index on the now mounted parameters
+      }
+
+      const codeEm = freeze({ emit, type: () => 'code-emission', uid: memoize(Symbol) }) satisfies CodeEmission;
+
+      return [[ftype, codeEm]];
+    }
+
+    return freeze({ run });
   });
 
   const additionalMethods = memoize((): Readonly<Readonly<[string, FunctionType]>[]> => {
@@ -122,7 +155,7 @@ function makeDeclarationShift
       const mFunctionNames = mNameThings.variableNameMap()[vname] ??
         raise(`variable "${vname}" not found`);
       const mAttributesCreation = AttributesCreation.
-        make(mContext, vname, mFunctionNames, mVariableType, mFactory);
+        make(contextType(), vname, mFunctionNames, mVariableType, mFactory);
       const { accessor, modifier, call } = mAttributesCreation;
       if (accessor())
         { rv.push(accessor()!); }
@@ -136,7 +169,7 @@ function makeDeclarationShift
   
   const associations = memoize((): ContextShiftAssociations | undefined => freeze({
     additionalMethods,
-    additionalLookUps
+    // additionalLookUps
   }));
 
   return freeze({
@@ -147,19 +180,23 @@ function makeDeclarationShift
   });
 }
 
+const dependencies = (): 'bag-of-stuff' => 'bag-of-stuff';
+
 function makeTask
-  (mInitializer: AstInitializerNode,): ContextShiftTask 
+  (mInitializer: AstInitializerNode,
+   mContextEntity: ConstantEntity
+  ): ContextShiftTask 
 {
   function run(
-    context: ObjectType,
+    // context: ObjectType,
     // v this factory must be able to "pre-associate" ftypes with immediates
     additions: ContextTaskAdditions,
     set: NodeEntitySet): ContextShift
   {
-    return makeDeclarationShift(context, mInitializer, additions, set);
+    return makeDeclarationShift(mContextEntity, mInitializer, additions, set);
   }
 
-  return freeze({ run });
+  return freeze({ dependencies, run });
 }
 
 export const DeclarationShiftTask = freeze({ make: makeTask });
